@@ -272,12 +272,38 @@ body,
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   background-color: rgba(20, 22, 28, var(--window-opacity, 0.85));
   overflow: hidden;
+  opacity: 0.88;
+  transition: opacity 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.floating-window.v2-window-focused {
+  opacity: 1;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .floating-window.maximized {
   border-radius: 0;
   border: none;
   box-shadow: none;
+}
+
+/* Anchor Button Icon Rotations */
+.anchor-icon {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.anchor-sticky-right {
+  transform: rotate(90deg);
+  color: var(--accent-color, #38bdf8);
+}
+.anchor-sticky-bottom {
+  transform: rotate(180deg);
+  color: var(--accent-color, #38bdf8);
+}
+.anchor-sticky-both {
+  transform: rotate(135deg);
+  color: var(--accent-color, #38bdf8);
+  filter: drop-shadow(0 0 4px var(--accent-glow));
 }
 
 .floating-window-titlebar {

@@ -43,6 +43,8 @@ export interface FloatingWindow {
   height: number | string;
   z: number;
   maximized?: boolean;
+  stickyRight?: boolean;
+  stickyBottom?: boolean;
 }
 
 export interface PanelInfo {
@@ -51,7 +53,7 @@ export interface PanelInfo {
   component: string;
   state: 'docked' | 'floating' | 'minimized';
   previousState?: 'docked' | 'floating';
-  lastFloatingRect?: { x: number; y: number; width: number; height: number };
+  lastFloatingRect?: { x: number; y: number; width: number; height: number; stickyRight?: boolean; stickyBottom?: boolean };
   lastLeafId?: string;
   dirty?: boolean;
 }
@@ -66,7 +68,7 @@ export interface WindowState {
 }
 
 export interface WindowActions {
-  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed' }) => void;
+  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => void;
   closePanel: (id: string) => void;
   minimizePanel: (id: string) => void;
   restorePanel: (id: string) => void;
@@ -74,7 +76,7 @@ export interface WindowActions {
   dockPanel: (id: string, targetLeafId?: string) => void;
   maximizePanel: (id: string) => void;
   updateSplitSizes: (path: number[], sizes: number[]) => void;
-  updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height'>>) => void;
+  updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'stickyRight' | 'stickyBottom'>>) => void;
   bringToFront: (id: string) => void;
   saveLayout: () => string;
   loadLayout: (layoutJson: string) => void;
@@ -352,7 +354,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return null;
   };
 
-  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed' }) => {
+  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => {
     setState(prev => {
       const exists = prev.panels[id];
       const entry = PanelRegistry.get(component);
@@ -413,9 +415,29 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       if (target === 'floating') {
         maxZRef.current += 1;
         const cascaded = getCascadedPosition(favPos, prev.floating);
+
+        const stickyRight = options?.stickyRight ?? entry?.defaultOptions?.defaultStickyRight ?? false;
+        const stickyBottom = options?.stickyBottom ?? entry?.defaultOptions?.defaultStickyBottom ?? false;
+
+        const viewW = Math.max(100, window.innerWidth || 1024);
+        const viewH = Math.max(100, window.innerHeight || 768);
+        const winW = typeof cascaded.width === 'string' ? parseFloat(cascaded.width) : cascaded.width;
+        const winH = typeof cascaded.height === 'string' ? parseFloat(cascaded.height) : cascaded.height;
+
+        let initialX = cascaded.x;
+        let initialY = cascaded.y;
+
+        const GAP = 10;
+        if (stickyRight) {
+          initialX = viewW - winW - GAP;
+        }
+        if (stickyBottom) {
+          initialY = viewH - winH - GAP;
+        }
+
         return {
           ...prev,
-          floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current }],
+          floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, x: initialX, y: initialY, stickyRight, stickyBottom }],
           panels: nextPanels
         };
       } else {
@@ -543,7 +565,14 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       if (panel.state === 'floating') {
         const win = prev.floating.find(w => w.id === id);
         if (win) {
-          lastFloatingRect = { x: win.x, y: win.y, width: win.width, height: win.height };
+          lastFloatingRect = { 
+            x: win.x, 
+            y: win.y, 
+            width: win.width, 
+            height: win.height,
+            stickyRight: win.stickyRight,
+            stickyBottom: win.stickyBottom
+          };
         }
       } else if (panel.state === 'docked') {
         const findLeafForPanel = (node: LayoutNode): string | null => {
@@ -596,7 +625,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         return {
           ...prev,
           minimized: nextMinimized,
-          floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current }],
+          floating: [
+            ...prev.floating, 
+            { 
+              ...cascaded, 
+              id, 
+              z: maxZRef.current,
+              stickyRight: !!panel.lastFloatingRect?.stickyRight,
+              stickyBottom: !!panel.lastFloatingRect?.stickyBottom
+            }
+          ],
           panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } }
         };
       } else {
@@ -624,7 +662,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           return {
             ...prev,
             minimized: nextMinimized,
-            floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current }],
+            floating: [
+              ...prev.floating, 
+              { 
+                ...cascaded, 
+                id, 
+                z: maxZRef.current,
+                stickyRight: !!panel.lastFloatingRect?.stickyRight,
+                stickyBottom: !!panel.lastFloatingRect?.stickyBottom
+              }
+            ],
             panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } }
           };
         } else {
@@ -902,7 +949,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }));
   }, []);
 
-  const updateFloatingPosition = useCallback((id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height'>>) => {
+  const updateFloatingPosition = useCallback((id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'stickyRight' | 'stickyBottom'>>) => {
     setState(prev => ({
       ...prev,
       floating: prev.floating.map(w => w.id === id ? { ...w, ...updates } : w)

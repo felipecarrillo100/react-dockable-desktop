@@ -9,6 +9,8 @@ export interface PanelRegistryEntry {
     canDrag?: boolean;
     canMinimize?: boolean;
     canClose?: boolean;
+    defaultStickyRight?: boolean;
+    defaultStickyBottom?: boolean;
   };
 }
 

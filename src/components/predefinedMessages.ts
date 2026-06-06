@@ -21,6 +21,9 @@ export const defaultPredefinedMessages = {
   restoreSize:     { id: 'dockable-desktop-restoreSize',     defaultMessage: 'Restore Size' },
   close:           { id: 'dockable-desktop-close',           defaultMessage: 'Close' },
   closeEmptyGroup: { id: 'dockable-desktop-closeEmptyGroup', defaultMessage: 'Close empty split group' },
+  anchorToRightEdge: { id: 'dockable-desktop-anchorToRightEdge', defaultMessage: 'Anchor to Right Edge' },
+  anchorToBottomEdge: { id: 'dockable-desktop-anchorToBottomEdge', defaultMessage: 'Anchor to Bottom Edge' },
+  windowAnchoringOptions: { id: 'dockable-desktop-windowAnchoringOptions', defaultMessage: 'Window Anchoring Options' },
 } as const;
 
 /**

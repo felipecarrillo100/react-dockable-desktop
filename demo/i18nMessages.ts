@@ -27,6 +27,9 @@ export const enMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Restore Size',
   'dockable-desktop-close':           'Close',
   'dockable-desktop-closeEmptyGroup': 'Close empty split group',
+  'dockable-desktop-anchorToRightEdge': 'Anchor to Right Edge',
+  'dockable-desktop-anchorToBottomEdge': 'Anchor to Bottom Edge',
+  'dockable-desktop-windowAnchoringOptions': 'Window Anchoring Options',
 };
 
 // ── Spanish ───────────────────────────────────────────────────────────────────
@@ -43,6 +46,9 @@ export const esMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Restaurar tamaño',
   'dockable-desktop-close':           'Cerrar',
   'dockable-desktop-closeEmptyGroup': 'Cerrar grupo vacío',
+  'dockable-desktop-anchorToRightEdge': 'Anclar al borde derecho',
+  'dockable-desktop-anchorToBottomEdge': 'Anclar al borde inferior',
+  'dockable-desktop-windowAnchoringOptions': 'Opciones de anclaje de ventana',
 };
 
 // ── Dutch ─────────────────────────────────────────────────────────────────────
@@ -59,6 +65,9 @@ export const nlMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Grootte herstellen',
   'dockable-desktop-close':           'Sluiten',
   'dockable-desktop-closeEmptyGroup': 'Lege splitsingsgroep sluiten',
+  'dockable-desktop-anchorToRightEdge': 'Verankeren aan rechterrand',
+  'dockable-desktop-anchorToBottomEdge': 'Verankeren aan onderrand',
+  'dockable-desktop-windowAnchoringOptions': 'Venster verankeringsopties',
 };
 
 // ── French ────────────────────────────────────────────────────────────────────
@@ -75,4 +84,7 @@ export const frMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Restaurer la taille',
   'dockable-desktop-close':           'Fermer',
   'dockable-desktop-closeEmptyGroup': 'Fermer le groupe vide',
+  'dockable-desktop-anchorToRightEdge': 'Ancrer au bord droit',
+  'dockable-desktop-anchorToBottomEdge': 'Ancrer au bord inférieur',
+  'dockable-desktop-windowAnchoringOptions': 'Options d\'ancrage de fenêtre',
 };

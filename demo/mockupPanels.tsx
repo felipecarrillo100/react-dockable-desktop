@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelRegistry, useFormContainer } from '../src/index';
+import { PanelRegistry, useFormContainer, usePanelContext } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import Editor from '@monaco-editor/react';
 import L from 'leaflet';
@@ -33,7 +33,10 @@ export default AppLayout;
 `;
 
 export const CodeEditor: React.FC = () => {
+  const container = useFormContainer();
   const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'light'>('vs-dark');
+  const [currentVal, setCurrentVal] = useState(defaultCode);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     const updateTheme = () => {
@@ -48,21 +51,59 @@ export const CodeEditor: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+  const handleEditorChange = (value: string | undefined) => {
+    const nextVal = value ?? '';
+    setCurrentVal(nextVal);
+
+    if (nextVal !== defaultCode) {
+      if (!isDirty) {
+        setIsDirty(true);
+        container.setDirty(true);
+      }
+    } else {
+      if (isDirty) {
+        setIsDirty(false);
+        container.setDirty(false);
+      }
+    }
+  };
+
+  const handleSave = () => {
+    setIsDirty(false);
+    container.setDirty(false);
+    alert('Code saved successfully!');
+  };
+
   return (
-    <div className="w-100 h-100 text-start" style={{ overflow: 'hidden' }}>
-      <Editor
-        height="100%"
-        defaultLanguage="typescript"
-        theme={editorTheme}
-        value={defaultCode}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 13,
-          lineNumbers: 'on',
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-        }}
-      />
+    <div className="w-100 h-100 text-start d-flex flex-column" style={{ overflow: 'hidden' }}>
+      <div className="d-flex align-items-center justify-content-between p-2 border-bottom border-secondary border-opacity-30 bg-black bg-opacity-20">
+        <span className="small text-muted font-monospace">// app.tsx</span>
+        <button
+          type="button"
+          className={`btn btn-xs py-0 px-2 btn-sm ${isDirty ? 'btn-warning text-dark' : 'btn-outline-success'}`}
+          onClick={handleSave}
+          disabled={!isDirty}
+          style={{ fontSize: '0.75rem' }}
+        >
+          {isDirty ? '💾 Save Changes' : '✅ Saved'}
+        </button>
+      </div>
+      <div className="flex-grow-1">
+        <Editor
+          height="100%"
+          defaultLanguage="typescript"
+          theme={editorTheme}
+          value={currentVal}
+          onChange={handleEditorChange}
+          options={{
+            minimap: { enabled: false },
+            fontSize: 13,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+          }}
+        />
+      </div>
     </div>
   );
 };
@@ -114,21 +155,64 @@ export const HelpCenter: React.FC = () => (
   </div>
 );
 
-export const LayerTree: React.FC = () => (
-  <div className="w-100 h-100 p-3 bg-transparent text-white text-start" style={{ overflow: 'auto' }}>
-    <h6 className="border-bottom border-secondary pb-2 text-info">Layer Catalog Explorer</h6>
-    <div className="d-flex flex-column gap-2 mt-3">
-      {['World Imagery (XYZ)', 'Leaflet OSM Street Map', 'Weather Overlay (WMS)', 'City Vector Model'].map((l, i) => (
-        <div key={l} className="d-flex align-items-center justify-content-between p-2 bg-black bg-opacity-30 rounded border border-secondary-subtle">
-          <span className="font-monospace small">{l}</span>
-          <div className="form-check form-switch m-0">
-            <input className="form-check-input" type="checkbox" defaultChecked={i < 2} role="switch" />
+const LAYER_DEFINITIONS = [
+  { id: 'basemap', name: '🗺️ CartoDB Dark/Voyager', defaultVisible: true, locked: true },
+  { id: 'markers', name: '📍 London Landmarks', defaultVisible: true, locked: false },
+  { id: 'polygons', name: '🏛️ District Boundaries', defaultVisible: true, locked: false },
+  { id: 'polylines', name: '🌊 Thames River Path', defaultVisible: false, locked: false },
+];
+
+export const LayerTree: React.FC = () => {
+  const { publish } = usePanelContext();
+  const [visibility, setVisibility] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    LAYER_DEFINITIONS.forEach(l => { initial[l.id] = l.defaultVisible; });
+    return initial;
+  });
+
+  // Publish initial layer states on mount
+  useEffect(() => {
+    LAYER_DEFINITIONS.forEach(layer => {
+      if (!layer.locked) {
+        publish('layer-visibility', { layerId: layer.id, visible: layer.defaultVisible });
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggle = (layerId: string) => {
+    setVisibility(prev => {
+      const next = { ...prev, [layerId]: !prev[layerId] };
+      publish('layer-visibility', { layerId, visible: next[layerId] });
+      return next;
+    });
+  };
+
+  return (
+    <div className="w-100 h-100 p-3 bg-transparent text-white text-start" style={{ overflow: 'auto' }}>
+      <h6 className="border-bottom border-secondary pb-2 text-info">Layer Catalog Explorer</h6>
+      <div className="d-flex flex-column gap-2 mt-3">
+        {LAYER_DEFINITIONS.map(layer => (
+          <div key={layer.id} className="d-flex align-items-center justify-content-between p-2 bg-black bg-opacity-30 rounded border border-secondary-subtle">
+            <span className="font-monospace small" style={{ opacity: visibility[layer.id] ? 1 : 0.5 }}>{layer.name}</span>
+            <div className="form-check form-switch m-0">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                checked={visibility[layer.id]}
+                disabled={layer.locked}
+                onChange={() => handleToggle(layer.id)}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      <div className="mt-3 small text-secondary">
+        Toggle layers to show/hide vector data on the map.
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const TimeControl: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -216,7 +300,7 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
-    const tileUrl = isLight 
+    const tileUrl = isLight
       ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
@@ -259,18 +343,69 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
   );
 };
 
+// GeoJSON vector data for London demo layers
+const LONDON_LANDMARKS: GeoJSON.FeatureCollection = {
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1276, 51.5074] }, properties: { name: 'Big Ben' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.0762, 51.5081] }, properties: { name: 'Tower of London' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1194, 51.5034] }, properties: { name: 'London Eye' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1416, 51.5014] }, properties: { name: 'Buckingham Palace' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.0983, 51.5138] }, properties: { name: 'St Paul\'s Cathedral' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1534, 51.5194] }, properties: { name: 'Oxford Circus' } },
+  ]
+};
+
+const DISTRICT_BOUNDARIES: GeoJSON.FeatureCollection = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[-0.14, 51.50], [-0.12, 51.50], [-0.12, 51.515], [-0.14, 51.515], [-0.14, 51.50]]]
+      },
+      properties: { name: 'Westminster' }
+    },
+    {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[-0.10, 51.505], [-0.07, 51.505], [-0.07, 51.52], [-0.10, 51.52], [-0.10, 51.505]]]
+      },
+      properties: { name: 'City of London' }
+    },
+    {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[-0.16, 51.495], [-0.14, 51.495], [-0.14, 51.51], [-0.16, 51.51], [-0.16, 51.495]]]
+      },
+      properties: { name: 'Kensington' }
+    }
+  ]
+};
+
+const THAMES_PATH: number[][] = [
+  [-0.18, 51.485], [-0.16, 51.487], [-0.14, 51.490], [-0.13, 51.498],
+  [-0.12, 51.501], [-0.115, 51.504], [-0.10, 51.506], [-0.08, 51.508],
+  [-0.06, 51.507], [-0.04, 51.505], [-0.02, 51.503], [0.00, 51.502]
+];
+
 export const MainMap: React.FC<{ panelId: string }> = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
+  const { subscribe } = usePanelContext();
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const map = L.map(container, {
-      center: [20, 0], // Global
-      zoom: 2,
+      center: [51.505, -0.09], // London
+      zoom: 13,
       zoomControl: false,
     });
     mapRef.current = map;
@@ -278,13 +413,69 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
-    const tileUrl = isLight 
+    const tileUrl = isLight
       ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
     const tileLayer = L.tileLayer(tileUrl, { attribution }).addTo(map);
     tileLayerRef.current = tileLayer;
+
+    // Create vector layer groups
+    // Markers layer
+    const markersGroup = L.layerGroup();
+    L.geoJSON(LONDON_LANDMARKS, {
+      pointToLayer: (_feature, latlng) => {
+        return L.circleMarker(latlng, {
+          radius: 7,
+          fillColor: '#38bdf8',
+          color: '#0ea5e9',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        if (feature.properties?.name) {
+          layer.bindTooltip(feature.properties.name, { permanent: false, direction: 'top', className: 'leaflet-tooltip-custom' });
+        }
+      }
+    }).addTo(markersGroup);
+    markersGroup.addTo(map);
+    layerGroupsRef.current['markers'] = markersGroup;
+
+    // Polygons layer
+    const polygonsGroup = L.layerGroup();
+    L.geoJSON(DISTRICT_BOUNDARIES, {
+      style: {
+        fillColor: '#a78bfa',
+        color: '#7c3aed',
+        weight: 2,
+        opacity: 0.7,
+        fillOpacity: 0.15
+      },
+      onEachFeature: (feature, layer) => {
+        if (feature.properties?.name) {
+          layer.bindTooltip(feature.properties.name, { permanent: true, direction: 'center', className: 'leaflet-tooltip-custom' });
+        }
+      }
+    }).addTo(polygonsGroup);
+    polygonsGroup.addTo(map);
+    layerGroupsRef.current['polygons'] = polygonsGroup;
+
+    // Polylines layer (Thames river path)
+    const polylinesGroup = L.layerGroup();
+    L.polyline(
+      THAMES_PATH.map(coord => [coord[1], coord[0]] as L.LatLngTuple),
+      {
+        color: '#22d3ee',
+        weight: 3,
+        opacity: 0.8,
+        dashArray: '8, 4'
+      }
+    ).bindTooltip('Thames River Path', { permanent: false, direction: 'center' }).addTo(polylinesGroup);
+    // Thames polyline is default hidden, don't add to map
+    layerGroupsRef.current['polylines'] = polylinesGroup;
 
     const updateMapTheme = () => {
       const light = document.documentElement.getAttribute('data-bs-theme') === 'light';
@@ -308,12 +499,33 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
+      layerGroupsRef.current = {};
     };
   }, []);
 
+  // Subscribe to layer visibility events
+  useEffect(() => {
+    const unsubscribe = subscribe('layer-visibility', (data: { layerId: string; visible: boolean }) => {
+      const map = mapRef.current;
+      const layerGroup = layerGroupsRef.current[data.layerId];
+      if (!map || !layerGroup) return;
+
+      if (data.visible) {
+        if (!map.hasLayer(layerGroup)) {
+          map.addLayer(layerGroup);
+        }
+      } else {
+        if (map.hasLayer(layerGroup)) {
+          map.removeLayer(layerGroup);
+        }
+      }
+    });
+    return unsubscribe;
+  }, [subscribe]);
+
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
-      <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px' }} />
+      <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px', zIndex: 1 }} />
       <div className="position-absolute top-0 start-0 m-2 p-1 px-2 rounded bg-black bg-opacity-75 text-success font-monospace small" style={{ zIndex: 1000, pointerEvents: 'none' }}>
         🗺️ Main Global Map View (Leaflet) [Locked Layout]
       </div>
@@ -467,33 +679,33 @@ export const DirtyEditorDemoPanel: React.FC = () => {
 
 // Register all panels
 export function registerDemoPanels() {
-  PanelRegistry.register('mainMap', MainMap, {
-    title: 'Main Map',
-    initialTarget: 'docked',
-    canClose: false,
-    canMinimize: false,
-    canDrag: false
-  });
-  PanelRegistry.register('editor', CodeEditor, { title: 'Code Editor', initialTarget: 'docked' });
-  PanelRegistry.register('terminal', TerminalConsole, { title: 'Console Output', initialTarget: 'docked' });
-  PanelRegistry.register('preview', PreviewOutput, { title: 'Sandbox Widget', initialTarget: 'floating' });
-  PanelRegistry.register('help', HelpCenter, { title: 'Workspace Help', initialTarget: 'docked' });
-  PanelRegistry.register('luciadMap', LeafletMapPanel, { title: 'Leaflet Map', initialTarget: 'docked' });
-  PanelRegistry.register('layertree', LayerTree, { title: 'Layer tree', initialTarget: 'floating', favoritePosition: { x: 1000, y: 100, width: 300, height: 400 } });
-  PanelRegistry.register('timecontrol', TimeControl, {
-    title: 'Time Control bar',
-    initialTarget: 'floating',
-    favoritePosition: {
-      x: '10px',
-      y: 'calc(100% - 130px)',
-      width: 'calc(100% - 20px)',
-      height: '100px'
-    }
-  });
-  PanelRegistry.register('overviewmap', OverviewMap, { title: 'Overview locator', initialTarget: 'floating', favoritePosition: { x: 80, y: 500, width: 220, height: 180 } });
-  PanelRegistry.register('table', TablePanel, { title: 'Attribute Table', initialTarget: 'docked' });
-  PanelRegistry.register('toolpanels', ToolPanel, { title: 'Toolbox Panel', initialTarget: 'docked' });
-  PanelRegistry.register('panelmanager', PanelManagerForm, { title: 'Panel Registry Form', initialTarget: 'floating', favoritePosition: { x: 400, y: 150, width: 500, height: 420 } });
-  PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { title: 'Intercept Form', initialTarget: 'floating', favoritePosition: { x: 350, y: 150, width: 450, height: 420 } });
-  PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { title: 'Intercept Editor', initialTarget: 'docked' });
+    PanelRegistry.register('mainMap', MainMap, {
+        title: 'Main Map',
+        initialTarget: 'docked',
+        canClose: false,
+        canMinimize: false,
+        canDrag: false
+    });
+    PanelRegistry.register('editor', CodeEditor, { title: 'Code Editor', initialTarget: 'docked' });
+    PanelRegistry.register('terminal', TerminalConsole, { title: 'Console Output', initialTarget: 'docked' });
+    PanelRegistry.register('preview', PreviewOutput, { title: 'Sandbox Widget', initialTarget: 'floating' });
+    PanelRegistry.register('help', HelpCenter, { title: 'Workspace Help', initialTarget: 'docked' });
+    PanelRegistry.register('luciadMap', LeafletMapPanel, { title: 'Leaflet Map', initialTarget: 'docked' });
+    PanelRegistry.register('layertree', LayerTree, { title: 'Layer tree', initialTarget: 'floating', favoritePosition: { x: 10, y: 50, width: 300, height: 400 }, defaultStickyRight: true });
+    PanelRegistry.register('timecontrol', TimeControl, {
+        title: 'Time Control bar',
+        initialTarget: 'floating',
+        favoritePosition: {
+            x: '10px',
+            y: 'calc(100% - 130px)',
+            width: 'calc(100% - 20px)',
+            height: '100px'
+        }
+    });
+    PanelRegistry.register('overviewmap', OverviewMap, { title: 'Overview locator', initialTarget: 'floating', favoritePosition: { x: 80, y: 500, width: 220, height: 180 } });
+    PanelRegistry.register('table', TablePanel, { title: 'Attribute Table', initialTarget: 'docked' });
+    PanelRegistry.register('toolpanels', ToolPanel, { title: 'Toolbox Panel', initialTarget: 'docked' });
+    PanelRegistry.register('panelmanager', PanelManagerForm, { title: 'Panel Registry Form', initialTarget: 'floating', favoritePosition: { x: 400, y: 150, width: 500, height: 420 } });
+    PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { title: 'Intercept Form', initialTarget: 'floating', favoritePosition: { x: 350, y: 150, width: 450, height: 420 } });
+    PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { title: 'Intercept Editor', initialTarget: 'docked' });
 }

@@ -385,7 +385,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 
 export const WindowManager: React.FC = () => {
   const state = useWindowManagerState();
-  const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, dockPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge } = useWindowManagerActions();
+  const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
@@ -577,12 +577,122 @@ export const WindowManager: React.FC = () => {
     };
   }, [state.draggedPanelId]);
 
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const [workspaceSize, setWorkspaceSize] = useState({ width: 1024, height: 768 });
+
+  // Dynamically observe the workspace container bounds (accounts for sidebar expanding/collapsing and taskbar showing/hiding)
+  useEffect(() => {
+    const el = workspaceRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const rect = entries[0].contentRect;
+      setWorkspaceSize({
+        width: Math.max(100, rect.width),
+        height: Math.max(100, rect.height)
+      });
+    });
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // Sync / Realignment Effect when actual workspace size changes
+  useEffect(() => {
+    const viewW = workspaceSize.width;
+    const viewH = workspaceSize.height;
+
+    state.floating.forEach(w => {
+      const winW = typeof w.width === 'string' ? parseFloat(w.width) : w.width;
+      const winH = typeof w.height === 'string' ? parseFloat(w.height) : w.height;
+      const winX = typeof w.x === 'string' ? parseFloat(w.x) : w.x;
+      const winY = typeof w.y === 'string' ? parseFloat(w.y) : w.y;
+
+      let newWidth = winW;
+      let newHeight = winH;
+      let newX = winX;
+      let newY = winY;
+      let changed = false;
+
+      // Clamp window size if it exceeds the new workspace size
+      if (newWidth > viewW) {
+        newWidth = Math.max(200, viewW - 20);
+        changed = true;
+      }
+      if (newHeight > viewH) {
+        newHeight = Math.max(150, viewH - 40);
+        changed = true;
+      }
+
+      const GAP = 10;
+
+      // Align sticky borders
+      if (w.stickyRight) {
+        newX = viewW - newWidth - GAP;
+        changed = true;
+      } else {
+        // Bounding clamp for non-sticky windows to prevent falling off-screen
+        const maxX = viewW - 100; // Keep at least 100px of titlebar visible
+        if (newX > maxX) {
+          newX = Math.max(0, maxX);
+          changed = true;
+        }
+      }
+
+      if (w.stickyBottom) {
+        newY = viewH - newHeight - GAP;
+        changed = true;
+      } else {
+        const maxY = viewH - 40; // Keep titlebar clickable
+        if (newY > maxY) {
+          newY = Math.max(0, maxY);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        updateFloatingPosition(w.id, {
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight
+        });
+      }
+    });
+  }, [workspaceSize, state.floating, updateFloatingPosition]);
+
+  // Global Window Focus Event Delegation (Left-click anywhere inside a window raises it)
+  useEffect(() => {
+    const handleMouseDownGlobal = (e: MouseEvent) => {
+      // Only handle left clicks (button === 0)
+      if (e.button !== 0) return;
+
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const windowEl = target.closest('.floating-window') as HTMLElement | null;
+      if (!windowEl) return;
+
+      const winId = windowEl.getAttribute('data-window-id');
+      if (winId) {
+        bringToFront(winId);
+      }
+    };
+
+    document.addEventListener('mousedown', handleMouseDownGlobal);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDownGlobal);
+    };
+  }, [bringToFront]);
+
   // Floating Window dragging handler
   const startDrag = (id: string, e: React.MouseEvent) => {
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
     bringToFront(id);
-    setDraggedPanelId(id);
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -590,38 +700,55 @@ export const WindowManager: React.FC = () => {
     const windowEl = titlebarEl.closest('.floating-window') as HTMLDivElement | null;
     const startPosX = windowEl ? windowEl.offsetLeft : 0;
     const startPosY = windowEl ? windowEl.offsetTop : 0;
+    let dragStarted = false;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
-      updateFloatingPosition(id, {
-        x: startPosX + dx,
-        y: startPosY + dy
-      });
+
+      if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        dragStarted = true;
+        setDraggedPanelId(id);
+      }
+
+      if (dragStarted) {
+        const newX = startPosX + dx;
+        const newY = startPosY + dy;
+
+        // Dragging clears all sticky anchoring
+        updateFloatingPosition(id, {
+          x: newX,
+          y: newY,
+          stickyRight: false,
+          stickyBottom: false
+        });
+      }
     };
 
     const handleMouseUp = () => {
-      const dropZone = activeDropZoneRef.current;
-      const targetTab = hoveredTabRef.current;
-      const edgeDrop = activeEdgeDropRef.current;
+      if (dragStarted) {
+        const dropZone = activeDropZoneRef.current;
+        const targetTab = hoveredTabRef.current;
+        const edgeDrop = activeEdgeDropRef.current;
 
-      if (edgeDrop) {
-        dockPanelToWorkspaceEdge(id, edgeDrop);
-      } else if (targetTab) {
-        let targetIndex = targetTab.index;
-        if (targetTab.side === 'right') {
-          targetIndex += 1;
+        if (edgeDrop) {
+          dockPanelToWorkspaceEdge(id, edgeDrop);
+        } else if (targetTab) {
+          let targetIndex = targetTab.index;
+          if (targetTab.side === 'right') {
+            targetIndex += 1;
+          }
+          movePanelOrder(id, targetTab.leafId, targetIndex);
+        } else if (dropZone) {
+          dockPanelToGroup(id, dropZone.leafId, dropZone.position);
         }
-        movePanelOrder(id, targetTab.leafId, targetIndex);
-      } else if (dropZone) {
-        dockPanelToGroup(id, dropZone.leafId, dropZone.position);
+        setDraggedPanelId(null);
+        setActiveDropZone(null);
+        activeDropZoneRef.current = null;
+        setHoveredTab(null);
+        hoveredTabRef.current = null;
+        setActiveEdgeDrop(null);
       }
-      setDraggedPanelId(null);
-      setActiveDropZone(null);
-      activeDropZoneRef.current = null;
-      setHoveredTab(null);
-      hoveredTabRef.current = null;
-      setActiveEdgeDrop(null);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -647,9 +774,47 @@ export const WindowManager: React.FC = () => {
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dw = moveEvent.clientX - startX;
       const dh = moveEvent.clientY - startY;
+
+      let newWidth = Math.max(200, startW + dw);
+      let newHeight = Math.max(150, startH + dh);
+
+      let newX = floatingWin.x;
+      let newY = floatingWin.y;
+
+      const viewW = workspaceSize.width;
+      const viewH = workspaceSize.height;
+
+      const parsedX = typeof floatingWin.x === 'string' ? parseFloat(floatingWin.x) : floatingWin.x;
+      const parsedY = typeof floatingWin.y === 'string' ? parseFloat(floatingWin.y) : floatingWin.y;
+      const parsedW = typeof floatingWin.width === 'string' ? parseFloat(floatingWin.width) : floatingWin.width;
+      const parsedH = typeof floatingWin.height === 'string' ? parseFloat(floatingWin.height) : floatingWin.height;
+
+      const isRightSnapped = Math.abs(parsedX + parsedW - viewW) < 4;
+      const isBottomSnapped = Math.abs(parsedY + parsedH - viewH) < 4;
+
+      if (isRightSnapped) {
+        newX = viewW - newWidth;
+        if (newX < 0) {
+          newX = 0;
+          newWidth = viewW;
+        }
+      }
+
+      if (isBottomSnapped) {
+        newY = viewH - newHeight;
+        if (newY < 0) {
+          newY = 0;
+          newHeight = viewH;
+        }
+      }
+
       updateFloatingPosition(id, {
-        width: Math.max(200, startW + dw),
-        height: Math.max(150, startH + dh)
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight,
+        stickyRight: isRightSnapped,
+        stickyBottom: isBottomSnapped
       });
     };
 
@@ -671,181 +836,238 @@ export const WindowManager: React.FC = () => {
   };
 
   return (
-    <div className={`window-manager-workspace w-100 h-100 d-flex flex-column overflow-hidden position-relative ${state.draggedPanelId ? 'dragging-active' : ''}`} style={{ userSelect: 'none' }}>
+    <div className="d-flex flex-column w-100 h-100 overflow-hidden" style={{ userSelect: 'none' }}>
       
-      {/* Workspace outer edge drop zone targets */}
-      {state.draggedPanelId !== null && (
-        <>
-          <div 
-            className="workspace-edge-trigger edge-trigger-left"
-            onMouseEnter={() => setActiveEdgeDrop('left')}
-            onMouseLeave={() => setActiveEdgeDrop(null)}
-          />
-          <div 
-            className="workspace-edge-trigger edge-trigger-right"
-            onMouseEnter={() => setActiveEdgeDrop('right')}
-            onMouseLeave={() => setActiveEdgeDrop(null)}
-          />
-          <div 
-            className="workspace-edge-trigger edge-trigger-top"
-            onMouseEnter={() => setActiveEdgeDrop('top')}
-            onMouseLeave={() => setActiveEdgeDrop(null)}
-          />
-          <div 
-            className="workspace-edge-trigger edge-trigger-bottom"
-            onMouseEnter={() => setActiveEdgeDrop('bottom')}
-            onMouseLeave={() => setActiveEdgeDrop(null)}
-          />
-        </>
-      )}
-
-      {/* Edge drop visual preview overlay */}
-      {state.draggedPanelId !== null && activeEdgeDrop !== null && (
-        <div className={`workspace-edge-preview edge-preview-${activeEdgeDrop}`} />
-      )}
-      
-      {/* 1. Viewport Split Grid Layout */}
-      <div className="flex-grow-1 w-100" style={{ overflow: 'hidden', position: 'relative' }}>
-        {state.gridRoot ? (
-          <WorkspaceGrid 
-            node={state.gridRoot} 
-            path={[]} 
-            onTabRightClick={handleTabRightClick} 
-            activeDropZone={activeDropZone} 
-            onHoverDropZone={handleHoverDropZone} 
-            onTabDragStart={handleTabDragStart}
-            hoveredTab={hoveredTab}
-            onTabHover={handleTabHover}
-          />
-        ) : (
-          <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted font-monospace small">
-            Grid Empty
-          </div>
-        )}
-      </div>
-
-      {/* 2. Floating Windows Absolute Container Overlay */}
-      {state.floating.map(w => {
-        const panel = state.panels[w.id];
-        if (!panel) return null;
-        
-        const isMaximized = w.maximized;
-        const isDragged = state.draggedPanelId === w.id;
-
-        const registryEntry = PanelRegistry.get(panel.component);
-        const options = registryEntry?.defaultOptions;
-
-        return (
-          <div
-            key={w.id}
-            onMouseDown={() => bringToFront(w.id)}
-            className={`floating-window ${isMaximized ? 'maximized' : ''} ${windowClass ?? ''}`}
-            style={{
-              position: 'absolute',
-              left: isMaximized ? 0 : (typeof w.x === 'number' ? `${w.x}px` : w.x),
-              top: isMaximized ? 0 : (typeof w.y === 'number' ? `${w.y}px` : w.y),
-              width: isMaximized ? '100%' : (typeof w.width === 'number' ? `${w.width}px` : w.width),
-              height: isMaximized ? '100%' : (typeof w.height === 'number' ? `${w.height}px` : w.height),
-              zIndex: w.z,
-              pointerEvents: isDragged ? 'none' : 'auto',
-            }}
-          >
-            {/* Title Bar */}
+      {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
+      <div 
+        ref={workspaceRef} 
+        className={`flex-grow-1 w-100 position-relative ${state.draggedPanelId ? 'dragging-active' : ''}`}
+        style={{ overflow: 'hidden' }}
+      >
+        {/* Workspace outer edge drop zone targets */}
+        {state.draggedPanelId !== null && (
+          <>
             <div 
-              onDoubleClick={() => maximizePanel(w.id)}
-              onMouseDown={(e) => {
-                if (options?.canDrag !== false) {
-                  startDrag(w.id, e);
-                }
-              }}
-              className="floating-window-titlebar d-flex flex-row justify-content-between align-items-center cursor-move"
-              style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
-            >
-              <span className="floating-window-title text-truncate me-2">
-                {formatLabel(panel.title, formatMessage)}
-                {panel.dirty ? ' *' : ''}
-              </span>
-              <div className="d-flex align-items-center gap-1.5" onMouseDown={(e) => e.stopPropagation()}>
-                {options?.canDrag !== false && (
-                  <button 
-                    type="button" 
-                    title={formatLabel(messages.dockWindow, formatMessage)}
-                    onClick={() => dockPanel(w.id)}
-                    className="custom-tab-btn"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <rect x="3" y="3" width="18" height="18" rx="2"/>
-                      <path d="M9 3v18M3 9h18"/>
-                    </svg>
-                  </button>
-                )}
-                {options?.canMinimize !== false && (
-                  <button 
-                    type="button" 
-                    title={formatLabel(messages.minimize, formatMessage)}
-                    onClick={() => minimizePanel(w.id)}
-                    className="custom-tab-btn"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <path d="M5 12h14"/>
-                    </svg>
-                  </button>
-                )}
-                <button 
-                  type="button" 
-                  title={isMaximized
-                    ? formatLabel(messages.restoreSize, formatMessage)
-                    : formatLabel(messages.maximize, formatMessage)}
-                  onClick={() => maximizePanel(w.id)}
-                  className="custom-tab-btn"
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="4" y="4" width="16" height="16" rx="1.5"/>
-                  </svg>
-                </button>
-                {options?.canClose !== false && (
-                  <button 
-                    type="button" 
-                    title={formatLabel(messages.close, formatMessage)}
-                    onClick={() => requestClosePanel(w.id)}
-                    className="custom-tab-btn btn-close-tab"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
+              className="workspace-edge-trigger edge-trigger-left"
+              onMouseEnter={() => setActiveEdgeDrop('left')}
+              onMouseLeave={() => setActiveEdgeDrop(null)}
+            />
+            <div 
+              className="workspace-edge-trigger edge-trigger-right"
+              onMouseEnter={() => setActiveEdgeDrop('right')}
+              onMouseLeave={() => setActiveEdgeDrop(null)}
+            />
+            <div 
+              className="workspace-edge-trigger edge-trigger-top"
+              onMouseEnter={() => setActiveEdgeDrop('top')}
+              onMouseLeave={() => setActiveEdgeDrop(null)}
+            />
+            <div 
+              className="workspace-edge-trigger edge-trigger-bottom"
+              onMouseEnter={() => setActiveEdgeDrop('bottom')}
+              onMouseLeave={() => setActiveEdgeDrop(null)}
+            />
+          </>
+        )}
 
-            {/* Window Content */}
-            <div className={`flex-grow-1 w-100 overflow-hidden ${windowBodyClass ?? ''}`} style={{ position: 'relative' }}>
-              <PreservedDOMWrapper key={w.id} panelId={w.id} />
+        {/* Edge drop visual preview overlay */}
+        {state.draggedPanelId !== null && activeEdgeDrop !== null && (
+          <div className={`workspace-edge-preview edge-preview-${activeEdgeDrop}`} />
+        )}
+        
+        {/* 1.1 Viewport Split Grid Layout */}
+        <div className="w-100 h-100" style={{ overflow: 'hidden', position: 'relative' }}>
+          {state.gridRoot ? (
+            <WorkspaceGrid 
+              node={state.gridRoot} 
+              path={[]} 
+              onTabRightClick={handleTabRightClick} 
+              activeDropZone={activeDropZone} 
+              onHoverDropZone={handleHoverDropZone} 
+              onTabDragStart={handleTabDragStart}
+              hoveredTab={hoveredTab}
+              onTabHover={handleTabHover}
+            />
+          ) : (
+            <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted font-monospace small">
+              Grid Empty
             </div>
+          )}
+        </div>
 
-            {/* Resize Handle */}
-            {!isMaximized && (
+        {/* 1.2 Floating Windows Absolute Container Overlay */}
+        {(() => {
+          const maxZ = state.floating.length > 0 ? Math.max(...state.floating.map(w => w.z)) : 0;
+          return state.floating.map(w => {
+            const panel = state.panels[w.id];
+            if (!panel) return null;
+            
+            const isMaximized = w.maximized;
+            const isDragged = state.draggedPanelId === w.id;
+            const isFocused = w.z === maxZ && state.floating.length > 0;
+
+            const registryEntry = PanelRegistry.get(panel.component);
+            const options = registryEntry?.defaultOptions;
+
+            return (
               <div
-                onMouseDown={(e) => startResize(w.id, e)}
+                key={w.id}
+                data-window-id={w.id}
+                className={`floating-window ${isMaximized ? 'maximized' : ''} ${isFocused ? 'v2-window-focused' : ''} ${windowClass ?? ''}`}
                 style={{
                   position: 'absolute',
-                  right: 0,
-                  bottom: 0,
-                  width: '14px',
-                  height: '14px',
-                  cursor: 'se-resize',
-                  zIndex: 30,
-                  background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%)'
+                  left: isMaximized ? 0 : (typeof w.x === 'number' ? `${w.x}px` : w.x),
+                  top: isMaximized ? 0 : (typeof w.y === 'number' ? `${w.y}px` : w.y),
+                  width: isMaximized ? '100%' : (typeof w.width === 'number' ? `${w.width}px` : w.width),
+                  height: isMaximized ? '100%' : (typeof w.height === 'number' ? `${w.height}px` : w.height),
+                  zIndex: w.z,
+                  pointerEvents: isDragged ? 'none' : 'auto',
                 }}
-              />
-            )}
-          </div>
-        );
-      })}
+              >
+                {/* Title Bar */}
+                <div 
+                  onDoubleClick={() => maximizePanel(w.id)}
+                  onMouseDown={(e) => {
+                    if (options?.canDrag !== false) {
+                      startDrag(w.id, e);
+                    }
+                  }}
+                  className="floating-window-titlebar d-flex flex-row justify-content-between align-items-center cursor-move"
+                  style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
+                >
+                  <span className="floating-window-title text-truncate me-2">
+                    {formatLabel(panel.title, formatMessage)}
+                    {panel.dirty ? ' *' : ''}
+                  </span>
+                  <div className="d-flex align-items-center gap-1.5" onMouseDown={(e) => e.stopPropagation()}>
+                    {options?.canDrag !== false && (
+                      <button 
+                        type="button" 
+                        title={formatLabel(messages.windowAnchoringOptions, formatMessage)}
+                        onClick={(e) => {
+                          const isRight = !!w.stickyRight;
+                          const isBottom = !!w.stickyBottom;
+                          contextMenuRef.current?.show({
+                            event: e,
+                            contextMenu: {
+                              items: [
+                                {
+                                  label: formatLabel(messages.anchorToRightEdge, formatMessage),
+                                  checkbox: {
+                                    active: true,
+                                    enabled: true,
+                                    value: isRight
+                                  },
+                                  action: () => {
+                                    const viewW = workspaceSize.width;
+                                    const winW = typeof w.width === 'string' ? parseFloat(w.width) : w.width;
+                                    const GAP = 10;
+                                    if (!isRight) {
+                                      updateFloatingPosition(w.id, { x: viewW - winW - GAP, stickyRight: true });
+                                    } else {
+                                      updateFloatingPosition(w.id, { stickyRight: false });
+                                    }
+                                  }
+                                },
+                                {
+                                  label: formatLabel(messages.anchorToBottomEdge, formatMessage),
+                                  checkbox: {
+                                    active: true,
+                                    enabled: true,
+                                    value: isBottom
+                                  },
+                                  action: () => {
+                                    const viewH = workspaceSize.height;
+                                    const winH = typeof w.height === 'string' ? parseFloat(w.height) : w.height;
+                                    const GAP = 10;
+                                    if (!isBottom) {
+                                      updateFloatingPosition(w.id, { y: viewH - winH - GAP, stickyBottom: true });
+                                    } else {
+                                      updateFloatingPosition(w.id, { stickyBottom: false });
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          });
+                        }}
+                        className="custom-tab-btn"
+                      >
+                        <svg className={`anchor-icon ${(w.stickyRight && w.stickyBottom) ? 'anchor-sticky-both' : w.stickyRight ? 'anchor-sticky-right' : w.stickyBottom ? 'anchor-sticky-bottom' : ''}`} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <circle cx="12" cy="5" r="2" />
+                          <path d="M12 7v7m0 0a4 4 0 0 1-4-4M12 14a4 4 0 0 0 4-4M5 18h14" />
+                        </svg>
+                      </button>
+                    )}
+                    {options?.canMinimize !== false && (
+                      <button 
+                        type="button" 
+                        title={formatLabel(messages.minimize, formatMessage)}
+                        onClick={() => minimizePanel(w.id)}
+                        className="custom-tab-btn"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <path d="M5 12h14"/>
+                        </svg>
+                      </button>
+                    )}
+                    <button 
+                      type="button" 
+                      title={isMaximized
+                        ? formatLabel(messages.restoreSize, formatMessage)
+                        : formatLabel(messages.maximize, formatMessage)}
+                      onClick={() => maximizePanel(w.id)}
+                      className="custom-tab-btn"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <rect x="4" y="4" width="16" height="16" rx="1.5"/>
+                      </svg>
+                    </button>
+                    {options?.canClose !== false && (
+                      <button 
+                        type="button" 
+                        title={formatLabel(messages.close, formatMessage)}
+                        onClick={() => requestClosePanel(w.id)}
+                        className="custom-tab-btn btn-close-tab"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
 
-      {/* 3. macOS / Windows 11-style Taskbar at the bottom */}
+                {/* Window Content */}
+                <div className={`flex-grow-1 w-100 overflow-hidden ${windowBodyClass ?? ''}`} style={{ position: 'relative' }}>
+                  <PreservedDOMWrapper key={w.id} panelId={w.id} />
+                </div>
+
+                {/* Resize Handle */}
+                {!isMaximized && (
+                  <div
+                    onMouseDown={(e) => startResize(w.id, e)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      bottom: 0,
+                      width: '14px',
+                      height: '14px',
+                      cursor: 'se-resize',
+                      zIndex: 30,
+                      background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%)'
+                    }}
+                  />
+                )}
+              </div>
+            );
+          });
+        })()}
+      </div>
+
+      {/* 2. macOS / Windows 11-style Taskbar Sibling Footer (Flex-shrinked at bottom) */}
       {state.minimized.length > 0 && (
-        <div className="d-flex flex-row align-items-center bg-black bg-opacity-75 border-top border-secondary border-opacity-30 px-3 py-1.5 justify-content-center" style={{ height: '48px', zIndex: 100 }}>
+        <div className="flex-shrink-0 w-100 d-flex flex-row align-items-center bg-black bg-opacity-75 border-top border-secondary border-opacity-30 px-3 py-1.5 justify-content-center" style={{ height: '48px', zIndex: 100 }}>
           <button 
             type="button" 
             onClick={() => scrollTaskbar('left')}
@@ -912,7 +1134,7 @@ export const WindowManager: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Persistence Port: Portals rendering panels into off-screen elements */}
+      {/* 3. Persistence Port: Portals rendering panels into off-screen elements */}
       {instantiatedPanels.map((id) => {
         const panel = state.panels[id];
         if (!panel) return null;
@@ -928,10 +1150,10 @@ export const WindowManager: React.FC = () => {
         );
       })}
 
-      {/* 5. Context Menu (replace-react-contexify JSON mode) */}
+      {/* 4. Context Menu (replace-react-contexify JSON mode) */}
       <JsonContextMenu ref={contextMenuRef} id="workspace-context-menu" theme="dark" />
 
-      {/* 6. Dragging Tab Ghost Representation */}
+      {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (
         <div 
           className="position-fixed bg-black bg-opacity-80 border border-info rounded text-info font-monospace px-3 py-1.5 shadow-lg d-flex align-items-center gap-2"
@@ -950,7 +1172,7 @@ export const WindowManager: React.FC = () => {
         </div>
       )}
 
-      {/* 7. Dirty warning dialog overlay */}
+      {/* 6. Dirty warning dialog overlay */}
       {state.pendingClose && (() => {
         const pendingPanel = state.panels[state.pendingClose.id];
         const panelTitle = pendingPanel ? formatLabel(pendingPanel.title, formatMessage) : 'Panel';
