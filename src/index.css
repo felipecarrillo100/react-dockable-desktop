@@ -8,6 +8,48 @@
   --border-color: rgba(255, 255, 255, 0.08);
   --accent-color: #38bdf8; /* Modern Cyan/Sky-blue accent */
   --accent-glow: rgba(56, 189, 248, 0.15);
+  /* Window skins variables */
+  --window-bg: rgba(20, 22, 28, var(--window-opacity, 0.85));
+  --window-border: rgba(255, 255, 255, 0.08);
+  --window-border-focused: rgba(255, 255, 255, 0.28);
+  --window-header-bg: rgba(0, 0, 0, 0.25);
+  --window-text: #f8f9fa;
+  --window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --window-shadow-focused: 0 24px 50px rgba(0, 0, 0, 0.55);
+  /* Grid/Docked panel theme variables */
+  --border-panel: rgba(255, 255, 255, 0.08);
+  --bg-tab-inactive: #0c0d12;
+  --text-tab-inactive: #858b99;
+  --text-tab-active: #ffffff;
+  /* Tab and control button hover colors */
+  --bg-tab-hover: #171a22;
+  --text-tab-hover: #e2e8f0;
+  --close-btn-hover-bg: rgba(255, 255, 255, 0.12);
+  --close-btn-hover-color: #ffffff;
+  --close-btn-color: #858b99;
+  --close-btn-active-color: #e2e8f0;
+  --resizer-bg: rgba(255, 255, 255, 0.08);
+  --custom-btn-bg: rgba(255, 255, 255, 0.03);
+  --custom-btn-border: rgba(255, 255, 255, 0.05);
+  --custom-btn-hover-bg: rgba(255, 255, 255, 0.12);
+  --custom-btn-hover-color: #ffffff;
+  /* Taskbar theme variables */
+  --taskbar-bg: rgba(0, 0, 0, 0.75);
+  --taskbar-border: rgba(255, 255, 255, 0.1);
+  --taskbar-nav-color: rgba(255, 255, 255, 0.5);
+  --taskbar-item-bg: rgba(15, 23, 42, 0.6);
+  --taskbar-item-hover-bg: rgba(15, 23, 42, 0.8);
+  --taskbar-item-border: rgba(255, 255, 255, 0.08);
+  --taskbar-item-text: var(--accent-color, #38bdf8);
+  /* Scrollbar theme variables */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  --scrollbar-track: rgba(255, 255, 255, 0.01);
+  /* Mockup Panel inner theme variables */
+  --panel-card-bg: rgba(0, 0, 0, 0.2);
+  --panel-card-border: rgba(255, 255, 255, 0.1);
+  --panel-text: var(--text-primary);
+  --panel-title-color: var(--accent-color, #38bdf8);
 }
 
 html,
@@ -56,14 +98,14 @@ body,
 /* Workspace Panel Container */
 .workspace-panel {
   background-color: var(--bg-panel);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-panel);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
 /* Tab Headers Bar */
 .workspace-tab-bar {
   background-color: var(--bg-tab-bar);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-panel);
   padding: 0 4px;
 }
 
@@ -81,10 +123,10 @@ body,
 /* Premium Tab styling (VS Code Style) */
 .workspace-tab {
   position: relative;
-  background-color: #0c0d12 !important; /* VS Code dark background for inactive tabs */
-  color: #858b99 !important; /* Clear readable gray */
+  background-color: var(--bg-tab-inactive) !important; /* VS Code dark background for inactive tabs */
+  color: var(--text-tab-inactive) !important; /* Clear readable gray */
   border: none !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important; /* crisp separator */
+  border-right: 1px solid var(--border-panel) !important; /* crisp separator */
   padding: 0 8px 0 16px !important;
   font-size: 0.75rem;
   transition: background-color 0.1s ease, color 0.1s ease;
@@ -106,16 +148,16 @@ body,
 }
 
 .workspace-tab:hover {
-  background-color: #171a22 !important;
-  color: #e2e8f0 !important;
+  background-color: var(--bg-tab-hover) !important;
+  color: var(--text-tab-hover) !important;
 }
 
 /* Active tab */
 .workspace-tab.active {
   background-color: var(--bg-panel) !important; /* matches panel content area */
-  color: #ffffff !important;
+  color: var(--text-tab-active) !important;
   font-weight: 500;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: 1px solid var(--border-panel) !important;
   z-index: 2;
 }
 
@@ -133,11 +175,11 @@ body,
 }
 
 .workspace-tab-inactive {
-  color: #858b99 !important;
+  color: var(--close-btn-color) !important;
 }
 
 .workspace-tab-inactive:hover {
-  color: #ffffff !important;
+  color: var(--text-tab-hover) !important;
 }
 
 /* Tab close button (VS Code style visibility) */
@@ -146,7 +188,7 @@ body,
   transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
   margin-left: 8px;
   border-radius: 3px;
-  color: #858b99 !important;
+  color: var(--close-btn-color) !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,38 +197,38 @@ body,
 /* Always show close icon on active tab */
 .workspace-tab.active .close-tab-x {
   opacity: 0.75 !important;
-  color: #e2e8f0 !important;
+  color: var(--close-btn-active-color) !important;
 }
 
 /* Show close icon on hover of any tab */
 .workspace-tab:hover .close-tab-x {
   opacity: 0.75 !important;
-  color: #e2e8f0 !important;
+  color: var(--close-btn-active-color) !important;
 }
 
 /* Hover style on the close icon itself (VS Code dark rounded background) */
 .close-tab-x:hover {
   opacity: 1 !important;
-  background-color: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
+  background-color: var(--close-btn-hover-bg) !important;
+  color: var(--close-btn-hover-color) !important;
 }
 
 /* Drag resizer split bars */
 .resizer-bar {
-  background-color: rgba(255, 255, 255, 0.03) !important;
+  background-color: var(--resizer-bg) !important;
   transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .resizer-bar:hover,
 .resizer-bar.active {
-  background-color: rgba(56, 189, 248, 0.3) !important;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  background-color: var(--accent-color) !important;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* Control buttons inside tabs/windows */
 .custom-tab-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--custom-btn-bg);
+  border: 1px solid var(--custom-btn-border);
   color: var(--text-secondary);
   font-size: 9px;
   width: 18px;
@@ -202,26 +244,43 @@ body,
 }
 
 .custom-tab-btn:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.18);
+  background-color: var(--custom-btn-hover-bg);
+  color: var(--custom-btn-hover-color);
+  border-color: var(--custom-btn-border);
   transform: scale(1.05);
+}
+
+/* Taskbar Sibling Footer Styling */
+.taskbar-footer-container {
+  background-color: var(--taskbar-bg) !important;
+  border-top: 1px solid var(--taskbar-border) !important;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+.taskbar-nav-btn {
+  color: var(--taskbar-nav-color) !important;
+}
+
+.taskbar-nav-btn:hover {
+  color: var(--accent-color) !important;
 }
 
 /* macOS/Win11 Glassmorphic Taskbar */
 .taskbar-glassmorphic-item {
-  background: rgba(15, 23, 42, 0.6) !important;
+  background: var(--taskbar-item-bg) !important;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--taskbar-item-border) !important;
+  color: var(--taskbar-item-text) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .taskbar-glassmorphic-item:hover {
-  background: rgba(15, 23, 42, 0.8) !important;
-  border-color: rgba(56, 189, 248, 0.4) !important;
-  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.2);
+  background: var(--taskbar-item-hover-bg) !important;
+  border-color: var(--accent-color, #38bdf8) !important;
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.15);
 }
 
 /* Custom scrollbar layout */
@@ -236,7 +295,7 @@ body,
 /* Cross-browser scrollbar styling (Firefox standard) */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.01);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* WebKit (Chrome, Safari, Edge) scrollbar styling */
@@ -245,14 +304,14 @@ body,
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Premium Hover Highlight Effects */
@@ -266,11 +325,11 @@ body,
   display: flex;
   flex-direction: column;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--window-border);
+  box-shadow: var(--window-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  background-color: rgba(20, 22, 28, var(--window-opacity, 0.85));
+  background-color: var(--window-bg);
   overflow: hidden;
   opacity: 0.88;
   transition: opacity 0.2s, box-shadow 0.2s, border-color 0.2s;
@@ -278,8 +337,8 @@ body,
 
 .floating-window.v2-window-focused {
   opacity: 1;
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: var(--window-shadow-focused), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: var(--window-border-focused);
 }
 
 .floating-window.maximized {
@@ -308,8 +367,8 @@ body,
 
 .floating-window-titlebar {
   padding: 8px 14px;
-  background-color: rgba(0, 0, 0, 0.25);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background-color: var(--window-header-bg);
+  border-bottom: 1px solid var(--window-border);
   min-height: 38px;
 }
 
@@ -317,7 +376,7 @@ body,
   font-family: 'Outfit', sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--window-text);
   letter-spacing: 0.02em;
 }
 
@@ -506,6 +565,14 @@ body,
 }
 
 [data-bs-theme="light"] {
+  --bg-primary: #f8f9fa;
+  --bg-workspace: #f1f5f9;
+  --bg-panel: #ffffff;
+  --bg-tab-bar: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: rgba(0, 0, 0, 0.08);
+
   --sidebar-bg: #f8f9fa;
   --sidebar-tabs-bg: #e9ecef;
   --sidebar-border: rgba(0, 0, 0, 0.08);
@@ -524,6 +591,48 @@ body,
   --tab-icon-active: #0066cc;
   --tab-icon-inactive: #555c66;
   --tab-btn-active-bg: #f8f9fa; /* Seamless merge look */
+  /* Light skin window overrides */
+  --window-bg: rgba(243, 244, 246, var(--window-opacity, 0.9));
+  --window-border: rgba(0, 0, 0, 0.08);
+  --window-border-focused: rgba(0, 0, 0, 0.28);
+  --window-header-bg: rgba(0, 0, 0, 0.04);
+  --window-text: #212529;
+  --window-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  --window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
+  /* Light skin grid/docked panel overrides */
+  --border-panel: rgba(0, 0, 0, 0.08);
+  --bg-tab-inactive: #e9ecef;
+  --text-tab-inactive: #495057;
+  --text-tab-active: #212529;
+  /* Light skin tab and control button hover colors */
+  --bg-tab-hover: #dee2e6;
+  --text-tab-hover: #212529;
+  --close-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --close-btn-hover-color: #212529;
+  --close-btn-color: #6c757d;
+  --close-btn-active-color: #212529;
+  --resizer-bg: rgba(0, 0, 0, 0.08);
+  --custom-btn-bg: rgba(0, 0, 0, 0.03);
+  --custom-btn-border: rgba(0, 0, 0, 0.08);
+  --custom-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --custom-btn-hover-color: #212529;
+  /* Light skin taskbar theme variables */
+  --taskbar-bg: rgba(248, 249, 250, 0.85);
+  --taskbar-border: rgba(0, 0, 0, 0.08);
+  --taskbar-nav-color: rgba(0, 0, 0, 0.5);
+  --taskbar-item-bg: rgba(255, 255, 255, 0.65);
+  --taskbar-item-hover-bg: rgba(255, 255, 255, 0.85);
+  --taskbar-item-border: rgba(0, 0, 0, 0.08);
+  --taskbar-item-text: #0066cc;
+  /* Light skin scrollbar theme variables */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --scrollbar-track: rgba(0, 0, 0, 0.02);
+  /* Light skin mockup panel inner theme variables */
+  --panel-card-bg: rgba(0, 0, 0, 0.03);
+  --panel-card-border: rgba(0, 0, 0, 0.08);
+  --panel-text: var(--text-primary);
+  --panel-title-color: #0066cc;
 }
 
 /* --- Modern Sidebar and Tabs UI Theme Customizations --- */

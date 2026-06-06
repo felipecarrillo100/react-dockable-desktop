@@ -32,7 +32,7 @@ const renderPanelContent = (id: string, componentKey: string) => {
   const registryEntry = PanelRegistry.get(componentKey);
   if (!registryEntry) {
     return (
-      <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-danger font-monospace p-3 text-center" style={{ border: '2px dashed var(--bs-danger, #dc3545)' }}>
+      <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-transparent text-danger font-monospace p-3 text-center" style={{ border: '2px dashed var(--bs-danger, #dc3545)' }}>
         <h6 className="fw-bold mb-1">⚠️ Component Unregistered</h6>
         <span className="small text-muted">Key: {componentKey}</span>
       </div>
@@ -170,7 +170,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
                   cursor: isRow ? 'col-resize' : 'row-resize',
                   width: isRow ? '6px' : '100%',
                   height: isRow ? '100%' : '6px',
-                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  backgroundColor: 'var(--resizer-bg)',
                   zIndex: 20,
                   transition: 'background-color 0.2s',
                 }}
@@ -304,7 +304,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
       </div>
 
       {/* Tab Content Display Area */}
-      <div className={`flex-grow-1 w-100 h-100 bg-dark ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className={`flex-grow-1 w-100 h-100 bg-transparent ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
         {leaf.activePanelId && state.panels[leaf.activePanelId] ? (
           <PreservedDOMWrapper key={leaf.activePanelId} panelId={leaf.activePanelId} />
         ) : (
@@ -1067,11 +1067,11 @@ export const WindowManager: React.FC = () => {
 
       {/* 2. macOS / Windows 11-style Taskbar Sibling Footer (Flex-shrinked at bottom) */}
       {state.minimized.length > 0 && (
-        <div className="flex-shrink-0 w-100 d-flex flex-row align-items-center bg-black bg-opacity-75 border-top border-secondary border-opacity-30 px-3 py-1.5 justify-content-center" style={{ height: '48px', zIndex: 100 }}>
+        <div className="flex-shrink-0 w-100 d-flex flex-row align-items-center taskbar-footer-container px-3 py-1.5 justify-content-center" style={{ height: '48px', zIndex: 100 }}>
           <button 
             type="button" 
             onClick={() => scrollTaskbar('left')}
-            className="btn btn-sm btn-link text-white-50 text-decoration-none py-0 font-monospace"
+            className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
             style={{ display: state.minimized.length > 5 ? 'block' : 'none' }}
           >
             ◀
@@ -1091,9 +1091,8 @@ export const WindowManager: React.FC = () => {
                 key={m.id}
                 onClick={() => restorePanel(m.id)}
                 onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
-                className="taskbar-glassmorphic-item px-3 py-1 text-info rounded border border-info border-opacity-20 d-flex align-items-center gap-2 cursor-pointer font-monospace small hover-elevate"
+                className="taskbar-glassmorphic-item px-3 py-1 rounded d-flex align-items-center gap-2 cursor-pointer font-monospace small hover-elevate"
                 style={{
-                  backgroundColor: 'rgba(0, 240, 255, 0.08)',
                   backdropFilter: 'blur(6px)',
                   transition: 'all 0.2s',
                   cursor: 'pointer',
@@ -1103,8 +1102,8 @@ export const WindowManager: React.FC = () => {
               >
                 <span>🔳</span>
                 <span className="text-truncate" style={{ maxWidth: '120px' }}>
-                  {formatLabel(m.title, formatMessage)}
-                  {state.panels[m.id]?.dirty ? ' *' : ''}
+                   {formatLabel(m.title, formatMessage)}
+                   {state.panels[m.id]?.dirty ? ' *' : ''}
                 </span>
                 <span 
                   onClick={(e) => {
@@ -1126,7 +1125,7 @@ export const WindowManager: React.FC = () => {
           <button 
             type="button" 
             onClick={() => scrollTaskbar('right')}
-            className="btn btn-sm btn-link text-white-50 text-decoration-none py-0 font-monospace"
+            className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
             style={{ display: state.minimized.length > 5 ? 'block' : 'none' }}
           >
             ▶
