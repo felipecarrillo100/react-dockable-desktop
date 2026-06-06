@@ -1,0 +1,13 @@
+{
+  "name": "demo-luciadria",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@luciad/ria": "^2026.0.7"
+  }
+}
