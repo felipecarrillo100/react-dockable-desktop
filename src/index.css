@@ -1,0 +1,1065 @@
+:root {
+  --bg-primary: #090b11;
+  --bg-workspace: #0f111a;
+  --bg-panel: #141722;
+  --bg-tab-bar: #0d0f16;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --accent-color: #38bdf8; /* Modern Cyan/Sky-blue accent */
+  --accent-glow: rgba(56, 189, 248, 0.15);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Premium full viewport layout */
+.full-viewport-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-primary);
+}
+
+/* Subtle, high-tech grid styling for the window manager workspace */
+.desktop-workspace,
+.window-manager-workspace {
+  background-color: var(--bg-workspace);
+  background-size: 32px 32px;
+  position: relative;
+}
+
+.show-grid .desktop-workspace,
+.show-grid .window-manager-workspace {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+}
+
+/* Workspace Panel Container */
+.workspace-panel {
+  background-color: var(--bg-panel);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Tab Headers Bar */
+.workspace-tab-bar {
+  background-color: var(--bg-tab-bar);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 4px;
+}
+
+/* Tab Headers Container */
+.tab-headers-container {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  padding-top: 4px;
+  padding-left: 6px;
+  position: relative;
+  margin-bottom: -1px;
+}
+
+/* Premium Tab styling (VS Code Style) */
+.workspace-tab {
+  position: relative;
+  background-color: #0c0d12 !important; /* VS Code dark background for inactive tabs */
+  color: #858b99 !important; /* Clear readable gray */
+  border: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important; /* crisp separator */
+  padding: 0 8px 0 16px !important;
+  font-size: 0.75rem;
+  transition: background-color 0.1s ease, color 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 0 !important; /* Square edges */
+  margin-right: 0 !important; /* No gaps between tabs */
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  height: 35px; /* VS Code standard height */
+  box-sizing: border-box;
+}
+
+/* Remove original after element separator */
+.workspace-tab:not(.active):not(:last-child)::after {
+  display: none !important;
+}
+
+.workspace-tab:hover {
+  background-color: #171a22 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Active tab */
+.workspace-tab.active {
+  background-color: var(--bg-panel) !important; /* matches panel content area */
+  color: #ffffff !important;
+  font-weight: 500;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  z-index: 2;
+}
+
+/* Top accent line on active tab (VS Code style indicator) */
+.workspace-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--accent-color);
+  border-radius: 0 !important;
+  box-shadow: 0 1px 4px var(--accent-glow);
+}
+
+.workspace-tab-inactive {
+  color: #858b99 !important;
+}
+
+.workspace-tab-inactive:hover {
+  color: #ffffff !important;
+}
+
+/* Tab close button (VS Code style visibility) */
+.close-tab-x {
+  opacity: 0; /* hidden by default on inactive tabs, allows hover/active overrides */
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  margin-left: 8px;
+  border-radius: 3px;
+  color: #858b99 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Always show close icon on active tab */
+.workspace-tab.active .close-tab-x {
+  opacity: 0.75 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Show close icon on hover of any tab */
+.workspace-tab:hover .close-tab-x {
+  opacity: 0.75 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Hover style on the close icon itself (VS Code dark rounded background) */
+.close-tab-x:hover {
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+/* Drag resizer split bars */
+.resizer-bar {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.resizer-bar:hover,
+.resizer-bar.active {
+  background-color: rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+/* Control buttons inside tabs/windows */
+.custom-tab-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  line-height: 1;
+}
+
+.custom-tab-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: scale(1.05);
+}
+
+/* macOS/Win11 Glassmorphic Taskbar */
+.taskbar-glassmorphic-item {
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.taskbar-glassmorphic-item:hover {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.2);
+}
+
+/* Custom scrollbar layout */
+.scrollbar-hidden::-webkit-scrollbar,
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cross-browser scrollbar styling (Firefox standard) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.01);
+}
+
+/* WebKit (Chrome, Safari, Edge) scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Premium Hover Highlight Effects */
+.hover-bg:hover {
+  background-color: rgba(56, 189, 248, 0.08) !important;
+  border-color: rgba(56, 189, 248, 0.25) !important;
+}
+
+/* Floating Windows customization styling */
+.floating-window {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background-color: rgba(20, 22, 28, var(--window-opacity, 0.85));
+  overflow: hidden;
+}
+
+.floating-window.maximized {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.floating-window-titlebar {
+  padding: 8px 14px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  min-height: 38px;
+}
+
+.floating-window-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.cursor-move {
+  cursor: grab;
+}
+.cursor-move:active {
+  cursor: grabbing;
+}
+
+/* VS Code Theme overrides for replace-react-contexify */
+.react-contexify {
+  background-color: #1e1e1e !important;
+  border: 1px solid #3c3c3c !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 3px !important;
+  padding: 4px 0 !important;
+  min-width: 150px !important;
+  z-index: 99999 !important;
+}
+
+.react-contexify .react-contexify__item__content {
+  color: #cccccc !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-size: 0.75rem !important;
+  padding: 6px 14px !important;
+}
+
+.react-contexify .react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
+  background-color: #094771 !important; /* VS Code Blue selection background */
+  color: #ffffff !important;
+}
+
+.react-contexify .react-contexify__separator {
+  background-color: #3c3c3c !important;
+  margin: 4px 0 !important;
+}
+
+.react-contexify .react-contexify__item-row {
+  gap: 0 !important;
+}
+
+.react-contexify .react-contexify__item-label {
+  text-align: left !important;
+}
+
+/* Drag split target drop zone overlays */
+.dock-drop-zone-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+/* Translucent overlay preview highlighting the grid section about to split */
+.dock-preview-highlight {
+  position: absolute;
+  background-color: rgba(56, 189, 248, 0.2) !important; /* neon cyan overlay */
+  border: 1.5px dashed var(--accent-color) !important;
+  transition: all 0.1s ease-out;
+  pointer-events: none;
+  z-index: 90;
+}
+
+/* Central cross layout container */
+.dock-target-cross {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  pointer-events: auto;
+}
+
+/* Visual split target buttons (top, bottom, left, right, center) */
+.dock-target-box {
+  position: absolute;
+  background-color: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: copy;
+  transition: all 0.12s ease-in-out;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  color: var(--text-secondary);
+}
+
+.dock-target-box:hover {
+  background-color: var(--accent-color) !important;
+  border-color: #ffffff !important;
+  color: #090b11 !important;
+  transform: scale(1.12);
+  box-shadow: 0 0 12px var(--accent-color);
+}
+
+/* Specific split target layouts */
+.dock-target-left {
+  left: 0;
+  top: 45px;
+  width: 40px;
+  height: 50px;
+}
+.dock-target-right {
+  right: 0;
+  top: 45px;
+  width: 40px;
+  height: 50px;
+}
+.dock-target-top {
+  left: 45px;
+  top: 0;
+  width: 50px;
+  height: 40px;
+}
+.dock-target-bottom {
+  left: 45px;
+  bottom: 0;
+  width: 50px;
+  height: 40px;
+}
+.dock-target-center {
+  left: 45px;
+  top: 45px;
+  width: 50px;
+  height: 50px;
+  background-color: rgba(30, 41, 59, 0.95);
+  color: var(--accent-color);
+}
+
+/* Drag hover indicators for tab reordering */
+.workspace-tab.drag-hover-left {
+  border-left: 2px solid var(--accent-color, #00f0ff) !important;
+}
+.workspace-tab.drag-hover-right {
+  border-right: 2px solid var(--accent-color, #00f0ff) !important;
+}
+
+/* Close button for empty LeafGroups inside header */
+.header-close-empty-group {
+  opacity: 0 !important;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease !important;
+}
+
+.workspace-panel:hover .header-close-empty-group {
+  opacity: 0.75 !important;
+}
+
+.header-close-empty-group:hover {
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+/* Grabbing cursor style during active dragging */
+.dragging-active,
+.dragging-active * {
+  cursor: grabbing !important;
+}
+
+/* --- Theme Variables for Sidebar and Tabs --- */
+[data-bs-theme="dark"] {
+  --sidebar-bg: #1e2024;
+  --sidebar-tabs-bg: #141619;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-card-bg: rgba(255, 255, 255, 0.03);
+  --sidebar-card-border: rgba(255, 255, 255, 0.08);
+  --sidebar-card-active-bg: rgba(56, 189, 248, 0.06);
+  --sidebar-card-active-border: rgba(56, 189, 248, 0.3);
+  --sidebar-text-title: #f8f9fa;
+  --sidebar-text-muted: #8a90a0;
+  --sidebar-badge-bg: #2d3139;
+  --sidebar-badge-text: #b0b5c0;
+  --sidebar-btn-front-border: #38bdf8;
+  --sidebar-btn-front-text: #38bdf8;
+  --sidebar-btn-front-bg: transparent;
+  --sidebar-btn-front-hover-bg: rgba(56, 189, 248, 0.1);
+  --tab-icon-active: #38bdf8;
+  --tab-icon-inactive: #9ea4b0;
+  --tab-btn-active-bg: #1e2024; /* Seamless merge look */
+}
+
+[data-bs-theme="light"] {
+  --sidebar-bg: #f8f9fa;
+  --sidebar-tabs-bg: #e9ecef;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-card-bg: #ffffff;
+  --sidebar-card-border: rgba(0, 0, 0, 0.08);
+  --sidebar-card-active-bg: rgba(0, 102, 204, 0.05);
+  --sidebar-card-active-border: rgba(0, 102, 204, 0.3);
+  --sidebar-text-title: #212529;
+  --sidebar-text-muted: #6c757d;
+  --sidebar-badge-bg: #e9ecef;
+  --sidebar-badge-text: #495057;
+  --sidebar-btn-front-border: #0066cc;
+  --sidebar-btn-front-text: #0066cc;
+  --sidebar-btn-front-bg: transparent;
+  --sidebar-btn-front-hover-bg: rgba(0, 102, 204, 0.08);
+  --tab-icon-active: #0066cc;
+  --tab-icon-inactive: #555c66;
+  --tab-btn-active-bg: #f8f9fa; /* Seamless merge look */
+}
+
+/* --- Modern Sidebar and Tabs UI Theme Customizations --- */
+.sidebar-content-drawer {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--sidebar-text-title) !important;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Position-specific drawer border and shadow alignment */
+.sidebar-content-drawer.left {
+  border-right: 1px solid var(--sidebar-border) !important;
+  border-left: none !important;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
+}
+.sidebar-content-drawer.right {
+  border-left: 1px solid var(--sidebar-border) !important;
+  border-right: none !important;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-tabs-strip {
+  background-color: var(--sidebar-tabs-bg) !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 38px; /* Perfectly aligned to match the 38px height of the drawer header bar */
+  padding-bottom: 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+/* Position-specific tab strip border alignment */
+.sidebar-tabs-strip.left {
+  border-right: 1px solid var(--sidebar-border) !important;
+  border-left: none !important;
+}
+.sidebar-tabs-strip.right {
+  border-left: 1px solid var(--sidebar-border) !important;
+  border-right: none !important;
+}
+
+/* Sidebar Header */
+.sidebar-header-title {
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sidebar-text-title);
+  font-size: 0.85rem;
+}
+
+/* Tab Button with real tabbed integration */
+.sidebar-tab-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent !important;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tab-icon-inactive);
+  position: relative;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+  outline: none !important;
+}
+
+/* Micro-interactions & hover tactile feedback for inactive buttons */
+.sidebar-tab-btn:not(.active):hover {
+  color: var(--sidebar-text-title);
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  transform: scale(1.05);
+}
+[data-bs-theme="light"] .sidebar-tab-btn:not(.active):hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.sidebar-tab-btn.active {
+  width: 100% !important; /* Take full width of the 56px strip to touch the drawer and close the gap */
+  color: var(--tab-icon-active) !important;
+  background-color: var(--tab-btn-active-bg) !important;
+  border-top: 1px solid var(--sidebar-border) !important;
+  border-bottom: 1px solid var(--sidebar-border) !important;
+  border-radius: 0 !important; /* Square edges to align flat and eliminate curved gap */
+  z-index: 6;
+  transition: color 0.15s ease; /* Prevent transition jumps on active state toggle */
+}
+
+/* Position-specific active button border & margin alignments to cover separation lines completely */
+.sidebar-tabs-strip.left .sidebar-tab-btn.active {
+  border-left: 3px solid var(--tab-icon-active) !important; /* Accent bar on the left edge */
+  border-right: none !important; /* Open right edge to merge with the drawer */
+  margin-right: -2px !important; /* Overlap right border of tab strip completely to eliminate gap */
+  margin-left: 0 !important;
+}
+.sidebar-tabs-strip.right .sidebar-tab-btn.active {
+  border-left: none !important; /* Open left edge to connect directly with drawer */
+  border-right: 3px solid var(--tab-icon-active) !important; /* Accent bar on the right edge */
+  margin-left: -2px !important; /* Overlap left border of tab strip completely to eliminate gap */
+  margin-right: 0 !important;
+}
+
+/* Sidebar Window Cards */
+.sidebar-window-card {
+  background-color: var(--sidebar-card-bg) !important;
+  border: 1px solid var(--sidebar-card-border) !important;
+  border-radius: 6px;
+  padding: 10px;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-window-card:hover {
+  border-color: rgba(56, 189, 248, 0.2);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-window-card.active {
+  background-color: var(--sidebar-card-active-bg) !important;
+  border-color: var(--sidebar-card-active-border) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.04);
+}
+
+/* Custom Outlined Front Button */
+.btn-pill-outline {
+  border: 1px solid var(--sidebar-btn-front-border) !important;
+  color: var(--sidebar-btn-front-text) !important;
+  background: var(--sidebar-btn-front-bg) !important;
+  font-size: 0.68rem !important;
+  font-weight: 500 !important;
+  border-radius: 12px !important;
+  padding: 2px 10px !important;
+  transition: all 0.15s ease !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+}
+
+.btn-pill-outline:hover {
+  background: var(--sidebar-btn-front-hover-bg) !important;
+  transform: scale(1.03);
+}
+
+/* Badge (Grid / Float) */
+.badge-pill-dark {
+  background-color: var(--sidebar-badge-bg) !important;
+  color: var(--sidebar-badge-text) !important;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Title text */
+.sidebar-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sidebar-text-title);
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Disable transitions/animations when animations are disabled */
+html:not(.enable-animations) *,
+html:not(.enable-animations) *::before,
+html:not(.enable-animations) *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Dirty Close Interception Warning Modal */
+.close-warning-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(9, 11, 17, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.close-warning-modal {
+  background: rgba(20, 23, 34, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  width: 420px;
+  max-width: 90%;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  color: var(--text-primary);
+  animation: scaleUp 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.close-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.close-warning-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.close-warning-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-warning-message {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.close-warning-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-warning-action {
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  font-family: inherit;
+}
+
+.btn-warning-cancel {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-warning-cancel:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-warning-discard {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.btn-warning-discard:hover {
+  background-color: #dc2626;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Stacked Modal Classes */
+.v2-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.18s ease-out;
+}
+
+.v2-modal-curtain {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(9, 11, 17, 0.65);
+  backdrop-filter: blur(6px);
+}
+
+.v2-modal-window {
+  position: relative;
+  background: rgba(20, 23, 34, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  max-width: 90%;
+  animation: scaleUp 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.v2-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.v2-modal-icon {
+  margin-right: 10px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.v2-modal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.v2-modal-close-button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.v2-modal-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.v2-modal-body {
+  padding: 10px;
+  overflow: auto;
+}
+
+/* Modal Sizes */
+.v2-modal-size-small { 
+  width: 360px; 
+  max-height: 270px; /* 4:3 aspect ratio */
+}
+.v2-modal-size-medium { 
+  width: 560px; 
+  max-height: 420px; /* ~4:3 aspect ratio */
+}
+.v2-modal-size-large { 
+  width: 800px; 
+  max-height: 500px; /* ~16:10 aspect ratio */
+}
+.v2-modal-size-fullscreen {
+  width: 98vw;
+  height: 96vh;
+}
+.v2-modal-size-auto { 
+  width: auto; 
+  min-width: 300px; 
+  max-height: 80vh; /* Safe aspect ratio threshold for auto content */
+}
+
+/* Side Drawer Panels */
+.v2-side-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 400px;
+  background: rgba(20, 23, 34, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 9000;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.v2-side-panel-right {
+  right: 0;
+  border-right: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
+}
+
+.v2-side-panel-left {
+  left: 0;
+}
+
+.v2-side-panel-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.v2-side-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(0, 0, 0, 0.15);
+  min-height: 44px;
+}
+
+.v2-side-panel-icon {
+  margin-right: 10px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.v2-side-panel-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  flex-grow: 1;
+  color: var(--text-primary);
+}
+
+.v2-side-panel-close-button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.v2-side-panel-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.v2-side-panel-body {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.v2-side-panel-left.v2-side-panel-visible {
+  animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.v2-side-panel-right.v2-side-panel-visible {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Outer Workspace Edge Drop Zones */
+.workspace-edge-trigger {
+  position: absolute;
+  z-index: 9999;
+  background-color: rgba(0, 123, 255, 0.01);
+  transition: background-color 0.2s;
+}
+
+.workspace-edge-trigger:hover {
+  background-color: rgba(0, 123, 255, 0.12);
+}
+
+.edge-trigger-left {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+}
+
+.edge-trigger-right {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+}
+
+.edge-trigger-top {
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 24px;
+}
+
+.edge-trigger-bottom {
+  bottom: 0;
+  left: 24px;
+  right: 24px;
+  height: 24px;
+}
+
+.workspace-edge-preview {
+  position: absolute;
+  z-index: 9998;
+  background-color: rgba(0, 123, 255, 0.2);
+  border: 2px dashed #007bff;
+  pointer-events: none;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.edge-preview-left {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+}
+
+.edge-preview-right {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+}
+
+.edge-preview-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+}
+
+.edge-preview-bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+}
+
+
+
