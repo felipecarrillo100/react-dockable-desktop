@@ -283,12 +283,20 @@ body,
 }
 
 /* Minimalist Taskbar Icon-Only & Premium Tooltip Rules */
+.taskbar-item-icon {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .taskbar-item-icon svg,
 .taskbar-item-icon img {
-  width: 18px !important;
-  height: 18px !important;
-  max-width: 18px !important;
-  max-height: 18px !important;
+  width: 22px !important;
+  height: 22px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
   object-fit: contain;
   display: block;
 }

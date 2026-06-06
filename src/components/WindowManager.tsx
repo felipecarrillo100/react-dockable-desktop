@@ -414,6 +414,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
   const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string } | null>(null);
   const minimizedTooltipTimeoutRef = useRef<any>(null);
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -557,6 +558,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
   const handleMinimizedRightClick = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
+    setHoveredMinimized(null);
     contextMenuRef.current?.show({
       event: e,
       contextMenu: {
@@ -1148,6 +1150,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   onClick={() => restorePanel(m.id)}
                   onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
                   onMouseEnter={(e) => {
+                    if (isContextMenuOpen) return;
                     if (minimizedTooltipTimeoutRef.current) {
                       clearTimeout(minimizedTooltipTimeoutRef.current);
                     }
@@ -1249,7 +1252,13 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       })}
 
       {/* 4. Context Menu (replace-react-contexify JSON mode) */}
-      <JsonContextMenu ref={contextMenuRef} id="workspace-context-menu" theme="dark" />
+      <JsonContextMenu 
+        ref={contextMenuRef} 
+        id="workspace-context-menu" 
+        theme="dark" 
+        onShow={() => setIsContextMenuOpen(true)}
+        onHide={() => setIsContextMenuOpen(false)}
+      />
 
       {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (

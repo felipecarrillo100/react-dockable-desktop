@@ -35,11 +35,10 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit"
   },
-  "dependencies": {},
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-dom": ">=16.8.0",
-    "replace-react-contexify": "^1.0.0"
+    "replace-react-contexify": "^1.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -62,7 +61,7 @@
     "react-bootstrap-submenu": "^4.0.0",
     "react-dom": "^19.2.6",
     "react-intl": "^10.1.12",
-    "replace-react-contexify": "^1.0.0",
+    "replace-react-contexify": "^1.1.0",
     "tsup": "^8.5.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
