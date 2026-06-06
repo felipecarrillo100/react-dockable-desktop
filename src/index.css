@@ -132,7 +132,6 @@ body,
   transition: background-color 0.1s ease, color 0.1s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
   border-radius: 0 !important; /* Square edges */
   margin-right: 0 !important; /* No gaps between tabs */
   font-weight: 500;
@@ -283,10 +282,85 @@ body,
   box-shadow: 0 6px 16px rgba(56, 189, 248, 0.15);
 }
 
-/* Custom scrollbar layout */
-.scrollbar-hidden::-webkit-scrollbar,
-.scrollbar-hidden {
-  scrollbar-width: none;
+/* Minimalist Taskbar Icon-Only & Premium Tooltip Rules */
+.taskbar-item-icon svg,
+.taskbar-item-icon img {
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  object-fit: contain;
+  display: block;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-90%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%);
+  }
+}
+
+.taskbar-item-tooltip {
+  background: var(--bg-panel, #1e1e1e) !important;
+  color: var(--text-primary, #ffffff) !important;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px !important;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--taskbar-item-border, rgba(255, 255, 255, 0.1)) !important;
+  animation: tooltipFadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Invisible bridge so mouse transitions smoothly to tooltip */
+.taskbar-item-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: transparent;
+}
+
+.taskbar-item-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--bg-panel, #1e1e1e) transparent transparent transparent;
+}
+
+
+
+.tooltip-close-x {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: transparent !important;
+  border: none !important;
+  color: var(--close-btn-color, var(--text-secondary, #888888)) !important;
+  cursor: pointer;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.75;
+}
+
+.tooltip-close-x:hover {
+  background: var(--close-btn-hover-bg) !important;
+  color: var(--close-btn-hover-color) !important;
+  opacity: 1 !important;
 }
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
@@ -787,6 +861,30 @@ body,
   width: 9px !important;
   height: 9px !important;
   flex-shrink: 0;
+}
+
+/* Panel Icon Styling and Alignment */
+.workspace-tab-icon,
+.window-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+  line-height: 1;
+  margin-right: 4px !important; /* Forces the gap between the icon and the text title */
+}
+
+.workspace-tab-icon svg,
+.workspace-tab-icon img,
+.window-title-icon svg,
+.window-title-icon img {
+  width: 14px !important;
+  height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  object-fit: contain;
+  display: block;
 }
 
 [data-workspace-skin="macos"] .custom-tab-btn:hover {

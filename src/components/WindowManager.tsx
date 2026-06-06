@@ -12,6 +12,15 @@ import type { FormContainerContract } from './FormContainerContext';
 const domCache = new Map<string, HTMLDivElement>();
 const hiddenContainerId = 'preserved-dom-container';
 
+const DefaultGridIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+    <rect x="3" y="3" width="7" height="9" rx="1" />
+    <rect x="14" y="3" width="7" height="5" rx="1" />
+    <rect x="14" y="12" width="7" height="9" rx="1" />
+    <rect x="3" y="16" width="7" height="5" rx="1" />
+  </svg>
+);
+
 const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
   let el = domCache.get(id);
   if (!el) {
@@ -104,13 +113,14 @@ interface WorkspaceGridProps {
   onTabDragStart: (id: string, e: React.MouseEvent) => void;
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
+  defaultPanelIcon?: React.ReactNode;
 }
 
-const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover }) => {
+const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon }) => {
   const { updateSplitSizes } = useWindowManagerActions();
 
   if (node.type === 'leaf') {
-    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} />;
+    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} />;
   }
 
   const isRow = node.orientation === 'horizontal';
@@ -161,7 +171,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
         return (
           <React.Fragment key={idx}>
             <div style={{ flexGrow: node.sizes[idx], flexBasis: `${size}%`, overflow: 'hidden', position: 'relative' }}>
-              <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} />
+              <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} />
             </div>
             {idx < node.children.length - 1 && (
               <div 
@@ -192,9 +202,10 @@ interface LeafGroupProps {
   onTabDragStart: (id: string, e: React.MouseEvent) => void;
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
+  defaultPanelIcon?: React.ReactNode;
 }
 
-const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover }) => {
+const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon }) => {
   const state = useWindowManagerState();
   const { requestClosePanel, openPanel, closeLeafGroup } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
@@ -264,9 +275,12 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 className={`workspace-tab ${isActive ? 'active workspace-tab-active' : 'workspace-tab-inactive'} ${sideClass}`}
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
-                <span className="text-truncate" style={{ maxWidth: '120px' }}>
-                  {formatLabel(panel.title, formatMessage)}
-                  {panel.dirty ? ' *' : ''}
+                <span className="text-truncate d-flex align-items-center" style={{ maxWidth: '120px' }}>
+                  <span className="workspace-tab-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
+                  <span>
+                    {formatLabel(panel.title, formatMessage)}
+                    {panel.dirty ? ' *' : ''}
+                  </span>
                 </span>
                 {options?.canClose !== false && (
                   <span 
@@ -383,7 +397,12 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 // 5. WindowManager (Main Render Component)
 // ==========================================
 
-export const WindowManager: React.FC<{ skin?: string }> = ({ skin = 'vscode' }) => {
+export interface WindowManagerProps {
+  skin?: string;
+  defaultPanelIcon?: React.ReactNode;
+}
+
+export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
   const state = useWindowManagerState();
   const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
@@ -392,6 +411,17 @@ export const WindowManager: React.FC<{ skin?: string }> = ({ skin = 'vscode' }) 
   const [instantiatedPanels, setInstantiatedPanels] = useState<string[]>([]);
   const taskbarRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<JsonContextMenuRef>(null);
+
+  const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string } | null>(null);
+  const minimizedTooltipTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (minimizedTooltipTimeoutRef.current) {
+        clearTimeout(minimizedTooltipTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const [activeDropZone, setActiveDropZone] = useState<{ leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null>(null);
   const activeDropZoneRef = useRef<{ leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null>(null);
@@ -905,6 +935,7 @@ export const WindowManager: React.FC<{ skin?: string }> = ({ skin = 'vscode' }) 
               onTabDragStart={handleTabDragStart}
               hoveredTab={hoveredTab}
               onTabHover={handleTabHover}
+              defaultPanelIcon={defaultPanelIcon}
             />
           ) : (
             <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted font-monospace small">
@@ -953,9 +984,12 @@ export const WindowManager: React.FC<{ skin?: string }> = ({ skin = 'vscode' }) 
                   className="floating-window-titlebar d-flex flex-row justify-content-between align-items-center cursor-move"
                   style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
                 >
-                  <span className="floating-window-title text-truncate me-2">
-                    {formatLabel(panel.title, formatMessage)}
-                    {panel.dirty ? ' *' : ''}
+                  <span className="floating-window-title text-truncate me-2 d-flex align-items-center">
+                    <span className="window-title-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
+                    <span>
+                      {formatLabel(panel.title, formatMessage)}
+                      {panel.dirty ? ' *' : ''}
+                    </span>
                   </span>
                   <div className="d-flex align-items-center gap-1.5" onMouseDown={(e) => e.stopPropagation()}>
                     {options?.canDrag !== false && (
@@ -1090,61 +1124,108 @@ export const WindowManager: React.FC<{ skin?: string }> = ({ skin = 'vscode' }) 
             type="button" 
             onClick={() => scrollTaskbar('left')}
             className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
-            style={{ display: state.minimized.length > 5 ? 'block' : 'none' }}
+            style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ◀
           </button>
           
           <div 
             ref={taskbarRef}
-            className="d-flex flex-row gap-2 overflow-x-auto align-items-center justify-content-center mx-2 px-1 py-0.5 scrollbar-hidden"
+            className="d-flex flex-row gap-2 overflow-x-auto align-items-center mx-2 px-1 py-0.5 scrollbar-hidden"
             style={{
-              maxWidth: '600px',
+              maxWidth: '800px',
               scrollbarWidth: 'none',
               scrollSnapType: 'x mandatory'
             }}
           >
-            {state.minimized.map(m => (
-              <div
-                key={m.id}
-                onClick={() => restorePanel(m.id)}
-                onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
-                className="taskbar-glassmorphic-item px-3 py-1 rounded d-flex align-items-center gap-2 cursor-pointer font-monospace small hover-elevate"
-                style={{
-                  backdropFilter: 'blur(6px)',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer',
-                  scrollSnapAlign: 'start',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                <span>🔳</span>
-                <span className="text-truncate" style={{ maxWidth: '120px' }}>
-                   {formatLabel(m.title, formatMessage)}
-                   {state.panels[m.id]?.dirty ? ' *' : ''}
-                </span>
-                <span 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    requestClosePanel(m.id);
+            {state.minimized.map(m => {
+              const regEntry = PanelRegistry.get(m.component);
+              const icon = regEntry?.defaultOptions?.icon || defaultPanelIcon || DefaultGridIcon;
+
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => restorePanel(m.id)}
+                  onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
+                  onMouseEnter={(e) => {
+                    if (minimizedTooltipTimeoutRef.current) {
+                      clearTimeout(minimizedTooltipTimeoutRef.current);
+                    }
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMinimized({ id: m.id, rect, title: m.title, component: m.component });
                   }}
-                  title={formatLabel(messages.closePanel, formatMessage)}
-                  className="close-tab-x d-flex align-items-center justify-content-center"
-                  style={{ width: '18px', height: '18px' }}
+                  onMouseLeave={() => {
+                    minimizedTooltipTimeoutRef.current = setTimeout(() => {
+                      setHoveredMinimized(null);
+                    }, 150);
+                  }}
+                  className="taskbar-glassmorphic-item rounded d-flex align-items-center justify-content-center cursor-pointer hover-elevate"
+                  style={{
+                    backdropFilter: 'blur(6px)',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    scrollSnapAlign: 'start',
+                    width: '38px',
+                    height: '38px',
+                    position: 'relative',
+                    padding: 0
+                  }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
-                </span>
-              </div>
-            ))}
+                  <span className="taskbar-item-icon d-flex align-items-center justify-content-center">
+                    {icon}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+
+          {hoveredMinimized && createPortal(
+            <div 
+              className="taskbar-item-tooltip d-flex align-items-center gap-2"
+              style={{
+                position: 'fixed',
+                left: `${hoveredMinimized.rect.left + hoveredMinimized.rect.width / 2}px`,
+                top: `${hoveredMinimized.rect.top - 8}px`,
+                transform: 'translateX(-50%) translateY(-100%)',
+                opacity: 1,
+                pointerEvents: 'auto',
+                zIndex: 999999
+              }}
+              onMouseEnter={() => {
+                if (minimizedTooltipTimeoutRef.current) {
+                  clearTimeout(minimizedTooltipTimeoutRef.current);
+                }
+              }}
+              onMouseLeave={() => {
+                setHoveredMinimized(null);
+              }}
+            >
+               <span className="tooltip-title-text text-truncate" style={{ maxWidth: '140px' }}>
+                 {formatLabel(hoveredMinimized.title, formatMessage)}
+                 {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
+               </span>
+               <span 
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   requestClosePanel(hoveredMinimized.id);
+                   setHoveredMinimized(null);
+                 }}
+                 title={formatLabel(messages.closePanel, formatMessage)}
+                 className="tooltip-close-x d-flex align-items-center justify-content-center"
+               >
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                   <path d="M18 6L6 18M6 6l12 12"/>
+                 </svg>
+               </span>
+            </div>,
+            document.body
+          )}
 
           <button 
             type="button" 
             onClick={() => scrollTaskbar('right')}
             className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
-            style={{ display: state.minimized.length > 5 ? 'block' : 'none' }}
+            style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ▶
           </button>

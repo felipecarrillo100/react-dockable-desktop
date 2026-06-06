@@ -681,19 +681,47 @@ export const DirtyEditorDemoPanel: React.FC = () => {
 export function registerDemoPanels() {
     PanelRegistry.register('mainMap', MainMap, {
         title: 'Main Map',
+        icon: '🗺️',
         initialTarget: 'docked',
         canClose: false,
         canMinimize: false,
         canDrag: false
     });
-    PanelRegistry.register('editor', CodeEditor, { title: 'Code Editor', initialTarget: 'docked' });
-    PanelRegistry.register('terminal', TerminalConsole, { title: 'Console Output', initialTarget: 'docked' });
-    PanelRegistry.register('preview', PreviewOutput, { title: 'Sandbox Widget', initialTarget: 'floating' });
-    PanelRegistry.register('help', HelpCenter, { title: 'Workspace Help', initialTarget: 'docked' });
-    PanelRegistry.register('luciadMap', LeafletMapPanel, { title: 'Leaflet Map', initialTarget: 'docked' });
-    PanelRegistry.register('layertree', LayerTree, { title: 'Layer tree', initialTarget: 'floating', favoritePosition: { x: 10, y: 50, width: 300, height: 400 }, defaultStickyRight: true });
+    PanelRegistry.register('editor', CodeEditor, { 
+        title: 'Code Editor', 
+        icon: '⚛️',
+        initialTarget: 'docked' 
+    });
+    PanelRegistry.register('terminal', TerminalConsole, { 
+        title: 'Console Output', 
+        icon: '💻',
+        initialTarget: 'docked' 
+    });
+    PanelRegistry.register('preview', PreviewOutput, { 
+        title: 'Sandbox Widget', 
+        icon: '📦',
+        initialTarget: 'floating' 
+    });
+    PanelRegistry.register('help', HelpCenter, { 
+        title: 'Workspace Help', 
+        icon: '❓',
+        initialTarget: 'docked' 
+    });
+    PanelRegistry.register('luciadMap', LeafletMapPanel, { 
+        title: 'Leaflet Map', 
+        icon: '🌍',
+        initialTarget: 'docked' 
+    });
+    PanelRegistry.register('layertree', LayerTree, { 
+        title: 'Layer tree', 
+        icon: '🌿',
+        initialTarget: 'floating', 
+        favoritePosition: { x: 10, y: 50, width: 300, height: 400 }, 
+        defaultStickyRight: true 
+    });
     PanelRegistry.register('timecontrol', TimeControl, {
         title: 'Time Control bar',
+        icon: '⏱️',
         initialTarget: 'floating',
         favoritePosition: {
             x: '10px',
@@ -702,10 +730,37 @@ export function registerDemoPanels() {
             height: '100px'
         }
     });
-    PanelRegistry.register('overviewmap', OverviewMap, { title: 'Overview locator', initialTarget: 'floating', favoritePosition: { x: 80, y: 500, width: 220, height: 180 } });
-    PanelRegistry.register('table', TablePanel, { title: 'Attribute Table', initialTarget: 'docked' });
-    PanelRegistry.register('toolpanels', ToolPanel, { title: 'Toolbox Panel', initialTarget: 'docked' });
-    PanelRegistry.register('panelmanager', PanelManagerForm, { title: 'Panel Registry Form', initialTarget: 'floating', favoritePosition: { x: 400, y: 150, width: 500, height: 420 } });
-    PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { title: 'Intercept Form', initialTarget: 'floating', favoritePosition: { x: 350, y: 150, width: 450, height: 420 } });
-    PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { title: 'Intercept Editor', initialTarget: 'docked' });
+    PanelRegistry.register('overviewmap', OverviewMap, { 
+        title: 'Overview locator', 
+        icon: '👁️',
+        initialTarget: 'floating', 
+        favoritePosition: { x: 80, y: 500, width: 220, height: 180 } 
+    });
+    PanelRegistry.register('table', TablePanel, { 
+        title: 'Attribute Table', 
+        icon: '📋',
+        initialTarget: 'docked' 
+    });
+    PanelRegistry.register('toolpanels', ToolPanel, { 
+        title: 'Toolbox Panel', 
+        icon: '🔧',
+        initialTarget: 'docked' 
+    });
+    PanelRegistry.register('panelmanager', PanelManagerForm, { 
+        title: 'Panel Registry Form', 
+        icon: '⚙️',
+        initialTarget: 'floating', 
+        favoritePosition: { x: 400, y: 150, width: 500, height: 420 } 
+    });
+    PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { 
+        title: 'Intercept Form', 
+        icon: '⚠️',
+        initialTarget: 'floating', 
+        favoritePosition: { x: 350, y: 150, width: 450, height: 420 } 
+    });
+    PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { 
+        title: 'Intercept Editor', 
+        icon: '📝',
+        initialTarget: 'docked' 
+    });
 }

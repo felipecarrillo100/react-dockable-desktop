@@ -788,7 +788,16 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           tabs={sidebarTabs}
           drawerWidth="220px"
         >
-          <WindowManager skin={skin} />
+          <WindowManager 
+            skin={skin} 
+            defaultPanelIcon={
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', opacity: 0.85 }}>
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            }
+          />
         </Sidebar>
         <SidePanelRenderer />
       </div>

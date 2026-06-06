@@ -4,6 +4,7 @@ export interface PanelRegistryEntry {
   Component: ComponentType<any>;
   defaultOptions?: {
     title?: string;
+    icon?: React.ReactNode;
     initialTarget?: 'floating' | 'docked' | 'tabbed';
     favoritePosition?: { x: number | string; y: number | string; width: number | string; height: number | string };
     canDrag?: boolean;
