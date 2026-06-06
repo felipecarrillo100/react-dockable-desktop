@@ -33,7 +33,7 @@ export const PanelManagerForm: React.FC = () => {
   });
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-white d-flex flex-column text-start" style={{ overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-body d-flex flex-column text-start" style={{ overflow: 'auto' }}>
       <div className="border-bottom border-secondary pb-2 mb-3 d-flex justify-content-between align-items-center">
         <h5 className="mb-0 text-info fw-bold">Panel & Window Manager</h5>
         <span className="badge bg-secondary font-monospace" style={{ fontSize: '0.75rem' }}>
@@ -47,7 +47,7 @@ export const PanelManagerForm: React.FC = () => {
           placeholder="Search registered windows and forms..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="form-control bg-black text-white border-secondary font-monospace"
+          className="form-control bg-body text-body border-secondary font-monospace"
           style={{ fontSize: '0.85rem' }}
         />
       </div>
@@ -62,7 +62,7 @@ export const PanelManagerForm: React.FC = () => {
           return (
             <div 
               key={item.componentId} 
-              className="p-2 bg-black bg-opacity-40 border border-secondary rounded d-flex justify-content-between align-items-center hover-bg"
+              className="p-2 bg-body-tertiary bg-opacity-40 border border-secondary rounded d-flex justify-content-between align-items-center hover-bg"
               style={{ transition: 'background-color 0.2s' }}
             >
               <div 
@@ -77,7 +77,7 @@ export const PanelManagerForm: React.FC = () => {
                 }}
                 style={{ cursor: isOpened ? 'pointer' : 'default' }}
               >
-                <div className="fw-semibold text-white-50 font-monospace" style={{ fontSize: '0.85rem' }}>
+                <div className="fw-semibold text-body font-monospace" style={{ fontSize: '0.85rem', opacity: 0.85 }}>
                   {getTitleString(item.title)}
                 </div>
                 <div className="text-muted font-monospace" style={{ fontSize: '0.7rem' }}>

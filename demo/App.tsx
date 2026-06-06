@@ -33,6 +33,7 @@ interface AppProps {
 
 function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [skin, setSkin] = useState<string>('vscode');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>('right');
   const [windowOpacity, setWindowOpacity] = useState<number>(85);
   const [showGrid, setShowGrid] = useState<boolean>(true);
@@ -731,6 +732,23 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                 <span className="fw-bold" style={{ fontSize: '0.7rem' }}>npm</span>
               </a>
 
+              {/* Skin Dropdown */}
+              <select
+                value={skin}
+                onChange={(e) => setSkin(e.target.value)}
+                className="form-select form-select-sm font-monospace"
+                style={{ width: '130px', fontSize: '0.75rem', backgroundColor: 'var(--bg-panel)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}
+                title="Select Workspace Preset Skin"
+              >
+                <option value="vscode">VS Code</option>
+                <option value="macos">macOS Glass</option>
+                <option value="chrome">Chrome Tab</option>
+                <option value="slate">Fluent Slate</option>
+                <option value="nord">Nordic Frost</option>
+                <option value="obsidian">Midnight Obsidian</option>
+                <option value="tokyo">Tokyo Night</option>
+              </select>
+
               {/* Theme Toggle Button */}
               <button
                 type="button"
@@ -770,7 +788,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           tabs={sidebarTabs}
           drawerWidth="220px"
         >
-          <WindowManager />
+          <WindowManager skin={skin} />
         </Sidebar>
         <SidePanelRenderer />
       </div>

@@ -347,20 +347,23 @@ body,
   box-shadow: none;
 }
 
-/* Anchor Button Icon Rotations */
+/* Anchor Button Icon Rotations - Base line sits at the bottom in default 0deg state */
 .anchor-icon {
   transition: transform 0.2s ease, color 0.2s ease;
 }
 .anchor-sticky-right {
-  transform: rotate(90deg);
+  /* Rotates -90deg so the bottom flat line sits on the right-hand side */
+  transform: rotate(-90deg);
   color: var(--accent-color, #38bdf8);
 }
 .anchor-sticky-bottom {
-  transform: rotate(180deg);
+  /* No rotation: the bottom flat line stays on the bottom */
+  transform: rotate(0deg);
   color: var(--accent-color, #38bdf8);
 }
 .anchor-sticky-both {
-  transform: rotate(135deg);
+  /* Rotates -45deg so the bottom flat line sits on the bottom-right corner */
+  transform: rotate(-45deg);
   color: var(--accent-color, #38bdf8);
   filter: drop-shadow(0 0 4px var(--accent-glow));
 }
@@ -631,8 +634,441 @@ body,
   /* Light skin mockup panel inner theme variables */
   --panel-card-bg: rgba(0, 0, 0, 0.03);
   --panel-card-border: rgba(0, 0, 0, 0.08);
-  --panel-text: var(--text-primary);
+  --panel-text: #212529;
   --panel-title-color: #0066cc;
+}
+
+/* ==========================================================================
+   MULTI-THEME PRESETS (SKINS) DEFINITIONS
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   SKIN 1: VS Code (Default Variables matching :root)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="vscode"] {
+  /* Inherits everything from :root */
+}
+
+/* --------------------------------------------------------------------------
+   SKIN 2: macOS / Glassmorphic Preset
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="macos"] {
+  --bg-workspace: #1a1a24;
+  --bg-panel: rgba(30, 30, 40, 0.45);
+  --bg-tab-bar: rgba(18, 18, 24, 0.3);
+  --window-bg: rgba(25, 25, 35, var(--window-opacity, 0.7));
+  --window-border: rgba(255, 255, 255, 0.1);
+  --window-header-bg: rgba(0, 0, 0, 0.15);
+  --accent-color: #38bdf8;
+  --accent-glow: rgba(56, 189, 248, 0.25);
+  --border-panel: rgba(255, 255, 255, 0.08);
+  --bg-tab-inactive: transparent;
+  --text-tab-inactive: #94a3b8;
+  --text-tab-active: #ffffff;
+  --window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --window-shadow-focused: 0 24px 50px rgba(56, 189, 248, 0.15);
+  --panel-card-bg: rgba(255, 255, 255, 0.03);
+  --panel-card-border: rgba(255, 255, 255, 0.08);
+}
+
+[data-workspace-skin="macos"][data-bs-theme="light"] {
+  --bg-primary: #f3f4f6;
+  --bg-workspace: #e5e7eb;
+  --bg-panel: rgba(255, 255, 255, 0.7);
+  --bg-tab-bar: rgba(229, 231, 235, 0.5);
+  --window-bg: rgba(255, 255, 255, var(--window-opacity, 0.85));
+  --window-border: rgba(0, 0, 0, 0.12);
+  --window-header-bg: rgba(243, 244, 246, 0.5);
+  --accent-color: #0066cc;
+  --accent-glow: rgba(0, 102, 204, 0.15);
+  --border-panel: rgba(0, 0, 0, 0.1);
+  --bg-tab-inactive: transparent;
+  --text-tab-inactive: #4b5563;
+  --text-tab-active: #111827;
+  --window-text: #111827;
+  --window-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --window-shadow-focused: 0 16px 36px rgba(0, 102, 204, 0.18);
+  --panel-card-bg: rgba(0, 0, 0, 0.04);
+  --panel-card-border: rgba(0, 0, 0, 0.08);
+  --panel-text: #111827;
+  --panel-title-color: #0066cc;
+  --close-btn-color: #4b5563;
+  --close-btn-active-color: #111827;
+}
+
+/* macOS structural adjustments */
+[data-workspace-skin="macos"] .floating-window {
+  border-radius: 12px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-color: var(--window-border);
+}
+[data-workspace-skin="macos"] .floating-window-titlebar {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+[data-workspace-skin="macos"] .workspace-panel {
+  border-radius: 8px;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+[data-workspace-skin="macos"] .workspace-tab {
+  border-radius: 6px !important;
+  margin: 4px 4px 4px 4px !important;
+  height: 28px !important;
+  border: 1px solid var(--border-panel) !important;
+}
+[data-workspace-skin="macos"] .workspace-tab.active {
+  background-color: var(--bg-workspace) !important;
+}
+[data-workspace-skin="macos"] .workspace-tab.active::before {
+  display: none !important; /* Hide VS Code top line */
+}
+
+/* macOS Circle dots controls styling */
+[data-workspace-skin="macos"] .custom-tab-btn {
+  border-radius: 50% !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: var(--custom-btn-bg) !important;
+  border: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  overflow: hidden;
+  margin: 0 2px;
+}
+[data-workspace-skin="macos"] .floating-window-titlebar {
+  flex-direction: row-reverse !important;
+}
+[data-workspace-skin="macos"] .floating-window-titlebar .d-flex.align-items-center {
+  flex-direction: row-reverse !important;
+}
+[data-workspace-skin="macos"] .custom-tab-btn:not(.btn-anchor-tab) svg {
+  display: none !important;
+}
+[data-workspace-skin="macos"] .btn-close-tab {
+  background-color: #ff5f56 !important;
+}
+[data-workspace-skin="macos"] .custom-tab-btn:nth-child(2) {
+  background-color: #ffbd2e !important;
+}
+[data-workspace-skin="macos"] .custom-tab-btn:nth-child(3) {
+  background-color: #27c93f !important;
+}
+[data-workspace-skin="macos"] .btn-anchor-tab {
+  /* Default: Neutral Graphite/Slate dot when inactive */
+  background-color: #8e8e93 !important;
+}
+/* When inactive (no sticky values) - show as a neutral grey macOS dot */
+[data-workspace-skin="macos"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
+  background-color: #8e8e93 !important;
+}
+[data-workspace-skin="macos"][data-bs-theme="light"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
+  background-color: #a4a4a8 !important;
+}
+
+/* macOS Active Snapped Dot State: Solid active blue with high-contrast yellow icon */
+[data-workspace-skin="macos"] .btn-anchor-tab:has(.anchor-sticky-right),
+[data-workspace-skin="macos"] .btn-anchor-tab:has(.anchor-sticky-bottom),
+[data-workspace-skin="macos"] .btn-anchor-tab:has(.anchor-sticky-both) {
+  background-color: #007aff !important;
+  border: 1px solid rgba(0,0,0,0.15) !important;
+}
+
+/* Ensure the anchor icon displays cleanly and is centered inside the macOS dot */
+[data-workspace-skin="macos"] .btn-anchor-tab {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+[data-workspace-skin="macos"] .btn-anchor-tab svg {
+  display: block !important;
+  color: #ffbd2e !important; /* Premium macOS system yellow */
+  width: 9px !important;
+  height: 9px !important;
+  flex-shrink: 0;
+}
+
+[data-workspace-skin="macos"] .custom-tab-btn:hover {
+  filter: brightness(0.85);
+  transform: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   SKIN 3: Chrome / Browser-Style Preset
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="chrome"] {
+  --bg-workspace: #202124;
+  --bg-panel: #292a2d;
+  --bg-tab-bar: #202124;
+  --window-bg: rgba(41, 42, 45, var(--window-opacity, 1.0));
+  --window-border: #3c4043;
+  --window-header-bg: #202124;
+  --accent-color: #8ab4f8;
+  --accent-glow: rgba(138, 180, 248, 0.15);
+  --border-panel: #3c4043;
+  --bg-tab-inactive: #202124;
+  --text-tab-inactive: #9aa0a6;
+  --text-tab-active: #ffffff;
+  --panel-card-bg: #202124;
+  --panel-card-border: #3c4043;
+  --window-text: #ffffff;
+  --panel-text: #e8eaed;
+}
+
+[data-workspace-skin="chrome"][data-bs-theme="light"] {
+  --bg-workspace: #dee1e6;
+  --bg-panel: #ffffff;
+  --bg-tab-bar: #dee1e6;
+  --window-bg: rgba(255, 255, 255, var(--window-opacity, 1.0));
+  --window-border: #cbd5e1;
+  --window-header-bg: #dee1e6;
+  --accent-color: #1a73e8;
+  --accent-glow: rgba(26, 115, 232, 0.15);
+  --border-panel: #dadce0;
+  --bg-tab-inactive: #dee1e6;
+  --text-tab-inactive: #474747;
+  --text-tab-active: #1f1f1f;
+  --panel-card-bg: #f1f3f4;
+  --panel-card-border: #dadce0;
+  --window-text: #1f1f1f;
+  --panel-text: #1f1f1f;
+  --panel-title-color: #1a73e8;
+  --close-btn-color: #474747;
+  --close-btn-active-color: #1f1f1f;
+}
+
+/* Chrome tab angled geometry shapes */
+[data-workspace-skin="chrome"] .workspace-tab {
+  clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 100%, 0% 100%);
+  padding: 0 18px !important;
+  margin-right: -4px !important;
+  border-right: none !important;
+}
+[data-workspace-skin="chrome"] .workspace-tab.active {
+  z-index: 5;
+}
+[data-workspace-skin="chrome"] .workspace-tab.active::before {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   SKIN 4: Fluent Slate Preset
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="slate"] {
+  --bg-workspace: #0f172a;
+  --bg-panel: #1e293b;
+  --bg-tab-bar: #0f172a;
+  --window-bg: rgba(30, 41, 59, var(--window-opacity, 1.0));
+  --window-border: #334155;
+  --window-header-bg: #1e293b;
+  --accent-color: #38bdf8;
+  --accent-glow: rgba(56, 189, 248, 0.15);
+  --border-panel: #334155;
+  --bg-tab-inactive: #1e293b;
+  --text-tab-inactive: #64748b;
+  --text-tab-active: #f8fafc;
+  --panel-card-bg: #0f172a;
+  --panel-card-border: #334155;
+  --window-text: #f8fafc;
+  --panel-text: #f8fafc;
+}
+
+[data-workspace-skin="slate"][data-bs-theme="light"] {
+  --bg-workspace: #f1f5f9;
+  --bg-panel: #ffffff;
+  --bg-tab-bar: #f1f5f9;
+  --window-bg: rgba(255, 255, 255, var(--window-opacity, 1.0));
+  --window-border: #cbd5e1;
+  --window-header-bg: #f8fafc;
+  --accent-color: #0078d4;
+  --accent-glow: rgba(0, 120, 212, 0.15);
+  --border-panel: #e2e8f0;
+  --bg-tab-inactive: #f8fafc;
+  --text-tab-inactive: #475569;
+  --text-tab-active: #0f172a;
+  --panel-card-bg: #f8fafc;
+  --panel-card-border: #cbd5e1;
+  --window-text: #0f172a;
+  --panel-text: #0f172a;
+  --panel-title-color: #0078d4;
+  --close-btn-color: #475569;
+  --close-btn-active-color: #0f172a;
+}
+
+[data-workspace-skin="slate"] .workspace-tab.active::before {
+  top: auto !important;
+  bottom: 0 !important;
+  height: 3px !important;
+}
+
+/* --------------------------------------------------------------------------
+   SKIN 5: Nordic Frost Preset (Nord Theme)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="nord"] {
+  --bg-workspace: #2e3440;
+  --bg-panel: #3b4252;
+  --bg-tab-bar: #2e3440;
+  --window-bg: rgba(59, 66, 82, var(--window-opacity, 1.0));
+  --window-border: #434c5e;
+  --window-header-bg: #2e3440;
+  --accent-color: #88c0d0;
+  --accent-glow: rgba(136, 192, 208, 0.2);
+  --border-panel: #434c5e;
+  --bg-tab-inactive: #2e3440;
+  --text-tab-inactive: #d8dee9;
+  --text-tab-active: #eceff4;
+  --panel-card-bg: #2e3440;
+  --panel-card-border: #4c566a;
+  --close-btn-color: #d8dee9;
+  --close-btn-active-color: #88c0d0;
+  --scrollbar-thumb: rgba(136, 192, 208, 0.25);
+  --scrollbar-thumb-hover: rgba(136, 192, 208, 0.4);
+  --window-text: #eceff4;
+  --panel-text: #eceff4;
+}
+
+[data-workspace-skin="nord"][data-bs-theme="light"] {
+  --bg-workspace: #e5e9f0;
+  --bg-panel: #eceff4;
+  --bg-tab-bar: #e5e9f0;
+  --window-bg: rgba(236, 239, 244, var(--window-opacity, 1.0));
+  --window-border: #d8dee9;
+  --window-header-bg: #e5e9f0;
+  --accent-color: #5e81ac;
+  --accent-glow: rgba(94, 129, 172, 0.15);
+  --border-panel: #d8dee9;
+  --bg-tab-inactive: #e5e9f0;
+  --text-tab-inactive: #4c566a;
+  --text-tab-active: #2e3440;
+  --panel-card-bg: #e5e9f0;
+  --panel-card-border: #d8dee9;
+  --close-btn-color: #4c566a;
+  --close-btn-active-color: #5e81ac;
+  --scrollbar-thumb: rgba(94, 129, 172, 0.2);
+  --scrollbar-thumb-hover: rgba(94, 129, 172, 0.35);
+  --window-text: #2e3440;
+  --panel-text: #2e3440;
+  --panel-title-color: #5e81ac;
+}
+
+/* --------------------------------------------------------------------------
+   SKIN 6: Midnight Obsidian Preset (Vercel Style)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="obsidian"] {
+  --bg-workspace: #000000;
+  --bg-panel: #0a0a0a;
+  --bg-tab-bar: #000000;
+  --window-bg: rgba(10, 10, 10, var(--window-opacity, 1.0));
+  --window-border: #1a1a1a;
+  --window-border-focused: #333333;
+  --window-header-bg: #000000;
+  --accent-color: #ffffff;
+  --accent-glow: rgba(255, 255, 255, 0.08);
+  --border-panel: #1a1a1a;
+  --bg-tab-inactive: #000000;
+  --text-tab-inactive: #737373;
+  --text-tab-active: #ffffff;
+  --panel-card-bg: #030303;
+  --panel-card-border: #1a1a1a;
+  --close-btn-color: #737373;
+  --close-btn-active-color: #ffffff;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
+  --window-text: #ffffff;
+  --panel-text: #ffffff;
+}
+
+[data-workspace-skin="obsidian"][data-bs-theme="light"] {
+  --bg-workspace: #ffffff;
+  --bg-panel: #fafafa;
+  --bg-tab-bar: #ffffff;
+  --window-bg: rgba(250, 250, 250, var(--window-opacity, 1.0));
+  --window-border: #e5e5e5;
+  --window-border-focused: #a3a3a3;
+  --window-header-bg: #ffffff;
+  --accent-color: #000000;
+  --accent-glow: rgba(0, 0, 0, 0.05);
+  --border-panel: #eaeaea;
+  --bg-tab-inactive: #ffffff;
+  --text-tab-inactive: #737373;
+  --text-tab-active: #000000;
+  --panel-card-bg: #ffffff;
+  --panel-card-border: #e5e5e5;
+  --close-btn-color: #737373;
+  --close-btn-active-color: #000000;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.1);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --window-text: #000000;
+  --panel-text: #000000;
+  --panel-title-color: #000000;
+}
+
+/* Obsidian custom borderless panel elevations */
+[data-workspace-skin="obsidian"] .floating-window {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  border-radius: 6px;
+}
+[data-workspace-skin="obsidian"] .floating-window.v2-window-focused {
+  box-shadow: 0 24px 50px rgba(255, 255, 255, 0.06), 0 0 1px rgba(255, 255, 255, 0.4) !important;
+}
+[data-workspace-skin="obsidian"][data-bs-theme="light"] .floating-window {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1) !important;
+}
+[data-workspace-skin="obsidian"][data-bs-theme="light"] .floating-window.v2-window-focused {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* --------------------------------------------------------------------------
+   SKIN 7: Tokyo Night Preset
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="tokyo"] {
+  --bg-workspace: #1a1b26;
+  --bg-panel: #24283c;
+  --bg-tab-bar: #1f2335;
+  --window-bg: rgba(36, 40, 60, var(--window-opacity, 1.0));
+  --window-border: #383e5a;
+  --window-border-focused: #7aa2f7;
+  --window-header-bg: #1f2335;
+  --accent-color: #bb9af7;
+  --accent-glow: rgba(187, 154, 247, 0.25);
+  --border-panel: #383e5a;
+  --bg-tab-inactive: #1f2335;
+  --text-tab-inactive: #787c99;
+  --text-tab-active: #c0caf5;
+  --panel-card-bg: #1a1b26;
+  --panel-card-border: #383e5a;
+  --close-btn-color: #787c99;
+  --close-btn-active-color: #7aa2f7;
+  --scrollbar-thumb: rgba(122, 162, 247, 0.25);
+  --scrollbar-thumb-hover: rgba(187, 154, 247, 0.4);
+  --window-text: #c0caf5;
+  --panel-text: #c0caf5;
+}
+
+[data-workspace-skin="tokyo"][data-bs-theme="light"] {
+  --bg-workspace: #e1e2e7;
+  --bg-panel: #f2f4f8;
+  --bg-tab-bar: #d5d6db;
+  --window-bg: rgba(242, 244, 248, var(--window-opacity, 1.0));
+  --window-border: #b4b5b9;
+  --window-border-focused: #385af6;
+  --window-header-bg: #d5d6db;
+  --accent-color: #9854f1;
+  --accent-glow: rgba(152, 84, 241, 0.15);
+  --border-panel: #b4b5b9;
+  --bg-tab-inactive: #d5d6db;
+  --text-tab-inactive: #565a6e;
+  --text-tab-active: #383e56;
+  --panel-card-bg: #e1e2e7;
+  --panel-card-border: #b4b5b9;
+  --close-btn-color: #565a6e;
+  --close-btn-active-color: #385af6;
+  --scrollbar-thumb: rgba(56, 90, 246, 0.2);
+  --scrollbar-thumb-hover: rgba(152, 84, 241, 0.35);
+  --window-text: #383e56;
+  --panel-text: #383e56;
+  --panel-title-color: #9854f1;
 }
 
 /* --- Modern Sidebar and Tabs UI Theme Customizations --- */

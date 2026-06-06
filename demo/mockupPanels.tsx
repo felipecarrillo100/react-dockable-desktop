@@ -76,7 +76,7 @@ export const CodeEditor: React.FC = () => {
 
   return (
     <div className="w-100 h-100 text-start d-flex flex-column" style={{ overflow: 'hidden' }}>
-      <div className="d-flex align-items-center justify-content-between p-2 border-bottom border-secondary border-opacity-30 bg-black bg-opacity-20">
+      <div className="d-flex align-items-center justify-content-between p-2 border-bottom border-secondary border-opacity-30 bg-body-tertiary bg-opacity-20">
         <span className="small text-muted font-monospace">// app.tsx</span>
         <button
           type="button"
@@ -565,10 +565,10 @@ export const DirtyFormDemoPanel: React.FC = () => {
   };
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-white text-start" style={{ overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-body d-flex flex-column text-start" style={{ overflow: 'auto' }}>
       <h6 className="border-bottom border-secondary pb-2 text-info">Dirty State & Close Interception Form</h6>
       <div className="d-flex flex-column gap-3 mt-3">
-        <div className="p-3 bg-black bg-opacity-30 rounded border border-secondary">
+        <div className="p-3 bg-body-tertiary bg-opacity-30 rounded border border-secondary">
           <label className="form-label small text-info">1. Try Marking Dirty State</label>
           <div className="d-flex align-items-center justify-content-between">
             <span className="small text-secondary">Is Form Dirty (Unsaved Changes)?</span>
@@ -585,7 +585,7 @@ export const DirtyFormDemoPanel: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-3 bg-black bg-opacity-30 rounded border border-secondary">
+        <div className="p-3 bg-body-tertiary bg-opacity-30 rounded border border-secondary">
           <label className="form-label small text-info">2. Try Blocking Close (Custom Guard)</label>
           <div className="form-check form-switch d-flex justify-content-between align-items-center p-0">
             <span className="small text-secondary">Lock Close Preventer:</span>
@@ -602,11 +602,11 @@ export const DirtyFormDemoPanel: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-3 bg-black bg-opacity-30 rounded border border-secondary">
+        <div className="p-3 bg-body-tertiary bg-opacity-30 rounded border border-secondary">
           <label className="form-label small text-info">3. Try Dynamic Title Update</label>
           <input
             type="text"
-            className="form-control form-control-sm bg-dark text-white border-secondary"
+            className="form-control form-control-sm bg-body text-body border-secondary"
             placeholder="Type new panel title..."
             value={titleInput}
             onChange={handleTitleChange}
@@ -655,7 +655,7 @@ export const DirtyEditorDemoPanel: React.FC = () => {
   };
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-white text-start d-flex flex-column gap-2" style={{ overflow: 'hidden' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-body text-start d-flex flex-column gap-2" style={{ overflow: 'hidden' }}>
       <div className="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2">
         <h6 className="mb-0 text-info">Dirty Code Editor</h6>
         <button
@@ -668,7 +668,7 @@ export const DirtyEditorDemoPanel: React.FC = () => {
         </button>
       </div>
       <textarea
-        className="form-control bg-black text-info font-monospace flex-grow-1 border-secondary p-3 mt-1"
+        className="form-control bg-body text-body font-monospace flex-grow-1 border-secondary p-3 mt-1"
         style={{ resize: 'none', fontSize: '0.85rem', height: 'calc(100% - 40px)' }}
         value={content}
         onChange={handleEdit}

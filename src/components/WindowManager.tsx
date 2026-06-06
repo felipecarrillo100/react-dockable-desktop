@@ -383,7 +383,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 // 5. WindowManager (Main Render Component)
 // ==========================================
 
-export const WindowManager: React.FC = () => {
+export const WindowManager: React.FC<{ skin?: string }> = ({ skin = 'vscode' }) => {
   const state = useWindowManagerState();
   const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
@@ -835,8 +835,26 @@ export const WindowManager: React.FC = () => {
     }
   };
 
+  // Fetch the active bs-theme from documentElement to make sure nested variables resolve correctly
+  const [currentBsTheme, setCurrentBsTheme] = useState<'dark' | 'light'>('dark');
+  useEffect(() => {
+    const updateThemeState = () => {
+      const activeTheme = document.documentElement.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
+      setCurrentBsTheme(activeTheme);
+    };
+    updateThemeState();
+    const obs = new MutationObserver(updateThemeState);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+    return () => obs.disconnect();
+  }, []);
+
   return (
-    <div className="d-flex flex-column w-100 h-100 overflow-hidden" style={{ userSelect: 'none' }}>
+    <div 
+      data-workspace-skin={skin}
+      data-bs-theme={currentBsTheme}
+      className="d-flex flex-column w-100 h-100 overflow-hidden" 
+      style={{ userSelect: 'none' }}
+    >
       
       {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
       <div 
@@ -991,7 +1009,7 @@ export const WindowManager: React.FC = () => {
                             }
                           });
                         }}
-                        className="custom-tab-btn"
+                        className="custom-tab-btn btn-anchor-tab"
                       >
                         <svg className={`anchor-icon ${(w.stickyRight && w.stickyBottom) ? 'anchor-sticky-both' : w.stickyRight ? 'anchor-sticky-right' : w.stickyBottom ? 'anchor-sticky-bottom' : ''}`} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <circle cx="12" cy="5" r="2" />
