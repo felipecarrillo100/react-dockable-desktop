@@ -1,9 +1,12 @@
-# Dockable Desktop (WindowManager)
+# React Dockable Desktop
 
 [![npm version](https://img.shields.io/badge/npm-v1.0.0-blue.svg)](#)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#)
+[![Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/)
 
 A beautiful, premium, state-of-the-art React window manager and dockable layout engine. It features fluid split-docking grids, resizable floating windows, dynamic taskbars, and tabbed panels with **zero-unmount DOM persistence** and **built-in internationalization (i18n) support**.
+
+[**Live Interactive Demo 🚀**](https://felipecarrillo100.github.io/react-dockable-desktop/)
 
 ---
 

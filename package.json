@@ -17,6 +17,14 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/felipecarrillo100/react-dockable-desktop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/felipecarrillo100/react-dockable-desktop/issues"
+  },
+  "homepage": "https://github.com/felipecarrillo100/react-dockable-desktop#readme",
   "type": "module",
   "scripts": {
     "dev": "vite demo",

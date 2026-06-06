@@ -703,38 +703,33 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             </Nav>
 
             <Nav className="align-items-center gap-3">
-              {/* Reset Layout Shortcut Button */}
-              <button
-                type="button"
-                onClick={resetWorkspaceLayout}
-                className="btn btn-sm btn-outline-info d-flex align-items-center gap-1 font-monospace"
+              {/* GitHub Repo Link */}
+              <a
+                href="https://github.com/felipecarrillo100/react-dockable-desktop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 font-monospace"
                 style={{ fontSize: '0.75rem' }}
-                title="Restore default panels layout"
+                title="View on GitHub"
               >
-                Reset Grid
-              </button>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+                  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+                  <path d="M9 18c-4.51 2-5-2-7-2" />
+                </svg>
+                GitHub
+              </a>
 
-              {/* Spawn Floating Window Shortcut Button */}
-              <button
-                type="button"
-                onClick={spawnFloatingWindow}
-                className="btn btn-sm btn-primary d-flex align-items-center gap-1 font-monospace"
+              {/* npm Package Link */}
+              <a
+                href="https://www.npmjs.com/package/react-dockable-desktop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 font-monospace"
                 style={{ fontSize: '0.75rem' }}
-                title="Create a new floating tool window"
+                title="View on npm"
               >
-                + Float Window
-              </button>
-
-              {/* Spawn Leaflet Map Button */}
-              <button
-                type="button"
-                onClick={spawnLeafletMapWindow}
-                className="btn btn-sm btn-success d-flex align-items-center gap-1 font-monospace"
-                style={{ fontSize: '0.75rem' }}
-                title="Create a new floating Leaflet map"
-              >
-                + Leaflet Map
-              </button>
+                <span className="fw-bold" style={{ fontSize: '0.7rem' }}>npm</span>
+              </a>
 
               {/* Theme Toggle Button */}
               <button
