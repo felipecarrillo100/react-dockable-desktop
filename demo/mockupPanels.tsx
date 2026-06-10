@@ -685,7 +685,8 @@ export function registerDemoPanels() {
         initialTarget: 'docked',
         canClose: false,
         canMinimize: false,
-        canDrag: false
+        canDrag: false,
+        disableLivePreview: true
     });
     PanelRegistry.register('editor', CodeEditor, { 
         title: 'Code Editor', 
@@ -710,7 +711,8 @@ export function registerDemoPanels() {
     PanelRegistry.register('luciadMap', LeafletMapPanel, { 
         title: 'Leaflet Map', 
         icon: '🌍',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        disableLivePreview: true 
     });
     PanelRegistry.register('layertree', LayerTree, { 
         title: 'Layer tree', 

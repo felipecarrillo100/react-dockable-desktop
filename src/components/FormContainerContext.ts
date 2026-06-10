@@ -14,6 +14,10 @@ export interface FormContainerContract {
   setIcon?: (icon: React.ReactNode) => void;
   containerType?: ContainerType;
   instanceId: string;
+  onClose?: (handler: () => void) => () => void;
+  onMinimize?: (handler: () => void) => () => void;
+  onRestore?: (handler: () => void) => () => void;
+  onResize?: (handler: (width: number, height: number) => void) => () => void;
 }
 
 const defaultContract: FormContainerContract = {
@@ -26,6 +30,10 @@ const defaultContract: FormContainerContract = {
   setIcon: () => {},
   containerType: 'standalone',
   instanceId: 'standalone',
+  onClose: () => () => {},
+  onMinimize: () => () => {},
+  onRestore: () => () => {},
+  onResize: () => () => {},
 };
 
 export const FormContainerContext = createContext<FormContainerContract>(defaultContract);

@@ -51,6 +51,29 @@ const renderPanelContent = (id: string, componentKey: string) => {
   return <Component panelId={id} />;
 };
 
+const activePanelDimensions = new Map<string, { width: number; height: number }>();
+
+const panelLifecycleRegistry = new Map<string, {
+  onClose: Set<() => void>;
+  onMinimize: Set<() => void>;
+  onRestore: Set<() => void>;
+  onResize: Set<(w: number, h: number) => void>;
+}>();
+
+const getOrCreateLifecycleRegistry = (panelId: string) => {
+  let entry = panelLifecycleRegistry.get(panelId);
+  if (!entry) {
+    entry = {
+      onClose: new Set(),
+      onMinimize: new Set(),
+      onRestore: new Set(),
+      onResize: new Set(),
+    };
+    panelLifecycleRegistry.set(panelId, entry);
+  }
+  return entry;
+};
+
 const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
 
@@ -61,7 +84,22 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
     const cachedEl = getOrCreateDomCacheElement(panelId);
     host.appendChild(cachedEl);
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          activePanelDimensions.set(panelId, { width, height });
+          const lifecycle = panelLifecycleRegistry.get(panelId);
+          if (lifecycle) {
+            lifecycle.onResize.forEach(h => h(width, height));
+          }
+        }
+      }
+    });
+    resizeObserver.observe(host);
+
     return () => {
+      resizeObserver.disconnect();
       let hiddenContainer = document.getElementById(hiddenContainerId);
       if (!hiddenContainer) {
         hiddenContainer = document.createElement('div');
@@ -76,9 +114,135 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   return <div ref={hostRef} className="w-100 h-100" />;
 };
 
+const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const state = useWindowManagerState();
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  
+  const panel = state.panels[panelId];
+  const regEntry = panel ? PanelRegistry.get(panel.component) : null;
+  const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || false;
+
+  const [dimensions, setDimensions] = useState({ width: 800, height: 500, scale: 0.25 });
+
+  useEffect(() => {
+    if (disableLivePreview) return;
+
+    const host = hostRef.current;
+    if (!host) return;
+
+    const cachedEl = domCache.get(panelId);
+    if (!cachedEl) return;
+
+    // 1. Read the panel's active dimensions before minimization
+    const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
+    const origW = lastSize.width;
+    const origH = lastSize.height;
+
+    // 2. Calculate scale factor to fit within a 220px x 140px thumbnail container
+    const maxW = 220;
+    const maxH = 140;
+    const scale = Math.min(maxW / origW, maxH / origH);
+
+    setDimensions({ width: origW, height: origH, scale });
+
+    host.appendChild(cachedEl);
+
+    return () => {
+      let hiddenContainer = document.getElementById(hiddenContainerId);
+      if (!hiddenContainer) {
+        hiddenContainer = document.createElement('div');
+        hiddenContainer.id = hiddenContainerId;
+        hiddenContainer.style.display = 'none';
+        document.body.appendChild(hiddenContainer);
+      }
+      hiddenContainer.appendChild(cachedEl);
+    };
+  }, [panelId, disableLivePreview]);
+
+  if (disableLivePreview) {
+    const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
+    const maxW = 220;
+    const maxH = 140;
+    const scale = Math.min(maxW / lastSize.width, maxH / lastSize.height);
+    const displayW = lastSize.width * scale;
+    const displayH = lastSize.height * scale;
+
+    const icon = regEntry?.defaultOptions?.icon || <span>🔳</span>;
+
+    return (
+      <div 
+        className="taskbar-item-preview-frame d-flex flex-column align-items-center justify-content-center text-muted"
+        style={{
+          width: `${displayW}px`,
+          height: `${displayH}px`,
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          border: '1px dashed var(--taskbar-item-border, rgba(255, 255, 255, 0.15))'
+        }}
+      >
+        <div className="taskbar-preview-placeholder-icon mb-1.5" style={{ transform: 'scale(1.2)', filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.4))' }}>
+          {icon}
+        </div>
+        <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.5px', opacity: 0.7, textTransform: 'uppercase' }}>
+          Active Session
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="taskbar-item-preview-frame"
+      style={{
+        width: `${dimensions.width * dimensions.scale}px`,
+        height: `${dimensions.height * dimensions.scale}px`,
+      }}
+    >
+      <div 
+        ref={hostRef} 
+        className="taskbar-item-preview-host"
+        style={{
+          width: `${dimensions.width}px`,
+          height: `${dimensions.height}px`,
+          transform: `scale(${dimensions.scale})`,
+          transformOrigin: 'top left',
+          position: 'absolute',
+          top: 0,
+          left: 0
+        }}
+      />
+    </div>
+  );
+};
+
 const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
+  const state = useWindowManagerState();
   const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle } = useWindowManagerActions();
   
+  const isMin = state.minimized.some(m => m.id === panelId);
+  const prevMinRef = useRef(isMin);
+
+  useEffect(() => {
+    const entry = panelLifecycleRegistry.get(panelId);
+    if (!entry) return;
+
+    if (isMin && !prevMinRef.current) {
+      entry.onMinimize.forEach(h => h());
+    } else if (!isMin && prevMinRef.current) {
+      entry.onRestore.forEach(h => h());
+    }
+    prevMinRef.current = isMin;
+  }, [isMin, panelId]);
+
+  useEffect(() => {
+    return () => {
+      const entry = panelLifecycleRegistry.get(panelId);
+      if (entry) {
+        entry.onClose.forEach(h => h());
+        panelLifecycleRegistry.delete(panelId);
+      }
+    };
+  }, [panelId]);
+
   const contract = React.useMemo<FormContainerContract>(() => ({
     requestClose: (options) => requestClosePanel(panelId, options),
     setDirty: (dirty) => setPanelDirty(panelId, dirty),
@@ -87,7 +251,27 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
       return () => unregisterCloseGuard(panelId);
     },
     setTitle: (title) => updatePanelTitle(panelId, title),
-    instanceId: panelId
+    instanceId: panelId,
+    onClose: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onClose.add(handler);
+      return () => reg.onClose.delete(handler);
+    },
+    onMinimize: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onMinimize.add(handler);
+      return () => reg.onMinimize.delete(handler);
+    },
+    onRestore: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onRestore.add(handler);
+      return () => reg.onRestore.delete(handler);
+    },
+    onResize: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onResize.add(handler);
+      return () => reg.onResize.delete(handler);
+    }
   }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle]);
 
   return (
@@ -130,6 +314,11 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
     const startOffset = isRow ? e.clientX : e.clientY;
     const startSizes = [...node.sizes];
     
+    // Add active classes directly for zero-latency DOM responsiveness during drag
+    const resizerEl = e.currentTarget as HTMLDivElement;
+    resizerEl.classList.add('active');
+    document.body.classList.add('resizing-active', isRow ? 'resizing-row-active' : 'resizing-col-active');
+
     // Capture the parent element and its size synchronously on mousedown
     const parentEl = e.currentTarget.parentElement;
     const parentSize = parentEl 
@@ -153,6 +342,8 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
     };
 
     const handleMouseUp = () => {
+      resizerEl.classList.remove('active');
+      document.body.classList.remove('resizing-active', 'resizing-row-active', 'resizing-col-active');
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -178,13 +369,11 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
                 onMouseDown={(e) => handleResizerMouseDown(idx, e)}
                 style={{
                   cursor: isRow ? 'col-resize' : 'row-resize',
-                  width: isRow ? '6px' : '100%',
-                  height: isRow ? '100%' : '6px',
-                  backgroundColor: 'var(--resizer-bg)',
+                  width: isRow ? '1px' : '100%',
+                  height: isRow ? '100%' : '1px',
                   zIndex: 20,
-                  transition: 'background-color 0.2s',
                 }}
-                className="resizer-bar hover-highlight"
+                className="resizer-bar"
               />
             )}
           </React.Fragment>
@@ -423,6 +612,15 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (hoveredMinimized) {
+      const isStillMinimized = state.minimized.some(m => m.id === hoveredMinimized.id);
+      if (!isStillMinimized) {
+        setHoveredMinimized(null);
+      }
+    }
+  }, [state.minimized, hoveredMinimized]);
 
   const [activeDropZone, setActiveDropZone] = useState<{ leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null>(null);
   const activeDropZoneRef = useRef<{ leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null>(null);
@@ -1147,7 +1345,10 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               return (
                 <div
                   key={m.id}
-                  onClick={() => restorePanel(m.id)}
+                  onClick={() => {
+                    setHoveredMinimized(null);
+                    restorePanel(m.id);
+                  }}
                   onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
                   onMouseEnter={(e) => {
                     if (isContextMenuOpen) return;
@@ -1155,6 +1356,13 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       clearTimeout(minimizedTooltipTimeoutRef.current);
                     }
                     const rect = e.currentTarget.getBoundingClientRect();
+                    const isInside = (
+                      e.clientX >= rect.left &&
+                      e.clientX <= rect.right &&
+                      e.clientY >= rect.top &&
+                      e.clientY <= rect.bottom
+                    );
+                    if (!isInside) return;
                     setHoveredMinimized({ id: m.id, rect, title: m.title, component: m.component });
                   }}
                   onMouseLeave={() => {
@@ -1184,7 +1392,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
           {hoveredMinimized && createPortal(
             <div 
-              className="taskbar-item-tooltip d-flex align-items-center gap-2"
+              className="taskbar-item-tooltip d-flex flex-column gap-1"
               style={{
                 position: 'fixed',
                 left: `${hoveredMinimized.rect.left + hoveredMinimized.rect.width / 2}px`,
@@ -1202,24 +1410,31 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               onMouseLeave={() => {
                 setHoveredMinimized(null);
               }}
+              onClick={() => {
+                restorePanel(hoveredMinimized.id);
+                setHoveredMinimized(null);
+              }}
             >
-               <span className="tooltip-title-text text-truncate" style={{ maxWidth: '140px' }}>
-                 {formatLabel(hoveredMinimized.title, formatMessage)}
-                 {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
-               </span>
-               <span 
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   requestClosePanel(hoveredMinimized.id);
-                   setHoveredMinimized(null);
-                 }}
-                 title={formatLabel(messages.closePanel, formatMessage)}
-                 className="tooltip-close-x d-flex align-items-center justify-content-center"
-               >
-                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                   <path d="M18 6L6 18M6 6l12 12"/>
-                 </svg>
-               </span>
+               <div className="d-flex flex-row align-items-center justify-content-between w-100 gap-3 px-1 py-0.5">
+                  <span className="tooltip-title-text text-truncate" style={{ maxWidth: '140px' }}>
+                    {formatLabel(hoveredMinimized.title, formatMessage)}
+                    {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
+                  </span>
+                  <span 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      requestClosePanel(hoveredMinimized.id);
+                      setHoveredMinimized(null);
+                    }}
+                    title={formatLabel(messages.closePanel, formatMessage)}
+                    className="tooltip-close-x d-flex align-items-center justify-content-center"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </span>
+               </div>
+               <PreviewDOMWrapper panelId={hoveredMinimized.id} />
             </div>,
             document.body
           )}

@@ -12,6 +12,7 @@ export interface PanelRegistryEntry {
     canClose?: boolean;
     defaultStickyRight?: boolean;
     defaultStickyBottom?: boolean;
+    disableLivePreview?: boolean;
   };
 }
 

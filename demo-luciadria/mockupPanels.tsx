@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { PanelRegistry, useFormContainer } from '../src/index';
+import React, {useEffect, useRef, useState} from 'react';
+import {PanelRegistry, useFormContainer} from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
-import { getReference } from '@luciad/ria/reference/ReferenceProvider.js';
-import { RIAMap } from '@luciad/ria/view/RIAMap.js';
+import {getReference} from '@luciad/ria/reference/ReferenceProvider.js';
+import {RIAMap} from '@luciad/ria/view/RIAMap.js';
+import {throttle} from "./utils/throttle.ts";
 
 // ==========================================
 // 1. Panel Mockup Components
@@ -155,28 +156,48 @@ export const ToolPanel: React.FC = () => (
 export const LuciadMapPanel: React.FC<{ panelId: string }> = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<RIAMap | null>(null);
+    const contract = useFormContainer();
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+      // 1. Get the form container contract
+
     try {
       // Create the map on the HTML DOM element in EPSG:4978
-      const map = new RIAMap(container, {
-        reference: getReference('EPSG:4978'),
+      mapRef.current = new RIAMap(container, {
+          reference: getReference('EPSG:4978'),
       });
-      mapRef.current = map;
 
-      const resizeObserver = new ResizeObserver(() => {
-        if (mapRef.current) {
-          mapRef.current.resize();
-        }
-      });
-      resizeObserver.observe(container);
+        // 2. Subscribe to the window resize emitter instead of local ResizeObserver
+        const unsubscribeResize = contract.onResize?.(throttle((_width, _height) => {
+            if (mapRef.current) {
+                // You receive the width & height directly!
+                mapRef.current.resize();
+                console.log("I was resized!")
+            }
+        }, 200, {
+            leading: true,   // Execute immediately on the first event
+            trailing: true   // Execute one last time after the user stops resizing
+        }));
+
+        const unsubscribeMinimize = contract.onMinimize?.(()=>{
+            mapRef.current?.invalidate();
+        });
+
+      // const resizeObserver = new ResizeObserver(() => {
+      //   if (mapRef.current) {
+      //     mapRef.current.resize();
+      //   }
+      // });
+     // resizeObserver.observe(container);
 
       return () => {
-        resizeObserver.disconnect();
-        if (mapRef.current) {
+       // resizeObserver.disconnect();
+          unsubscribeMinimize?.();
+          unsubscribeResize?.();
+          if (mapRef.current) {
           mapRef.current.destroy();
           mapRef.current = null;
         }
@@ -187,9 +208,9 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = () => {
   }, []);
 
   return (
-    <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
-      <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px' }} />
-      <div className="position-absolute top-0 start-0 m-2 p-1 px-2 rounded bg-black bg-opacity-75 text-info font-monospace small" style={{ zIndex: 10, pointerEvents: 'none' }}>
+    <div className="position-relative" style={{ overflow: 'hidden' ,width: '100%', height: "100%", backgroundColor: "orange"  }}>
+      <div ref={containerRef} className="map-mini" style={{ width: '100%', height: "100%" , backgroundColor: "pink" }} />
+      <div className="position-absolute top-0 start-0 rounded bg-black bg-opacity-75 text-info font-monospace small" style={{ width:"100%", zIndex: 10, pointerEvents: 'none' }}>
         LuciadRIA 3D Earth (EPSG:4978)
       </div>
     </div>
@@ -231,7 +252,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
 
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
-      <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px' }} />
+      <div ref={containerRef} style={{width: "100%", height: "100%"}} className="mini-me"  />
       <div className="position-absolute top-0 start-0 m-2 p-1 px-2 rounded bg-black bg-opacity-75 text-success font-monospace small" style={{ zIndex: 1, pointerEvents: 'none' }}>
         🗺️ Main Global Map View (EPSG:4978) [Locked Layout]
       </div>
@@ -416,4 +437,3 @@ export function registerDemoPanels() {
   PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { title: 'Intercept Form', initialTarget: 'floating', favoritePosition: { x: 350, y: 150, width: 450, height: 420 } });
   PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { title: 'Intercept Editor', initialTarget: 'docked' });
 }
-

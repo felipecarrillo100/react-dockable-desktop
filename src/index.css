@@ -214,14 +214,66 @@ body,
 
 /* Drag resizer split bars */
 .resizer-bar {
-  background-color: var(--resizer-bg) !important;
-  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  background-color: var(--border-panel, rgba(255, 255, 255, 0.08)) !important;
+  transition: background-color 0.15s ease, transform 0.15s ease !important;
+  position: relative;
+  z-index: 21;
 }
 
+/* Invisible 8px hit-box overlay to make grabbing easy */
+.resizer-bar::before {
+  content: '';
+  position: absolute;
+  z-index: 22;
+}
+
+/* Grab hit-box for columns (cursor: col-resize) */
+.resizer-bar[style*="cursor: col-resize"]::before {
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 8px;
+  height: 100%;
+}
+
+/* Grab hit-box for rows (cursor: row-resize) */
+.resizer-bar[style*="cursor: row-resize"]::before {
+  left: 0;
+  right: 0;
+  top: -3px;
+  height: 8px;
+  width: 100%;
+}
+
+/* Highlight state (on hover or active drag) */
 .resizer-bar:hover,
 .resizer-bar.active {
-  background-color: var(--accent-color) !important;
-  box-shadow: 0 0 8px var(--accent-glow);
+  background-color: color-mix(in srgb, var(--accent-color) 35%, transparent) !important;
+  box-shadow: none !important;
+  z-index: 25 !important;
+}
+
+.resizer-bar[style*="cursor: col-resize"]:hover,
+.resizer-bar[style*="cursor: col-resize"].active {
+  transform: scaleX(2);
+}
+
+.resizer-bar[style*="cursor: row-resize"]:hover,
+.resizer-bar[style*="cursor: row-resize"].active {
+  transform: scaleY(2);
+}
+
+/* Global body cursor overrides during active resize drag to prevent cursor flickering */
+body.resizing-active {
+  user-select: none !important;
+}
+body.resizing-row-active,
+body.resizing-row-active * {
+  cursor: row-resize !important;
+}
+body.resizing-col-active,
+body.resizing-col-active * {
+  cursor: col-resize !important;
 }
 
 /* Control buttons inside tabs/windows */
@@ -315,14 +367,15 @@ body,
 .taskbar-item-tooltip {
   background: var(--bg-panel, #1e1e1e) !important;
   color: var(--text-primary, #ffffff) !important;
-  padding: 6px 12px;
+  padding: 8px !important;
   border-radius: 6px;
   font-size: 11px !important;
   font-family: 'Outfit', 'Inter', system-ui, sans-serif;
-  white-space: nowrap;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--taskbar-item-border, rgba(255, 255, 255, 0.1)) !important;
   animation: tooltipFadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Invisible bridge so mouse transitions smoothly to tooltip */
@@ -345,6 +398,29 @@ body,
   border-width: 5px;
   border-style: solid;
   border-color: var(--bg-panel, #1e1e1e) transparent transparent transparent;
+}
+
+/* Live preview thumbnail styles */
+.taskbar-item-preview-frame {
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000000;
+  border: 1px solid var(--taskbar-item-border, rgba(255, 255, 255, 0.15));
+  position: relative;
+  margin-top: 4px;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.taskbar-item-preview-host {
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.taskbar-item-preview-host * {
+  pointer-events: none !important;
+  user-select: none !important;
 }
 
 
