@@ -65,6 +65,7 @@ export interface WindowState {
   panels: Record<string, PanelInfo>;
   draggedPanelId: string | null;
   pendingClose: { id: string; resolve: (discard: boolean) => void } | null;
+  activePanelId: string | null;
 }
 
 export interface WindowActions {
@@ -93,6 +94,7 @@ export interface WindowActions {
   requestClosePanel: (id: string, options?: { force?: boolean }) => Promise<void>;
   resolvePendingClose: (discard: boolean) => void;
   dockPanelToWorkspaceEdge: (id: string, position: 'left' | 'right' | 'top' | 'bottom') => void;
+  setActivePanel: (id: string | null) => void;
 }
 
 const WindowStateContext = createContext<WindowState | null>(null);
@@ -195,7 +197,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     minimized: [],
     panels: initialPanels,
     draggedPanelId: null,
-    pendingClose: null
+    pendingClose: null,
+    activePanelId: 'main-map'
   });
 
   const stateRef = useRef(state);
@@ -276,7 +279,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       if (panel.state === 'floating') {
         return {
           ...prev,
-          floating: prev.floating.map(w => w.id === id ? { ...w, z } : w)
+          floating: prev.floating.map(w => w.id === id ? { ...w, z } : w),
+          activePanelId: id
         };
       } else if (panel.state === 'docked') {
         const selectActiveInTree = (node: LayoutNode): LayoutNode => {
@@ -291,10 +295,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         };
         return {
           ...prev,
-          gridRoot: selectActiveInTree(prev.gridRoot)
+          gridRoot: selectActiveInTree(prev.gridRoot),
+          activePanelId: id
         };
       }
-      return prev;
+      return { ...prev, activePanelId: id };
     });
   }, []);
 
@@ -969,18 +974,27 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     try {
       const parsed = JSON.parse(layoutJson);
       if (parsed.gridRoot && parsed.floating && parsed.minimized && parsed.panels) {
+        const firstActive = Object.keys(parsed.panels)[0] || null;
         setState({
           gridRoot: parsed.gridRoot,
           floating: parsed.floating,
           minimized: parsed.minimized,
           panels: parsed.panels,
           draggedPanelId: null,
-          pendingClose: null
+          pendingClose: null,
+          activePanelId: firstActive
         });
       }
     } catch (e) {
       console.error('Failed to parse layout configuration:', e);
     }
+  }, []);
+
+  const setActivePanel = useCallback((id: string | null) => {
+    setState(prev => {
+      if (prev.activePanelId === id) return prev;
+      return { ...prev, activePanelId: id };
+    });
   }, []);
 
   const actions = useMemo<WindowActions>(() => ({
@@ -1008,7 +1022,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     updatePanelTitle,
     requestClosePanel,
     resolvePendingClose,
-    dockPanelToWorkspaceEdge
+    dockPanelToWorkspaceEdge,
+    setActivePanel
   }), [
     openPanel,
     closePanel,
@@ -1034,7 +1049,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     updatePanelTitle,
     requestClosePanel,
     resolvePendingClose,
-    dockPanelToWorkspaceEdge
+    dockPanelToWorkspaceEdge,
+    setActivePanel
   ]);
 
   const defaultFormatMessage: MessageFormatter = (msg) => {

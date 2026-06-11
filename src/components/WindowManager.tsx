@@ -396,17 +396,22 @@ interface LeafGroupProps {
 
 const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon }) => {
   const state = useWindowManagerState();
-  const { requestClosePanel, openPanel, closeLeafGroup } = useWindowManagerActions();
+  const { requestClosePanel, openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
 
   const selectTab = (id: string) => {
     openPanel(id, state.panels[id].component);
+    setActivePanel(id);
   };
 
   return (
-    <div className={`workspace-panel w-100 h-100 d-flex flex-column ${windowClass ?? ''}`} style={{ overflow: 'hidden', position: 'relative' }}>
+    <div 
+      data-active-panel-id={leaf.activePanelId || ''}
+      className={`workspace-panel w-100 h-100 d-flex flex-column ${windowClass ?? ''}`} 
+      style={{ overflow: 'hidden', position: 'relative' }}
+    >
       {/* Tab Headers */}
       <div className="workspace-tab-bar d-flex flex-row justify-content-between align-items-center" style={{ minHeight: '38px' }}>
         <div 
@@ -426,7 +431,8 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
           {leaf.panels.map((id, idx) => {
             const panel = state.panels[id];
             if (!panel) return null;
-            const isActive = leaf.activePanelId === id;
+            const isSelected = leaf.activePanelId === id;
+            const isGloballyActive = state.activePanelId === id;
             
             const registryEntry = PanelRegistry.get(panel.component);
             const options = registryEntry?.defaultOptions;
@@ -437,6 +443,10 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             const sideClass = isHovered 
               ? (hoveredTab.side === 'left' ? 'drag-hover-left' : 'drag-hover-right') 
               : (isHoveredEmpty ? 'drag-hover-right' : '');
+
+            const tabFocusClass = isSelected
+              ? (isGloballyActive ? 'active workspace-tab-active-focused' : 'active workspace-tab-active-unfocused')
+              : 'workspace-tab-inactive';
 
             return (
               <div 
@@ -461,7 +471,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                     onTabHover(leaf.id, '', -1, null);
                   }
                 }}
-                className={`workspace-tab ${isActive ? 'active workspace-tab-active' : 'workspace-tab-inactive'} ${sideClass}`}
+                className={`workspace-tab ${tabFocusClass} ${sideClass}`}
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
                 <span className="text-truncate d-flex align-items-center" style={{ maxWidth: '120px' }}>
@@ -593,7 +603,7 @@ export interface WindowManagerProps {
 
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
   const state = useWindowManagerState();
-  const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge } = useWindowManagerActions();
+  const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
@@ -894,7 +904,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     });
   }, [workspaceSize, state.floating, updateFloatingPosition]);
 
-  // Global Window Focus Event Delegation (Left-click anywhere inside a window raises it)
+  // Global Window Focus Event Delegation (Left-click anywhere inside a window or grid panel focuses it)
   useEffect(() => {
     const handleMouseDownGlobal = (e: MouseEvent) => {
       // Only handle left clicks (button === 0)
@@ -903,12 +913,24 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
+      // 1. Check if click is inside a floating window
       const windowEl = target.closest('.floating-window') as HTMLElement | null;
-      if (!windowEl) return;
+      if (windowEl) {
+        const winId = windowEl.getAttribute('data-window-id');
+        if (winId) {
+          setActivePanel(winId);
+          bringToFront(winId);
+        }
+        return;
+      }
 
-      const winId = windowEl.getAttribute('data-window-id');
-      if (winId) {
-        bringToFront(winId);
+      // 2. Check if click is inside a grid split pane
+      const panelEl = target.closest('.workspace-panel') as HTMLElement | null;
+      if (panelEl) {
+        const panelId = panelEl.getAttribute('data-active-panel-id');
+        if (panelId) {
+          setActivePanel(panelId);
+        }
       }
     };
 
@@ -916,7 +938,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     return () => {
       document.removeEventListener('mousedown', handleMouseDownGlobal);
     };
-  }, [bringToFront]);
+  }, [bringToFront, setActivePanel]);
 
   // Floating Window dragging handler
   const startDrag = (id: string, e: React.MouseEvent) => {
@@ -1153,7 +1175,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             
             const isMaximized = w.maximized;
             const isDragged = state.draggedPanelId === w.id;
-            const isFocused = w.z === maxZ && state.floating.length > 0;
+            const isFocused = state.activePanelId === w.id;
 
             const registryEntry = PanelRegistry.get(panel.component);
             const options = registryEntry?.defaultOptions;
@@ -1162,6 +1184,10 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               <div
                 key={w.id}
                 data-window-id={w.id}
+                onMouseDownCapture={() => {
+                  setActivePanel(w.id);
+                  bringToFront(w.id);
+                }}
                 className={`floating-window ${isMaximized ? 'maximized' : ''} ${isFocused ? 'v2-window-focused' : ''} ${windowClass ?? ''}`}
                 style={{
                   position: 'absolute',

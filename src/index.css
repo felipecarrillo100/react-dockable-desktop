@@ -28,6 +28,13 @@
   --close-btn-hover-color: #ffffff;
   --close-btn-color: #858b99;
   --close-btn-active-color: #e2e8f0;
+  /* Tab focus states */
+  --tab-indicator-focused: var(--accent-color, #38bdf8);
+  --tab-indicator-unfocused: rgba(255, 255, 255, 0.3);
+  --tab-bg-active-focused: var(--bg-panel);
+  --tab-bg-active-unfocused: rgba(20, 23, 34, 0.55);
+  --tab-text-active-focused: var(--text-tab-active, #ffffff);
+  --tab-text-active-unfocused: rgba(255, 255, 255, 0.65);
   --resizer-bg: rgba(255, 255, 255, 0.08);
   --custom-btn-bg: rgba(255, 255, 255, 0.03);
   --custom-btn-border: rgba(255, 255, 255, 0.05);
@@ -151,26 +158,45 @@ body,
   color: var(--text-tab-hover) !important;
 }
 
-/* Active tab */
-.workspace-tab.active {
-  background-color: var(--bg-panel) !important; /* matches panel content area */
-  color: var(--text-tab-active) !important;
+/* Active tab (focused) */
+.workspace-tab.active.workspace-tab-active-focused {
+  background-color: var(--tab-bg-active-focused) !important;
+  color: var(--tab-text-active-focused) !important;
   font-weight: 500;
   border-right: 1px solid var(--border-panel) !important;
   z-index: 2;
 }
 
-/* Top accent line on active tab (VS Code style indicator) */
-.workspace-tab.active::before {
+.workspace-tab.active.workspace-tab-active-focused::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 2px;
-  background-color: var(--accent-color);
+  background-color: var(--tab-indicator-focused) !important;
   border-radius: 0 !important;
   box-shadow: 0 1px 4px var(--accent-glow);
+}
+
+/* Active tab (unfocused/inactive group) */
+.workspace-tab.active.workspace-tab-active-unfocused {
+  background-color: var(--tab-bg-active-unfocused) !important;
+  color: var(--tab-text-active-unfocused) !important;
+  font-weight: 500;
+  border-right: 1px solid var(--border-panel) !important;
+  z-index: 2;
+}
+
+.workspace-tab.active.workspace-tab-active-unfocused::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--tab-indicator-unfocused) !important;
+  border-radius: 0 !important;
 }
 
 .workspace-tab-inactive {
@@ -772,6 +798,12 @@ body.resizing-col-active * {
   --close-btn-hover-color: #212529;
   --close-btn-color: #6c757d;
   --close-btn-active-color: #212529;
+  --tab-indicator-focused: #0066cc;
+  --tab-indicator-unfocused: rgba(0, 0, 0, 0.25);
+  --tab-bg-active-focused: var(--bg-panel);
+  --tab-bg-active-unfocused: rgba(220, 224, 230, 0.65);
+  --tab-text-active-focused: #212529;
+  --tab-text-active-unfocused: #6c757d;
   --resizer-bg: rgba(0, 0, 0, 0.08);
   --custom-btn-bg: rgba(0, 0, 0, 0.03);
   --custom-btn-border: rgba(0, 0, 0, 0.08);
