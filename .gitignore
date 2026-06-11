@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 
 # LuciadRIA license
-demo-luciadria/license/luciadria_development.txt
+demo-luciadria/license/luciadria*.txt
+demo-oldria/license/luciadria*.txt

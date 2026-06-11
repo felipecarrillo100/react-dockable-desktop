@@ -1,0 +1,13 @@
+{
+  "name": "demo-oldria",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@luciad/ria": "^2025.0.14"
+  }
+}
