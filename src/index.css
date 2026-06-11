@@ -134,7 +134,7 @@ body,
   color: var(--text-tab-inactive) !important; /* Clear readable gray */
   border: none !important;
   border-right: 1px solid var(--border-panel) !important; /* crisp separator */
-  padding: 0 8px 0 16px !important;
+  padding: 0 6px 0 14px !important;
   font-size: 0.75rem;
   transition: background-color 0.1s ease, color 0.1s ease;
   display: flex;
@@ -146,6 +146,10 @@ body,
   user-select: none;
   height: 35px; /* VS Code standard height */
   box-sizing: border-box;
+}
+
+.workspace-tab > .text-truncate {
+  margin-right: 12px;
 }
 
 /* Remove original after element separator */

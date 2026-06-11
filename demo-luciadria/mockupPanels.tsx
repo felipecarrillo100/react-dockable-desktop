@@ -1,9 +1,10 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {PanelRegistry, useFormContainer} from '../src/index';
+import {PanelRegistry, useFormContainer, useWindowManagerActions} from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import {getReference} from '@luciad/ria/reference/ReferenceProvider.js';
 import {RIAMap} from '@luciad/ria/view/RIAMap.js';
 import {throttle} from "./utils/throttle.ts";
+import type {GestureEvent} from "@luciad/ria/view/input/GestureEvent";
 
 // ==========================================
 // 1. Panel Mockup Components
@@ -153,10 +154,11 @@ export const ToolPanel: React.FC = () => (
   </div>
 );
 
-export const LuciadMapPanel: React.FC<{ panelId: string }> = () => {
+export const LuciadMapPanel: React.FC<{ panelId: string }> = ({panelId}) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<RIAMap | null>(null);
-    const contract = useFormContainer();
+  const contract = useFormContainer();
+  const { setActivePanel } = useWindowManagerActions();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -169,6 +171,13 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = () => {
       mapRef.current = new RIAMap(container, {
           reference: getReference('EPSG:4978'),
       });
+
+      if (mapRef.current) {
+          mapRef.current.onClick = () => {
+              setActivePanel(panelId);
+              return false;
+          }
+      }
 
         // 2. Subscribe to the window resize emitter instead of local ResizeObserver
         const unsubscribeResize = contract.onResize?.(throttle((_width, _height) => {
