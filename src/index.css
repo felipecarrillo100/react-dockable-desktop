@@ -504,7 +504,6 @@ body.resizing-col-active * {
   border-color: rgba(56, 189, 248, 0.25) !important;
 }
 
-/* Floating Windows customization styling */
 .floating-window {
   display: flex;
   flex-direction: column;
@@ -515,14 +514,18 @@ body.resizing-col-active * {
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   background-color: var(--window-bg);
   overflow: hidden;
-  opacity: 0.88;
-  transition: opacity 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 
 .floating-window.v2-window-focused {
-  opacity: 1;
   box-shadow: var(--window-shadow-focused), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   border-color: var(--window-border-focused);
+}
+
+/* Dim only titlebar when window is unfocused to keep panel content opaque */
+.floating-window:not(.v2-window-focused) .floating-window-titlebar {
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
 }
 
 .floating-window.maximized {

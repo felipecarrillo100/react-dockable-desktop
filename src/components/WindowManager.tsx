@@ -1166,9 +1166,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           )}
         </div>
 
-        {/* 1.2 Floating Windows Absolute Container Overlay */}
         {(() => {
-          const maxZ = state.floating.length > 0 ? Math.max(...state.floating.map(w => w.z)) : 0;
           return state.floating.map(w => {
             const panel = state.panels[w.id];
             if (!panel) return null;
