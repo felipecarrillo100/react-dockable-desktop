@@ -1,13 +1,106 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {PanelRegistry, useFormContainer, useWindowManagerActions} from '../src/index';
+import React, { useEffect, useRef, useState } from 'react';
+import { PanelRegistry, useFormContainer, useWindowManagerActions } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
-import {getReference} from '@luciad/ria/reference/ReferenceProvider.js';
-import {RIAMap} from '@luciad/ria/view/RIAMap.js';
-import {throttle} from "./utils/throttle.ts";
-import type {GestureEvent} from "@luciad/ria/view/input/GestureEvent";
+import { DirtyFormDemoPanel, DirtyEditorDemoPanel } from '../demo/mockupPanels';
+import { getReference } from '@luciad/ria/reference/ReferenceProvider.js';
+import { RIAMap } from '@luciad/ria/view/RIAMap.js';
+import { throttle } from "./utils/throttle.ts";
+
+import { WMSTileSetModel } from '@luciad/ria/model/tileset/WMSTileSetModel.js';
+import { WMSTileSetLayer } from '@luciad/ria/view/tileset/WMSTileSetLayer.js';
+import { WFSFeatureStore } from '@luciad/ria/model/store/WFSFeatureStore.js';
+import { FeatureModel } from '@luciad/ria/model/feature/FeatureModel.js';
+import { FeatureLayer } from '@luciad/ria/view/feature/FeatureLayer.js';
+import { FeaturePainter } from "@luciad/ria/view/feature/FeaturePainter.js";
+import type { PaintState } from "@luciad/ria/view/feature/FeaturePainter.js";
+import type { GeoCanvas } from "@luciad/ria/view/style/GeoCanvas.js";
+import { Feature } from "@luciad/ria/model/feature/Feature.js";
+import { Shape } from "@luciad/ria/shape/Shape.js";
+import { Layer } from "@luciad/ria/view/Layer.js";
+import type { LabelCanvas } from "@luciad/ria/view/style/LabelCanvas.js";
+import { Map } from "@luciad/ria/view/Map.js";
+import type { ShapeStyle } from "@luciad/ria/view/style/ShapeStyle.js";
+import { DrapeTarget } from "@luciad/ria/view/style/DrapeTarget.js";
 
 // ==========================================
-// 1. Panel Mockup Components
+// 1. LuciadRIA Layers & Styles Painter
+// ==========================================
+
+const normalStyle: ShapeStyle = {
+  drapeTarget: DrapeTarget.TERRAIN,
+  stroke: {
+    width: 2,
+    color: "rgb(1,64,89)"
+  },
+  fill: {
+    color: "rgba(1,64,89, 0.5)"
+  }
+};
+
+const selectedStyle: ShapeStyle = {
+  drapeTarget: DrapeTarget.TERRAIN,
+  stroke: {
+    width: 2,
+    color: "rgb(103,1,55)"
+  },
+  fill: {
+    color: "rgba(103,1,55, 0.5)"
+  }
+};
+
+export class StatesPainter extends FeaturePainter {
+  paintBody(geoCanvas: GeoCanvas, feature: Feature, shape: Shape, layer: Layer, map: Map, paintState: PaintState) {
+    const style = paintState.selected
+      ? JSON.parse(JSON.stringify(selectedStyle))
+      : JSON.parse(JSON.stringify(normalStyle));
+
+    if (paintState.hovered && style.stroke) {
+      style.stroke.width = 4;
+    }
+
+    geoCanvas.drawShape(shape, style);
+  }
+
+  paintLabel(labelCanvas: LabelCanvas, feature: Feature, shape: Shape, layer: Layer, map: Map, paintState: PaintState) {
+    const name = feature.properties.STATE_NAME;
+    const label = `<div class="painter_state_label"><span>${name}</span></div>`;
+    labelCanvas.drawLabelInPath(label, shape, {});
+  }
+}
+
+function addMapLayers(map: RIAMap) {
+  // 1. Add WMS Layer (Imagery)
+  const wmsUrl = "https://sampleservices.luciad.com/wms";
+  const layerImageryName = [{ layer: "4ceea49c-3e7c-4e2d-973d-c608fb2fb07e" }];
+
+  WMSTileSetModel.createFromURL(wmsUrl, layerImageryName, {}).then((model) => {
+    const layer = new WMSTileSetLayer(model, { label: "Imagery" });
+    map.layerTree.addChild(layer);
+  }).catch((e) => {
+    console.error("Failed to load WMS layer:", e);
+  });
+
+  // 2. Add WFS Layer (USA States)
+  const wfsUrl = "https://sampleservices.luciad.com/wfs";
+  WFSFeatureStore.createFromURL(wfsUrl, "ns4:t_states__c__1213").then((store) => {
+    const model = new FeatureModel(store);
+    const layer = new FeatureLayer(model, {
+      label: "USA",
+      selectable: true,
+      hoverable: true,
+      painter: new StatesPainter()
+    });
+    map.layerTree.addChild(layer);
+    if (layer.bounds) {
+      map.mapNavigator.fit({ bounds: layer.bounds });
+    }
+  }).catch((e) => {
+    console.error("Failed to load WFS layer:", e);
+  });
+}
+
+// ==========================================
+// 2. Panel Mockup Components
 // ==========================================
 
 export const CodeEditor: React.FC = () => (
@@ -154,7 +247,7 @@ export const ToolPanel: React.FC = () => (
   </div>
 );
 
-export const LuciadMapPanel: React.FC<{ panelId: string }> = ({panelId}) => {
+export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<RIAMap | null>(null);
   const contract = useFormContainer();
@@ -164,49 +257,40 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({panelId}) => {
     const container = containerRef.current;
     if (!container) return;
 
-      // 1. Get the form container contract
-
     try {
       // Create the map on the HTML DOM element in EPSG:4978
-      mapRef.current = new RIAMap(container, {
-          reference: getReference('EPSG:4978'),
+      const map = new RIAMap(container, {
+        reference: getReference('EPSG:4978'),
       });
+      mapRef.current = map;
 
-      if (mapRef.current) {
-          mapRef.current.onClick = () => {
-              setActivePanel(panelId);
-              return false;
-          }
+      if (map) {
+        map.onClick = () => {
+          setActivePanel(panelId);
+          return false;
+        };
       }
 
-        // 2. Subscribe to the window resize emitter instead of local ResizeObserver
-        const unsubscribeResize = contract.onResize?.(throttle((_width, _height) => {
-            if (mapRef.current) {
-                // You receive the width & height directly!
-                mapRef.current.resize();
-                console.log("I was resized!")
-            }
-        }, 200, {
-            leading: true,   // Execute immediately on the first event
-            trailing: true   // Execute one last time after the user stops resizing
-        }));
+      addMapLayers(map);
 
-        const unsubscribeMinimize = contract.onMinimize?.(()=>{
-            mapRef.current?.invalidate();
-        });
+      // Subscribe to the window resize emitter
+      const unsubscribeResize = contract.onResize?.(throttle((_width, _height) => {
+        if (mapRef.current) {
+          mapRef.current.resize();
+        }
+      }, 200, {
+        leading: true,
+        trailing: true
+      }));
 
-      // const resizeObserver = new ResizeObserver(() => {
-      //   if (mapRef.current) {
-      //     mapRef.current.resize();
-      //   }
-      // });
-     // resizeObserver.observe(container);
+      const unsubscribeMinimize = contract.onMinimize?.(() => {
+        mapRef.current?.invalidate();
+      });
 
       return () => {
-       // resizeObserver.disconnect();
-          unsubscribeMinimize?.();
-          unsubscribeResize?.();
-          if (mapRef.current) {
+        unsubscribeMinimize?.();
+        unsubscribeResize?.();
+        if (mapRef.current) {
           mapRef.current.destroy();
           mapRef.current = null;
         }
@@ -214,12 +298,12 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({panelId}) => {
     } catch (e) {
       console.error("Failed to initialize LuciadRIA Map in EPSG:4978:", e);
     }
-  }, []);
+  }, [panelId]);
 
   return (
-    <div className="position-relative" style={{ overflow: 'hidden' ,width: '100%', height: "100%", backgroundColor: "orange"  }}>
-      <div ref={containerRef} className="map-mini" style={{ width: '100%', height: "100%" , backgroundColor: "pink" }} />
-      <div className="position-absolute top-0 start-0 rounded bg-black bg-opacity-75 text-info font-monospace small" style={{ width:"100%", zIndex: 10, pointerEvents: 'none' }}>
+    <div className="position-relative" style={{ overflow: 'hidden', width: '100%', height: "100%", backgroundColor: "orange" }}>
+      <div ref={containerRef} className="map-mini luciad" style={{ width: '100%', height: "100%", backgroundColor: "pink" }} />
+      <div className="position-absolute top-0 start-0 rounded bg-black bg-opacity-75 text-info font-monospace small" style={{ width: "100%", zIndex: 10, pointerEvents: 'none' }}>
         LuciadRIA 3D Earth (EPSG:4978)
       </div>
     </div>
@@ -239,6 +323,8 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
         reference: getReference('EPSG:4978'),
       });
       mapRef.current = map;
+
+      addMapLayers(map);
 
       const resizeObserver = new ResizeObserver(() => {
         if (mapRef.current) {
@@ -261,155 +347,10 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
 
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
-      <div ref={containerRef} style={{width: "100%", height: "100%"}} className="mini-me"  />
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} className="mini-me luciad" />
       <div className="position-absolute top-0 start-0 m-2 p-1 px-2 rounded bg-black bg-opacity-75 text-success font-monospace small" style={{ zIndex: 1, pointerEvents: 'none' }}>
         🗺️ Main Global Map View (EPSG:4978) [Locked Layout]
       </div>
-    </div>
-  );
-};
-
-// ==========================================
-// 2. Close Interception & Dirty State Test Panels
-// ==========================================
-
-export const DirtyFormDemoPanel: React.FC = () => {
-  const container = useFormContainer();
-  const [dirty, setDirtyState] = useState(false);
-  const [customGuard, setCustomGuard] = useState(false);
-  const [titleInput, setTitleInput] = useState('');
-
-  const toggleDirty = () => {
-    const next = !dirty;
-    setDirtyState(next);
-    container.setDirty(next);
-  };
-
-  useEffect(() => {
-    if (customGuard) {
-      // Register custom guard that blocks closure completely
-      const cleanup = container.onCloseRequested(() => {
-        alert("Close guard triggered: closing is BLOCKED because the lock switch is ON!");
-        return false;
-      });
-      return cleanup;
-    }
-  }, [customGuard, container]);
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitleInput(e.target.value);
-    container.setTitle(e.target.value || 'Intercept Form');
-  };
-
-  return (
-    <div className="w-100 h-100 p-3 bg-transparent text-white text-start" style={{ overflow: 'auto' }}>
-      <h6 className="border-bottom border-secondary pb-2 text-info">Dirty State & Close Interception Form</h6>
-      <div className="d-flex flex-column gap-3 mt-3">
-        <div className="p-3 bg-black bg-opacity-30 rounded border border-secondary">
-          <label className="form-label small text-info">1. Try Marking Dirty State</label>
-          <div className="d-flex align-items-center justify-content-between">
-            <span className="small text-secondary">Is Form Dirty (Unsaved Changes)?</span>
-            <button
-              type="button"
-              className={`btn btn-sm ${dirty ? 'btn-danger' : 'btn-outline-secondary'}`}
-              onClick={toggleDirty}
-            >
-              {dirty ? '🔴 Unsaved (Dirty)' : '🟢 Clean'}
-            </button>
-          </div>
-          <div className="small text-muted mt-2">
-            When dirty, attempting to close this tab/window shows a warning modal asking to Discard or Cancel.
-          </div>
-        </div>
-
-        <div className="p-3 bg-black bg-opacity-30 rounded border border-secondary">
-          <label className="form-label small text-info">2. Try Blocking Close (Custom Guard)</label>
-          <div className="form-check form-switch d-flex justify-content-between align-items-center p-0">
-            <span className="small text-secondary">Lock Close Preventer:</span>
-            <input
-              className="form-check-input ms-0"
-              type="checkbox"
-              role="switch"
-              checked={customGuard}
-              onChange={(e) => setCustomGuard(e.target.checked)}
-            />
-          </div>
-          <div className="small text-muted mt-2">
-            When locked, custom logic blocks the panel from closing entirely (onCloseRequested returns false).
-          </div>
-        </div>
-
-        <div className="p-3 bg-black bg-opacity-30 rounded border border-secondary">
-          <label className="form-label small text-info">3. Try Dynamic Title Update</label>
-          <input
-            type="text"
-            className="form-control form-control-sm bg-dark text-white border-secondary"
-            placeholder="Type new panel title..."
-            value={titleInput}
-            onChange={handleTitleChange}
-          />
-        </div>
-
-        <div className="d-flex gap-2">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger flex-grow-1"
-            onClick={() => container.requestClose()}
-          >
-            Close Programmatically
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-danger"
-            onClick={() => container.requestClose({ force: true })}
-            title="Bypasses all dirty checks and guards"
-          >
-            Force Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const DirtyEditorDemoPanel: React.FC = () => {
-  const container = useFormContainer();
-  const [content, setContent] = useState('// Type something here, changes make the tab dirty.\n// Click Save to clear the dirty state.');
-  const [isDirty, setIsDirty] = useState(false);
-
-  const handleEdit = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-    if (!isDirty) {
-      setIsDirty(true);
-      container.setDirty(true);
-    }
-  };
-
-  const handleSave = () => {
-    setIsDirty(false);
-    container.setDirty(false);
-    alert('Changes saved successfully!');
-  };
-
-  return (
-    <div className="w-100 h-100 p-3 bg-transparent text-white text-start d-flex flex-column gap-2" style={{ overflow: 'hidden' }}>
-      <div className="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2">
-        <h6 className="mb-0 text-info">Dirty Code Editor</h6>
-        <button
-          type="button"
-          className={`btn btn-sm ${isDirty ? 'btn-warning' : 'btn-outline-success'}`}
-          onClick={handleSave}
-          disabled={!isDirty}
-        >
-          {isDirty ? '💾 Save Changes' : '✅ Saved'}
-        </button>
-      </div>
-      <textarea
-        className="form-control bg-black text-info font-monospace flex-grow-1 border-secondary p-3 mt-1"
-        style={{ resize: 'none', fontSize: '0.85rem', height: 'calc(100% - 40px)' }}
-        value={content}
-        onChange={handleEdit}
-      />
     </div>
   );
 };

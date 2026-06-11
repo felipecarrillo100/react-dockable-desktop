@@ -117,12 +117,17 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const state = useWindowManagerState();
   const hostRef = useRef<HTMLDivElement | null>(null);
-  
+
   const panel = state.panels[panelId];
   const regEntry = panel ? PanelRegistry.get(panel.component) : null;
   const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || false;
 
-  const [dimensions, setDimensions] = useState({ width: 800, height: 500, scale: 0.25 });
+  const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
+  const origW = lastSize.width;
+  const origH = lastSize.height;
+  const maxW = 220;
+  const maxH = 140;
+  const scale = Math.min(maxW / origW, maxH / origH);
 
   useEffect(() => {
     if (disableLivePreview) return;
@@ -132,18 +137,6 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
     const cachedEl = domCache.get(panelId);
     if (!cachedEl) return;
-
-    // 1. Read the panel's active dimensions before minimization
-    const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
-    const origW = lastSize.width;
-    const origH = lastSize.height;
-
-    // 2. Calculate scale factor to fit within a 220px x 140px thumbnail container
-    const maxW = 220;
-    const maxH = 140;
-    const scale = Math.min(maxW / origW, maxH / origH);
-
-    setDimensions({ width: origW, height: origH, scale });
 
     host.appendChild(cachedEl);
 
@@ -160,17 +153,12 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   }, [panelId, disableLivePreview]);
 
   if (disableLivePreview) {
-    const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
-    const maxW = 220;
-    const maxH = 140;
-    const scale = Math.min(maxW / lastSize.width, maxH / lastSize.height);
-    const displayW = lastSize.width * scale;
-    const displayH = lastSize.height * scale;
-
+    const displayW = origW * scale;
+    const displayH = origH * scale;
     const icon = regEntry?.defaultOptions?.icon || <span>🔳</span>;
 
     return (
-      <div 
+      <div
         className="taskbar-item-preview-frame d-flex flex-column align-items-center justify-content-center text-muted"
         style={{
           width: `${displayW}px`,
@@ -190,24 +178,25 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   }
 
   return (
-    <div 
+    <div
       className="taskbar-item-preview-frame"
       style={{
-        width: `${dimensions.width * dimensions.scale}px`,
-        height: `${dimensions.height * dimensions.scale}px`,
+        width: `${origW * scale}px`,
+        height: `${origH * scale}px`,
       }}
     >
-      <div 
-        ref={hostRef} 
+      <div
+        ref={hostRef}
         className="taskbar-item-preview-host"
         style={{
-          width: `${dimensions.width}px`,
-          height: `${dimensions.height}px`,
-          transform: `scale(${dimensions.scale})`,
+          width: `${origW}px`,
+          height: `${origH}px`,
+          transform: `scale(${scale})`,
           transformOrigin: 'top left',
           position: 'absolute',
           top: 0,
-          left: 0
+          left: 0,
+          ['--preview-scale' as string]: scale
         }}
       />
     </div>
@@ -217,7 +206,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
   const state = useWindowManagerState();
   const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle } = useWindowManagerActions();
-  
+
   const isMin = state.minimized.some(m => m.id === panelId);
   const prevMinRef = useRef(isMin);
 
@@ -313,7 +302,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
     e.preventDefault();
     const startOffset = isRow ? e.clientX : e.clientY;
     const startSizes = [...node.sizes];
-    
+
     // Add active classes directly for zero-latency DOM responsiveness during drag
     const resizerEl = e.currentTarget as HTMLDivElement;
     resizerEl.classList.add('active');
@@ -321,8 +310,8 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
 
     // Capture the parent element and its size synchronously on mousedown
     const parentEl = e.currentTarget.parentElement;
-    const parentSize = parentEl 
-      ? (isRow ? parentEl.clientWidth : parentEl.clientHeight) 
+    const parentSize = parentEl
+      ? (isRow ? parentEl.clientWidth : parentEl.clientHeight)
       : (isRow ? 1000 : 800);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -330,7 +319,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
       const delta = currentOffset - startOffset;
 
       const deltaPercentage = delta / parentSize;
-      
+
       const newSizes = [...startSizes];
       newSizes[idx] += deltaPercentage;
       newSizes[idx + 1] -= deltaPercentage;
@@ -353,7 +342,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
   };
 
   return (
-    <div 
+    <div
       className={`d-flex w-100 h-100 ${isRow ? 'flex-row' : 'flex-column'}`}
       style={{ overflow: 'hidden', position: 'relative' }}
     >
@@ -365,7 +354,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
               <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} />
             </div>
             {idx < node.children.length - 1 && (
-              <div 
+              <div
                 onMouseDown={(e) => handleResizerMouseDown(idx, e)}
                 style={{
                   cursor: isRow ? 'col-resize' : 'row-resize',
@@ -407,15 +396,15 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
   };
 
   return (
-    <div 
+    <div
       data-active-panel-id={leaf.activePanelId || ''}
-      className={`workspace-panel w-100 h-100 d-flex flex-column ${windowClass ?? ''}`} 
+      className={`workspace-panel w-100 h-100 d-flex flex-column ${windowClass ?? ''}`}
       style={{ overflow: 'hidden', position: 'relative' }}
     >
       {/* Tab Headers */}
       <div className="workspace-tab-bar d-flex flex-row justify-content-between align-items-center" style={{ minHeight: '38px' }}>
-        <div 
-          className="d-flex flex-row overflow-x-auto flex-grow-1 tab-headers-container" 
+        <div
+          className="d-flex flex-row overflow-x-auto flex-grow-1 tab-headers-container"
           style={{ scrollbarWidth: 'none' }}
           onMouseMove={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
@@ -433,15 +422,15 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             if (!panel) return null;
             const isSelected = leaf.activePanelId === id;
             const isGloballyActive = state.activePanelId === id;
-            
+
             const registryEntry = PanelRegistry.get(panel.component);
             const options = registryEntry?.defaultOptions;
 
             const isHovered = hoveredTab && hoveredTab.leafId === leaf.id && hoveredTab.panelId === id;
             const isLast = idx === leaf.panels.length - 1;
             const isHoveredEmpty = hoveredTab && hoveredTab.leafId === leaf.id && hoveredTab.panelId === 'EMPTY' && isLast;
-            const sideClass = isHovered 
-              ? (hoveredTab.side === 'left' ? 'drag-hover-left' : 'drag-hover-right') 
+            const sideClass = isHovered
+              ? (hoveredTab.side === 'left' ? 'drag-hover-left' : 'drag-hover-right')
               : (isHoveredEmpty ? 'drag-hover-right' : '');
 
             const tabFocusClass = isSelected
@@ -449,7 +438,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
               : 'workspace-tab-inactive';
 
             return (
-              <div 
+              <div
                 key={id}
                 onClick={() => selectTab(id)}
                 onMouseDown={(e) => {
@@ -482,7 +471,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                   </span>
                 </span>
                 {options?.canClose !== false && (
-                  <span 
+                  <span
                     onClick={(e) => {
                       e.stopPropagation();
                       requestClosePanel(id);
@@ -500,7 +489,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             );
           })}
         </div>
-        
+
         {/* Empty group close button — only visible when keepOnEmpty keeps the group alive */}
         {leaf.panels.length === 0 && leaf.keepOnEmpty && leaf.canClose !== false && (
           <span
@@ -531,7 +520,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
           <div className="dock-drop-zone-overlay">
             <div className="dock-target-cross">
               {/* Top target */}
-              <div 
+              <div
                 onMouseEnter={() => onHoverDropZone(leaf.id, 'top')}
                 onMouseLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-top"
@@ -539,7 +528,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 ▲
               </div>
               {/* Bottom target */}
-              <div 
+              <div
                 onMouseEnter={() => onHoverDropZone(leaf.id, 'bottom')}
                 onMouseLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-bottom"
@@ -547,7 +536,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 ▼
               </div>
               {/* Left target */}
-              <div 
+              <div
                 onMouseEnter={() => onHoverDropZone(leaf.id, 'left')}
                 onMouseLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-left"
@@ -555,7 +544,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 ◀
               </div>
               {/* Right target */}
-              <div 
+              <div
                 onMouseEnter={() => onHoverDropZone(leaf.id, 'right')}
                 onMouseLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-right"
@@ -563,7 +552,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 ▶
               </div>
               {/* Center target */}
-              <div 
+              <div
                 onMouseEnter={() => onHoverDropZone(leaf.id, 'center')}
                 onMouseLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-center"
@@ -576,7 +565,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 
         {/* Visual preview highlight overlay */}
         {state.draggedPanelId !== null && activeDropZone !== null && activeDropZone.leafId === leaf.id && (
-          <div 
+          <div
             className="dock-preview-highlight"
             style={{
               left: activeDropZone.position === 'right' ? '50%' : '0',
@@ -607,12 +596,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
-  const [instantiatedPanels, setInstantiatedPanels] = useState<string[]>([]);
   const taskbarRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<JsonContextMenuRef>(null);
 
   const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string } | null>(null);
-  const minimizedTooltipTimeoutRef = useRef<any>(null);
+  const minimizedTooltipTimeoutRef = useRef<number>(null);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -661,7 +649,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const handleTabDragStart = (id: string, e: React.MouseEvent) => {
     // Only handle left click drags
     if (e.button !== 0) return;
-    
+
     const startX = e.clientX;
     const startY = e.clientY;
     let dragStarted = false;
@@ -684,7 +672,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const handleMouseUp = (moveEvent: MouseEvent) => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUpWrapper);
-      
+
       if (dragStarted) {
         const dropZone = activeDropZoneRef.current;
         const targetTab = hoveredTabRef.current;
@@ -789,12 +777,9 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     });
   };
 
-  // Sync state.panels keys to dynamic DOM tree to mount components inside hidden Persistent Port
+  // Clean up domCache for panels that are no longer in state.panels
   useEffect(() => {
     const keys = Object.keys(state.panels);
-    setInstantiatedPanels(keys);
-
-    // Clean up domCache for panels that are no longer in state.panels
     for (const cachedId of Array.from(domCache.keys())) {
       if (!keys.includes(cachedId)) {
         domCache.delete(cachedId);
@@ -1101,38 +1086,38 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   }, []);
 
   return (
-    <div 
+    <div
       data-workspace-skin={skin}
       data-bs-theme={currentBsTheme}
-      className="d-flex flex-column w-100 h-100 overflow-hidden" 
+      className="d-flex flex-column w-100 h-100 overflow-hidden"
       style={{ userSelect: 'none' }}
     >
-      
+
       {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
-      <div 
-        ref={workspaceRef} 
+      <div
+        ref={workspaceRef}
         className={`flex-grow-1 w-100 position-relative ${state.draggedPanelId ? 'dragging-active' : ''}`}
         style={{ overflow: 'hidden' }}
       >
         {/* Workspace outer edge drop zone targets */}
         {state.draggedPanelId !== null && (
           <>
-            <div 
+            <div
               className="workspace-edge-trigger edge-trigger-left"
               onMouseEnter={() => setActiveEdgeDrop('left')}
               onMouseLeave={() => setActiveEdgeDrop(null)}
             />
-            <div 
+            <div
               className="workspace-edge-trigger edge-trigger-right"
               onMouseEnter={() => setActiveEdgeDrop('right')}
               onMouseLeave={() => setActiveEdgeDrop(null)}
             />
-            <div 
+            <div
               className="workspace-edge-trigger edge-trigger-top"
               onMouseEnter={() => setActiveEdgeDrop('top')}
               onMouseLeave={() => setActiveEdgeDrop(null)}
             />
-            <div 
+            <div
               className="workspace-edge-trigger edge-trigger-bottom"
               onMouseEnter={() => setActiveEdgeDrop('bottom')}
               onMouseLeave={() => setActiveEdgeDrop(null)}
@@ -1144,16 +1129,16 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         {state.draggedPanelId !== null && activeEdgeDrop !== null && (
           <div className={`workspace-edge-preview edge-preview-${activeEdgeDrop}`} />
         )}
-        
+
         {/* 1.1 Viewport Split Grid Layout */}
         <div className="w-100 h-100" style={{ overflow: 'hidden', position: 'relative' }}>
           {state.gridRoot ? (
-            <WorkspaceGrid 
-              node={state.gridRoot} 
-              path={[]} 
-              onTabRightClick={handleTabRightClick} 
-              activeDropZone={activeDropZone} 
-              onHoverDropZone={handleHoverDropZone} 
+            <WorkspaceGrid
+              node={state.gridRoot}
+              path={[]}
+              onTabRightClick={handleTabRightClick}
+              activeDropZone={activeDropZone}
+              onHoverDropZone={handleHoverDropZone}
               onTabDragStart={handleTabDragStart}
               hoveredTab={hoveredTab}
               onTabHover={handleTabHover}
@@ -1170,7 +1155,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           return state.floating.map(w => {
             const panel = state.panels[w.id];
             if (!panel) return null;
-            
+
             const isMaximized = w.maximized;
             const isDragged = state.draggedPanelId === w.id;
             const isFocused = state.activePanelId === w.id;
@@ -1198,7 +1183,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 }}
               >
                 {/* Title Bar */}
-                <div 
+                <div
                   onDoubleClick={() => maximizePanel(w.id)}
                   onMouseDown={(e) => {
                     if (options?.canDrag !== false) {
@@ -1217,8 +1202,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   </span>
                   <div className="d-flex align-items-center gap-1.5" onMouseDown={(e) => e.stopPropagation()}>
                     {options?.canDrag !== false && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         title={formatLabel(messages.windowAnchoringOptions, formatMessage)}
                         onClick={(e) => {
                           const isRight = !!w.stickyRight;
@@ -1276,8 +1261,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       </button>
                     )}
                     {options?.canMinimize !== false && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         title={formatLabel(messages.minimize, formatMessage)}
                         onClick={() => minimizePanel(w.id)}
                         className="custom-tab-btn"
@@ -1287,8 +1272,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                         </svg>
                       </button>
                     )}
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       title={isMaximized
                         ? formatLabel(messages.restoreSize, formatMessage)
                         : formatLabel(messages.maximize, formatMessage)}
@@ -1300,8 +1285,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       </svg>
                     </button>
                     {options?.canClose !== false && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         title={formatLabel(messages.close, formatMessage)}
                         onClick={() => requestClosePanel(w.id)}
                         className="custom-tab-btn btn-close-tab"
@@ -1344,16 +1329,16 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       {/* 2. macOS / Windows 11-style Taskbar Sibling Footer (Flex-shrinked at bottom) */}
       {state.minimized.length > 0 && (
         <div className="flex-shrink-0 w-100 d-flex flex-row align-items-center taskbar-footer-container px-3 py-1.5 justify-content-center" style={{ height: '48px', zIndex: 100 }}>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => scrollTaskbar('left')}
             className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ◀
           </button>
-          
-          <div 
+
+          <div
             ref={taskbarRef}
             className="d-flex flex-row gap-2 overflow-x-auto align-items-center mx-2 px-1 py-0.5 scrollbar-hidden"
             style={{
@@ -1415,7 +1400,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           </div>
 
           {hoveredMinimized && createPortal(
-            <div 
+            <div
               className="taskbar-item-tooltip d-flex flex-column gap-1"
               style={{
                 position: 'fixed',
@@ -1444,7 +1429,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     {formatLabel(hoveredMinimized.title, formatMessage)}
                     {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
                   </span>
-                  <span 
+                  <span
                     onClick={(e) => {
                       e.stopPropagation();
                       requestClosePanel(hoveredMinimized.id);
@@ -1463,8 +1448,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             document.body
           )}
 
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => scrollTaskbar('right')}
             className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
@@ -1475,7 +1460,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       )}
 
       {/* 3. Persistence Port: Portals rendering panels into off-screen elements */}
-      {instantiatedPanels.map((id) => {
+      {Object.keys(state.panels).map((id) => {
         const panel = state.panels[id];
         if (!panel) return null;
         const targetEl = getOrCreateDomCacheElement(id);
@@ -1491,17 +1476,17 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       })}
 
       {/* 4. Context Menu (replace-react-contexify JSON mode) */}
-      <JsonContextMenu 
-        ref={contextMenuRef} 
-        id="workspace-context-menu" 
-        theme="dark" 
+      <JsonContextMenu
+        ref={contextMenuRef}
+        id="workspace-context-menu"
+        theme="dark"
         onShow={() => setIsContextMenuOpen(true)}
         onHide={() => setIsContextMenuOpen(false)}
       />
 
       {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (
-        <div 
+        <div
           className="position-fixed bg-black bg-opacity-80 border border-info rounded text-info font-monospace px-3 py-1.5 shadow-lg d-flex align-items-center gap-2"
           style={{
             left: dragPos.x + 12,
@@ -1552,7 +1537,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           </div>
         );
       })()}
-      
+
     </div>
   );
 };

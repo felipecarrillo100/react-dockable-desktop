@@ -1853,5 +1853,14 @@ html:not(.enable-animations) *::after {
   height: 30%;
 }
 
+/* Counteract scale for canvas and its siblings inside Luciad containers */
+.taskbar-item-preview-host .luciad canvas,
+.taskbar-item-preview-host .luciad canvas ~ * {
+  transform: scale(calc(1 / var(--preview-scale, 1))) !important;
+  transform-origin: top left;
+  width: calc(100% * var(--preview-scale, 1)) !important;
+  height: calc(100% * var(--preview-scale, 1)) !important;
+}
+
 
 

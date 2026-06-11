@@ -28,6 +28,7 @@
   "scripts": {
     "dev": "vite demo",
     "dev:ria": "vite demo-luciadria",
+    "dev:oldria": "vite demo-oldria",
     "build": "tsup && node -e \"require('fs').copyFileSync('src/index.css', 'dist/styles.css')\"",
     "demo:build": "vite build",
     "test": "vitest run",
