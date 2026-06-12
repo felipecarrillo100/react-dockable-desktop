@@ -7,9 +7,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses } from './WindowManagerContext';
+import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode } from './WindowManagerContext';
-import { PanelRegistry } from './PanelRegistry';
+import type { PanelRegistryClass } from './PanelRegistry';
 import { isElementRtl } from '../utils/rtl';
 import { JsonContextMenu, type JsonContextMenuRef } from 'replace-react-contexify';
 import 'replace-react-contexify/styles.css';
@@ -47,8 +47,8 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
 // 3. Persistent DOM Container Host & Slot
 // ==========================================
 
-const renderPanelContent = (id: string, componentKey: string) => {
-  const registryEntry = PanelRegistry.get(componentKey);
+const renderPanelContent = (id: string, componentKey: string, registry: PanelRegistryClass) => {
+  const registryEntry = registry.get(componentKey);
   if (!registryEntry) {
     return (
       <div className="dw-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
@@ -126,11 +126,12 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
 const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const state = useWindowManagerState();
+  const registry = useRegistry();
   const formatMessage = useFormatMessage();
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   const panel = state.panels[panelId];
-  const regEntry = panel ? PanelRegistry.get(panel.component) : null;
+  const regEntry = panel ? registry.get(panel.component) : null;
   const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || false;
 
   const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
@@ -406,6 +407,7 @@ interface LeafGroupProps {
 
 const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
   const state = useWindowManagerState();
+  const registry = useRegistry();
   const { openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
@@ -444,7 +446,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             const isSelected = leaf.activePanelId === id;
             const isGloballyActive = state.activePanelId === id;
 
-            const registryEntry = PanelRegistry.get(panel.component);
+            const registryEntry = registry.get(panel.component);
             const options = registryEntry?.defaultOptions;
 
             const isHovered = hoveredTab && hoveredTab.leafId === leaf.id && hoveredTab.panelId === id;
@@ -622,6 +624,7 @@ export interface WindowManagerProps {
 
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
   const state = useWindowManagerState();
+  const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection } = useWindowManagerActions();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
@@ -777,7 +780,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     e.preventDefault();
     const panel = state.panels[id];
     if (!panel) return;
-    const registryEntry = PanelRegistry.get(panel.component);
+    const registryEntry = registry.get(panel.component);
     const options = registryEntry?.defaultOptions;
 
     const items = [];
@@ -1157,23 +1160,23 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     }
   };
 
-  // Fetch the active bs-theme from documentElement to make sure nested variables resolve correctly
-  const [currentBsTheme, setCurrentBsTheme] = useState<'dark' | 'light'>('dark');
+  // Fetch the active color-scheme from documentElement to make sure nested variables resolve correctly
+  const [currentColorScheme, setCurrentColorScheme] = useState<'dark' | 'light'>('dark');
   useEffect(() => {
     const updateThemeState = () => {
-      const activeTheme = document.documentElement.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
-      setCurrentBsTheme(activeTheme);
+      const activeTheme = document.documentElement.getAttribute('data-color-scheme') === 'light' ? 'light' : 'dark';
+      setCurrentColorScheme(activeTheme);
     };
     updateThemeState();
     const obs = new MutationObserver(updateThemeState);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
     return () => obs.disconnect();
   }, []);
 
   return (
     <div
       data-workspace-skin={skin}
-      data-bs-theme={currentBsTheme}
+      data-color-scheme={currentColorScheme}
       style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
       dir={state.dir}
     >
@@ -1246,7 +1249,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             const isDragged = state.draggedPanelId === w.id;
             const isFocused = state.activePanelId === w.id;
 
-            const registryEntry = PanelRegistry.get(panel.component);
+            const registryEntry = registry.get(panel.component);
             const options = registryEntry?.defaultOptions;
 
             return (
@@ -1436,7 +1439,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {state.minimized.map(m => {
-              const regEntry = PanelRegistry.get(m.component);
+              const regEntry = registry.get(m.component);
               const icon = regEntry?.defaultOptions?.icon || defaultPanelIcon || DefaultGridIcon;
 
               return (
@@ -1556,7 +1559,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
             <div style={{ width: '100%', height: '100%' }}>
-              {renderPanelContent(id, panel.component)}
+              {renderPanelContent(id, panel.component, registry)}
             </div>
           </FormContainerProviderWrapper>,
           targetEl,

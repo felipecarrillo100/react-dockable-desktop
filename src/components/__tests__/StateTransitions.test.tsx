@@ -3,11 +3,28 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { WorkspaceClient } from '../../WorkspaceClient';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
-PanelRegistry.register('map', MockPanel);
+const NonDragPanel: React.FC = () => <div />;
 
+// Standard 2-leaf layout. Provides group-left-top for the restore-fallback tests.
+const STANDARD_LAYOUT = JSON.stringify({
+  gridRoot: {
+    type: 'branch',
+    orientation: 'vertical',
+    sizes: [0.75, 0.25],
+    children: [
+      { type: 'leaf', id: 'group-left-top',    panels: [], activePanelId: null },
+      { type: 'leaf', id: 'group-left-bottom', panels: [], activePanelId: null },
+    ],
+  },
+  floating: [],
+  minimized: [],
+  panels: {},
+});
+
+let client: WorkspaceClient;
 let lastState: any = null;
 let lastActions: any = null;
 
@@ -26,6 +43,13 @@ describe('WindowManager State Transitions', () => {
     document.body.appendChild(container);
     lastState = null;
     lastActions = null;
+    client = new WorkspaceClient({
+      panels: {
+        map:     { component: MockPanel },
+        nondrag: { component: NonDragPanel, defaultOptions: { canDrag: false } },
+      },
+      initialState: STANDARD_LAYOUT,
+    });
   });
 
   afterEach(() => {
@@ -41,7 +65,7 @@ describe('WindowManager State Transitions', () => {
     act(() => {
       root = createRoot(container!);
       root.render(
-        <WindowManagerProvider>
+        <WindowManagerProvider client={client}>
           <StateExtractor />
         </WindowManagerProvider>
       );
@@ -57,7 +81,6 @@ describe('WindowManager State Transitions', () => {
 
   const variants = ['default', 'custom-title', 'keep-on-empty', 'can-close-false'];
 
-  // 4 scenarios * 4 variants = 16 core test cases covering transition stability
   transitionScenarios.forEach((scenario, sIdx) => {
     variants.forEach((variant) => {
       it(`[Scenario ${sIdx} - ${variant}] should transition panel from ${scenario.start} to ${scenario.to} then to ${scenario.then}`, () => {
@@ -71,7 +94,6 @@ describe('WindowManager State Transitions', () => {
           });
         });
 
-        // Intermediate transition
         act(() => {
           if (scenario.to === 'floating') {
             lastActions.floatPanel(panelId);
@@ -83,7 +105,6 @@ describe('WindowManager State Transitions', () => {
         });
         expect(lastState.panels[panelId].state).toBe(scenario.to);
 
-        // Final transition
         act(() => {
           if (scenario.then === 'floating') {
             lastActions.floatPanel(panelId);
@@ -103,61 +124,27 @@ describe('WindowManager State Transitions', () => {
       mount();
       const panelId = 'fallback-test-panel';
 
-      // 1. Open panel (docked by default)
-      act(() => {
-        lastActions.openPanel(panelId, 'map');
-      });
-
-      // 2. Minimize it
-      act(() => {
-        lastActions.minimizePanel(panelId);
-      });
+      act(() => { lastActions.openPanel(panelId, 'map'); });
+      act(() => { lastActions.minimizePanel(panelId); });
       expect(lastState.panels[panelId].state).toBe('minimized');
 
-      // 3. Destroy the leaf group it belonged to
-      act(() => {
-        lastActions.closeLeafGroup('group-left-top');
-      });
+      act(() => { lastActions.closeLeafGroup('group-left-top'); });
+      act(() => { lastActions.restorePanel(panelId); });
 
-      // 4. Restore it
-      act(() => {
-        lastActions.restorePanel(panelId);
-      });
-
-      // 5. It should restore as floating
       expect(lastState.panels[panelId].state).toBe('floating');
     });
 
     it('should restore as docked fallback if leaf group ceased to exist but canDrag is false', () => {
-      // Register a non-drag component
-      const NonDragPanel: React.FC = () => <div />;
-      PanelRegistry.register('nondrag', NonDragPanel, { canDrag: false });
-      
       mount();
       const panelId = 'fallback-nondrag-panel';
 
-      // 1. Open non-drag panel (docked by default)
-      act(() => {
-        lastActions.openPanel(panelId, 'nondrag');
-      });
-
-      // 2. Minimize it
-      act(() => {
-        lastActions.minimizePanel(panelId);
-      });
+      act(() => { lastActions.openPanel(panelId, 'nondrag'); });
+      act(() => { lastActions.minimizePanel(panelId); });
       expect(lastState.panels[panelId].state).toBe('minimized');
 
-      // 3. Destroy the leaf group it belonged to
-      act(() => {
-        lastActions.closeLeafGroup('group-left-top');
-      });
+      act(() => { lastActions.closeLeafGroup('group-left-top'); });
+      act(() => { lastActions.restorePanel(panelId); });
 
-      // 4. Restore it
-      act(() => {
-        lastActions.restorePanel(panelId);
-      });
-
-      // 5. It should restore as docked in the first available group
       expect(lastState.panels[panelId].state).toBe('docked');
     });
   });

@@ -36,8 +36,9 @@ export interface PanelRegistryEntry {
 /**
  * Registry mapping catalog entries to allow programmatic panel instantiation
  * inside dynamic layout cells or floating windows.
+ * Exported so WorkspaceClient can create scoped, per-instance registries.
  */
-class PanelRegistryClass {
+export class PanelRegistryClass {
   private registry = new Map<string, PanelRegistryEntry>();
 
   /**

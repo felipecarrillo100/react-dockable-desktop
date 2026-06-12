@@ -6,59 +6,29 @@ This document is the second part of the developer guide. It assumes you have rea
 
 ## Topic 1 — Pre-Loading a Layout on Startup
 
-In [BestPractices.md Step 12](BestPractices.md#step-12--saving-and-restoring-the-layout) you learned how to save and restore a layout. But what if you want to define a fixed starting layout in code — before the user has ever interacted with the app?
+The provider starts with an **empty canvas** by default. There are two ways to define an initial layout.
 
-`WindowManagerProvider` starts with a hardcoded default layout defined inside the library. To replace it, call `loadLayout` inside a `useEffect` that runs once after the providers mount.
+### Approach A — WorkspaceClient.initialState (recommended)
+
+Pass a JSON string (or `null`) directly to `WorkspaceClient`. The layout is parsed synchronously before the first render — no flicker, no effect needed.
 
 ```typescript
-import React, { useEffect } from 'react';
-import {
-  WindowManagerProvider,
-  PanelProvider,
-  WindowManager,
-  ModalStackRenderer,
-  SidePanelRenderer,
-  useWindowManagerActions,
-  PanelRegistry,
-} from 'react-dockable-desktop';
+import { WorkspaceClient, WindowManagerProvider, WindowManager, PanelProvider, ModalStackRenderer, SidePanelRenderer } from 'react-dockable-desktop';
 import { MapPanel } from './panels/MapPanel';
 import { ConsolePanel } from './panels/ConsolePanel';
 import { PropertiesPanel } from './panels/PropertiesPanel';
 
-PanelRegistry.register('map', MapPanel, { title: 'Map', canClose: false });
-PanelRegistry.register('console', ConsolePanel, { title: 'Console' });
-PanelRegistry.register('properties', PropertiesPanel, { title: 'Properties' });
-
-// Define the layout as a plain object, then serialise it
 const DEFAULT_LAYOUT = JSON.stringify({
   gridRoot: {
     type: 'branch',
     orientation: 'horizontal',
     sizes: [0.7, 0.3],
     children: [
-      {
-        type: 'leaf',
-        id: 'main-area',
-        panels: ['map-1'],
-        activePanelId: 'map-1',
-      },
-      {
-        type: 'branch',
-        orientation: 'vertical',
-        sizes: [0.5, 0.5],
+      { type: 'leaf', id: 'main-area',    panels: ['map-1'],        activePanelId: 'map-1' },
+      { type: 'branch', orientation: 'vertical', sizes: [0.5, 0.5],
         children: [
-          {
-            type: 'leaf',
-            id: 'top-right',
-            panels: ['properties-1'],
-            activePanelId: 'properties-1',
-          },
-          {
-            type: 'leaf',
-            id: 'bottom-right',
-            panels: ['console-1'],
-            activePanelId: 'console-1',
-          },
+          { type: 'leaf', id: 'top-right',    panels: ['properties-1'], activePanelId: 'properties-1' },
+          { type: 'leaf', id: 'bottom-right', panels: ['console-1'],    activePanelId: 'console-1' },
         ],
       },
     ],
@@ -72,23 +42,19 @@ const DEFAULT_LAYOUT = JSON.stringify({
   },
 });
 
-// Inner component can use hooks because it is inside the providers
-const WorkspaceLoader: React.FC = () => {
-  const { loadLayout } = useWindowManagerActions();
-
-  useEffect(() => {
-    const saved = localStorage.getItem('workspace-layout');
-    loadLayout(saved ?? DEFAULT_LAYOUT);
-  }, []); // runs once on mount
-
-  return null;
-};
+const client = new WorkspaceClient({
+  panels: {
+    map:        { component: MapPanel,        defaultOptions: { title: 'Map',        canClose: false } },
+    console:    { component: ConsolePanel,    defaultOptions: { title: 'Console' } },
+    properties: { component: PropertiesPanel, defaultOptions: { title: 'Properties' } },
+  },
+  initialState: localStorage.getItem('workspace-layout') ?? DEFAULT_LAYOUT,
+});
 
 export default function App() {
   return (
-    <WindowManagerProvider>
+    <WindowManagerProvider client={client}>
       <PanelProvider>
-        <WorkspaceLoader />
         <div style={{ width: '100vw', height: '100vh' }}>
           <WindowManager />
         </div>
@@ -100,11 +66,37 @@ export default function App() {
 }
 ```
 
-> **Key point:** `WorkspaceLoader` is placed **inside** the providers so it can call `useWindowManagerActions`. The empty `useEffect` dependency array ensures `loadLayout` runs exactly once after the first render.
+> **Key point:** `initialState` is read once at construction time. For layouts loaded asynchronously (e.g. from an API), use Approach B below.
+
+### Approach B — loadLayout in a useEffect (dynamic / async)
+
+When the layout must be fetched asynchronously, use the `WorkspaceClient` imperative API or `loadLayout` action inside a `useEffect`:
+
+```typescript
+// Option 1 — via WorkspaceClient (from outside React)
+useEffect(() => {
+  fetchLayoutFromServer().then(json => client.loadLayout(json));
+}, []);
+
+// Option 2 — via hook (from inside the provider tree)
+const WorkspaceLoader: React.FC = () => {
+  const { loadLayout } = useWindowManagerActions();
+
+  useEffect(() => {
+    fetchLayoutFromServer().then(json => loadLayout(json));
+  }, []);
+
+  return null;
+};
+```
+
+The workspace shows the empty canvas briefly while the request is in flight. Use `initialState` (Approach A) with a local default to avoid this.
 
 ---
 
 ## Topic 2 — Programmatic Layout Control
+
+> **WorkspaceClient shortcut:** If you created a `WorkspaceClient`, all the actions below are also available directly on the client object — `client.saveLayout()`, `client.loadLayout(json)`, `client.openPanel(id, component, options)`, etc. — from anywhere in your application, no hook required.
 
 Beyond `openPanel` and `closePanel`, `useWindowManagerActions` exposes a full set of layout manipulation methods. These are useful when your application logic needs to drive the workspace rather than leaving it entirely to user interaction.
 

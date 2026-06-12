@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v1.0.0-blue.svg)](#)
+[![npm version](https://img.shields.io/badge/npm-v1.2.0-blue.svg)](#)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#)
 [![Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/)
 
@@ -61,37 +61,26 @@ npm run dev:ria
 
 ## 🛠️ Getting Started
 
-### 1. Define and Register Custom Panels
-
-Register your components with `PanelRegistry`. This exposes them to the window manager layout engine for spawning and custom configuration.
+### 1. Create a WorkspaceClient
 
 ```typescript
-import React from 'react';
-import { PanelRegistry } from 'react-dockable-desktop';
+import { WorkspaceClient } from 'react-dockable-desktop';
+import MapView from './panels/MapView';
+import EditorPanel from './panels/EditorPanel';
 
-// Example Panel Component
-const MapView: React.FC = () => {
-  return (
-    <div style={{ width: '100%', height: '100%', padding: '1rem', color: '#fff' }}>
-      <h3>Interactive Map</h3>
-      <p>This DOM is preserved across tabs, floats, and minimizations!</p>
-    </div>
-  );
-};
-
-// Register
-PanelRegistry.register('mainMap', MapView, {
-  title: { id: 'app.mapTitle', defaultMessage: 'Satellite Map View' },
-  canClose: false,      // Permanent panel
-  canMinimize: true,
-  canDrag: true,
-  favoritePosition: { x: 100, y: 120, width: 600, height: 400 }
+export const client = new WorkspaceClient({
+  panels: {
+    mainMap: { component: MapView,     defaultOptions: { title: 'Satellite Map View', canClose: false, canMinimize: true, canDrag: true } },
+    editor:  { component: EditorPanel, defaultOptions: { title: 'Editor', canMinimize: true } },
+  },
+  // Restore last layout, or null for an empty canvas
+  initialState: localStorage.getItem('workspace-layout'),
 });
 ```
 
-### 2. Set Up the WindowManager Context Provider
+> **No module-level side effects.** Panels are registered inside `WorkspaceClient`, not via a global `PanelRegistry.register` call. The client can be exported and used imperatively from anywhere: `client.openPanel(...)`, `client.saveLayout()`.
 
-Wrap your workspace inside `WindowManagerProvider` and render `WindowManager`. If you need modals or side panels, also add `ModalStackRenderer` and/or `SidePanelRenderer` inside the same provider tree.
+### 2. Set Up the Provider
 
 ```typescript
 import React from 'react';
@@ -102,10 +91,11 @@ import {
   ModalStackRenderer,
   SidePanelRenderer,
 } from 'react-dockable-desktop';
+import { client } from './workspaceClient';
 
 function App() {
   return (
-    <WindowManagerProvider>
+    <WindowManagerProvider client={client}>
       <PanelProvider>
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
           <WindowManager />
@@ -119,6 +109,8 @@ function App() {
 
 export default App;
 ```
+
+> **Backward compatibility:** The `client` prop is optional. The `PanelRegistry` global singleton and the old provider props (`formatMessage`, `predefinedMessages`, `dir`) still work as before.
 
 ---
 
@@ -138,30 +130,24 @@ interface ContextMenuPredefinedMessage {
 
 ### Integrating custom formatters (e.g., `react-intl`)
 
-To route messages through your application's translation engine, pass a `formatMessage` callback to the `WindowManagerProvider`.
+To route messages through your application's translation engine, pass a `formatMessage` callback to `WorkspaceClient`:
 
 ```typescript
-import React from 'react';
-import { useIntl } from 'react-intl';
-import { WindowManagerProvider, Desktop } from 'react-dockable-desktop';
+const client = new WorkspaceClient({
+  panels: { ... },
+  formatMessage: (msg) => intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values),
+});
 
 function App() {
-  const intl = useIntl();
-
-  // Map descriptor payload directly to react-intl formatter
-  const handleFormatMessage = (msg: { id: string; defaultMessage?: string; values?: any }) => {
-    return intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values);
-  };
-
   return (
-    <WindowManagerProvider formatMessage={handleFormatMessage}>
-      <div style={{ width: '100vw', height: '100vh' }}>
-        <Desktop />
-      </div>
+    <WindowManagerProvider client={client}>
+      ...
     </WindowManagerProvider>
   );
 }
 ```
+
+> **Backward compatibility:** Passing `formatMessage` directly as a prop to `WindowManagerProvider` is still supported for existing code.
 
 *If no `formatMessage` function is provided, the engine defaults to a fallback formatting template parser resolving placeholders like `Hello {user}` using values.*
 
@@ -178,9 +164,10 @@ Simply apply the HTML `dir="rtl"` attribute to the container enclosing your layo
 ```
 
 #### 2. Explicit Programmatic Control
-To force a specific direction regardless of the surrounding HTML structure, pass the `dir` prop directly to the provider:
+To force a specific direction regardless of the surrounding HTML structure, pass the `dir` option to `WorkspaceClient`:
 ```typescript
-<WindowManagerProvider dir="rtl">
+const client = new WorkspaceClient({ panels: { ... }, dir: 'rtl' });
+<WindowManagerProvider client={client}>
   <Desktop />
 </WindowManagerProvider>
 ```
@@ -223,6 +210,18 @@ const SidebarControls = () => {
 | `useFormatMessage()` | `(msg: ContextMenuPredefinedMessage) => string` | Returns the translation message formatter hook matching the provider preset configuration. |
 | `usePanelContext()` | `{ publish, subscribe }` | Dynamic decoupled event bus helper for active panels. |
 | `useStyleClasses()` | `StyleClasses` | Returns the custom CSS class overrides configured on the provider (`windowClass`, `windowBodyClass`, etc.). |
+| `useRegistry()` | `PanelRegistryClass` | Returns the scoped panel registry for the current provider. |
+
+---
+
+## New Exports (v1.2.0)
+
+The following additional exports are available in v1.2.0:
+
+- `WorkspaceClient` — class for creating a scoped workspace configuration outside React.
+- `WorkspaceClientConfig` — TypeScript interface for the `WorkspaceClient` constructor options.
+- `PanelDefinition` — TypeScript interface describing a single panel entry in the `panels` map.
+- `PanelRegistryClass` — the class backing both the scoped (per-client) and global registries; useful for typing or extending the registry.
 
 ---
 
@@ -324,23 +323,32 @@ const MapView: React.FC = () => {
 
 ## 🎨 Layout Presets & Configuration Options
 
-You can customized defaults, positioning attributes, and sizes using the registry builder options:
+You can customize defaults, positioning attributes, and sizes using the `WorkspaceClient` panels configuration:
 
 ```typescript
-PanelRegistry.register('unique-panel-key', PanelComponent, {
-  title: 'Default Title String', // fallback
-  canMinimize: true,
-  canDrag: true,
-  canClose: true,
-  initialTarget: 'docked', // or 'floating'
-  favoritePosition: {
-    x: 400, 
-    y: 200, 
-    width: 500, 
-    height: 350
-  }
+const client = new WorkspaceClient({
+  panels: {
+    'unique-panel-key': {
+      component: PanelComponent,
+      defaultOptions: {
+        title: 'Default Title String', // fallback
+        canMinimize: true,
+        canDrag: true,
+        canClose: true,
+        initialTarget: 'docked', // or 'floating'
+        favoritePosition: {
+          x: 400,
+          y: 200,
+          width: 500,
+          height: 350,
+        },
+      },
+    },
+  },
 });
 ```
+
+> **Legacy / backward-compatible approach:** You can still use the global `PanelRegistry.register('unique-panel-key', PanelComponent, options)` at module scope. This singleton is fully supported for existing codebases.
 
 To customize CSS layout attributes, you can override variables in your stylesheet:
 ```css
@@ -354,9 +362,21 @@ To customize CSS layout attributes, you can override variables in your styleshee
 
 ---
 
+## 🎨 Theming
+
+The library's theming attribute is `data-color-scheme`. When switching themes in your app, set this attribute on the workspace root (or a wrapping element):
+
+```typescript
+document.documentElement.setAttribute('data-color-scheme', 'dark'); // or 'light'
+```
+
+If you are also using Bootstrap, you may set `data-bs-theme` alongside it for Bootstrap component compatibility.
+
+---
+
 ## 📐 Architecture
 
-For a deep-dive into the layout tree model, DOM persistence strategy, overlay system, RTL detection, and build pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).
+For a deep-dive into the layout tree model, DOM persistence strategy, overlay system, `WorkspaceClient` and scoped registries, empty canvas default behavior, RTL detection, and build pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 

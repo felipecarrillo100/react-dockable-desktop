@@ -186,7 +186,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   }, [enableAnimations]);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-bs-theme', theme);
+    document.documentElement.setAttribute('data-color-scheme', theme);
+    document.documentElement.setAttribute('data-bs-theme', theme); // Bootstrap needs its own attribute for bg-body-* variables
     if (theme === 'light') {
       document.documentElement.style.setProperty('--bg-primary', '#f8f9fa');
       document.documentElement.style.setProperty('--bg-workspace', '#e9ecef');

@@ -58,11 +58,13 @@ Before writing any code it helps to understand the three concepts the library is
 
 ### The Registry
 
-A global catalog where you register your React components once, before the application renders. The layout engine looks up components by a string key when it needs to display them.
+The panel catalog. Register your React components under string keys so the layout engine can spawn them. There are two ways:
 
-```
-PanelRegistry.register('my-key', MyComponent, options)
-```
+**Recommended — WorkspaceClient (v1.2.0+)**
+Panels are declared inside `WorkspaceClient` alongside layout configuration. No module-level side effects, scoped per client instance.
+
+**Legacy — Global PanelRegistry**
+`PanelRegistry.register('my-key', MyComponent, options)` — module-level singleton. Still fully supported for backward compatibility.
 
 ### The Providers
 
@@ -88,33 +90,33 @@ Create a file `src/App.tsx`:
 ```typescript
 import React from 'react';
 import {
+  WorkspaceClient,
   WindowManagerProvider,
   PanelProvider,
   WindowManager,
   ModalStackRenderer,
   SidePanelRenderer,
-  PanelRegistry,
 } from 'react-dockable-desktop';
 
 // 1. Define a simple panel component
-const HelloPanel: React.FC = () => {
-  return (
-    <div style={{ padding: '2rem', color: 'white' }}>
-      <h2>Hello from a panel!</h2>
-      <p>You can drag this tab, split it, float it, or minimize it.</p>
-    </div>
-  );
-};
+const HelloPanel: React.FC = () => (
+  <div style={{ padding: '2rem', color: 'white' }}>
+    <h2>Hello from a panel!</h2>
+    <p>You can drag this tab, split it, float it, or minimize it.</p>
+  </div>
+);
 
-// 2. Register it before the app renders
-PanelRegistry.register('hello', HelloPanel, {
-  title: 'Hello Panel',
+// 2. Create a WorkspaceClient and declare panels inside it
+const client = new WorkspaceClient({
+  panels: {
+    hello: { component: HelloPanel, defaultOptions: { title: 'Hello Panel' } },
+  },
 });
 
 // 3. Build the application shell
 function App() {
   return (
-    <WindowManagerProvider>
+    <WindowManagerProvider client={client}>
       <PanelProvider>
         <div style={{ width: '100vw', height: '100vh' }}>
           <WindowManager />
@@ -129,7 +131,7 @@ function App() {
 export default App;
 ```
 
-If you run this now you will see an empty workspace. The panel is registered but nothing has opened it yet. That is intentional — panels are opened programmatically, which you will do in the next step.
+The workspace starts empty. Panels are opened programmatically, which you will do in the next step.
 
 ---
 
@@ -154,14 +156,14 @@ const Toolbar: React.FC = () => {
 };
 ```
 
-> **Two arguments to `openPanel`:** The first is a unique **instance ID** (you choose it — like a database row ID). The second is the **registry key** you used in `PanelRegistry.register`. Using a fixed instance ID means calling `openPanel` again with the same ID will focus the existing panel rather than opening a second copy.
+> **Two arguments to `openPanel`:** The first is a unique **instance ID** (you choose it — like a database row ID). The second is the **registry key** you used when declaring panels in `WorkspaceClient`. Using a fixed instance ID means calling `openPanel` again with the same ID will focus the existing panel rather than opening a second copy.
 
 Place the toolbar inside your app, above the `WindowManager`:
 
 ```typescript
 function App() {
   return (
-    <WindowManagerProvider>
+    <WindowManagerProvider client={client}>
       <PanelProvider>
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Toolbar />
@@ -183,7 +185,7 @@ Now clicking the button opens the panel in the docked grid. Try right-clicking t
 
 ## Step 5 — Adding a Second Panel
 
-Register a second component and give it a different key:
+Add the second panel component and declare it in the `WorkspaceClient`:
 
 ```typescript
 const NotesPanel: React.FC = () => {
@@ -202,10 +204,11 @@ const NotesPanel: React.FC = () => {
   );
 };
 
-PanelRegistry.register('notes', NotesPanel, {
-  title: 'Notes',
-  canMinimize: true,
-  canClose: true,
+const client = new WorkspaceClient({
+  panels: {
+    hello: { component: HelloPanel, defaultOptions: { title: 'Hello Panel' } },
+    notes: { component: NotesPanel, defaultOptions: { title: 'Notes', canMinimize: true, canClose: true } },
+  },
 });
 ```
 
@@ -241,26 +244,33 @@ openPanel('notes-float', 'notes', {
 
 ## Step 7 — Registry Options Reference
 
-When calling `PanelRegistry.register` the third argument controls panel behaviour:
+The full set of options available for each panel entry in `WorkspaceClient`:
 
 ```typescript
-PanelRegistry.register('my-panel', MyComponent, {
-  title: 'Panel Title',       // string or i18n descriptor
-  canClose: true,             // show close button (default: true)
-  canMinimize: true,          // show minimize button (default: true)
-  canDrag: true,              // allow dragging the tab (default: true)
-  initialTarget: 'docked',   // 'docked' | 'floating'
-  favoritePosition: {         // default floating position
-    x: 100,
-    y: 100,
-    width: 500,
-    height: 400,
+const client = new WorkspaceClient({
+  panels: {
+    'my-panel': {
+      component: MyComponent,
+      defaultOptions: {
+        title: 'Panel Title',       // string or i18n descriptor
+        canClose: true,             // show close button (default: true)
+        canMinimize: true,          // show minimize button (default: true)
+        canDrag: true,              // allow dragging the tab (default: true)
+        initialTarget: 'docked',   // 'docked' | 'floating'
+        favoritePosition: {         // default floating position
+          x: 100,
+          y: 100,
+          width: 500,
+          height: 400,
+        },
+        icon: <MyIcon />,           // icon shown in tab header and taskbar
+        renderHeaderActions: (panelId) => (
+          <button onClick={() => console.log(panelId)}>⚙</button>
+        ),
+        disableLivePreview: false,  // set true for WebGL panels (uses initial letter instead)
+      },
+    },
   },
-  icon: <MyIcon />,           // icon shown in tab header and taskbar
-  renderHeaderActions: (panelId) => (
-    <button onClick={() => console.log(panelId)}>⚙</button>
-  ),
-  disableLivePreview: false,  // set true for WebGL panels (uses initial letter instead)
 });
 ```
 
@@ -427,6 +437,16 @@ const LayoutControls: React.FC = () => {
 
 `saveLayout` returns a JSON string. Store it anywhere — `localStorage`, a database, a user profile API. `loadLayout` accepts the same string and reconstructs the entire workspace.
 
+You can also call `client.saveLayout()` from **outside** the React tree — useful for toolbar button handlers, keyboard shortcuts, or any imperative code that doesn't have access to hooks:
+
+```typescript
+// From outside the React tree (e.g. in a toolbar button handler, a keyboard shortcut)
+const saveButton = document.getElementById('save-btn');
+saveButton?.addEventListener('click', () => {
+  localStorage.setItem('workspace-layout', client.saveLayout());
+});
+```
+
 ---
 
 ## Step 13 — Working with React Bootstrap
@@ -447,8 +467,6 @@ const HelloPanel: React.FC = () => {
     </Card>
   );
 };
-
-PanelRegistry.register('hello-bs', HelloPanel, { title: 'Hello (Bootstrap)' });
 ```
 
 ---
@@ -473,8 +491,6 @@ const HelloPanel: React.FC = () => {
     </Box>
   );
 };
-
-PanelRegistry.register('hello-mui', HelloPanel, { title: 'Hello (MUI)' });
 ```
 
 You can even mix both frameworks in the same workspace — one panel using Bootstrap, another using MUI. The layout engine does not care what is inside the panels.
@@ -507,21 +523,30 @@ The `skin` prop on `WindowManager` applies a `data-workspace-skin` attribute to 
 
 ## Common Mistakes
 
-**Registering components inside a React component**
+**Registering components inside a React component (legacy PanelRegistry)**
+
+If you use the global `PanelRegistry`, register at module scope — not inside a component body. With `WorkspaceClient`, this problem doesn't exist because panels are declared once at client construction time.
 
 ```typescript
-// Wrong — re-registers on every render
+// Wrong — re-registers on every render (legacy PanelRegistry only)
 function App() {
   PanelRegistry.register('map', MapPanel, { title: 'Map' }); // ❌
   return ...;
 }
 
-// Correct — register once at module level
+// Correct — register once at module level (legacy approach)
 PanelRegistry.register('map', MapPanel, { title: 'Map' }); // ✓
 
 function App() {
   return ...;
 }
+
+// Recommended — declare panels in WorkspaceClient at construction time
+const client = new WorkspaceClient({
+  panels: {
+    map: { component: MapPanel, defaultOptions: { title: 'Map' } },
+  },
+}); // ✓ no side effects, scoped, safe to export
 ```
 
 **Using the same instance ID for different components**
@@ -560,19 +585,22 @@ The workspace fills its container. If the container has no height the workspace 
 Copy this as a starting point for any new project:
 
 ```typescript
-// src/panels.ts — register all panels here
-import { PanelRegistry } from 'react-dockable-desktop';
+// src/workspaceClient.ts — create client and register panels here
+import { WorkspaceClient } from 'react-dockable-desktop';
 import { WelcomePanel } from './panels/WelcomePanel';
 import { NotesPanel } from './panels/NotesPanel';
 
-PanelRegistry.register('welcome', WelcomePanel, { title: 'Welcome', canClose: false });
-PanelRegistry.register('notes', NotesPanel, { title: 'Notes' });
+export const client = new WorkspaceClient({
+  panels: {
+    welcome: { component: WelcomePanel, defaultOptions: { title: 'Welcome', canClose: false } },
+    notes:   { component: NotesPanel,   defaultOptions: { title: 'Notes' } },
+  },
+  initialState: localStorage.getItem('workspace-layout'),
+});
 ```
 
 ```typescript
 // src/App.tsx
-import './panels'; // ensure registration runs before render
-
 import React from 'react';
 import {
   WindowManagerProvider,
@@ -582,6 +610,7 @@ import {
   SidePanelRenderer,
   useWindowManagerActions,
 } from 'react-dockable-desktop';
+import { client } from './workspaceClient';
 
 const Toolbar: React.FC = () => {
   const { openPanel } = useWindowManagerActions();
@@ -589,13 +618,14 @@ const Toolbar: React.FC = () => {
     <div style={{ padding: '0.5rem', background: '#111', display: 'flex', gap: '0.5rem' }}>
       <button onClick={() => openPanel('welcome', 'welcome')}>Welcome</button>
       <button onClick={() => openPanel('notes-1', 'notes')}>Notes</button>
+      <button onClick={() => localStorage.setItem('workspace-layout', client.saveLayout())}>Save Layout</button>
     </div>
   );
 };
 
 export default function App() {
   return (
-    <WindowManagerProvider>
+    <WindowManagerProvider client={client}>
       <PanelProvider>
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Toolbar />
