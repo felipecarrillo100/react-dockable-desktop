@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { PanelRegistry } from './PanelRegistry';
 import { defaultPredefinedMessages } from './predefinedMessages';
 import type { PredefinedMessageKey } from './predefinedMessages';
@@ -122,6 +122,10 @@ export interface WindowState {
   draggedPanelId: string | null;
   /** The ID of the active/focused panel. */
   activePanelId: string | null;
+  /** Current layout direction ('ltr' or 'rtl') */
+  dir: 'ltr' | 'rtl';
+  /** Convenient boolean flag indicating RTL direction */
+  isRtl: boolean;
 }
 
 /**
@@ -178,6 +182,8 @@ export interface WindowActions {
   dockPanelToWorkspaceEdge: (id: string, position: 'left' | 'right' | 'top' | 'bottom') => void;
   /** Update active focused tab reference. */
   setActivePanel: (id: string | null) => void;
+  /** Explicitly set or override layout direction */
+  setDirection: (dir: 'ltr' | 'rtl') => void;
 }
 
 const WindowStateContext = createContext<WindowState | null>(null);
@@ -258,6 +264,7 @@ export interface WindowManagerProviderProps {
   children: React.ReactNode;
   formatMessage?: MessageFormatter;
   predefinedMessages?: Record<string, ContextMenuPredefinedMessage>;
+  dir?: 'ltr' | 'rtl';
   modalClass?: string;
   modalBodyClass?: string;
   sidePanelClass?: string;
@@ -270,6 +277,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   children,
   formatMessage,
   predefinedMessages,
+  dir: dirProp,
   modalClass,
   modalBodyClass,
   sidePanelClass,
@@ -283,7 +291,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     minimized: [],
     panels: initialPanels,
     draggedPanelId: null,
-    activePanelId: 'main-map'
+    activePanelId: 'main-map',
+    dir: dirProp || 'ltr',
+    isRtl: dirProp === 'rtl'
   });
 
   const stateRef = useRef(state);
@@ -1051,14 +1061,15 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const parsed = JSON.parse(layoutJson);
       if (parsed.gridRoot && parsed.floating && parsed.minimized && parsed.panels) {
         const firstActive = Object.keys(parsed.panels)[0] || null;
-        setState({
+        setState(prev => ({
+          ...prev,
           gridRoot: parsed.gridRoot,
           floating: parsed.floating,
           minimized: parsed.minimized,
           panels: parsed.panels,
           draggedPanelId: null,
           activePanelId: firstActive
-        });
+        }));
       }
     } catch (e) {
       console.error('Failed to parse layout configuration:', e);
@@ -1071,6 +1082,22 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       return { ...prev, activePanelId: id };
     });
   }, []);
+
+  const setDirection = useCallback((dir: 'ltr' | 'rtl') => {
+    setState(prev => {
+      if (prev.dir === dir) return prev;
+      return { ...prev, dir, isRtl: dir === 'rtl' };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (dirProp) {
+      setState(prev => {
+        if (prev.dir === dirProp) return prev;
+        return { ...prev, dir: dirProp, isRtl: dirProp === 'rtl' };
+      });
+    }
+  }, [dirProp]);
 
   const actions = useMemo<WindowActions>(() => ({
     openPanel,
@@ -1097,7 +1124,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     updatePanelTitle,
     requestClosePanel,
     dockPanelToWorkspaceEdge,
-    setActivePanel
+    setActivePanel,
+    setDirection
   }), [
     openPanel,
     closePanel,
@@ -1123,7 +1151,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     updatePanelTitle,
     requestClosePanel,
     dockPanelToWorkspaceEdge,
-    setActivePanel
+    setActivePanel,
+    setDirection
   ]);
 
   const defaultFormatMessage: MessageFormatter = (msg) => {

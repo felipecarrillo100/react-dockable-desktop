@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
 import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderContext';
-import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages } from './WindowManagerContext';
+import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 
 /**
@@ -25,6 +25,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
   const { close, openModal, updateInstance, setDirty } = usePanelActions();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
+  const { dir } = useWindowManagerState();
   const { modalClass, modalBodyClass } = useStyleClasses();
   const closeHandlerRef = useRef<(() => boolean | Promise<boolean>) | null>(null);
 
@@ -114,7 +115,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
   const modalZIndex = baseZIndex + (index * 10);
 
   return (
-    <div className="v2-modal-overlay" style={{ zIndex: modalZIndex }}>
+    <div className="v2-modal-overlay" style={{ zIndex: modalZIndex }} dir={dir}>
       <div className="v2-modal-curtain" onClick={showCloseButton ? () => handleClose() : undefined} />
       <div className={`v2-modal-window ${sizeClass} ${modalClass ?? ''}`}>
         <div className="v2-modal-header">

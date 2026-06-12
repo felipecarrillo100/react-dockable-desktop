@@ -945,9 +945,24 @@ body.resizing-col-active * {
 }
 [data-workspace-skin="macos"] .floating-window-titlebar {
   flex-direction: row-reverse !important;
+  position: relative !important;
+}
+[data-workspace-skin="macos"] .floating-window-titlebar .floating-window-title {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  text-align: center !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  justify-content: center !important;
+}
+[data-workspace-skin="macos"] .floating-window-titlebar .floating-window-title > * {
+  pointer-events: auto;
 }
 [data-workspace-skin="macos"] .floating-window-titlebar .d-flex.align-items-center {
   flex-direction: row-reverse !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 [data-workspace-skin="macos"] .custom-tab-btn:not(.btn-anchor-tab) svg {
   display: none !important;
@@ -1786,5 +1801,110 @@ html:not(.enable-animations) *::after {
   height: calc(100% * var(--preview-scale, 1)) !important;
 }
 
+/* ==========================================
+   RTL (Right-to-Left) Support
+   ========================================== */
 
+[dir="rtl"] .workspace-tab-bar {
+  flex-direction: row-reverse !important;
+}
 
+[dir="rtl"] .tab-headers-container {
+  flex-direction: row-reverse !important;
+}
+
+[dir="rtl"] .workspace-tab {
+  border-right: none !important;
+  border-left: 1px solid var(--border-panel) !important;
+  padding: 0 14px 0 6px !important;
+}
+
+[dir="rtl"] .workspace-tab > .text-truncate {
+  margin-right: 0 !important;
+  margin-left: 12px !important;
+}
+
+[dir="rtl"] .workspace-tab-icon {
+  margin-right: 0 !important;
+  margin-left: 6px !important;
+}
+
+[dir="rtl"] .tab-header-actions {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+[dir="rtl"] .close-tab-x {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+/* Floating window title bar adjustments */
+[dir="rtl"] [data-workspace-skin="vscode"] .floating-window-titlebar,
+[dir="rtl"] [data-workspace-skin="chrome"] .floating-window-titlebar,
+[dir="rtl"] [data-workspace-skin="slate"] .floating-window-titlebar {
+  flex-direction: row-reverse !important;
+}
+
+[dir="rtl"] [data-workspace-skin="vscode"] .floating-window-titlebar .d-flex.align-items-center,
+[dir="rtl"] [data-workspace-skin="chrome"] .floating-window-titlebar .d-flex.align-items-center,
+[dir="rtl"] [data-workspace-skin="slate"] .floating-window-titlebar .d-flex.align-items-center {
+  flex-direction: row-reverse !important;
+}
+
+[dir="rtl"] .floating-window-title {
+  margin-right: 0 !important;
+  margin-left: auto !important;
+}
+
+/* Side Panels transitions slide-in direction */
+[dir="rtl"] .v2-side-panel-left {
+  left: auto !important;
+  right: 0 !important;
+  transform: translateX(100%) !important;
+}
+[dir="rtl"] .v2-side-panel-left.v2-side-panel-visible {
+  transform: translateX(0) !important;
+  border-right: none !important;
+  border-left: 1px solid var(--border-panel, #3c3c3c) !important;
+}
+
+[dir="rtl"] .v2-side-panel-right {
+  right: auto !important;
+  left: 0 !important;
+  transform: translateX(-100%) !important;
+}
+[dir="rtl"] .v2-side-panel-right.v2-side-panel-visible {
+  transform: translateX(0) !important;
+  border-left: none !important;
+  border-right: 1px solid var(--border-panel, #3c3c3c) !important;
+}
+
+/* Minimize Taskbar adjustments */
+[dir="rtl"] .taskbar-footer-container {
+  flex-direction: row-reverse !important;
+}
+[dir="rtl"] .taskbar-item-icon {
+  margin-right: 0 !important;
+  margin-left: 4px !important;
+}
+
+/* macOS Skin - RTL floating window titlebar overrides
+   Dots must stay on the LEFT in both LTR and RTL (real macOS behavior).
+   Title is absolutely centered, so no direction-specific adjustment needed.
+   In RTL, row-reverse naturally places the button group on the left. */
+[dir="rtl"][data-workspace-skin="macos"] .floating-window-titlebar {
+  flex-direction: row-reverse !important;
+}
+
+/* Button group: keep dots in correct visual order (Red → Yellow → Green)
+   from left to right regardless of text direction */
+[dir="rtl"][data-workspace-skin="macos"] .floating-window-titlebar .d-flex.align-items-center {
+  flex-direction: row !important;
+}
+
+/* Mirror close-button margins for macOS tabs under RTL */
+[dir="rtl"][data-workspace-skin="macos"] .close-tab-x {
+  margin-left: 0 !important;
+  margin-right: 2px !important;
+}

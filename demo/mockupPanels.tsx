@@ -85,7 +85,22 @@ PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
 
 // Modifying the layout dynamically
 const { loadLayout } = useWindowManagerActions();
-loadLayout(JSON_LAYOUT_STRING);`
+loadLayout(JSON_LAYOUT_STRING);`,
+
+  rtlShowcase: `// RTL Content Showcase Panel
+PanelRegistry.register('rtlShowcase', RTLShowcasePanel, {
+  title: 'RTL Showcase',
+  icon: '🔄',
+  initialTarget: 'docked'
+});
+
+// Reading direction from the WindowManager state
+const state = useWindowManagerState();
+console.log(state.dir);   // 'ltr' | 'rtl'
+console.log(state.isRtl); // boolean
+
+// All panels inherit dir automatically via DOM.
+// Panels render content based on the active direction.`
 };
 
 export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({ panelId, type }) => {
@@ -1098,6 +1113,168 @@ export const DirtyEditorDemoPanel: React.FC = () => {
   );
 };
 
+// ==========================================
+// RTL Content Showcase Panel
+// ==========================================
+
+const RTL_CONTENT = {
+  rtl: {
+    badge: 'RTL — من اليمين إلى اليسار',
+    heading: 'عرض محتوى ثنائي الاتجاه',
+    subtitle: 'هذه اللوحة تثبت أن سمة dir="rtl" تنتقل بشكل صحيح إلى محتوى اللوحة.',
+    article: {
+      title: '📰 مقال تجريبي',
+      body: 'يُعد نظام إدارة النوافذ القابلة للإرساء منصة مرنة وقوية لبناء تطبيقات سطح المكتب الحديثة. يدعم النظام تخطيطات متعددة، ونوافذ عائمة، وأدراج جانبية، ونوافذ مودال متداخلة.',
+      author: 'المؤلف: فريق التطوير',
+    },
+    form: {
+      title: '📝 نموذج إدخال',
+      name: 'الاسم الكامل',
+      namePlaceholder: 'أدخل اسمك...',
+      email: 'البريد الإلكتروني',
+      emailPlaceholder: 'user@example.com',
+      notes: 'ملاحظات',
+      notesPlaceholder: 'اكتب ملاحظاتك هنا...',
+      submit: '✅ إرسال',
+    },
+    table: {
+      title: '📊 بيانات المشروع',
+      headers: ['الميزة', 'الحالة', 'الأولوية'],
+      rows: [
+        ['دعم RTL', '✅ مكتمل', '🔴 عالية'],
+        ['النوافذ العائمة', '✅ مكتمل', '🔴 عالية'],
+        ['السحب والإفلات', '✅ مكتمل', '🟡 متوسطة'],
+        ['الأدراج الجانبية', '✅ مكتمل', '🟢 منخفضة'],
+      ],
+    },
+    footer: 'جميع العناصر أعلاه ترث اتجاه dir="rtl" من حاوية اللوحة تلقائياً.',
+  },
+  ltr: {
+    badge: 'LTR — Left to Right',
+    heading: 'Bidirectional Content Showcase',
+    subtitle: 'This panel proves that the dir attribute propagates correctly to panel content.',
+    article: {
+      title: '📰 Sample Article',
+      body: 'The Dockable Desktop window manager is a flexible, powerful platform for building modern desktop applications. It supports multi-pane layouts, floating windows, side drawers, and stacked modals — all with full RTL support.',
+      author: 'Author: Development Team',
+    },
+    form: {
+      title: '📝 Input Form',
+      name: 'Full Name',
+      namePlaceholder: 'Enter your name...',
+      email: 'Email Address',
+      emailPlaceholder: 'user@example.com',
+      notes: 'Notes',
+      notesPlaceholder: 'Write your notes here...',
+      submit: '✅ Submit',
+    },
+    table: {
+      title: '📊 Project Data',
+      headers: ['Feature', 'Status', 'Priority'],
+      rows: [
+        ['RTL Support', '✅ Complete', '🔴 High'],
+        ['Floating Windows', '✅ Complete', '🔴 High'],
+        ['Drag & Drop', '✅ Complete', '🟡 Medium'],
+        ['Side Drawers', '✅ Complete', '🟢 Low'],
+      ],
+    },
+    footer: 'All elements above inherit the dir="ltr" direction from the panel container automatically.',
+  },
+};
+
+export const RTLShowcasePanel: React.FC = () => {
+  const state = useWindowManagerState();
+  const isRtl = state.dir === 'rtl';
+  const c = isRtl ? RTL_CONTENT.rtl : RTL_CONTENT.ltr;
+
+  return (
+    <div
+      className="w-100 h-100 p-3 d-flex flex-column gap-3 text-start overflow-auto"
+      style={{ color: 'var(--panel-text)', fontFamily: isRtl ? '"Noto Sans Arabic", "Segoe UI", sans-serif' : 'inherit' }}
+    >
+      {/* Direction badge */}
+      <div className="d-flex align-items-center gap-2">
+        <span
+          className="badge rounded-pill px-3 py-2"
+          style={{
+            background: isRtl
+              ? 'linear-gradient(135deg, #00b09b, #96c93d)'
+              : 'linear-gradient(135deg, #667eea, #764ba2)',
+            fontSize: '0.85rem',
+            letterSpacing: isRtl ? '0' : '0.5px',
+          }}
+        >
+          {c.badge}
+        </span>
+        <code className="text-secondary small" style={{ fontFamily: 'var(--bs-font-monospace)' }}>
+          dir="{state.dir}"
+        </code>
+      </div>
+
+      {/* Heading */}
+      <div style={{ textAlign: 'start' }}>
+        <h5 className="mb-1 fw-bold" style={{ color: 'var(--accent-color)', textAlign: 'start' }}>{c.heading}</h5>
+        <p className="text-secondary mb-0 small" style={{ textAlign: 'start' }}>{c.subtitle}</p>
+      </div>
+
+      {/* Article card */}
+      <div className="rounded-3 p-3" style={{ background: 'var(--panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-panel)', textAlign: 'start' }}>
+        <h6 className="mb-2" style={{ color: 'var(--panel-title-color)', textAlign: 'start' }}>{c.article.title}</h6>
+        <p className="mb-2 small" style={{ lineHeight: '1.7', color: 'var(--panel-text)', textAlign: 'start' }}>{c.article.body}</p>
+        <small className="text-secondary fst-italic">{c.article.author}</small>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-3 p-3" style={{ background: 'var(--panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-panel)', textAlign: 'start' }}>
+        <h6 className="mb-2" style={{ color: 'var(--panel-title-color)', textAlign: 'start' }}>{c.table.title}</h6>
+        <table className="table table-sm table-borderless mb-0 small" style={{ color: 'var(--panel-text)', textAlign: 'start' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border-panel)' }}>
+              {c.table.headers.map((h, i) => (
+                <th key={i} className="py-1 text-secondary fw-normal" style={{ textAlign: 'start' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {c.table.rows.map((row, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid var(--border-panel, rgba(255,255,255,0.05))' }}>
+                {row.map((cell, j) => (
+                  <td key={j} className="py-1" style={{ textAlign: 'start' }}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Form */}
+      <div className="rounded-3 p-3" style={{ background: 'var(--panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-panel)', textAlign: 'start' }}>
+        <h6 className="mb-2" style={{ color: 'var(--panel-title-color)', textAlign: 'start' }}>{c.form.title}</h6>
+        <div className="d-flex flex-column gap-2">
+          <div>
+            <label className="form-label small text-secondary mb-1">{c.form.name}</label>
+            <input type="text" className="form-control form-control-sm bg-dark text-white border-secondary" placeholder={c.form.namePlaceholder} style={{ textAlign: 'start' }} />
+          </div>
+          <div>
+            <label className="form-label small text-secondary mb-1">{c.form.email}</label>
+            <input type="email" className="form-control form-control-sm bg-dark text-white border-secondary" placeholder={c.form.emailPlaceholder} dir="ltr" />
+          </div>
+          <div>
+            <label className="form-label small text-secondary mb-1">{c.form.notes}</label>
+            <textarea className="form-control form-control-sm bg-dark text-white border-secondary" rows={2} placeholder={c.form.notesPlaceholder} style={{ textAlign: 'start' }} />
+          </div>
+          <button className="btn btn-sm btn-outline-success" style={{ alignSelf: isRtl ? 'flex-end' : 'flex-start' }}>{c.form.submit}</button>
+        </div>
+      </div>
+
+      {/* Footer note */}
+      <div className="text-center small text-secondary fst-italic border-top pt-2" style={{ borderColor: 'var(--border-panel) !important' }}>
+        {c.footer}
+      </div>
+    </div>
+  );
+};
+
 // Register all panels
 export function registerDemoPanels() {
     PanelRegistry.register('mainMap', MainMap, {
@@ -1205,5 +1382,11 @@ export function registerDemoPanels() {
         icon: '📝',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
+    });
+    PanelRegistry.register('rtlShowcase', RTLShowcasePanel, { 
+        title: 'RTL Showcase', 
+        icon: '🔄',
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="rtlShowcase" />
     });
 }

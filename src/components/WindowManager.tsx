@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode } from './WindowManagerContext';
 import { PanelRegistry } from './PanelRegistry';
+import { isElementRtl } from '../utils/rtl';
 import { JsonContextMenu, type JsonContextMenuRef } from 'replace-react-contexify';
 import 'replace-react-contexify/styles.css';
 import { FormContainerProvider } from './FormContainerContext';
@@ -620,7 +621,7 @@ export interface WindowManagerProps {
 
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
   const state = useWindowManagerState();
-  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel } = useWindowManagerActions();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection } = useWindowManagerActions();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
@@ -881,6 +882,32 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       observer.disconnect();
     };
   }, []);
+
+  // Dynamically observe document/container direction changes
+  useEffect(() => {
+    const el = workspaceRef.current;
+    if (!el) return;
+
+    const updateDir = () => {
+      const isRtl = isElementRtl(el);
+      setDirection(isRtl ? 'rtl' : 'ltr');
+    };
+
+    updateDir();
+
+    const observer = new MutationObserver(updateDir);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['dir'] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['dir'] });
+
+    const closestDir = el.closest('[dir]');
+    if (closestDir && closestDir !== document.documentElement && closestDir !== document.body) {
+      observer.observe(closestDir, { attributes: true, attributeFilter: ['dir'] });
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [setDirection]);
 
   // Sync / Realignment Effect when actual workspace size changes
   useEffect(() => {
@@ -1148,6 +1175,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       data-bs-theme={currentBsTheme}
       className="d-flex flex-column w-100 h-100 overflow-hidden"
       style={{ userSelect: 'none' }}
+      dir={state.dir}
     >
 
       {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
@@ -1225,6 +1253,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               <div
                 key={w.id}
                 data-window-id={w.id}
+                dir={state.dir}
                 onMouseDownCapture={() => {
                   setActivePanel(w.id);
                   bringToFront(w.id);
@@ -1465,6 +1494,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           {hoveredMinimized && createPortal(
             <div
               className="taskbar-item-tooltip d-flex flex-column gap-1"
+              dir={state.dir}
               style={{
                 position: 'fixed',
                 left: `${hoveredMinimized.rect.left + hoveredMinimized.rect.width / 2}px`,

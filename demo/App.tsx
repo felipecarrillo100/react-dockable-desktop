@@ -23,7 +23,7 @@ import {
 import type { SidebarTab, SidebarHandle } from '../src/index';
 import { PanelRegistry } from '../src/index';
 import { IntlProvider, useIntl } from 'react-intl';
-import { enMessages, esMessages, nlMessages, frMessages } from './i18nMessages';
+import { enMessages, esMessages, nlMessages, frMessages, zhMessages, arMessages } from './i18nMessages';
 import {EditAndMeasureIcon, SearchResultsIcon, SettingsIcon, WindowsIcon} from "./resources/SvgIcons.tsx";
 
 interface AppProps {
@@ -681,6 +681,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                 <option value="es">Español (ES)</option>
                 <option value="nl">Nederlands (NL)</option>
                 <option value="fr">Français (FR)</option>
+                <option value="zh">中文 (ZH)</option>
+                <option value="ar">العربية (AR)</option>
               </select>
             </div>
           </div>
@@ -758,6 +760,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                 </DropdownSubmenu>
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={spawnFloatingWindow}>🪟 Spawn Help Window</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => openPanel('rtlshowcase-main', 'rtlShowcase')}>🔄 RTL Content Showcase</NavDropdown.Item>
               </NavDropdownMenu>
              {/* Elements dropdown showing active windows, with limit N + Show All */}
               <NavDropdownMenu title={`Active Elements (${openPanelsList.length})`} id="elements-dropdown">
@@ -899,7 +902,9 @@ const messagesMap: Record<string, Record<string, string>> = {
   en: enMessages,
   es: esMessages,
   nl: nlMessages,
-  fr: frMessages
+  fr: frMessages,
+  zh: zhMessages,
+  ar: arMessages
 };
 
 interface AppWithIntlProps extends AppProps {
@@ -915,7 +920,11 @@ function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
   };
 
   return (
-    <WindowManagerProvider formatMessage={handleFormatMessage} predefinedMessages={defaultPredefinedMessages}>
+    <WindowManagerProvider
+      formatMessage={handleFormatMessage}
+      predefinedMessages={defaultPredefinedMessages}
+      dir={locale === 'ar' ? 'rtl' : 'ltr'}
+    >
       <PanelProvider>
         <AppContent locale={locale} onLocaleChange={onLocaleChange} />
       </PanelProvider>

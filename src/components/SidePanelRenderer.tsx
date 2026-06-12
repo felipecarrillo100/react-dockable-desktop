@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
 import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProviderContext';
-import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages } from './WindowManagerContext';
+import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 
 /**
@@ -26,6 +26,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
   const { modals } = usePanelState();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
+  const { dir } = useWindowManagerState();
   const { sidePanelClass, sidePanelBodyClass } = useStyleClasses();
   const closeHandlerRef = useRef<(() => boolean | Promise<boolean>) | null>(null);
 
@@ -123,6 +124,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
     <div 
       className={`v2-side-panel v2-side-panel-${position} v2-side-panel-visible ${sidePanelClass ?? ''}`}
       style={{ width: widthStyle }}
+      dir={dir}
     >
       <div className="v2-side-panel-window">
         <div className="v2-side-panel-header">

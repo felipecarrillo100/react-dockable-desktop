@@ -18,7 +18,9 @@ A beautiful, premium, state-of-the-art React window manager and dockable layout 
 * **🎨 Custom Global Style Classes**: Inject custom, global styles at the provider level (`modalClass`, `modalBodyClass`, `sidePanelClass`, `sidePanelBodyClass`, `windowClass`, and `windowBodyClass`) to style widgets uniformly.
 * **🥞 Aspect-Ratio Modal Engine**: Modals automatically wrap and shrink-to-fit content snugly, but cap height and scroll gracefully at visual aspect-ratio thresholds (4:3 for small/medium, 16:10 for large layouts).
 * **🔬 Zero-Unmount DOM Persistence**: Heavy widgets (like Leaflet Maps, WebGL viewports, terminal consoles, or stateful forms) maintain their DOM nodes and state. The engine moves existing DOM structures into a hidden document fragment host rather than unmounting them.
-* **🌍 i18n Ready**: Native translation pipeline designed to adapt with tools like `react-intl` (`intl.formatMessage`) or custom formatting libraries. Translate tab headers, floating window titles, taskbars, and right-click context actions dynamically.
+* **🌍 i18n & Full RTL Support**: Native translation pipeline matching React Intl formats and **Right-to-Left (RTL) language layouts** (Arabic, Hebrew, Persian, etc.). Detection is completely automatic based on surrounding `dir="rtl"` elements, with explicit provider control options.
+* **🛠️ Custom Header Actions**: Inject custom React components directly into tabbed headers and floating window titlebars dynamically using the `renderHeaderActions` registry property.
+* **🔍 Initial Letter Hover Miniatures**: Miniature preview popovers automatically display the uppercase first character of the panel title inside a theme-responsive grayish layout fallback for panels with disabled live previews.
 * **💎 Glassmorphic & Modern Styling**: Sleek dark mode aesthetics, interactive micro-animations, and fluid transitions.
 * **🔌 Inter-Panel Pub/Sub Event Bus**: A robust messaging system for lightweight, decoupled communication between active panels.
 
@@ -152,6 +154,26 @@ function App() {
 ```
 
 *If no `formatMessage` function is provided, the engine defaults to a fallback formatting template parser resolving placeholders like `Hello {user}` using values.*
+
+### Right-to-Left (RTL) Layout Support
+
+The library features built-in, theme-resilient Right-to-Left (RTL) rendering. It automatically mirrors tab stacking flows, close icon alignments, custom header buttons, side drawers (which slide in from the opposite edge), titlebars, and taskbar icons.
+
+#### 1. Automatic Detection (Zero Configuration)
+Simply apply the HTML `dir="rtl"` attribute to the container enclosing your layout, or globally on the `<html>`/`<body>` nodes. The workspace will observe it using a `MutationObserver` and mirror dynamically:
+```html
+<div dir="rtl">
+  <Desktop />
+</div>
+```
+
+#### 2. Explicit Programmatic Control
+To force a specific direction regardless of the surrounding HTML structure, pass the `dir` prop directly to the provider:
+```typescript
+<WindowManagerProvider dir="rtl">
+  <Desktop />
+</WindowManagerProvider>
+```
 
 ---
 
