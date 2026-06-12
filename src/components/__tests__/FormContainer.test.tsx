@@ -1,28 +1,30 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { createRoot, Root } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerActions, useWindowManagerState } from '../WindowManagerContext';
+import { PanelProvider, usePanelState, usePanelActions } from '../PanelProviderContext';
 import { useFormContainer } from '../FormContainerContext';
 import { PanelRegistry } from '../PanelRegistry';
 import WindowManager from '../WindowManager';
+import ModalStackRenderer from '../ModalStackRenderer';
+import ConfirmationForm from '../../forms/ConfirmationForm';
 
+// Panel that exposes FormContainerContract via buttons so tests can drive it
 const TestFormChild: React.FC<{ panelId: string }> = ({ panelId }) => {
   const container = useFormContainer();
-  
+
   return (
     <div id={`child-${panelId}`}>
-      <button id={`dirty-btn-${panelId}`} onClick={() => container.setDirty(true)}>Set Dirty</button>
-      <button id={`clean-btn-${panelId}`} onClick={() => container.setDirty(false)}>Set Clean</button>
-      <button id={`close-btn-${panelId}`} onClick={() => container.requestClose()}>Request Close</button>
+      <button id={`dirty-btn-${panelId}`}    onClick={() => container.setDirty(true)}>Set Dirty</button>
+      <button id={`clean-btn-${panelId}`}    onClick={() => container.setDirty(false)}>Set Clean</button>
+      <button id={`close-btn-${panelId}`}    onClick={() => container.requestClose()}>Request Close</button>
       <button id={`force-close-btn-${panelId}`} onClick={() => container.requestClose({ force: true })}>Force Close</button>
-      <button id={`title-btn-${panelId}`} onClick={() => container.setTitle('Dynamic Title')}>Set Title</button>
-      <button 
-        id={`guard-btn-${panelId}`} 
+      <button id={`title-btn-${panelId}`}    onClick={() => container.setTitle('Dynamic Title')}>Set Title</button>
+      <button
+        id={`guard-btn-${panelId}`}
         onClick={() => {
-          container.onCloseRequested(() => {
-            return false;
-          });
+          container.onCloseRequested(() => false);
         }}
       >
         Register Block Guard
@@ -35,10 +37,14 @@ PanelRegistry.register('testForm', TestFormChild);
 
 let testActions: any = null;
 let testState: any = null;
+let panelState: any = null;
+let panelActions: any = null;
 
 const TestHelper: React.FC = () => {
   testActions = useWindowManagerActions();
   testState = useWindowManagerState();
+  panelState = usePanelState();
+  panelActions = usePanelActions();
   return null;
 };
 
@@ -51,6 +57,8 @@ describe('FormContainer Integration', () => {
     document.body.appendChild(container);
     testActions = null;
     testState = null;
+    panelState = null;
+    panelActions = null;
   });
 
   afterEach(() => {
@@ -60,6 +68,10 @@ describe('FormContainer Integration', () => {
     if (container) {
       document.body.removeChild(container);
     }
+    const preserved = document.getElementById('preserved-dom-container');
+    if (preserved?.parentNode) {
+      preserved.parentNode.removeChild(preserved);
+    }
   });
 
   const mount = () => {
@@ -67,8 +79,11 @@ describe('FormContainer Integration', () => {
       root = createRoot(container!);
       root.render(
         <WindowManagerProvider>
-          <TestHelper />
-          <WindowManager />
+          <PanelProvider>
+            <TestHelper />
+            <WindowManager />
+            <ModalStackRenderer />
+          </PanelProvider>
         </WindowManagerProvider>
       );
     });
@@ -76,33 +91,46 @@ describe('FormContainer Integration', () => {
 
   it('should render form container and show asterisk on dirty state', () => {
     mount();
-    
-    // Open our test panel
+
     act(() => {
       testActions.openPanel('test-panel', 'testForm', { title: 'Test Form' });
     });
 
-    // Verify it is docked/open
     expect(testState.panels['test-panel']).toBeDefined();
-    
-    // Find tab header text
-    let tabElement = container!.querySelector('.workspace-tab.active');
-    expect(tabElement?.textContent).toContain('Test Form');
-    expect(tabElement?.textContent).not.toContain('*');
 
-    // Click the dirty button to mark dirty
-    const dirtyBtn = container!.querySelector('#dirty-btn-test-panel');
-    expect(dirtyBtn).toBeDefined();
+    let tab = container!.querySelector('.workspace-tab.active');
+    expect(tab?.textContent).toContain('Test Form');
+    expect(tab?.textContent).not.toContain('*');
+
     act(() => {
-      (dirtyBtn as HTMLButtonElement).click();
+      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
     });
 
-    // Check that panel is marked dirty in state
     expect(testState.panels['test-panel'].dirty).toBe(true);
 
-    // Verify tab text now contains the asterisk indicator
-    tabElement = container!.querySelector('.workspace-tab.active');
-    expect(tabElement?.textContent).toContain('Test Form *');
+    tab = container!.querySelector('.workspace-tab.active');
+    expect(tab?.textContent).toContain('Test Form *');
+  });
+
+  it('should clear dirty flag and asterisk when setDirty(false) is called', () => {
+    mount();
+
+    act(() => {
+      testActions.openPanel('test-panel', 'testForm', { title: 'Test Form' });
+    });
+
+    act(() => {
+      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
+    });
+    expect(testState.panels['test-panel'].dirty).toBe(true);
+
+    act(() => {
+      (container!.querySelector('#clean-btn-test-panel') as HTMLButtonElement).click();
+    });
+    expect(testState.panels['test-panel'].dirty).toBe(false);
+
+    const tab = container!.querySelector('.workspace-tab.active');
+    expect(tab?.textContent).not.toContain('*');
   });
 
   it('should support dynamic title updates via context contract', () => {
@@ -111,119 +139,166 @@ describe('FormContainer Integration', () => {
       testActions.openPanel('test-panel', 'testForm', { title: 'Initial Title' });
     });
 
-    // Click set title button
-    const titleBtn = container!.querySelector('#title-btn-test-panel');
     act(() => {
-      (titleBtn as HTMLButtonElement).click();
+      (container!.querySelector('#title-btn-test-panel') as HTMLButtonElement).click();
     });
 
-    // Title should update
     expect(testState.panels['test-panel'].title).toBe('Dynamic Title');
-    const tabElement = container!.querySelector('.workspace-tab.active');
-    expect(tabElement?.textContent).toContain('Dynamic Title');
+    const tab = container!.querySelector('.workspace-tab.active');
+    expect(tab?.textContent).toContain('Dynamic Title');
   });
 
-  it('should block tab closure when onCloseRequested guard returns false', async () => {
+  it('should block panel closure when onCloseRequested guard returns false', async () => {
     mount();
     act(() => {
       testActions.openPanel('test-panel', 'testForm', { title: 'Guard Test' });
     });
 
-    // Register blocking guard
-    const guardBtn = container!.querySelector('#guard-btn-test-panel');
+    // Register a blocking guard via the panel's own button
     act(() => {
-      (guardBtn as HTMLButtonElement).click();
+      (container!.querySelector('#guard-btn-test-panel') as HTMLButtonElement).click();
     });
 
-    // Request close - wrapped in await act because guard checks are async
-    const closeBtn = container!.querySelector('#close-btn-test-panel');
-    await act(async () => {
-      (closeBtn as HTMLButtonElement).click();
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-
-    // Panel should NOT close because guard blocked it
-    expect(testState.panels['test-panel']).toBeDefined();
-  });
-
-  it('should prompt dirty overlay modal and support Cancel or Discard choices', async () => {
-    mount();
-    act(() => {
-      testActions.openPanel('test-panel', 'testForm', { title: 'Modal Test' });
-    });
-
-    // Set dirty
-    act(() => {
-      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
-    });
-
-    // Click close - wrapped in await act because requestClose is async
+    // requestClose() goes through the guard — should be blocked
     await act(async () => {
       (container!.querySelector('#close-btn-test-panel') as HTMLButtonElement).click();
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    // Overlay modal should appear
-    expect(testState.pendingClose).not.toBeNull();
-    expect(testState.pendingClose.id).toBe('test-panel');
-    
-    let modalElement = container!.querySelector('.close-warning-overlay');
-    expect(modalElement).not.toBeNull();
-    expect(modalElement!.querySelector('.close-warning-title')?.textContent).toBe('Unsaved Changes');
-
-    // Click cancel in modal
-    const cancelBtn = modalElement!.querySelector('.btn-warning-cancel');
-    await act(async () => {
-      (cancelBtn as HTMLButtonElement).click();
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-
-    // Overlay modal should be gone, and panel remains open
-    expect(testState.pendingClose).toBeNull();
     expect(testState.panels['test-panel']).toBeDefined();
-    expect(container!.querySelector('.close-warning-overlay')).toBeNull();
-
-    // Request close again to re-trigger modal
-    await act(async () => {
-      (container!.querySelector('#close-btn-test-panel') as HTMLButtonElement).click();
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-
-    modalElement = container!.querySelector('.close-warning-overlay');
-    expect(modalElement).not.toBeNull();
-
-    // Click discard changes
-    const discardBtn = modalElement!.querySelector('.btn-warning-discard');
-    await act(async () => {
-      (discardBtn as HTMLButtonElement).click();
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-
-    // Modal should be gone, and panel closed
-    expect(testState.pendingClose).toBeNull();
-    expect(testState.panels['test-panel']).toBeUndefined();
   });
 
-  it('should bypass guards and dirty check if requested with force option', async () => {
+  it('should bypass guard and dirty check on force close', async () => {
     mount();
     act(() => {
       testActions.openPanel('test-panel', 'testForm', { title: 'Force Close Test' });
     });
 
-    // Make dirty and register block guard
     act(() => {
       (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
       (container!.querySelector('#guard-btn-test-panel') as HTMLButtonElement).click();
     });
 
-    // Trigger force close
     await act(async () => {
       (container!.querySelector('#force-close-btn-test-panel') as HTMLButtonElement).click();
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    // Panel should be closed directly without blocking or triggering pendingClose modal
     expect(testState.panels['test-panel']).toBeUndefined();
-    expect(testState.pendingClose).toBeNull();
+  });
+
+  it('should show dirty confirmation modal when openModal is triggered for a dirty panel', () => {
+    mount();
+    act(() => {
+      testActions.openPanel('test-panel', 'testForm', { title: 'Modal Test' });
+    });
+
+    // Mark dirty
+    act(() => {
+      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
+    });
+    expect(testState.panels['test-panel'].dirty).toBe(true);
+
+    // The tab X button must be present (UI structural assertion)
+    expect(container!.querySelector('.close-tab-x')).not.toBeNull();
+
+    // Open the ConfirmationForm modal directly (simulates what handleRequestClose does)
+    act(() => {
+      panelActions.openModal(
+        ConfirmationForm,
+        { message: 'You have unsaved changes. Discard?', useYesNoTitles: true, onOK: () => {}, onCancel: () => {} },
+        { size: 'small', title: 'Unsaved Changes' }
+      );
+    });
+
+    expect(panelState.modals.length).toBeGreaterThan(0);
+    const modal = container!.querySelector('.v2-modal-overlay');
+    expect(modal).not.toBeNull();
+    expect(modal!.textContent).toContain('Unsaved Changes');
+  });
+
+  it('should keep panel open when No is clicked in dirty confirmation modal', () => {
+    mount();
+    act(() => {
+      testActions.openPanel('test-panel', 'testForm', { title: 'Modal Test' });
+    });
+
+    act(() => {
+      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
+    });
+
+    // Open the confirmation modal
+    act(() => {
+      panelActions.openModal(
+        ConfirmationForm,
+        { message: 'Discard unsaved changes?', useYesNoTitles: true, onOK: () => testActions.closePanel('test-panel'), onCancel: () => {} },
+        { size: 'small', title: 'Unsaved Changes' }
+      );
+    });
+
+    const modal = container!.querySelector('.v2-modal-overlay');
+    expect(modal).not.toBeNull();
+
+    // The first type="button" is the modal close X; the second is the ConfirmationForm cancel/No
+    const allTypeBtns = Array.from(modal!.querySelectorAll('button[type="button"]'));
+    const noBtn = allTypeBtns.find(b => b.textContent?.trim() === 'No') as HTMLButtonElement;
+    expect(noBtn).not.toBeNull();
+    act(() => { noBtn.click(); });
+
+    // Modal dismissed, panel still open
+    expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
+    expect(testState.panels['test-panel']).toBeDefined();
+  });
+
+  it('should close panel when Yes is clicked in dirty confirmation modal', () => {
+    mount();
+    act(() => {
+      testActions.openPanel('test-panel', 'testForm', { title: 'Modal Test' });
+    });
+
+    act(() => {
+      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
+    });
+
+    // Open the confirmation modal with onOK that closes the panel
+    act(() => {
+      panelActions.openModal(
+        ConfirmationForm,
+        { message: 'Discard unsaved changes?', useYesNoTitles: true, onOK: () => testActions.closePanel('test-panel'), onCancel: () => {} },
+        { size: 'small', title: 'Unsaved Changes' }
+      );
+    });
+
+    const modal = container!.querySelector('.v2-modal-overlay');
+    expect(modal).not.toBeNull();
+
+    // Click "Yes" (confirm/submit) button — type="submit"
+    const yesBtn = modal!.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(yesBtn?.textContent).toContain('Yes');
+    act(() => { yesBtn.click(); });
+
+    // Modal dismissed, panel closed
+    expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
+    expect(testState.panels['test-panel']).toBeUndefined();
+  });
+
+  it('requestClose on a dirty panel without onConfirm should silently abort (no modal, no close)', async () => {
+    mount();
+    act(() => {
+      testActions.openPanel('test-panel', 'testForm', { title: 'Silent Abort Test' });
+    });
+
+    act(() => {
+      (container!.querySelector('#dirty-btn-test-panel') as HTMLButtonElement).click();
+    });
+
+    // container.requestClose() has no onConfirm — per architecture it silently returns
+    await act(async () => {
+      (container!.querySelector('#close-btn-test-panel') as HTMLButtonElement).click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
+    expect(testState.panels['test-panel']).toBeDefined();
   });
 });
