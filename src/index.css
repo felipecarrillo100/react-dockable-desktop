@@ -2225,3 +2225,124 @@ html:not(.enable-animations) *::after {
 [data-color-scheme="light"] .dw-btn-primary {
   color: #ffffff;
 }
+
+/* ============================================================
+   TOUCH SUPPORT (Phase 1C, 2A–B, 3B, 4A, 4C)
+   ============================================================ */
+
+/* Phase 1C: touch-action — suppress scroll on drag handles,
+   allow horizontal pan on tab bar */
+.workspace-tab              { touch-action: none; }
+.floating-window-titlebar   { touch-action: none; }
+.resizer-bar                { touch-action: none; }
+.resize-handle              { touch-action: none; }
+.tab-headers-container      { touch-action: pan-x; }
+
+/* Phase 2A: Expand resizer hit area to 44px on touch devices */
+@media (pointer: coarse) {
+  .resizer-bar[style*="cursor: col-resize"]::before {
+    left: -20px;
+    width: 44px;
+  }
+  .resizer-bar[style*="cursor: row-resize"]::before {
+    top: -20px;
+    height: 44px;
+  }
+}
+
+/* Phase 3B: 8-direction resize handles on floating windows */
+.resize-handle {
+  position: absolute;
+  z-index: 30;
+}
+
+/* Edge handles */
+.resize-n  { top: -4px;    left: 16px;   right: 16px;  height: 8px;  cursor: n-resize; }
+.resize-s  { bottom: -4px; left: 16px;   right: 16px;  height: 8px;  cursor: s-resize; }
+.resize-e  { right: -4px;  top: 16px;    bottom: 16px; width:  8px;  cursor: e-resize; }
+.resize-w  { left: -4px;   top: 16px;    bottom: 16px; width:  8px;  cursor: w-resize; }
+
+/* Corner handles */
+.resize-ne { top: -4px;    right: -4px;  width: 16px; height: 16px; cursor: ne-resize; }
+.resize-se { bottom: -4px; right: -4px;  width: 16px; height: 16px; cursor: se-resize; }
+.resize-sw { bottom: -4px; left: -4px;   width: 16px; height: 16px; cursor: sw-resize; }
+.resize-nw { top: -4px;    left: -4px;   width: 16px; height: 16px; cursor: nw-resize; }
+
+/* SE corner subtle visual indicator (preserve existing look) */
+.resize-se::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%);
+}
+
+/* Touch: larger 44px hit areas via padding */
+@media (pointer: coarse) {
+  .resize-ne, .resize-se, .resize-sw, .resize-nw {
+    width: 28px;
+    height: 28px;
+  }
+  .resize-n, .resize-s {
+    left: 28px;
+    right: 28px;
+    height: 12px;
+    top: -6px;
+  }
+  .resize-s { top: auto; bottom: -6px; }
+  .resize-e, .resize-w {
+    top: 28px;
+    bottom: 28px;
+    width: 12px;
+    right: -6px;
+  }
+  .resize-w { right: auto; left: -6px; }
+}
+
+/* Phase 2B: Adaptive density for coarse-pointer (touch) devices */
+@media (pointer: coarse) {
+  /* Taller tabs for touch targets */
+  .workspace-tab {
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 12px 0 14px !important;
+  }
+
+  /* Always-visible close button (no hover-to-reveal) */
+  .workspace-tab .close-tab-x {
+    opacity: 0.8 !important;
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* Larger titlebar action buttons */
+  .custom-tab-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  /* Taller taskbar items */
+  .taskbar-glassmorphic-item {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+/* Phase 4A: Long-press active animation (visual feedback during 300ms hold) */
+.long-press-active {
+  animation: rdd-long-press-pulse 0.25s ease-out forwards;
+  transform-origin: center;
+}
+
+@keyframes rdd-long-press-pulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 var(--accent-glow, rgba(56,189,248,0.3)); }
+  60%  { transform: scale(1.04); box-shadow: 0 0 0 6px var(--accent-glow, rgba(56,189,248,0.15)); }
+  100% { transform: scale(1.02); box-shadow: 0 0 0 4px var(--accent-glow, rgba(56,189,248,0.1)); }
+}
+
+/* Phase 4C: Tab bar horizontal scroll (handled by existing .tab-headers-container overflow-x: auto) */
+.tab-headers-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.tab-headers-container::-webkit-scrollbar { display: none; }
+.workspace-tab { scroll-snap-align: start; }
