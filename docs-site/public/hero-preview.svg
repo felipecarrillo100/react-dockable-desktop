@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" fill="none">
+  <!-- App window background -->
+  <rect width="640" height="420" rx="10" fill="#12131a"/>
+
+  <!-- ── Top toolbar ── -->
+  <rect width="640" height="40" rx="10" fill="#1a1c28"/>
+  <rect y="30" width="640" height="10" fill="#1a1c28"/>
+  <!-- Toolbar buttons -->
+  <circle cx="18" cy="20" r="6" fill="#ff5f57"/>
+  <circle cx="36" cy="20" r="6" fill="#febc2e"/>
+  <circle cx="54" cy="20" r="6" fill="#28c840"/>
+  <!-- Toolbar title -->
+  <rect x="200" y="14" width="240" height="12" rx="4" fill="#2a2d3e" opacity="0.8"/>
+  <!-- Toolbar right buttons -->
+  <rect x="560" y="12" width="32" height="16" rx="4" fill="#1e3a5f" opacity="0.9"/>
+  <rect x="598" y="12" width="32" height="16" rx="4" fill="#1e3a5f" opacity="0.9"/>
+
+  <!-- ── Main layout area ── -->
+  <!-- Left panel (large) -->
+  <rect x="0" y="40" width="280" height="340" fill="#14151f"/>
+  <!-- Left panel tab bar -->
+  <rect x="0" y="40" width="280" height="32" fill="#1a1c28"/>
+  <rect x="6"  y="46" width="70" height="20" rx="4" fill="#0a6bc4"/>
+  <rect x="82" y="46" width="60" height="20" rx="4" fill="#2a2d3e"/>
+  <rect x="148" y="46" width="60" height="20" rx="4" fill="#2a2d3e"/>
+  <!-- Tab labels -->
+  <rect x="18"  y="53" width="46" height="6" rx="2" fill="#fff" opacity="0.8"/>
+  <rect x="92"  y="53" width="40" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+  <rect x="158" y="53" width="40" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+  <!-- Left panel content: map-like placeholder -->
+  <rect x="0" y="72" width="280" height="308" fill="#0f1520"/>
+  <!-- Grid lines (map grid) -->
+  <line x1="0"   y1="120" x2="280" y2="120" stroke="#1e2840" stroke-width="1"/>
+  <line x1="0"   y1="170" x2="280" y2="170" stroke="#1e2840" stroke-width="1"/>
+  <line x1="0"   y1="220" x2="280" y2="220" stroke="#1e2840" stroke-width="1"/>
+  <line x1="0"   y1="270" x2="280" y2="270" stroke="#1e2840" stroke-width="1"/>
+  <line x1="0"   y1="320" x2="280" y2="320" stroke="#1e2840" stroke-width="1"/>
+  <line x1="70"  y1="72"  x2="70"  y2="380" stroke="#1e2840" stroke-width="1"/>
+  <line x1="140" y1="72"  x2="140" y2="380" stroke="#1e2840" stroke-width="1"/>
+  <line x1="210" y1="72"  x2="210" y2="380" stroke="#1e2840" stroke-width="1"/>
+  <!-- Map blobs -->
+  <ellipse cx="100" cy="160" rx="40" ry="28" fill="#1a3a5c" opacity="0.7"/>
+  <ellipse cx="190" cy="200" rx="55" ry="35" fill="#1a3a5c" opacity="0.5"/>
+  <ellipse cx="60"  cy="280" rx="30" ry="20" fill="#1a3a5c" opacity="0.6"/>
+  <ellipse cx="220" cy="310" rx="38" ry="25" fill="#1a3a5c" opacity="0.5"/>
+  <!-- Pin marker -->
+  <circle cx="100" cy="160" r="5" fill="#0a6bc4"/>
+  <circle cx="100" cy="160" r="9" fill="none" stroke="#0a6bc4" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Vertical splitter -->
+  <rect x="280" y="40" width="3" height="340" fill="#252836"/>
+
+  <!-- Center panel -->
+  <rect x="283" y="40" width="230" height="340" fill="#14151f"/>
+  <!-- Center panel tab bar -->
+  <rect x="283" y="40" width="230" height="32" fill="#1a1c28"/>
+  <rect x="289" y="46" width="68" height="20" rx="4" fill="#0a6bc4"/>
+  <rect x="363" y="46" width="68" height="20" rx="4" fill="#2a2d3e"/>
+  <!-- Tab labels -->
+  <rect x="301" y="53" width="44" height="6" rx="2" fill="#fff" opacity="0.8"/>
+  <rect x="373" y="53" width="44" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+  <!-- Code editor content -->
+  <rect x="283" y="72" width="230" height="308" fill="#0d0e17"/>
+  <!-- Line numbers column -->
+  <rect x="283" y="72" width="28" height="308" fill="#111220"/>
+  <rect x="291" y="84"  width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="97"  width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="110" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="123" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="136" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="149" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="162" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="175" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="188" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <rect x="291" y="201" width="12" height="5" rx="1" fill="#3a3f52" opacity="0.7"/>
+  <!-- Code lines -->
+  <rect x="316" y="84"  width="30" height="5" rx="1" fill="#c792ea" opacity="0.8"/>
+  <rect x="350" y="84"  width="50" height="5" rx="1" fill="#82aaff" opacity="0.8"/>
+  <rect x="316" y="97"  width="20" height="5" rx="1" fill="#89ddff" opacity="0.8"/>
+  <rect x="340" y="97"  width="60" height="5" rx="1" fill="#c3e88d" opacity="0.8"/>
+  <rect x="404" y="97"  width="24" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="324" y="110" width="40" height="5" rx="1" fill="#f78c6c" opacity="0.8"/>
+  <rect x="368" y="110" width="30" height="5" rx="1" fill="#82aaff" opacity="0.8"/>
+  <rect x="316" y="123" width="70" height="5" rx="1" fill="#c3e88d" opacity="0.8"/>
+  <rect x="390" y="123" width="25" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="316" y="136" width="50" height="5" rx="1" fill="#89ddff" opacity="0.8"/>
+  <rect x="370" y="136" width="35" height="5" rx="1" fill="#f78c6c" opacity="0.8"/>
+  <rect x="316" y="149" width="25" height="5" rx="1" fill="#c792ea" opacity="0.8"/>
+  <rect x="345" y="149" width="55" height="5" rx="1" fill="#82aaff" opacity="0.8"/>
+  <rect x="404" y="149" width="20" height="5" rx="1" fill="#c3e88d" opacity="0.8"/>
+  <rect x="316" y="162" width="80" height="5" rx="1" fill="#c3e88d" opacity="0.8"/>
+  <rect x="316" y="175" width="45" height="5" rx="1" fill="#f78c6c" opacity="0.7"/>
+  <rect x="365" y="175" width="30" height="5" rx="1" fill="#89ddff" opacity="0.7"/>
+  <rect x="316" y="188" width="60" height="5" rx="1" fill="#82aaff" opacity="0.7"/>
+  <rect x="316" y="201" width="35" height="5" rx="1" fill="#c792ea" opacity="0.6"/>
+
+  <!-- Vertical splitter 2 -->
+  <rect x="513" y="40" width="3" height="340" fill="#252836"/>
+
+  <!-- Right panel (narrow) -->
+  <rect x="516" y="40" width="124" height="340" fill="#14151f"/>
+  <!-- Right panel tab bar -->
+  <rect x="516" y="40" width="124" height="32" fill="#1a1c28"/>
+  <rect x="522" y="46" width="54" height="20" rx="4" fill="#0a6bc4"/>
+  <rect x="582" y="46" width="50" height="20" rx="4" fill="#2a2d3e"/>
+  <rect x="534" y="53" width="30" height="6" rx="2" fill="#fff" opacity="0.8"/>
+  <rect x="591" y="53" width="32" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+  <!-- Right panel: property list -->
+  <rect x="516" y="72" width="124" height="308" fill="#12131a"/>
+  <!-- Section header -->
+  <rect x="520" y="80"  width="60" height="6" rx="2" fill="#0a6bc4" opacity="0.9"/>
+  <!-- Property rows -->
+  <rect x="520" y="96"  width="44" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="96"  width="56" height="5" rx="1" fill="#c3e88d" opacity="0.7"/>
+  <rect x="520" y="109" width="36" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="109" width="42" height="5" rx="1" fill="#f78c6c" opacity="0.7"/>
+  <rect x="520" y="122" width="50" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="122" width="38" height="5" rx="1" fill="#82aaff" opacity="0.7"/>
+  <rect x="520" y="135" width="40" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="135" width="48" height="5" rx="1" fill="#c792ea" opacity="0.7"/>
+  <!-- Divider -->
+  <line x1="516" y1="148" x2="640" y2="148" stroke="#252836" stroke-width="1"/>
+  <!-- Section header 2 -->
+  <rect x="520" y="156" width="50" height="6" rx="2" fill="#0a6bc4" opacity="0.9"/>
+  <!-- More rows -->
+  <rect x="520" y="172" width="38" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="172" width="44" height="5" rx="1" fill="#89ddff" opacity="0.7"/>
+  <rect x="520" y="185" width="54" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="185" width="36" height="5" rx="1" fill="#c3e88d" opacity="0.7"/>
+  <rect x="520" y="198" width="30" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="198" width="52" height="5" rx="1" fill="#f78c6c" opacity="0.7"/>
+  <rect x="520" y="211" width="46" height="5" rx="1" fill="#8892a4" opacity="0.6"/>
+  <rect x="576" y="211" width="40" height="5" rx="1" fill="#82aaff" opacity="0.7"/>
+
+  <!-- ── Floating window (top-right overlap) ── -->
+  <rect x="330" y="180" width="210" height="160" rx="6" fill="#1e2030" stroke="#3a3f52" stroke-width="1.5"/>
+  <!-- Floating title bar -->
+  <rect x="330" y="180" width="210" height="28" rx="6" fill="#252836"/>
+  <rect x="330" y="194" width="210" height="14" fill="#252836"/>
+  <!-- Floating window title -->
+  <rect x="345" y="189" width="80" height="6" rx="2" fill="#8892a4" opacity="0.7"/>
+  <!-- Close / min / max dots -->
+  <circle cx="413" cy="194" r="4" fill="#2a2d3e"/>
+  <circle cx="425" cy="194" r="4" fill="#2a2d3e"/>
+  <circle cx="437" cy="194" r="4" fill="#ff5f57" opacity="0.8"/>
+  <!-- Floating window content -->
+  <rect x="340" y="218" width="80" height="8" rx="2" fill="#0a6bc4" opacity="0.25"/>
+  <rect x="340" y="234" width="170" height="5" rx="1" fill="#8892a4" opacity="0.4"/>
+  <rect x="340" y="246" width="140" height="5" rx="1" fill="#8892a4" opacity="0.4"/>
+  <rect x="340" y="258" width="155" height="5" rx="1" fill="#8892a4" opacity="0.4"/>
+  <rect x="340" y="270" width="110" height="5" rx="1" fill="#8892a4" opacity="0.4"/>
+  <!-- Floating window bottom button -->
+  <rect x="400" y="312" width="70" height="18" rx="4" fill="#0a6bc4" opacity="0.85"/>
+  <rect x="412" y="318" width="46" height="6" rx="2" fill="#fff" opacity="0.8"/>
+
+  <!-- ── Bottom taskbar ── -->
+  <rect x="0" y="380" width="640" height="40" fill="#1a1c28"/>
+  <rect x="0" y="380" width="640" height="1"  fill="#252836"/>
+  <!-- Minimized panel pills -->
+  <rect x="8"  y="390" width="70" height="20" rx="4" fill="#252836" stroke="#3a3f52" stroke-width="1"/>
+  <rect x="84" y="390" width="70" height="20" rx="4" fill="#252836" stroke="#3a3f52" stroke-width="1"/>
+  <rect x="160" y="390" width="70" height="20" rx="4" fill="#252836" stroke="#3a3f52" stroke-width="1"/>
+  <rect x="20"  y="397" width="46" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+  <rect x="96"  y="397" width="46" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+  <rect x="172" y="397" width="46" height="6" rx="2" fill="#8892a4" opacity="0.6"/>
+
+  <!-- Outer border/shadow -->
+  <rect width="640" height="420" rx="10" stroke="#2a2d3e" stroke-width="1.5"/>
+</svg>

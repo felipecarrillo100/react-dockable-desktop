@@ -6,7 +6,7 @@ hero:
   text: Premium dockable layout engine for React
   tagline: Zero-unmount DOM preservation · Floating windows · i18n & RTL · Pub/sub event bus
   image:
-    src: /hero-preview.png
+    src: /hero-preview.svg
     alt: react-dockable-desktop preview
   actions:
     - theme: brand
