@@ -183,7 +183,11 @@ export class WorkspaceClient {
 
   saveLayout(): string { return this._actions?.saveLayout() ?? ''; }
 
-  loadLayout(json: string): void { this._dispatch(a => a.loadLayout(json)); }
+  loadLayout(json: string): boolean {
+    if (this._actions) return this._actions.loadLayout(json);
+    this._pendingCalls.push(a => { a.loadLayout(json); });
+    return false;
+  }
 
   setDirection(dir: 'ltr' | 'rtl'): void { this._dispatch(a => a.setDirection(dir)); }
 

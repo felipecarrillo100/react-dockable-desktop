@@ -30,6 +30,9 @@ export {
 // TypeScript Types and Interfaces
 export type {
   SplitOrientation,
+  SplitDirection,
+  DropPosition,
+  DropTarget,
   LayoutGridNode,
   LayoutLeafNode,
   LayoutNode,

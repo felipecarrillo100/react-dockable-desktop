@@ -88,7 +88,7 @@ export interface SidebarHandle {
  * Sidebar component rendering a tab strip and a collapsible content drawer.
  * Supports imperative method bindings like openTab and closeDrawer via forwardRef.
  */
-export const Sidebar = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
+export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<SidebarHandle>> = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
   {
     position = 'right',
     tabs,

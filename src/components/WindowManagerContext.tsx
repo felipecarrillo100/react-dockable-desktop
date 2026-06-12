@@ -26,6 +26,18 @@ export type MessageFormatter = (msg: ContextMenuPredefinedMessage) => string;
 /** Orientation modifier indicating split directions. */
 export type SplitOrientation = 'horizontal' | 'vertical';
 
+/** The four cardinal directions a panel can be docked relative to another. */
+export type SplitDirection = 'left' | 'right' | 'top' | 'bottom';
+
+/** All possible drop positions — cardinal directions plus center (same group). */
+export type DropPosition = SplitDirection | 'center';
+
+/** The target leaf and position for a drag-and-drop dock operation. */
+export interface DropTarget {
+  leafId: string;
+  position: DropPosition;
+}
+
 /**
  * Grid layout branch node containing nested splits and relative flex sizes.
  */
@@ -250,8 +262,9 @@ export interface WindowActions {
    * Restores a previously serialized workspace from a JSON string.
    * Replaces the entire current layout — all panels not in the snapshot are closed.
    * @param layoutJson - JSON string produced by {@link saveLayout}.
+   * @returns `true` if the layout was successfully parsed and applied, `false` otherwise.
    */
-  loadLayout: (layoutJson: string) => void;
+  loadLayout: (layoutJson: string) => boolean;
   /**
    * Publishes an event to the inter-panel pub/sub event bus.
    * @param event - Event name string.
@@ -277,7 +290,7 @@ export interface WindowActions {
    * @param targetLeafId - Leaf group ID to split.
    * @param position - Which side of the target to split and dock into.
    */
-  dockPanelToGroup: (id: string, targetLeafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center') => void;
+  dockPanelToGroup: (id: string, targetLeafId: string, position: DropPosition) => void;
   /**
    * Reorders a panel's tab index within a docked leaf group.
    * @param panelId - Panel instance ID to move.
@@ -327,7 +340,7 @@ export interface WindowActions {
    * @param id - Panel instance ID.
    * @param position - Edge to dock to.
    */
-  dockPanelToWorkspaceEdge: (id: string, position: 'left' | 'right' | 'top' | 'bottom') => void;
+  dockPanelToWorkspaceEdge: (id: string, position: SplitDirection) => void;
   /**
    * Overrides the workspace layout direction.
    * @param dir - `'ltr'` or `'rtl'`.
@@ -365,7 +378,7 @@ export interface StyleClasses {
 const StyleClassContext = createContext<StyleClasses>({});
 
 /** Custom hook to read configured style class contexts. */
-export const useStyleClasses = () => useContext(StyleClassContext);
+export const useStyleClasses = (): StyleClasses => useContext(StyleClassContext);
 
 const RegistryContext = createContext<PanelRegistryClass>(PanelRegistry);
 
@@ -385,7 +398,7 @@ const RegistryContext = createContext<PanelRegistryClass>(PanelRegistry);
  * }
  * ```
  */
-export const useRegistry = () => useContext(RegistryContext);
+export const useRegistry = (): PanelRegistryClass => useContext(RegistryContext);
 
 // Event Bus class for pub-sub communication between panels
 class PanelEventBus {
@@ -836,17 +849,17 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         return prev;
       }
 
-      let lastFloatingRect: any = undefined;
-      let lastLeafId: any = undefined;
+      let lastFloatingRect: PanelInfo['lastFloatingRect'] = undefined;
+      let lastLeafId: string | undefined = undefined;
 
       if (panel.state === 'floating') {
         const win = prev.floating.find(w => w.id === id);
         if (win) {
-          lastFloatingRect = { 
-            x: win.x, 
-            y: win.y, 
-            width: win.width, 
-            height: win.height,
+          lastFloatingRect = {
+            x: Number(win.x),
+            y: Number(win.y),
+            width: Number(win.width),
+            height: Number(win.height),
             stickyRight: win.stickyRight,
             stickyBottom: win.stickyBottom
           };
@@ -863,7 +876,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             return null;
           }
         };
-        lastLeafId = findLeafForPanel(prev.gridRoot);
+        lastLeafId = findLeafForPanel(prev.gridRoot) ?? undefined;
       }
 
       const cleanRoot = removePanelFromTree(prev.gridRoot, id);
@@ -1020,7 +1033,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     node: LayoutNode,
     leafId: string,
     panelId: string,
-    position: 'left' | 'right' | 'top' | 'bottom'
+    position: SplitDirection
   ): LayoutNode => {
     if (node.type === 'leaf') {
       if (node.id === leafId) {
@@ -1052,7 +1065,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     setState(prev => ({ ...prev, draggedPanelId: id }));
   }, []);
 
-  const dockPanelToGroup = useCallback((id: string, targetLeafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center') => {
+  const dockPanelToGroup = useCallback((id: string, targetLeafId: string, position: DropPosition) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1080,7 +1093,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     });
   }, []);
 
-  const dockPanelToWorkspaceEdge = useCallback((id: string, position: 'left' | 'right' | 'top' | 'bottom') => {
+  const dockPanelToWorkspaceEdge = useCallback((id: string, position: SplitDirection) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1242,7 +1255,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     });
   }, []);
 
-  const loadLayout = useCallback((layoutJson: string) => {
+  const loadLayout = useCallback((layoutJson: string): boolean => {
     try {
       const parsed = JSON.parse(layoutJson);
       if (parsed.gridRoot && parsed.floating && parsed.minimized && parsed.panels) {
@@ -1256,9 +1269,12 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           draggedPanelId: null,
           activePanelId: firstActive
         }));
+        return true;
       }
+      return false;
     } catch (e) {
       console.error('Failed to parse layout configuration:', e);
+      return false;
     }
   }, []);
 
@@ -1433,7 +1449,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
  * }
  * ```
  */
-export const useWindowManagerState = () => {
+export const useWindowManagerState = (): WindowState => {
   const ctx = useContext(WindowStateContext);
   if (!ctx) throw new Error('useWindowManagerState must be used within WindowManagerProvider');
   return ctx;
@@ -1475,7 +1491,7 @@ export const useWindowManagerActionsInternal = (): InternalWindowActions => {
 /**
  * React hook to retrieve the active i18n formatter.
  */
-export const useFormatMessage = () => {
+export const useFormatMessage = (): MessageFormatter => {
   const formatter = useContext(WindowI18nContext);
   return formatter || ((msg) => {
     let text = msg.defaultMessage || msg.id;
@@ -1503,7 +1519,7 @@ export const formatLabel = (
 /**
  * React hook providing pub-sub helper methods for inter-panel event messaging.
  */
-export const usePanelContext = () => {
+export const usePanelContext = (): Pick<WindowActions, 'publish' | 'subscribe'> => {
   const { publish, subscribe } = useWindowManagerActions();
   return { publish, subscribe };
 };
@@ -1511,6 +1527,6 @@ export const usePanelContext = () => {
 /**
  * React hook to fetch the localizable predefined message map catalog.
  */
-export const usePredefinedMessages = () => {
+export const usePredefinedMessages = (): Record<PredefinedMessageKey, ContextMenuPredefinedMessage> => {
   return useContext(WindowPredefinedMessagesContext);
 };
