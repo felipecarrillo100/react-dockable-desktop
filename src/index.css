@@ -2236,7 +2236,6 @@ html:not(.enable-animations) *::after {
 .floating-window-titlebar   { touch-action: none; }
 .resizer-bar                { touch-action: none; }
 .resize-handle              { touch-action: none; }
-.tab-headers-container      { touch-action: pan-x; }
 
 /* Phase 2A: Expand resizer hit area to 44px on touch devices */
 @media (pointer: coarse) {
@@ -2340,9 +2339,6 @@ html:not(.enable-animations) *::after {
 }
 
 /* Phase 4C: Tab bar horizontal scroll (handled by existing .tab-headers-container overflow-x: auto) */
-.tab-headers-container {
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-}
+/* Note: touch-action and -webkit-overflow-scrolling intentionally omitted — they cause iOS Safari
+   to fire pointercancel before the 300ms long-press timer can activate tab drag */
 .tab-headers-container::-webkit-scrollbar { display: none; }
-.workspace-tab { scroll-snap-align: start; }
