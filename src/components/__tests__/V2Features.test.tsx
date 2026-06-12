@@ -235,8 +235,8 @@ describe('C2: WorkspaceClient pending-call queue', () => {
 // ─── C2: "Forgot client=" warning (timer-based) ───────────────────────────────
 
 describe('C2: WorkspaceClient warns when never connected', () => {
-  it('emits console.warn after 1s if connected client never receives _connect()', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('emits console.error after 1s if connected client never receives _connect()', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // Temporarily pretend we are in development mode
     const originalEnv = process.env.NODE_ENV;
@@ -251,17 +251,17 @@ describe('C2: WorkspaceClient warns when never connected', () => {
 
     await new Promise(resolve => setTimeout(resolve, 1100));
 
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('Did you forget client={workspace}')
     );
 
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
     // @ts-ignore
     process.env.NODE_ENV = originalEnv;
   });
 
-  it('does NOT warn when the client connects within 1s', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('does NOT error when the client connects within 1s', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const originalEnv = process.env.NODE_ENV;
     // @ts-ignore
@@ -286,13 +286,13 @@ describe('C2: WorkspaceClient warns when never connected', () => {
 
     await new Promise(resolve => setTimeout(resolve, 1100));
 
-    expect(warnSpy).not.toHaveBeenCalledWith(
+    expect(errorSpy).not.toHaveBeenCalledWith(
       expect.stringContaining('Did you forget client={workspace}')
     );
 
     act(() => { root!.unmount(); });
     document.body.removeChild(container);
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
     // @ts-ignore
     process.env.NODE_ENV = originalEnv;
   });
