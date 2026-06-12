@@ -7,7 +7,7 @@
  * define in their IntlProvider messages table. The `defaultMessage` is used
  * as a fallback when no external formatter is provided.
  *
- * Pass a partial or full override to <WindowManagerProvider predefinedMessages={…} />
+ * Pass a partial or full override to `<WindowManagerProvider predefinedMessages={…} />`
  * to customise labels without replacing the whole table.
  */
 export const defaultPredefinedMessages = {

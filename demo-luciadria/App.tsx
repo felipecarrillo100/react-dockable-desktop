@@ -40,7 +40,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const sidebarRef = React.useRef<SidebarHandle>(null);
   const state = useWindowManagerState();
   const { openPanel, loadLayout, saveLayout } = useWindowManagerActions();
-  const { closePanel, minimizePanel, maximizePanel, bringToFront, restorePanel } = useWindowManagerActions();
+  const { closePanel, minimizePanel, maximizePanel, focusPanel, restorePanel } = useWindowManagerActions();
   const { openLeftPanel, openRightPanel, openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
 
@@ -600,7 +600,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                       <span className="badge-pill-dark">{panel.isFloating ? 'Float' : 'Grid'}</span>
                     </div>
                     <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="btn-pill-outline" onClick={() => bringToFront(panel.id)}>Front</button>
+                      <button type="button" className="btn-pill-outline" onClick={() => focusPanel(panel.id)}>Front</button>
                       <div className="d-flex gap-2">
                         {panel.canMinimize && (
                           <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Minimize" onClick={() => minimizePanel(panel.id)} style={{ fontSize: '0.85rem' }}>_</button>

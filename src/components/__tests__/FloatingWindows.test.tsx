@@ -147,7 +147,7 @@ describe('Floating Windows', () => {
     expect(lastState.floating.find((w: any) => w.id === 'toggle-max').maximized).toBe(false);
   });
 
-  it('should bring a floating window to front (highest z-index)', () => {
+  it('should focus a floating window (highest z-index)', () => {
     mount();
     act(() => {
       lastActions.openPanel('win-a', 'map', { initialTarget: 'floating' });
@@ -155,7 +155,7 @@ describe('Floating Windows', () => {
     });
 
     const zBefore = lastState.floating.find((w: any) => w.id === 'win-a').z;
-    act(() => { lastActions.bringToFront('win-a'); });
+    act(() => { lastActions.focusPanel('win-a'); });
     const zAfter = lastState.floating.find((w: any) => w.id === 'win-a').z;
 
     expect(zAfter).toBeGreaterThan(zBefore);

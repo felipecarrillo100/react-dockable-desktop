@@ -32,10 +32,19 @@ export interface WorkspaceClientConfig {
 /**
  * WorkspaceClient is the central configuration and imperative API object for
  * react-dockable-desktop. Create one instance outside the React tree and pass
- * it to <WindowManagerProvider client={client}>.
+ * it to `<WindowManagerProvider client={client}>`.
  *
  * Pattern: TanStack QueryClient / Redux store — configuration and imperative
  * access live on the client; rendering is delegated to the thin React provider.
+ *
+ * @remarks
+ * Calls made before the provider mounts are queued and replayed automatically
+ * in order once `_connect()` fires. If the client is never connected to a
+ * provider (e.g. `client={workspace}` was forgotten), a console warning is
+ * emitted in development after 1 second.
+ *
+ * `subscribe()` and `saveLayout()` return values immediately and cannot be
+ * queued — they return safe defaults (`() => {}` and `''`) when disconnected.
  *
  * @example
  * const workspace = new WorkspaceClient({
@@ -52,7 +61,8 @@ export interface WorkspaceClientConfig {
  *
  * // Imperative access from anywhere:
  * workspace.saveLayout();
- * workspace.openPanel('map', 'map');
+ * workspace.openPanel('map-1', 'map');
+ * workspace.focusPanel('map-1');
  */
 export class WorkspaceClient {
   /** Scoped panel registry — fully independent from the global singleton. */
@@ -65,6 +75,12 @@ export class WorkspaceClient {
   readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir'>;
 
   private _actions: WindowActions | null = null;
+
+  /** Calls queued before _connect() fires — replayed in order on first connect. */
+  private _pendingCalls: Array<(actions: WindowActions) => void> = [];
+
+  /** DEV-only timer that warns if _connect() is never called within 1 second. */
+  private _disconnectedWarnTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: WorkspaceClientConfig = {}) {
     this.registry = new PanelRegistryClass();
@@ -82,9 +98,17 @@ export class WorkspaceClient {
     }
   }
 
+  // ── Internal lifecycle ────────────────────────────────────────────────────
+
   /** @internal Called by WindowManagerProvider after mount. */
   _connect(actions: WindowActions): void {
     this._actions = actions;
+    if (this._disconnectedWarnTimer !== null) {
+      clearTimeout(this._disconnectedWarnTimer);
+      this._disconnectedWarnTimer = null;
+    }
+    const pending = this._pendingCalls.splice(0); // drain atomically
+    for (const fn of pending) fn(actions);
   }
 
   /** @internal Called by WindowManagerProvider on unmount. */
@@ -97,30 +121,74 @@ export class WorkspaceClient {
     return this._actions !== null;
   }
 
-  // ── Forwarding methods — mirrors the WindowActions interface ──────────────
+  // ── Internal dispatch helper ──────────────────────────────────────────────
 
-  saveLayout(): string { return this._actions?.saveLayout() ?? ''; }
-  loadLayout(json: string): void { this._actions?.loadLayout(json); }
+  /**
+   * Dispatches a void action immediately if connected, or queues it for replay.
+   * In development, warns if the client is still not connected after 1 second.
+   */
+  private _dispatch(fn: (actions: WindowActions) => void): void {
+    if (this._actions) {
+      fn(this._actions);
+    } else {
+      this._pendingCalls.push(fn);
+      if (process.env.NODE_ENV !== 'production' && this._disconnectedWarnTimer === null) {
+        this._disconnectedWarnTimer = setTimeout(() => {
+          if (!this.isConnected && this._pendingCalls.length > 0) {
+            console.warn(
+              '[react-dockable-desktop] WorkspaceClient has queued calls but was never ' +
+              'connected to a provider. Did you forget client={workspace} on ' +
+              '<WindowManagerProvider client={workspace}>?'
+            );
+          }
+        }, 1000);
+      }
+    }
+  }
+
+  // ── Forwarding methods — mirrors the WindowActions public interface ────────
 
   openPanel(...args: Parameters<WindowActions['openPanel']>): void {
-    this._actions?.openPanel(...args);
+    this._dispatch(a => a.openPanel(...args));
   }
-  closePanel(id: string): void { this._actions?.closePanel(id); }
-  minimizePanel(id: string): void { this._actions?.minimizePanel(id); }
-  restorePanel(id: string): void { this._actions?.restorePanel(id); }
+
+  closePanel(id: string): void { this._dispatch(a => a.closePanel(id)); }
+
+  minimizePanel(id: string): void { this._dispatch(a => a.minimizePanel(id)); }
+
+  restorePanel(id: string): void { this._dispatch(a => a.restorePanel(id)); }
 
   floatPanel(...args: Parameters<WindowActions['floatPanel']>): void {
-    this._actions?.floatPanel(...args);
+    this._dispatch(a => a.floatPanel(...args));
   }
+
   dockPanel(...args: Parameters<WindowActions['dockPanel']>): void {
-    this._actions?.dockPanel(...args);
+    this._dispatch(a => a.dockPanel(...args));
   }
-  maximizePanel(id: string): void { this._actions?.maximizePanel(id); }
-  bringToFront(id: string): void { this._actions?.bringToFront(id); }
 
-  setDirection(dir: 'ltr' | 'rtl'): void { this._actions?.setDirection(dir); }
+  maximizePanel(id: string): void { this._dispatch(a => a.maximizePanel(id)); }
 
-  publish(event: string, data: unknown): void { this._actions?.publish(event, data); }
+  /**
+   * Activates the given panel regardless of its current state.
+   * For floating panels: raises z-index so the window appears on top.
+   * For docked panels: selects the tab within its leaf group.
+   */
+  focusPanel(id: string): void { this._dispatch(a => a.focusPanel(id)); }
+
+  /** Returns `true` if a panel with this ID is currently open. */
+  isOpen(id: string): boolean { return this._actions?.isOpen(id) ?? false; }
+
+  /** Returns the IDs of all currently open panels. */
+  getOpenPanelIds(): string[] { return this._actions?.getOpenPanelIds() ?? []; }
+
+  saveLayout(): string { return this._actions?.saveLayout() ?? ''; }
+
+  loadLayout(json: string): void { this._dispatch(a => a.loadLayout(json)); }
+
+  setDirection(dir: 'ltr' | 'rtl'): void { this._dispatch(a => a.setDirection(dir)); }
+
+  publish(event: string, data: unknown): void { this._dispatch(a => a.publish(event, data)); }
+
   subscribe(event: string, callback: (data: unknown) => void): () => void {
     return this._actions?.subscribe(event, callback) ?? (() => {});
   }

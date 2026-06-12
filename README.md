@@ -1,103 +1,75 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v1.2.0-blue.svg)](#)
-[![license](https://img.shields.io/badge/license-MIT-green.svg)](#)
-[![Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/)
+[![npm version](https://img.shields.io/badge/npm-v2.0.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
+[![Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/demo/)
+[![Docs](https://img.shields.io/badge/docs-site-blue.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/)
 
-A beautiful, premium, state-of-the-art React window manager and dockable layout engine. It features fluid split-docking grids, resizable floating windows, dynamic taskbars, and tabbed panels with **zero-unmount DOM persistence** and **built-in internationalization (i18n) support**.
+A premium React window manager and dockable layout engine. Fluid split-docking grids, resizable floating windows, dynamic taskbars, and tabbed panels with **zero-unmount DOM persistence** and **built-in i18n/RTL support**.
 
-[**Live Interactive Demo 🚀**](https://felipecarrillo100.github.io/react-dockable-desktop/)
-
----
-
-## 🌟 Key Features
-
-* **📦 Dockable Splits & Tab Grid**: Drag-and-drop panels to split screens or group them together into tabbed containers.
-* **🗺️ Workspace Edge Docking**: Drag a tab or floating window to the outer edges of the screen (left, right, top, bottom) to instantly dock it as a full-width or full-height column/row.
-* **🪐 Floating Windows**: Seamlessly pop panels out into floating windows with smooth drag-and-drop movement, custom resizing, maximize, and minimize behaviors.
-* **🎨 Custom Global Style Classes**: Inject custom, global styles at the provider level (`modalClass`, `modalBodyClass`, `sidePanelClass`, `sidePanelBodyClass`, `windowClass`, and `windowBodyClass`) to style widgets uniformly.
-* **🥞 Aspect-Ratio Modal Engine**: Modals automatically wrap and shrink-to-fit content snugly, but cap height and scroll gracefully at visual aspect-ratio thresholds (4:3 for small/medium, 16:10 for large layouts).
-* **🔬 Zero-Unmount DOM Persistence**: Heavy widgets (like Leaflet Maps, WebGL viewports, terminal consoles, or stateful forms) maintain their DOM nodes and state. The engine moves existing DOM structures into a hidden document fragment host rather than unmounting them.
-* **🌍 i18n & Full RTL Support**: Native translation pipeline matching React Intl formats and **Right-to-Left (RTL) language layouts** (Arabic, Hebrew, Persian, etc.). Detection is completely automatic based on surrounding `dir="rtl"` elements, with explicit provider control options.
-* **🛠️ Custom Header Actions**: Inject custom React components directly into tabbed headers and floating window titlebars dynamically using the `renderHeaderActions` registry property.
-* **🔍 Initial Letter Hover Miniatures**: Miniature preview popovers automatically display the uppercase first character of the panel title inside a theme-responsive grayish layout fallback for panels with disabled live previews.
-* **💎 Glassmorphic & Modern Styling**: Sleek dark mode aesthetics, interactive micro-animations, and fluid transitions.
-* **🔌 Inter-Panel Pub/Sub Event Bus**: A robust messaging system for lightweight, decoupled communication between active panels.
+**[Full Documentation](https://felipecarrillo100.github.io/react-dockable-desktop/)** &nbsp;|&nbsp;
+**[Live Demo](https://felipecarrillo100.github.io/react-dockable-desktop/demo/)** &nbsp;|&nbsp;
+**[API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/)**
 
 ---
 
-## 🚀 Installation
+## Key Features
+
+- **Dockable Splits & Tab Grid** — drag panels to split screens or group them into tabbed containers
+- **Workspace Edge Docking** — drag to outer edges to dock as full-width/height columns or rows
+- **Floating Windows** — pop panels into resizable floating windows with maximize and minimize
+- **Zero-Unmount DOM Persistence** — WebGL, maps, terminals, and stateful forms keep their DOM node and state when moved
+- **i18n & RTL** — full Right-to-Left layout support with automatic `dir="rtl"` detection
+- **Inter-Panel Pub/Sub** — decoupled lightweight messaging between active panels
+- **Imperative API** — `WorkspaceClient` lets you open, close, focus, and serialize panels from anywhere outside React
+- **Layout Serialization** — save/restore the full workspace layout as a JSON string
+
+---
+
+## Installation
 
 ```bash
 npm install react-dockable-desktop replace-react-contexify
 ```
 
-Ensure the styling for both the layout engine and context menu is imported in your main entry file (e.g., `index.js` or `main.tsx`):
+Import styles in your entry file:
 
-```typescript
+```ts
 import 'replace-react-contexify/styles.css';
 import 'react-dockable-desktop/styles.css';
 ```
 
 ---
 
-## 💻 Running the Demo Environments
-
-The project includes two built-in demo setups to explore and test the window manager layout features:
-
-### 1. Leaflet & Monaco Open Source Demo (Default)
-A clean, lightweight dashboard demo suitable for public deployment. It showcases Leaflet 2D/3D map integration (with dynamic CARTO Light/Dark tile styles mapping to dashboard theme switches) and Monaco Editor panels.
-```bash
-npm run dev
-```
-
-### 2. LuciadRIA Earth 3D Demo (Isolated)
-An isolated sandbox dashboard demonstrating premium 3D Earth visualizations in the `EPSG:4978` reference reference frame using LuciadRIA. *Note: Requires a valid LuciadRIA developer license locally to run.*
-```bash
-npm run dev:ria
-```
-
----
-
-## 🛠️ Getting Started
+## Quick Start
 
 ### 1. Create a WorkspaceClient
 
-```typescript
+```ts
 import { WorkspaceClient } from 'react-dockable-desktop';
-import MapView from './panels/MapView';
+import MapPanel from './panels/MapPanel';
 import EditorPanel from './panels/EditorPanel';
 
 export const client = new WorkspaceClient({
   panels: {
-    mainMap: { component: MapView,     defaultOptions: { title: 'Satellite Map View', canClose: false, canMinimize: true, canDrag: true } },
-    editor:  { component: EditorPanel, defaultOptions: { title: 'Editor', canMinimize: true } },
+    map:    { component: MapPanel,    defaultOptions: { title: 'Map View' } },
+    editor: { component: EditorPanel, defaultOptions: { title: 'Editor' } },
   },
-  // Restore last layout, or null for an empty canvas
   initialState: localStorage.getItem('workspace-layout'),
 });
 ```
 
-> **No module-level side effects.** Panels are registered inside `WorkspaceClient`, not via a global `PanelRegistry.register` call. The client can be exported and used imperatively from anywhere: `client.openPanel(...)`, `client.saveLayout()`.
+### 2. Mount the Provider
 
-### 2. Set Up the Provider
-
-```typescript
-import React from 'react';
-import {
-  WindowManagerProvider,
-  WindowManager,
-  PanelProvider,
-  ModalStackRenderer,
-  SidePanelRenderer,
-} from 'react-dockable-desktop';
+```tsx
+import { WindowManagerProvider, WindowManager, PanelProvider, ModalStackRenderer, SidePanelRenderer } from 'react-dockable-desktop';
 import { client } from './workspaceClient';
 
 function App() {
   return (
     <WindowManagerProvider client={client}>
       <PanelProvider>
-        <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100vw', height: '100vh' }}>
           <WindowManager />
         </div>
         <ModalStackRenderer />
@@ -106,280 +78,80 @@ function App() {
     </WindowManagerProvider>
   );
 }
-
-export default App;
 ```
 
-> **Backward compatibility:** The `client` prop is optional. The `PanelRegistry` global singleton and the old provider props (`formatMessage`, `predefinedMessages`, `dir`) still work as before.
+### 3. Open Panels Imperatively
 
----
+```ts
+// From anywhere outside React:
+client.openPanel('map-1', 'map', { title: 'Satellite View' });
+client.focusPanel('map-1');
+client.saveLayout();
 
-## 🌍 Internationalization (i18n)
-
-`react-dockable-desktop` is built with dynamic translation in mind. Titles and context menus can accept either raw `string` values or a structured descriptor object resembling `ContextMenuPredefinedMessage`.
-
-### Message Descriptor Format
-
-```typescript
-interface ContextMenuPredefinedMessage {
-  id: string;
-  defaultMessage?: string;
-  values?: Record<string, string | number>;
-}
-```
-
-### Integrating custom formatters (e.g., `react-intl`)
-
-To route messages through your application's translation engine, pass a `formatMessage` callback to `WorkspaceClient`:
-
-```typescript
-const client = new WorkspaceClient({
-  panels: { ... },
-  formatMessage: (msg) => intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values),
-});
-
-function App() {
-  return (
-    <WindowManagerProvider client={client}>
-      ...
-    </WindowManagerProvider>
-  );
-}
-```
-
-> **Backward compatibility:** Passing `formatMessage` directly as a prop to `WindowManagerProvider` is still supported for existing code.
-
-*If no `formatMessage` function is provided, the engine defaults to a fallback formatting template parser resolving placeholders like `Hello {user}` using values.*
-
-### Right-to-Left (RTL) Layout Support
-
-The library features built-in, theme-resilient Right-to-Left (RTL) rendering. It automatically mirrors tab stacking flows, close icon alignments, custom header buttons, side drawers (which slide in from the opposite edge), titlebars, and taskbar icons.
-
-#### 1. Automatic Detection (Zero Configuration)
-Simply apply the HTML `dir="rtl"` attribute to the container enclosing your layout, or globally on the `<html>`/`<body>` nodes. The workspace will observe it using a `MutationObserver` and mirror dynamically:
-```html
-<div dir="rtl">
-  <Desktop />
-</div>
-```
-
-#### 2. Explicit Programmatic Control
-To force a specific direction regardless of the surrounding HTML structure, pass the `dir` option to `WorkspaceClient`:
-```typescript
-const client = new WorkspaceClient({ panels: { ... }, dir: 'rtl' });
-<WindowManagerProvider client={client}>
-  <Desktop />
-</WindowManagerProvider>
+// Query state:
+client.isOpen('map-1');          // boolean
+client.getOpenPanelIds();        // string[]
 ```
 
 ---
 
-## 🎛️ Programmatic Spawning and Layout API
+## Hooks
 
-Consume actions from the layout context anywhere inside or outside your panel components using the provided hooks.
+Use these inside any component within the provider tree:
 
-```typescript
-import { useWindowManagerActions, useWindowManagerState } from 'react-dockable-desktop';
-
-const SidebarControls = () => {
-  const { openPanel, closePanel, saveLayout, loadLayout } = useWindowManagerActions();
-  const state = useWindowManagerState();
-
-  const handleOpenConsole = () => {
-    openPanel('debug-console', 'terminal', {
-      title: { id: 'app.console', defaultMessage: 'System Console Log' },
-      initialTarget: 'floating' // Options: 'docked' | 'floating' | 'tabbed'
-    });
-  };
-
-  return (
-    <div>
-      <button onClick={handleOpenConsole}>Spawn Console</button>
-      <button onClick={() => alert(saveLayout())}>Backup Layout</button>
-    </div>
-  );
-};
-```
-
-### Hook Reference
-
-| Hook Name | Return Type | Description |
+| Hook | Returns | Description |
 | :--- | :--- | :--- |
-| `useWindowManagerState()` | `WindowState` | Access grid layout trees, list of active floating windows, minimized windows list, and general dragging statuses. |
-| `useWindowManagerActions()` | `WindowActions` | Spawns, minimizes, restores, docks, floats, maximizes, or closes panels. Also handles split sizing, custom locations, and layout serialization (`saveLayout` / `loadLayout`). |
-| `useFormatMessage()` | `(msg: ContextMenuPredefinedMessage) => string` | Returns the translation message formatter hook matching the provider preset configuration. |
-| `usePanelContext()` | `{ publish, subscribe }` | Dynamic decoupled event bus helper for active panels. |
-| `useStyleClasses()` | `StyleClasses` | Returns the custom CSS class overrides configured on the provider (`windowClass`, `windowBodyClass`, etc.). |
-| `useRegistry()` | `PanelRegistryClass` | Returns the scoped panel registry for the current provider. |
+| `useWindowManagerActions()` | `WindowActions` | Open, close, focus, dock, float, minimize, maximize, serialize panels |
+| `useWindowManagerState()` | `WindowState` | Reactive access to grid layout, floating windows, minimized panels |
+| `useRegistry()` | `PanelRegistryClass` | The scoped panel registry for the current provider |
+| `usePanelContext()` | `{ publish, subscribe }` | Inter-panel pub/sub event bus |
+| `useFormContainer()` | `FormContainerContract` | Dirty-state tracking, dynamic title overrides, close guards |
+| `useFormatMessage()` | `(msg) => string` | Translation formatter matching the provider's i18n config |
 
 ---
 
-## New Exports (v1.2.0)
+## v2.0.0 — Breaking Changes
 
-The following additional exports are available in v1.2.0:
+| Removed | Replacement |
+| :--- | :--- |
+| `bringToFront(id)` | `focusPanel(id)` — works for both floating and docked panels |
+| `setActivePanel(id)` on `WindowActions` | `focusPanel(id)` |
 
-- `WorkspaceClient` — class for creating a scoped workspace configuration outside React.
-- `WorkspaceClientConfig` — TypeScript interface for the `WorkspaceClient` constructor options.
-- `PanelDefinition` — TypeScript interface describing a single panel entry in the `panels` map.
-- `PanelRegistryClass` — the class backing both the scoped (per-client) and global registries; useful for typing or extending the registry.
+**New in v2.0.0:**
+- `focusPanel(id)` — unified "show this panel" method
+- `isOpen(id): boolean` — synchronous panel state query
+- `getOpenPanelIds(): string[]` — list all open panel IDs
+- Pending-call queue: imperative calls before the provider mounts are automatically buffered and replayed
+- DEV-mode warning if `client=` prop is missing on the provider
+- DEV-mode warning if `replace-react-contexify` CSS is not detected
+
+See the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) for the full list of changes.
 
 ---
 
-## 🛡️ Form Container Context (Close Interception & Dirty States)
+## Demo Environments
 
-`react-dockable-desktop` provides a context-driven panel container contract to support dirty form tracking, dynamic title overrides, and close action guards. Child elements can access this container context using the `useFormContainer()` hook.
-
-### Context Hook Functions
-
-| Function / Property | Type | Description |
-| :--- | :--- | :--- |
-| `setDirty(dirty)` | `(dirty: boolean) => void` | Marks the container as dirty. An asterisk `*` will be appended to the panel title (in tabs, minimized taskbars, and floating headers). Attempting to close the panel will trigger a confirmation warning modal. |
-| `onCloseRequested(handler)` | `(handler: () => boolean \| Promise<boolean>) => () => void` | Registers an interception handler. When the panel is closed, this function is triggered. If it returns `false`, the closing is cancelled. Returns an unregister cleanup function. |
-| `setTitle(title)` | `(title: string \| ContextMenuPredefinedMessage) => void` | Overrides the tab / window title dynamically from the child element. |
-| `requestClose(options)` | `(options?: { force?: boolean }) => void` | Request the parent panel container to close programmatically. If `force: true` is passed, it closes immediately, bypassing any dirty checks or guards. |
-| `instanceId` | `string` | The unique ID of the panel. |
-
-### Implementation Example
-
-```typescript
-import React, { useState, useEffect } from 'react';
-import { useFormContainer } from 'react-dockable-desktop';
-
-const EditFormPanel: React.FC = () => {
-  const container = useFormContainer();
-  const [text, setText] = useState('');
-
-  // 1. Mark dirty when typing
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
-    container.setDirty(true); // Appends '*' to tab header and prompts warning on close
-  };
-
-  const handleSave = () => {
-    container.setDirty(false); // Resets dirty state
-    alert('Saved successfully!');
-  };
-
-  // 2. Intercept and block closing based on conditions
-  useEffect(() => {
-    const unregister = container.onCloseRequested(() => {
-      if (text.includes('BLOCK')) {
-        alert('Cannot close while the word "BLOCK" is present!');
-        return false; // Blocks closure
-      }
-      return true; // Allows closure
-    });
-    return unregister;
-  }, [container, text]);
-
-  return (
-    <div style={{ padding: '1rem', color: '#fff' }}>
-      <h5>Dynamic Form Editor</h5>
-      <textarea value={text} onChange={handleChange} />
-      <button onClick={handleSave}>Save</button>
-      <button onClick={() => container.requestClose()}>Cancel & Close</button>
-    </div>
-  );
-};
+```bash
+npm run dev          # Leaflet + Monaco open-source demo
+npm run dev:ria      # LuciadRIA 3D Earth demo (requires license)
 ```
 
 ---
 
-## 🔌 Inter-Panel Event Communication Bus
+## Documentation
 
-Avoid complex state management boilerplate. Active panels can broadcast lightweight messages across the workspace seamlessly:
+Full narrative guides, API reference, and the interactive demo are published at:
 
-```typescript
-import React, { useEffect } from 'react';
-import { usePanelContext } from 'react-dockable-desktop';
+**https://felipecarrillo100.github.io/react-dockable-desktop/**
 
-// Subscriber Panel (e.g. Console Log Viewer)
-const ConsoleView: React.FC = () => {
-  const { subscribe } = usePanelContext();
-
-  useEffect(() => {
-    const unsubscribe = subscribe('CONSOLE_LOG', (payload) => {
-      console.log('Received log message: ', payload.message);
-    });
-    return () => unsubscribe();
-  }, [subscribe]);
-
-  return <div>Console Viewer</div>;
-};
-
-// Publisher Panel (e.g. Map View)
-const MapView: React.FC = () => {
-  const { publish } = usePanelContext();
-
-  const handleInteract = () => {
-    publish('CONSOLE_LOG', { message: 'User zoomed map viewport.' });
-  };
-
-  return <button onClick={handleInteract}>Click Map</button>;
-};
-```
+- [Getting Started](https://felipecarrillo100.github.io/react-dockable-desktop/guide/)
+- [WorkspaceClient Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/workspace-client)
+- [Layout System](https://felipecarrillo100.github.io/react-dockable-desktop/guide/layout)
+- [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/)
+- [Migration v1 → v2](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration)
 
 ---
 
-## 🎨 Layout Presets & Configuration Options
-
-You can customize defaults, positioning attributes, and sizes using the `WorkspaceClient` panels configuration:
-
-```typescript
-const client = new WorkspaceClient({
-  panels: {
-    'unique-panel-key': {
-      component: PanelComponent,
-      defaultOptions: {
-        title: 'Default Title String', // fallback
-        canMinimize: true,
-        canDrag: true,
-        canClose: true,
-        initialTarget: 'docked', // or 'floating'
-        favoritePosition: {
-          x: 400,
-          y: 200,
-          width: 500,
-          height: 350,
-        },
-      },
-    },
-  },
-});
-```
-
-> **Legacy / backward-compatible approach:** You can still use the global `PanelRegistry.register('unique-panel-key', PanelComponent, options)` at module scope. This singleton is fully supported for existing codebases.
-
-To customize CSS layout attributes, you can override variables in your stylesheet:
-```css
-:root {
-  --accent-color: #00f0ff;
-  --bg-dark-color: #12131a;
-  --glass-bg: rgba(18, 19, 26, 0.65);
-  --border-color: rgba(255, 255, 255, 0.08);
-}
-```
-
----
-
-## 🎨 Theming
-
-The library's theming attribute is `data-color-scheme`. When switching themes in your app, set this attribute on the workspace root (or a wrapping element):
-
-```typescript
-document.documentElement.setAttribute('data-color-scheme', 'dark'); // or 'light'
-```
-
-If you are also using Bootstrap, you may set `data-bs-theme` alongside it for Bootstrap component compatibility.
-
----
-
-## 📐 Architecture
-
-For a deep-dive into the layout tree model, DOM persistence strategy, overlay system, `WorkspaceClient` and scoped registries, empty canvas default behavior, RTL detection, and build pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
----
-
-## 📄 License
+## License
 
 MIT. Free to use, adapt, and build upon.
