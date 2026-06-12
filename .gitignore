@@ -26,3 +26,13 @@ dist-ssr
 # LuciadRIA license
 demo-luciadria/license/luciadria*.txt
 demo-oldria/license/luciadria*.txt
+
+# Demo build output (Vite outDir → ../docs, rebuilt in CI and copied into pages dist)
+docs/
+
+# VitePress build output
+docs-site/.vitepress/dist
+docs-site/.vitepress/cache
+
+# TypeDoc generated API reference (rebuilt in CI)
+docs-site/api/

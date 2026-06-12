@@ -7,7 +7,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
+import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
 import { isElementRtl } from '../utils/rtl';
@@ -50,6 +50,11 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
 const renderPanelContent = (id: string, componentKey: string, registry: PanelRegistryClass) => {
   const registryEntry = registry.get(componentKey);
   if (!registryEntry) {
+    console.warn(
+      `[react-dockable-desktop] Panel "${id}" references component key "${componentKey}" ` +
+      `which is not registered. Add it to the WorkspaceClient panels config:\n` +
+      `  new WorkspaceClient({ panels: { "${componentKey}": { component: YourComponent } } })`
+    );
     return (
       <div className="dw-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
         <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ Component Unregistered</h6>
@@ -408,7 +413,7 @@ interface LeafGroupProps {
 const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
-  const { openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActions();
+  const { openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActionsInternal();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
@@ -625,7 +630,7 @@ export interface WindowManagerProps {
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
-  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection } = useWindowManagerActions();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection } = useWindowManagerActionsInternal();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
@@ -662,7 +667,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const contextMenuRef = useRef<JsonContextMenuRef>(null);
 
   const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string } | null>(null);
-  const minimizedTooltipTimeoutRef = useRef<number>(null);
+  const minimizedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -992,7 +997,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         const winId = windowEl.getAttribute('data-window-id');
         if (winId) {
           setActivePanel(winId);
-          bringToFront(winId);
+          focusPanel(winId);
         }
         return;
       }
@@ -1011,13 +1016,13 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     return () => {
       document.removeEventListener('mousedown', handleMouseDownGlobal);
     };
-  }, [bringToFront, setActivePanel]);
+  }, [focusPanel, setActivePanel]);
 
   // Floating Window dragging handler
   const startDrag = (id: string, e: React.MouseEvent) => {
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
-    bringToFront(id);
+    focusPanel(id);
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -1087,7 +1092,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     e.stopPropagation();
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
-    bringToFront(id);
+    focusPanel(id);
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -1259,7 +1264,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 dir={state.dir}
                 onMouseDownCapture={() => {
                   setActivePanel(w.id);
-                  bringToFront(w.id);
+                  focusPanel(w.id);
                 }}
                 className={`floating-window ${isMaximized ? 'maximized' : ''} ${isFocused ? 'v2-window-focused' : ''} ${windowClass ?? ''}`}
                 style={{

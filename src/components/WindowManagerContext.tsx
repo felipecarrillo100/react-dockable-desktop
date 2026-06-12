@@ -130,65 +130,224 @@ export interface WindowState {
 }
 
 /**
- * Interface mapping layout actions, event bus handles, and serialization methods.
+ * All layout mutation methods, event bus handles, and serialization methods
+ * exposed by the `WindowManagerProvider`.
+ *
+ * Obtain this object via {@link useWindowManagerActions} inside a component,
+ * or via {@link WorkspaceClient} methods from outside the React tree.
+ *
+ * @group Hooks
+ * @example
+ * ```tsx
+ * function MyToolbar() {
+ *   const actions = useWindowManagerActions();
+ *   return <button onClick={() => actions.openPanel('map-1', 'map')}>Open Map</button>;
+ * }
+ * ```
  */
 export interface WindowActions {
-  /** Instantiates a registered panel into the workspace. */
+  /**
+   * Opens a registered panel into the workspace.
+   * If the panel ID is already open, the panel is focused instead of duplicated.
+   * @param id - Unique instance identifier for this panel.
+   * @param component - Component key registered in the panel catalog.
+   * @param options - Optional display and placement overrides.
+   * @example
+   * ```ts
+   * actions.openPanel('map-1', 'map', { title: 'Satellite View', initialTarget: 'floating' });
+   * ```
+   */
   openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => void;
-  /** Directly closes a panel by ID, bypassing close confirmation dialogs. */
+  /**
+   * Closes a panel immediately, bypassing dirty-state close guards.
+   * For guarded close, use {@link requestClosePanel}.
+   * @param id - Panel instance ID.
+   */
   closePanel: (id: string) => void;
-  /** Minimizes a panel to the bottom taskbar, saving its current layout positioning. */
+  /**
+   * Minimizes a panel to the bottom taskbar dock, preserving its layout position.
+   * @param id - Panel instance ID.
+   */
   minimizePanel: (id: string) => void;
-  /** Restores a minimized panel back to its previous position in the grid or as a float. */
+  /**
+   * Restores a minimized panel back to its last docked or floating position.
+   * @param id - Panel instance ID.
+   */
   restorePanel: (id: string) => void;
-  /** Detaches a docked panel, turning it into a floating resizable window. */
+  /**
+   * Detaches a docked panel, converting it to a resizable floating window.
+   * @param id - Panel instance ID.
+   * @param rect - Optional initial position and size for the floating window.
+   */
   floatPanel: (id: string, rect?: { x: number; y: number; width: number; height: number }) => void;
-  /** Returns a floating window back to a docked grid tab group. */
+  /**
+   * Returns a floating window to a docked grid tab group.
+   * @param id - Panel instance ID.
+   * @param targetLeafId - Target leaf group ID. Defaults to the panel's last leaf.
+   */
   dockPanel: (id: string, targetLeafId?: string) => void;
-  /** Maximizes a floating window to cover the entire layout screen boundaries. */
+  /**
+   * Maximizes a floating window to cover the entire workspace viewport.
+   * @param id - Panel instance ID.
+   */
   maximizePanel: (id: string) => void;
-  /** Resizes flex dimensions of children inside split layout rows/columns. */
+  /**
+   * Resizes the flex split proportions of a branch node's children.
+   * @param path - Index path from root to the branch node.
+   * @param sizes - New proportional sizes (must sum to 1.0).
+   */
   updateSplitSizes: (path: number[], sizes: number[]) => void;
-  /** Updates bounds or positioning attributes on a floating window. */
+  /**
+   * Updates the position or size of a floating window.
+   * @param id - Panel instance ID.
+   * @param updates - Partial update to `x`, `y`, `width`, `height`, `stickyRight`, or `stickyBottom`.
+   */
   updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'stickyRight' | 'stickyBottom'>>) => void;
-  /** Pushes a floating window z-index layer to render on top of others. */
-  bringToFront: (id: string) => void;
-  /** Serializes the active grid node structures and panel targets to JSON. */
+  /**
+   * Activates the given panel regardless of its current state.
+   * - Floating panel: raises z-index so the window appears on top of others.
+   * - Docked panel: selects the tab within its leaf group.
+   * @param id - Panel instance ID.
+   * @example
+   * ```ts
+   * // Ensure a panel is visible before updating its content:
+   * if (actions.isOpen('map-1')) actions.focusPanel('map-1');
+   * ```
+   */
+  focusPanel: (id: string) => void;
+  /**
+   * Returns `true` if a panel with the given ID is currently open (docked, floating, or minimized).
+   * Uses a synchronous `stateRef` read — safe to call outside of render.
+   * @param id - Panel instance ID.
+   * @returns `true` if the panel is open.
+   * @example
+   * ```ts
+   * if (!actions.isOpen('map-1')) {
+   *   actions.openPanel('map-1', 'map');
+   * } else {
+   *   actions.focusPanel('map-1');
+   * }
+   * ```
+   */
+  isOpen: (id: string) => boolean;
+  /**
+   * Returns the IDs of all currently open panels (docked, floating, and minimized).
+   * Uses a synchronous `stateRef` read — safe to call outside of render.
+   * @returns Array of panel instance IDs.
+   */
+  getOpenPanelIds: () => string[];
+  /**
+   * Serializes the entire workspace state to a JSON string.
+   * Includes grid layout, floating window positions, minimized panels, and panel metadata.
+   * @returns JSON string suitable for storage and later restoration via {@link loadLayout}.
+   * @example
+   * ```ts
+   * localStorage.setItem('layout', actions.saveLayout());
+   * ```
+   */
   saveLayout: () => string;
-  /** Rebuilds the grid layouts and floating window placements from a JSON string. */
+  /**
+   * Restores a previously serialized workspace from a JSON string.
+   * Replaces the entire current layout — all panels not in the snapshot are closed.
+   * @param layoutJson - JSON string produced by {@link saveLayout}.
+   */
   loadLayout: (layoutJson: string) => void;
-  /** Publishes an event to the global inter-panel message bus. */
+  /**
+   * Publishes an event to the inter-panel pub/sub event bus.
+   * @param event - Event name string.
+   * @param data - Arbitrary payload passed to all subscribers.
+   */
   publish: (event: string, data: any) => void;
-  /** Subscribes callback listeners to inter-panel event messages. */
+  /**
+   * Subscribes a callback to the inter-panel pub/sub event bus.
+   * @param event - Event name string.
+   * @param callback - Function called with the event payload.
+   * @returns Unsubscribe function — call it to remove the listener.
+   * @example
+   * ```ts
+   * useEffect(() => actions.subscribe('map:zoom', ({ level }) => setZoom(level)), []);
+   * ```
+   */
   subscribe: (event: string, callback: (data: any) => void) => () => void;
-  /** Stores reference to the active tab ID being dragged. */
+  /** @internal Stores reference to the active tab ID being dragged. */
   setDraggedPanelId: (id: string | null) => void;
-  /** Splits an existing tab group to dock a dragged panel next to it. */
+  /**
+   * Splits an existing leaf group and docks a panel to the given side.
+   * @param id - Panel instance ID to dock.
+   * @param targetLeafId - Leaf group ID to split.
+   * @param position - Which side of the target to split and dock into.
+   */
   dockPanelToGroup: (id: string, targetLeafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center') => void;
-  /** Reorders tab indices inside a docked leaf group. */
+  /**
+   * Reorders a panel's tab index within a docked leaf group.
+   * @param panelId - Panel instance ID to move.
+   * @param targetLeafId - Destination leaf group ID.
+   * @param targetIndex - New tab index within the target group.
+   */
   movePanelOrder: (panelId: string, targetLeafId: string, targetIndex: number) => void;
-  /** Closes an empty split group. */
+  /**
+   * Closes an empty leaf group (removes it from the grid tree).
+   * @param leafId - Leaf node ID to remove.
+   */
   closeLeafGroup: (leafId: string) => void;
-  /** Binds a close intercept confirmation guard. */
+  /**
+   * Registers a close guard that can intercept and cancel panel close requests.
+   * @param id - Panel instance ID to guard.
+   * @param guard - Function returning `true` (allow close) or `false` / `Promise<false>` (block).
+   */
   registerCloseGuard: (id: string, guard: () => boolean | Promise<boolean>) => void;
-  /** Removes close confirmation guards. */
+  /**
+   * Removes a previously registered close guard.
+   * @param id - Panel instance ID.
+   */
   unregisterCloseGuard: (id: string) => void;
-  /** Set panel dirty state flag. */
+  /**
+   * Marks a panel as dirty (has unsaved changes). Dirty panels show a visual indicator
+   * and the built-in close guard prompts the user before closing.
+   * @param id - Panel instance ID.
+   * @param dirty - `true` to mark dirty, `false` to clear.
+   * @param options - Custom confirmation dialog options.
+   */
   setPanelDirty: (id: string, dirty: boolean, options?: DirtyStateOptions) => void;
-  /** Change title header. */
+  /**
+   * Updates the display title of an open panel.
+   * @param id - Panel instance ID.
+   * @param title - New title string or localizable message descriptor.
+   */
   updatePanelTitle: (id: string, title: string | ContextMenuPredefinedMessage) => void;
-  /** Intercepts close panel requests, prompting warning dialogs if dirty. */
+  /**
+   * Closes a panel, first running any registered close guards.
+   * If the panel is dirty, shows the built-in unsaved-changes confirmation dialog.
+   * @param id - Panel instance ID.
+   * @param options - `force: true` bypasses guards; `onConfirm` provides a custom dialog.
+   */
   requestClosePanel: (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => Promise<void>;
-  /** Docks a panel directly to workspace edges. */
+  /**
+   * Docks a floating panel to a workspace edge, creating a full-width or full-height column/row.
+   * @param id - Panel instance ID.
+   * @param position - Edge to dock to.
+   */
   dockPanelToWorkspaceEdge: (id: string, position: 'left' | 'right' | 'top' | 'bottom') => void;
-  /** Update active focused tab reference. */
-  setActivePanel: (id: string | null) => void;
-  /** Explicitly set or override layout direction */
+  /**
+   * Overrides the workspace layout direction.
+   * @param dir - `'ltr'` or `'rtl'`.
+   */
   setDirection: (dir: 'ltr' | 'rtl') => void;
 }
 
+/**
+ * Extension of {@link WindowActions} used internally by WindowManager components.
+ * `setActivePanel` is not part of the public API — it is a low-level tab-focus
+ * primitive used exclusively within this library's rendering layer.
+ * @internal
+ */
+export interface InternalWindowActions extends WindowActions {
+  /** @internal */
+  setActivePanel: (id: string | null) => void;
+}
+
 const WindowStateContext = createContext<WindowState | null>(null);
-const WindowActionsContext = createContext<WindowActions | null>(null);
+const WindowActionsContext = createContext<InternalWindowActions | null>(null);
 const WindowI18nContext = createContext<MessageFormatter | null>(null);
 
 const WindowPredefinedMessagesContext = createContext<Record<PredefinedMessageKey, ContextMenuPredefinedMessage>>(defaultPredefinedMessages);
@@ -210,7 +369,22 @@ export const useStyleClasses = () => useContext(StyleClassContext);
 
 const RegistryContext = createContext<PanelRegistryClass>(PanelRegistry);
 
-/** Custom hook to read the scoped panel registry for the current provider. */
+/**
+ * React hook to read the scoped {@link PanelRegistryClass} for the current provider.
+ * When the provider was created with a {@link WorkspaceClient}, this returns the client's
+ * private registry. Otherwise it returns the global `PanelRegistry` singleton.
+ *
+ * @group Hooks
+ * @returns The panel registry instance in scope.
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const registry = useRegistry();
+ *   const entry = registry.get('map');
+ *   return entry ? <entry.Component panelId="preview" /> : null;
+ * }
+ * ```
+ */
 export const useRegistry = () => useContext(RegistryContext);
 
 // Event Bus class for pub-sub communication between panels
@@ -376,7 +550,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return { x, y, width, height };
   }, []);
 
-  const bringToFront = useCallback((id: string) => {
+  const focusPanel = useCallback((id: string) => {
     maxZRef.current += 1;
     const z = maxZRef.current;
     setState(prev => {
@@ -498,7 +672,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             };
           }
         } else if (exists.state === 'floating') {
-          bringToFront(id);
+          focusPanel(id);
           return prev;
         } else {
           // Focus in tab group
@@ -561,7 +735,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         };
       }
     });
-  }, [getCascadedPosition, bringToFront]);
+  }, [getCascadedPosition, focusPanel]);
 
   const closePanel = useCallback((id: string) => {
     setState(prev => {
@@ -1102,6 +1276,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     });
   }, []);
 
+  const isOpen = useCallback((id: string) => id in stateRef.current.panels, []);
+
+  const getOpenPanelIds = useCallback(() => Object.keys(stateRef.current.panels), []);
+
   useEffect(() => {
     if (effectiveDir) {
       setState(prev => {
@@ -1111,7 +1289,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }
   }, [effectiveDir]);
 
-  const actions = useMemo<WindowActions>(() => ({
+  const actions = useMemo<InternalWindowActions>(() => ({
     openPanel,
     closePanel,
     minimizePanel,
@@ -1121,7 +1299,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     maximizePanel,
     updateSplitSizes,
     updateFloatingPosition,
-    bringToFront,
+    focusPanel,
+    isOpen,
+    getOpenPanelIds,
     saveLayout,
     loadLayout,
     publish,
@@ -1148,7 +1328,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     maximizePanel,
     updateSplitSizes,
     updateFloatingPosition,
-    bringToFront,
+    focusPanel,
+    isOpen,
+    getOpenPanelIds,
     saveLayout,
     loadLayout,
     publish,
@@ -1187,6 +1369,29 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }), [modalClass, modalBodyClass, sidePanelClass, sidePanelBodyClass, windowClass, windowBodyClass]);
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    let found = false;
+    try {
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          const rules = Array.from(sheet.cssRules || []);
+          if (rules.some((r: CSSRule) => r.cssText?.includes('react-contexify'))) {
+            found = true;
+            break;
+          }
+        } catch { /* CORS-restricted stylesheet — skip */ }
+      }
+    } catch { /* document.styleSheets unavailable (SSR) */ }
+    if (!found) {
+      console.warn(
+        '[react-dockable-desktop] replace-react-contexify CSS not detected. ' +
+        'Context menus may not render correctly.\n' +
+        'Add: import "replace-react-contexify/dist/ReactContexify.css"'
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     if (client) {
       client._connect(actions);
       return () => { client._disconnect(); };
@@ -1211,8 +1416,22 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 };
 
 /**
- * React hook to retrieve the active Window Manager layout state.
+ * React hook to subscribe to the live {@link WindowState} inside a component.
+ * The component re-renders whenever the state changes.
+ *
+ * For imperative reads without a subscription, use {@link WorkspaceClient} methods
+ * like `isOpen()` and `getOpenPanelIds()` instead.
+ *
+ * @group Hooks
+ * @returns The current workspace state tree.
  * @throws Error if used outside of a {@link WindowManagerProvider}.
+ * @example
+ * ```tsx
+ * function PanelList() {
+ *   const { panels } = useWindowManagerState();
+ *   return <ul>{Object.keys(panels).map(id => <li key={id}>{id}</li>)}</ul>;
+ * }
+ * ```
  */
 export const useWindowManagerState = () => {
   const ctx = useContext(WindowStateContext);
@@ -1221,12 +1440,35 @@ export const useWindowManagerState = () => {
 };
 
 /**
- * React hook to retrieve layouts mutation actions (dock, float, minimize, save/load).
+ * React hook to retrieve all layout mutation actions.
+ * Returns the public {@link WindowActions} interface.
+ *
+ * @group Hooks
+ * @returns The full set of workspace mutation methods.
  * @throws Error if used outside of a {@link WindowManagerProvider}.
+ * @example
+ * ```tsx
+ * function Toolbar() {
+ *   const actions = useWindowManagerActions();
+ *   return (
+ *     <button onClick={() => actions.openPanel('map-1', 'map')}>Open Map</button>
+ *   );
+ * }
+ * ```
  */
-export const useWindowManagerActions = () => {
+export const useWindowManagerActions = (): WindowActions => {
   const ctx = useContext(WindowActionsContext);
   if (!ctx) throw new Error('useWindowManagerActions must be used within WindowManagerProvider');
+  return ctx;
+};
+
+/**
+ * @internal — used by WindowManager.tsx rendering components only.
+ * Returns the full {@link InternalWindowActions} including `setActivePanel`.
+ */
+export const useWindowManagerActionsInternal = (): InternalWindowActions => {
+  const ctx = useContext(WindowActionsContext);
+  if (!ctx) throw new Error('useWindowManagerActionsInternal must be used within WindowManagerProvider');
   return ctx;
 };
 

@@ -41,7 +41,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const sidebarRef = React.useRef<SidebarHandle>(null);
   const state = useWindowManagerState();
   const { openPanel, loadLayout, saveLayout } = useWindowManagerActions();
-  const { closePanel, minimizePanel, maximizePanel, bringToFront, restorePanel } = useWindowManagerActions();
+  const { closePanel, minimizePanel, maximizePanel, focusPanel, restorePanel } = useWindowManagerActions();
   const { openLeftPanel, openRightPanel, openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
 
@@ -601,7 +601,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                       <span className="badge-pill-dark">{panel.isFloating ? 'Float' : 'Grid'}</span>
                     </div>
                     <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="btn-pill-outline" onClick={() => bringToFront(panel.id)}>Front</button>
+                      <button type="button" className="btn-pill-outline" onClick={() => focusPanel(panel.id)}>Front</button>
                       <div className="d-flex gap-2">
                         {panel.canMinimize && (
                           <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Minimize" onClick={() => minimizePanel(panel.id)} style={{ fontSize: '0.85rem' }}>_</button>
@@ -797,6 +797,21 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             </Nav>
 
             <Nav className="align-items-center gap-3">
+              {/* Documentation Link */}
+              <a
+                href="https://felipecarrillo100.github.io/react-dockable-desktop/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 font-monospace"
+                style={{ fontSize: '0.75rem' }}
+                title="API Documentation"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                </svg>
+                Docs
+              </a>
+
               {/* GitHub Repo Link */}
               <a
                 href="https://github.com/felipecarrillo100/react-dockable-desktop"

@@ -3,7 +3,7 @@ import { useWindowManagerActions, useWindowManagerState, PanelRegistry, type Pan
 
 export const PanelManagerForm: React.FC = () => {
   const state = useWindowManagerState();
-  const { openPanel, closePanel, minimizePanel, restorePanel, bringToFront } = useWindowManagerActions();
+  const { openPanel, closePanel, minimizePanel, restorePanel, focusPanel } = useWindowManagerActions();
   const [search, setSearch] = useState('');
 
   const registeredIds = PanelRegistry.getRegisteredIds();
@@ -72,7 +72,7 @@ export const PanelManagerForm: React.FC = () => {
                     if (isMinimized) {
                       restorePanel(item.instance!.id);
                     }
-                    bringToFront(item.instance!.id);
+                    focusPanel(item.instance!.id);
                   }
                 }}
                 style={{ cursor: isOpened ? 'pointer' : 'default' }}

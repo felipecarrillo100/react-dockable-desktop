@@ -67,7 +67,7 @@ export interface SidebarProps {
 }
 
 /**
- * Imperative handle exposed by <Sidebar ref={...}> via forwardRef.
+ * Imperative handle exposed by `<Sidebar ref={...}>` via forwardRef.
  * Allows external components (outside the sidebar tree) to control
  * which tab is open without prop drilling.
  */

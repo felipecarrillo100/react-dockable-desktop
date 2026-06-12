@@ -251,7 +251,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<WebGLMap | null>(null);
   const contract = useFormContainer();
-  const { setActivePanel } = useWindowManagerActions();
+  const { focusPanel } = useWindowManagerActions();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -266,7 +266,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
 
       if (map) {
         map.onClick = () => {
-          setActivePanel(panelId);
+          focusPanel(panelId);
           return false;
         };
       }
