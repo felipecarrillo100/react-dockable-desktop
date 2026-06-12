@@ -7,6 +7,7 @@
  */
 
 :root {
+  --rdd-styles-loaded: 1; /* sentinel — checked at mount to detect missing CSS import */
   --bg-primary: #090b11;
   --bg-workspace: #0f111a;
   --bg-panel: #141722;

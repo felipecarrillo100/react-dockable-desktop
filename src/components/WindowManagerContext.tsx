@@ -1420,6 +1420,22 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
+
+    // Check 1: styles.css sentinel — catches the "forgot to import" case precisely
+    try {
+      const sentinel = getComputedStyle(document.documentElement)
+        .getPropertyValue('--rdd-styles-loaded').trim();
+      if (sentinel !== '1') {
+        console.error(
+          "[react-dockable-desktop] styles.css is not imported.\n" +
+          "Add this to your entry file (main.tsx / index.tsx):\n" +
+          "  import 'react-dockable-desktop/styles.css'\n" +
+          "Without it the workspace renders as a black screen with no console errors."
+        );
+      }
+    } catch { /* getComputedStyle unavailable (SSR) */ }
+
+    // Check 2: replace-react-contexify CSS — context menus need this stylesheet
     let found = false;
     try {
       for (const sheet of Array.from(document.styleSheets)) {
