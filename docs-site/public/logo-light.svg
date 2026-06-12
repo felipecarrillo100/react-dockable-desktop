@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 32" fill="none">
+  <!-- Outer window frame -->
+  <rect x="1" y="1" width="34" height="30" rx="3.5" stroke="#0F56A8" stroke-width="2"/>
+  <!-- Vertical panel splitter -->
+  <line x1="22" y1="1" x2="22" y2="31" stroke="#0F56A8" stroke-width="1.5"/>
+  <!-- Right panel: active tab pill -->
+  <rect x="23.5" y="3.5" width="10" height="5" rx="2" fill="#0F56A8"/>
+  <!-- Left panel: content rows -->
+  <rect x="4" y="9" width="13" height="2" rx="1" fill="#0F56A8" opacity="0.45"/>
+  <rect x="4" y="14" width="10" height="2" rx="1" fill="#0F56A8" opacity="0.45"/>
+  <rect x="4" y="19" width="12" height="2" rx="1" fill="#0F56A8" opacity="0.45"/>
+  <rect x="4" y="24" width="8"  height="2" rx="1" fill="#0F56A8" opacity="0.45"/>
+  <!-- Right panel: content rows -->
+  <rect x="24" y="13" width="9" height="2" rx="1" fill="#0F56A8" opacity="0.3"/>
+  <rect x="24" y="18" width="7" height="2" rx="1" fill="#0F56A8" opacity="0.3"/>
+  <rect x="24" y="23" width="8" height="2" rx="1" fill="#0F56A8" opacity="0.3"/>
+</svg>
