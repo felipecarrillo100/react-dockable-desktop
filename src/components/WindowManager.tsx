@@ -336,7 +336,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
     const startSizes = [...node.sizes];
 
     resizerEl.classList.add('active');
-    document.body.classList.add('resizing-active', isRow ? 'resizing-row-active' : 'resizing-col-active');
+    document.body.classList.add('resizing-active', isRow ? 'resizing-col-active' : 'resizing-row-active');
 
     const parentEl = resizerEl.parentElement;
     const parentSize = parentEl
