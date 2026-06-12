@@ -879,15 +879,52 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const el = workspaceRef.current;
     if (!el) return;
 
+    let heightWarnShown = false;
+
     const observer = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
       const rect = entries[0].contentRect;
-      if (process.env.NODE_ENV === 'development' && rect.height < 10) {
+
+      if (process.env.NODE_ENV === 'development' && rect.height < 10 && !heightWarnShown) {
+        heightWarnShown = true;
+
+        // Walk up the ancestor chain to find the highest zero-height element
+        let culprit: Element = el;
+        let cursor = el.parentElement;
+        while (cursor && cursor !== document.documentElement) {
+          if (cursor.getBoundingClientRect().height < 10) {
+            culprit = cursor;
+          } else {
+            break;
+          }
+          cursor = cursor.parentElement;
+        }
+
+        const tag = culprit.tagName.toLowerCase();
+        const id  = culprit.id ? ` id="${culprit.id}"` : '';
+        const cls = culprit.className ? ` class="${culprit.className}"` : '';
+        const who = culprit === el
+          ? 'the WindowManager container itself'
+          : `a wrapper element: <${tag}${id}${cls}>`;
+
         console.warn(
-          '[react-dockable-desktop] Workspace height is near zero. ' +
-          'Add: html, body, #root { height: 100%; overflow: hidden; }'
+          `[react-dockable-desktop] Workspace height is 0px — the workspace will be invisible.\n\n` +
+          `Zero height found at: ${who}\n\n` +
+          `Root cause: in CSS, "height: 100%" only works when the parent has an explicit height.\n` +
+          `If any ancestor has height: auto (the default for <div>), the chain breaks and\n` +
+          `everything inside collapses to 0px.\n\n` +
+          `Fix options:\n` +
+          `  1. Use height: 100vh directly on the workspace wrapper:\n` +
+          `       <div style={{ height: '100vh', overflow: 'hidden' }}>\n` +
+          `         <WindowManager />\n` +
+          `       </div>\n\n` +
+          `  2. Use CSS Grid/Flex and let the workspace fill remaining space:\n` +
+          `       .layout { display: flex; flex-direction: column; height: 100vh; }\n` +
+          `       .workspace { flex: 1; min-height: 0; }\n\n` +
+          `  3. Verify styles.css is imported — it anchors html, body, #root to 100% height.`
         );
       }
+
       setWorkspaceSize({
         width: Math.max(100, rect.width),
         height: Math.max(100, rect.height)
