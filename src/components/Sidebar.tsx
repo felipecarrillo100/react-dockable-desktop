@@ -247,16 +247,12 @@ export const Sidebar = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
             }}
           >
             {/* Drawer header */}
-            <div
-              className="d-flex align-items-center justify-content-between border-bottom border-secondary-subtle px-3 py-2 flex-shrink-0"
-              style={{ background: 'rgba(0,0,0,0.08)', minHeight: '38px' }}
-            >
+            <div className="sidebar-drawer-header">
               <span className="sidebar-header-title">{tab.label}</span>
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn btn-link p-0 text-secondary d-flex align-items-center"
-                style={{ textDecoration: 'none' }}
+                className="sidebar-close-btn"
                 title={formatMessage(predefinedMessages.closePanelTooltip)}
                 aria-label={formatMessage(predefinedMessages.closePanelTooltip)}
               >
@@ -275,7 +271,7 @@ export const Sidebar = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
             </div>
 
             {/* Drawer body — consumer-supplied content */}
-            <div className="flex-grow-1 overflow-auto">
+            <div className="sidebar-drawer-body">
               {tab.renderContent(tab.id, handleClose, onOpen)}
             </div>
           </div>

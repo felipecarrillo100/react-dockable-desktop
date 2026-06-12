@@ -116,6 +116,10 @@ body,
   background-color: var(--bg-panel);
   border: 1px solid var(--border-panel);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Tab Headers Bar */
@@ -123,6 +127,10 @@ body,
   background-color: var(--bg-tab-bar);
   border-bottom: 1px solid var(--border-panel);
   padding: 0 4px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* Tab Headers Container */
@@ -134,6 +142,8 @@ body,
   padding-left: 6px;
   position: relative;
   margin-bottom: -1px;
+  flex-grow: 1;
+  overflow-x: auto;
 }
 
 /* Premium Tab styling (VS Code Style) */
@@ -346,10 +356,25 @@ body.resizing-col-active * {
   border-top: 1px solid var(--taskbar-border) !important;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
 }
 
 .taskbar-nav-btn {
   color: var(--taskbar-nav-color) !important;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: monospace;
+  padding: 0;
+  text-decoration: none;
+  font-size: 0.875rem;
+  line-height: 1;
 }
 
 .taskbar-nav-btn:hover {
@@ -365,6 +390,11 @@ body.resizing-col-active * {
   color: var(--taskbar-item-text) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .taskbar-glassmorphic-item:hover {
@@ -415,6 +445,7 @@ body.resizing-col-active * {
   animation: tooltipFadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
 }
 
 /* Invisible bridge so mouse transitions smoothly to tooltip */
@@ -573,6 +604,10 @@ body.resizing-col-active * {
   background-color: var(--window-header-bg);
   border-bottom: 1px solid var(--window-border);
   min-height: 38px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .floating-window-title {
@@ -581,6 +616,12 @@ body.resizing-col-active * {
   font-weight: 600;
   color: var(--window-text);
   letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-inline-end: 0.5rem;
 }
 
 .cursor-move {
@@ -727,6 +768,10 @@ body.resizing-col-active * {
 .header-close-empty-group {
   opacity: 0 !important;
   transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-end: 0.5rem;
 }
 
 .workspace-panel:hover .header-close-empty-group {
@@ -959,7 +1004,7 @@ body.resizing-col-active * {
 [data-workspace-skin="macos"] .floating-window-titlebar .floating-window-title > * {
   pointer-events: auto;
 }
-[data-workspace-skin="macos"] .floating-window-titlebar .d-flex.align-items-center {
+[data-workspace-skin="macos"] .floating-window-titlebar .fw-titlebar-actions {
   flex-direction: row-reverse !important;
   position: relative !important;
   z-index: 1 !important;
@@ -1846,9 +1891,9 @@ html:not(.enable-animations) *::after {
   flex-direction: row-reverse !important;
 }
 
-[dir="rtl"] [data-workspace-skin="vscode"] .floating-window-titlebar .d-flex.align-items-center,
-[dir="rtl"] [data-workspace-skin="chrome"] .floating-window-titlebar .d-flex.align-items-center,
-[dir="rtl"] [data-workspace-skin="slate"] .floating-window-titlebar .d-flex.align-items-center {
+[dir="rtl"] [data-workspace-skin="vscode"] .floating-window-titlebar .fw-titlebar-actions,
+[dir="rtl"] [data-workspace-skin="chrome"] .floating-window-titlebar .fw-titlebar-actions,
+[dir="rtl"] [data-workspace-skin="slate"] .floating-window-titlebar .fw-titlebar-actions {
   flex-direction: row-reverse !important;
 }
 
@@ -1899,7 +1944,7 @@ html:not(.enable-animations) *::after {
 
 /* Button group: keep dots in correct visual order (Red → Yellow → Green)
    from left to right regardless of text direction */
-[dir="rtl"][data-workspace-skin="macos"] .floating-window-titlebar .d-flex.align-items-center {
+[dir="rtl"][data-workspace-skin="macos"] .floating-window-titlebar .fw-titlebar-actions {
   flex-direction: row !important;
 }
 
@@ -1907,4 +1952,275 @@ html:not(.enable-animations) *::after {
 [dir="rtl"][data-workspace-skin="macos"] .close-tab-x {
   margin-left: 0 !important;
   margin-right: 2px !important;
+}
+
+/* ==========================================================================
+   FRAMEWORK-AGNOSTIC UTILITY CLASSES
+   (replaces Bootstrap utility class dependencies)
+   ========================================================================== */
+
+/* Text truncation (equivalent to Bootstrap .text-truncate) */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Floating window titlebar button group */
+.fw-titlebar-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* Window custom header actions slot */
+.window-header-actions {
+  display: flex;
+  align-items: center;
+  margin-inline-end: 0.25rem;
+  gap: var(--header-button-gap, 4px);
+}
+
+/* Tab header custom actions slot */
+.tab-header-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  margin-inline-end: 0.25rem;
+  gap: var(--header-button-gap, 4px);
+}
+
+/* Panel body (tab content area / floating window content area) */
+.dw-panel-body {
+  flex-grow: 1;
+  width: 100%;
+  height: 100%;
+}
+
+/* Empty workspace section placeholder text */
+.empty-leaf-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #94a3b8);
+}
+
+/* Empty workspace grid (no panels loaded) */
+.empty-workspace-grid {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #94a3b8);
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+/* Unregistered component error panel */
+.dw-unregistered-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #dc3545;
+  font-family: monospace;
+  padding: 1rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Taskbar scrollable items row */
+.taskbar-items-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  overflow-x: auto;
+  align-items: center;
+  margin: 0 0.5rem;
+  padding: 2px 4px;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  max-width: 800px;
+}
+
+.taskbar-items-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tooltip header row (title + close button) */
+.tooltip-header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+/* Drag ghost tab preview (floating label while dragging) */
+.drag-ghost-tab {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--accent-color, #38bdf8);
+  border-left: 3px solid var(--accent-color, #38bdf8);
+  border-radius: 4px;
+  color: var(--accent-color, #38bdf8);
+  font-family: monospace;
+  padding: 0.375rem 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ConfirmationForm component styles */
+.confirmation-form-body {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.confirmation-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.625rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+}
+
+.confirmation-alert-danger {
+  background: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: #f87171;
+}
+
+.confirmation-alert-info {
+  background: rgba(13, 202, 240, 0.15);
+  border: 1px solid rgba(13, 202, 240, 0.3);
+  color: #67e8f9;
+}
+
+.confirmation-alert-warning {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #fbbf24;
+}
+
+.confirmation-alert-success {
+  background: rgba(25, 135, 84, 0.15);
+  border: 1px solid rgba(25, 135, 84, 0.3);
+  color: #4ade80;
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Sidebar drawer header */
+.sidebar-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08));
+  padding: 0 0.75rem;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.08);
+  min-height: 38px;
+}
+
+/* Sidebar drawer close button */
+.sidebar-close-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary, #94a3b8);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+  text-decoration: none;
+}
+
+.sidebar-close-btn:hover {
+  color: var(--text-primary, #f1f5f9);
+}
+
+/* Sidebar drawer content body */
+.sidebar-drawer-body {
+  flex-grow: 1;
+  overflow: auto;
+}
+
+/* Button base — used in ConfirmationForm and similar dialogs */
+.dw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1.2;
+}
+
+.dw-btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.dw-btn-outline {
+  background: transparent;
+  border: 1px solid var(--text-secondary, #6c757d);
+  color: var(--text-secondary, #6c757d);
+}
+
+.dw-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--text-primary, #f1f5f9);
+  color: var(--text-primary, #f1f5f9);
+}
+
+[data-bs-theme="light"] .dw-btn-outline {
+  border-color: #6c757d;
+  color: #6c757d;
+}
+
+[data-bs-theme="light"] .dw-btn-outline:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #495057;
+  color: #495057;
+}
+
+.dw-btn-primary {
+  background: var(--accent-color, #38bdf8);
+  border: 1px solid var(--accent-color, #38bdf8);
+  color: #090b11;
+}
+
+.dw-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+[data-bs-theme="light"] .dw-btn-primary {
+  color: #ffffff;
 }
