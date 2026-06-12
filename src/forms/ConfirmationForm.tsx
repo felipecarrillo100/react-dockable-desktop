@@ -77,9 +77,9 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 d-flex flex-column gap-3">
+    <form onSubmit={handleSubmit} className="confirmation-form-body">
       {alert && (
-        <div className={`alert alert-${alertType === 'danger' ? 'danger' : alertType} d-flex align-items-center gap-2 m-0 p-2.5 small`}>
+        <div className={`confirmation-alert confirmation-alert-${alertType}`}>
           <span>ℹ️</span>
           <span>{alert}</span>
         </div>
@@ -89,19 +89,19 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
         {resolvedMessage}
       </div>
 
-      <hr className="my-2 opacity-10" />
+      <hr style={{ marginTop: '0.5rem', marginBottom: '0.5rem', opacity: 0.1 }} />
 
-      <div className="d-flex justify-content-end gap-2">
+      <div className="confirmation-actions">
         <button
           type="button"
-          className="btn btn-sm btn-outline-secondary font-monospace"
+          className="dw-btn dw-btn-sm dw-btn-outline"
           onClick={handleCancel}
         >
           {cancelLabel}
         </button>
         <button
           type="submit"
-          className="btn btn-sm btn-primary font-monospace"
+          className="dw-btn dw-btn-sm dw-btn-primary"
           ref={confirmButtonRef}
         >
           {confirmLabel}

@@ -51,9 +51,9 @@ const renderPanelContent = (id: string, componentKey: string) => {
   const registryEntry = PanelRegistry.get(componentKey);
   if (!registryEntry) {
     return (
-      <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-transparent text-danger font-monospace p-3 text-center" style={{ border: '2px dashed var(--bs-danger, #dc3545)' }}>
-        <h6 className="fw-bold mb-1">⚠️ Component Unregistered</h6>
-        <span className="small text-muted">Key: {componentKey}</span>
+      <div className="dw-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
+        <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ Component Unregistered</h6>
+        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>Key: {componentKey}</span>
       </div>
     );
   }
@@ -121,7 +121,7 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
     };
   }, [panelId]);
 
-  return <div ref={hostRef} className="w-100 h-100" />;
+  return <div ref={hostRef} style={{ width: '100%', height: '100%' }} />;
 };
 
 const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
@@ -172,10 +172,13 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
     return (
       <div
-        className="taskbar-item-preview-frame d-flex align-items-center justify-content-center"
+        className="taskbar-item-preview-frame"
         style={{
           width: `${displayW}px`,
           height: `${displayH}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           background: 'rgba(108, 117, 125, 0.15)',
           border: '1px dashed var(--taskbar-item-border, rgba(255, 255, 255, 0.15))'
         }}
@@ -361,8 +364,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
 
   return (
     <div
-      className={`d-flex w-100 h-100 ${isRow ? 'flex-row' : 'flex-column'}`}
-      style={{ overflow: 'hidden', position: 'relative' }}
+      style={{ display: 'flex', flexDirection: isRow ? 'row' : 'column', width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}
     >
       {node.children.map((child, idx) => {
         const size = node.sizes[idx] * 100;
@@ -417,13 +419,13 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
   return (
     <div
       data-active-panel-id={leaf.activePanelId || ''}
-      className={`workspace-panel w-100 h-100 d-flex flex-column ${windowClass ?? ''}`}
+      className={`workspace-panel ${windowClass ?? ''}`}
       style={{ overflow: 'hidden', position: 'relative' }}
     >
       {/* Tab Headers */}
-      <div className="workspace-tab-bar d-flex flex-row justify-content-between align-items-center" style={{ minHeight: '38px' }}>
+      <div className="workspace-tab-bar" style={{ minHeight: '38px' }}>
         <div
-          className="d-flex flex-row overflow-x-auto flex-grow-1 tab-headers-container"
+          className="tab-headers-container"
           style={{ scrollbarWidth: 'none' }}
           onMouseMove={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
@@ -482,7 +484,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 className={`workspace-tab ${tabFocusClass} ${sideClass}`}
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
-                <span className="text-truncate d-flex align-items-center" style={{ maxWidth: '120px' }}>
+                <span className="text-truncate" style={{ maxWidth: '120px', display: 'flex', alignItems: 'center' }}>
                   <span className="workspace-tab-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
                   <span>
                     {formatLabel(panel.title, formatMessage)}
@@ -491,8 +493,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 </span>
                 {options?.renderHeaderActions && (
                   <span
-                    className="tab-header-actions ms-auto d-flex align-items-center me-1"
-                    style={{ gap: 'var(--header-button-gap, 4px)' }}
+                    className="tab-header-actions"
                     onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
@@ -506,8 +507,8 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                       onRequestClosePanel(id);
                     }}
                     title={formatLabel(messages.closeTab, formatMessage)}
-                    className={`close-tab-x ${options?.renderHeaderActions ? '' : 'ms-auto'} d-flex align-items-center justify-content-center`}
-                    style={{ width: '18px', height: '18px' }}
+                    className="close-tab-x"
+                    style={{ width: '18px', height: '18px', ...(options?.renderHeaderActions ? {} : { marginInlineStart: 'auto' }) }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M18 6L6 18M6 6l12 12"/>
@@ -523,7 +524,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         {leaf.panels.length === 0 && leaf.keepOnEmpty && leaf.canClose !== false && (
           <span
             onClick={() => closeLeafGroup(leaf.id)}
-            className="close-tab-x d-flex align-items-center justify-content-center me-2 header-close-empty-group"
+            className="close-tab-x header-close-empty-group"
             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             title={formatLabel(messages.closeEmptyGroup, formatMessage)}
           >
@@ -535,11 +536,11 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
       </div>
 
       {/* Tab Content Display Area */}
-      <div className={`flex-grow-1 w-100 h-100 bg-transparent ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className={`dw-panel-body ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
         {leaf.activePanelId && state.panels[leaf.activePanelId] ? (
           <PreservedDOMWrapper key={leaf.activePanelId} panelId={leaf.activePanelId} />
         ) : (
-          <div className="w-100 h-100 d-flex align-items-center justify-content-center font-monospace text-muted small empty-leaf-placeholder">
+          <div className="empty-leaf-placeholder">
             <span>Empty Workspace Section</span>
           </div>
         )}
@@ -1173,16 +1174,15 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     <div
       data-workspace-skin={skin}
       data-bs-theme={currentBsTheme}
-      className="d-flex flex-column w-100 h-100 overflow-hidden"
-      style={{ userSelect: 'none' }}
+      style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
       dir={state.dir}
     >
 
       {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
       <div
         ref={workspaceRef}
-        className={`flex-grow-1 w-100 position-relative ${state.draggedPanelId ? 'dragging-active' : ''}`}
-        style={{ overflow: 'hidden' }}
+        className={state.draggedPanelId ? 'dragging-active' : undefined}
+        style={{ flexGrow: 1, width: '100%', position: 'relative', overflow: 'hidden' }}
       >
         {/* Workspace outer edge drop zone targets */}
         {state.draggedPanelId !== null && (
@@ -1216,7 +1216,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         )}
 
         {/* 1.1 Viewport Split Grid Layout */}
-        <div className="w-100 h-100" style={{ overflow: 'hidden', position: 'relative' }}>
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
           {state.gridRoot ? (
             <WorkspaceGrid
               node={state.gridRoot}
@@ -1231,7 +1231,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               onRequestClosePanel={handleRequestClose}
             />
           ) : (
-            <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted font-monospace small">
+            <div className="empty-workspace-grid">
               Grid Empty
             </div>
           )}
@@ -1277,19 +1277,19 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       startDrag(w.id, e);
                     }
                   }}
-                  className="floating-window-titlebar d-flex flex-row justify-content-between align-items-center cursor-move"
+                  className="floating-window-titlebar cursor-move"
                   style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
                 >
-                  <span className="floating-window-title text-truncate me-2 d-flex align-items-center">
+                  <span className="floating-window-title">
                     <span className="window-title-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
                     <span>
                       {formatLabel(panel.title, formatMessage)}
                       {panel.dirty ? ' *' : ''}
                     </span>
                   </span>
-                  <div className="d-flex align-items-center" style={{ gap: 'var(--header-button-gap, 4px)' }} onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="fw-titlebar-actions" style={{ gap: 'var(--header-button-gap, 4px)' }} onMouseDown={(e) => e.stopPropagation()}>
                     {options?.renderHeaderActions && (
-                      <div className="window-header-actions d-flex align-items-center me-1" style={{ gap: 'var(--header-button-gap, 4px)' }}>
+                      <div className="window-header-actions">
                         {options.renderHeaderActions(w.id)}
                       </div>
                     )}
@@ -1392,7 +1392,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 </div>
 
                 {/* Window Content */}
-                <div className={`flex-grow-1 w-100 overflow-hidden ${windowBodyClass ?? ''}`} style={{ position: 'relative' }}>
+                <div className={windowBodyClass ?? undefined} style={{ flexGrow: 1, width: '100%', overflow: 'hidden', position: 'relative', isolation: 'isolate' }}>
                   <PreservedDOMWrapper key={w.id} panelId={w.id} />
                 </div>
 
@@ -1420,11 +1420,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
       {/* 2. macOS / Windows 11-style Taskbar Sibling Footer (Flex-shrinked at bottom) */}
       {state.minimized.length > 0 && (
-        <div className="flex-shrink-0 w-100 d-flex flex-row align-items-center taskbar-footer-container px-3 py-1.5 justify-content-center" style={{ height: '48px', zIndex: 100 }}>
+        <div className="taskbar-footer-container" style={{ height: '48px', zIndex: 100 }}>
           <button
             type="button"
             onClick={() => scrollTaskbar('left')}
-            className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
+            className="taskbar-nav-btn"
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ◀
@@ -1432,12 +1432,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
           <div
             ref={taskbarRef}
-            className="d-flex flex-row gap-2 overflow-x-auto align-items-center mx-2 px-1 py-0.5 scrollbar-hidden"
-            style={{
-              maxWidth: '800px',
-              scrollbarWidth: 'none',
-              scrollSnapType: 'x mandatory'
-            }}
+            className="taskbar-items-container"
+            style={{ scrollSnapType: 'x mandatory' }}
           >
             {state.minimized.map(m => {
               const regEntry = PanelRegistry.get(m.component);
@@ -1471,7 +1467,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       setHoveredMinimized(null);
                     }, 150);
                   }}
-                  className="taskbar-glassmorphic-item rounded d-flex align-items-center justify-content-center cursor-pointer hover-elevate"
+                  className="taskbar-glassmorphic-item"
                   style={{
                     backdropFilter: 'blur(6px)',
                     transition: 'all 0.2s',
@@ -1483,7 +1479,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     padding: 0
                   }}
                 >
-                  <span className="taskbar-item-icon d-flex align-items-center justify-content-center">
+                  <span className="taskbar-item-icon">
                     {icon}
                   </span>
                 </div>
@@ -1493,7 +1489,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
           {hoveredMinimized && createPortal(
             <div
-              className="taskbar-item-tooltip d-flex flex-column gap-1"
+              className="taskbar-item-tooltip"
               dir={state.dir}
               style={{
                 position: 'fixed',
@@ -1517,7 +1513,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 setHoveredMinimized(null);
               }}
             >
-               <div className="d-flex flex-row align-items-center justify-content-between w-100 gap-3 px-1 py-0.5">
+               <div className="tooltip-header-row">
                   <span className="tooltip-title-text text-truncate" style={{ maxWidth: '140px' }}>
                     {formatLabel(hoveredMinimized.title, formatMessage)}
                     {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
@@ -1529,7 +1525,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       setHoveredMinimized(null);
                     }}
                     title={formatLabel(messages.closePanel, formatMessage)}
-                    className="tooltip-close-x d-flex align-items-center justify-content-center"
+                    className="tooltip-close-x"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M18 6L6 18M6 6l12 12"/>
@@ -1544,7 +1540,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           <button
             type="button"
             onClick={() => scrollTaskbar('right')}
-            className="btn btn-sm btn-link taskbar-nav-btn text-decoration-none py-0 font-monospace"
+            className="taskbar-nav-btn"
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ▶
@@ -1580,16 +1576,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (
         <div
-          className="position-fixed bg-black bg-opacity-80 border border-info rounded text-info font-monospace px-3 py-1.5 shadow-lg d-flex align-items-center gap-2"
+          className="drag-ghost-tab"
           style={{
             left: dragPos.x + 12,
             top: dragPos.y + 12,
             zIndex: 100000,
-            pointerEvents: 'none',
-            fontSize: '0.75rem',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-            borderLeft: '3px solid var(--accent-color)',
-            whiteSpace: 'nowrap'
           }}
         >
           📄 {formatLabel(state.panels[state.draggedPanelId]?.title, formatMessage) || 'Tab'}
