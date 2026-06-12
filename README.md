@@ -91,18 +91,28 @@ PanelRegistry.register('mainMap', MapView, {
 
 ### 2. Set Up the WindowManager Context Provider
 
-Wrap your workspace inside the `WindowManagerProvider` and render the `Desktop` component:
+Wrap your workspace inside `WindowManagerProvider` and render `WindowManager`. If you need modals or side panels, also add `ModalStackRenderer` and/or `SidePanelRenderer` inside the same provider tree.
 
 ```typescript
 import React from 'react';
-import { WindowManagerProvider, Desktop } from 'react-dockable-desktop';
+import {
+  WindowManagerProvider,
+  WindowManager,
+  PanelProvider,
+  ModalStackRenderer,
+  SidePanelRenderer,
+} from 'react-dockable-desktop';
 
 function App() {
   return (
     <WindowManagerProvider>
-      <div style={{ width: '100vw', height: '100vh' }}>
-        <Desktop />
-      </div>
+      <PanelProvider>
+        <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <WindowManager />
+        </div>
+        <ModalStackRenderer />
+        <SidePanelRenderer />
+      </PanelProvider>
     </WindowManagerProvider>
   );
 }
@@ -212,7 +222,7 @@ const SidebarControls = () => {
 | `useWindowManagerActions()` | `WindowActions` | Spawns, minimizes, restores, docks, floats, maximizes, or closes panels. Also handles split sizing, custom locations, and layout serialization (`saveLayout` / `loadLayout`). |
 | `useFormatMessage()` | `(msg: ContextMenuPredefinedMessage) => string` | Returns the translation message formatter hook matching the provider preset configuration. |
 | `usePanelContext()` | `{ publish, subscribe }` | Dynamic decoupled event bus helper for active panels. |
-| `usePanelId()` | `string` | Returns the unique instance ID of the panel calling the hook. |
+| `useStyleClasses()` | `StyleClasses` | Returns the custom CSS class overrides configured on the provider (`windowClass`, `windowBodyClass`, etc.). |
 
 ---
 
@@ -341,6 +351,12 @@ To customize CSS layout attributes, you can override variables in your styleshee
   --border-color: rgba(255, 255, 255, 0.08);
 }
 ```
+
+---
+
+## 📐 Architecture
+
+For a deep-dive into the layout tree model, DOM persistence strategy, overlay system, RTL detection, and build pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
