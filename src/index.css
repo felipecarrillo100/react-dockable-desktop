@@ -142,6 +142,7 @@ body,
   padding-top: 4px;
   padding-left: 6px;
   position: relative;
+  z-index: 26; /* above resizer ::before (22) and resizer hover (25) — tabs always win */
   margin-bottom: -1px;
   flex-grow: 1;
   overflow-x: auto;
@@ -286,12 +287,13 @@ body,
   height: 100%;
 }
 
-/* Grab hit-box for rows (cursor: row-resize) */
+/* Grab hit-box for rows (cursor: row-resize) — extends upward only (into safe content area),
+   never downward into the tab bar of the panel below */
 .resizer-bar[style*="cursor: row-resize"]::before {
   left: 0;
   right: 0;
-  top: -3px;
-  height: 8px;
+  top: -8px;
+  height: 9px;
   width: 100%;
 }
 
@@ -2244,8 +2246,8 @@ html:not(.enable-animations) *::after {
     width: 44px;
   }
   .resizer-bar[style*="cursor: row-resize"]::before {
-    top: -20px;
-    height: 44px;
+    top: -32px;
+    height: 33px; /* 32px upward into safe content area, 0px downward into tab bar */
   }
 }
 
