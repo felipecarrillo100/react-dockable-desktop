@@ -125,6 +125,7 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
 const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const state = useWindowManagerState();
+  const formatMessage = useFormatMessage();
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   const panel = state.panels[panelId];
@@ -164,23 +165,29 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   if (disableLivePreview) {
     const displayW = origW * scale;
     const displayH = origH * scale;
-    const icon = regEntry?.defaultOptions?.icon || <span>🔳</span>;
+    const rawTitle = panel?.title || regEntry?.defaultOptions?.title || 'Panel';
+    const title = formatLabel(rawTitle, formatMessage);
+    const initialChar = (Array.from(title)[0] || 'P').toUpperCase();
 
     return (
       <div
-        className="taskbar-item-preview-frame d-flex flex-column align-items-center justify-content-center text-muted"
+        className="taskbar-item-preview-frame d-flex align-items-center justify-content-center"
         style={{
           width: `${displayW}px`,
           height: `${displayH}px`,
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          background: 'rgba(108, 117, 125, 0.15)',
           border: '1px dashed var(--taskbar-item-border, rgba(255, 255, 255, 0.15))'
         }}
       >
-        <div className="taskbar-preview-placeholder-icon mb-1.5" style={{ transform: 'scale(1.2)', filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.4))' }}>
-          {icon}
-        </div>
-        <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.5px', opacity: 0.7, textTransform: 'uppercase' }}>
-          Active Session
+        <div
+          style={{
+            fontSize: '2rem',
+            fontWeight: 600,
+            color: 'var(--panel-title-color, var(--panel-text, rgba(255, 255, 255, 0.85)))',
+            userSelect: 'none'
+          }}
+        >
+          {initialChar}
         </div>
       </div>
     );
@@ -481,6 +488,16 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                     {panel.dirty ? ' *' : ''}
                   </span>
                 </span>
+                {options?.renderHeaderActions && (
+                  <span
+                    className="tab-header-actions ms-auto d-flex align-items-center me-1"
+                    style={{ gap: 'var(--header-button-gap, 4px)' }}
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    {options.renderHeaderActions(id)}
+                  </span>
+                )}
                 {options?.canClose !== false && (
                   <span
                     onClick={(e) => {
@@ -488,7 +505,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                       onRequestClosePanel(id);
                     }}
                     title={formatLabel(messages.closeTab, formatMessage)}
-                    className="close-tab-x ms-auto d-flex align-items-center justify-content-center"
+                    className={`close-tab-x ${options?.renderHeaderActions ? '' : 'ms-auto'} d-flex align-items-center justify-content-center`}
                     style={{ width: '18px', height: '18px' }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1241,7 +1258,12 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       {panel.dirty ? ' *' : ''}
                     </span>
                   </span>
-                  <div className="d-flex align-items-center gap-1.5" onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="d-flex align-items-center" style={{ gap: 'var(--header-button-gap, 4px)' }} onMouseDown={(e) => e.stopPropagation()}>
+                    {options?.renderHeaderActions && (
+                      <div className="window-header-actions d-flex align-items-center me-1" style={{ gap: 'var(--header-button-gap, 4px)' }}>
+                        {options.renderHeaderActions(w.id)}
+                      </div>
+                    )}
                     {options?.canDrag !== false && (
                       <button
                         type="button"
@@ -1301,30 +1323,30 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                         </svg>
                       </button>
                     )}
-                    {options?.canMinimize !== false && (
-                      <button
-                        type="button"
-                        title={formatLabel(messages.minimize, formatMessage)}
-                        onClick={() => minimizePanel(w.id)}
-                        className="custom-tab-btn"
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <path d="M5 12h14"/>
-                        </svg>
-                      </button>
-                    )}
                     <button
                       type="button"
                       title={isMaximized
                         ? formatLabel(messages.restoreSize, formatMessage)
                         : formatLabel(messages.maximize, formatMessage)}
                       onClick={() => maximizePanel(w.id)}
-                      className="custom-tab-btn"
+                      className="custom-tab-btn btn-maximize-tab"
                     >
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <rect x="4" y="4" width="16" height="16" rx="1.5"/>
                       </svg>
                     </button>
+                    {options?.canMinimize !== false && (
+                      <button
+                        type="button"
+                        title={formatLabel(messages.minimize, formatMessage)}
+                        onClick={() => minimizePanel(w.id)}
+                        className="custom-tab-btn btn-minimize-tab"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <path d="M5 12h14"/>
+                        </svg>
+                      </button>
+                    )}
                     {options?.canClose !== false && (
                       <button
                         type="button"

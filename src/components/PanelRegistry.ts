@@ -28,6 +28,8 @@ export interface PanelRegistryEntry {
     defaultStickyBottom?: boolean;
     /** Disables live WebGL rendering canvas thumbnails inside the taskbar hover popup previews. */
     disableLivePreview?: boolean;
+    /** Custom header actions renderer, placing custom components in the window/tab titlebar. */
+    renderHeaderActions?: (panelId: string) => React.ReactNode;
   };
 }
 

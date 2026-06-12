@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PanelRegistry, useFormContainer, useWindowManagerActions } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
-import { DirtyFormDemoPanel, DirtyEditorDemoPanel } from '../demo/mockupPanels';
+import { DirtyFormDemoPanel, DirtyEditorDemoPanel, ShowcaseControlCenter, CodeSnippetButton } from '../demo/mockupPanels';
 import { getReference } from '@luciad/ria/reference/ReferenceProvider.js';
 import { WebGLMap } from '@luciad/ria/view/WebGLMap.js';
 import { throttle } from "../demo-luciadria/utils/throttle.ts";
@@ -362,12 +362,22 @@ export function registerDemoPanels() {
     initialTarget: 'docked',
     canClose: false,
     canMinimize: false,
-    canDrag: false
+    canDrag: false,
+    renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
   });
-  PanelRegistry.register('editor', CodeEditor, { title: 'Code Editor', initialTarget: 'docked' });
+  PanelRegistry.register('editor', CodeEditor, { 
+    title: 'Code Editor', 
+    initialTarget: 'docked',
+    renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
+  });
   PanelRegistry.register('terminal', TerminalConsole, { title: 'Console Output', initialTarget: 'docked' });
   PanelRegistry.register('preview', PreviewOutput, { title: 'Sandbox Widget', initialTarget: 'floating' });
   PanelRegistry.register('help', HelpCenter, { title: 'Workspace Help', initialTarget: 'docked' });
+  PanelRegistry.register('showcaseControl', ShowcaseControlCenter, { 
+    title: 'Control Center', 
+    initialTarget: 'docked',
+    renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
+  });
   PanelRegistry.register('luciadMap', LuciadMapPanel, { title: 'LuciadRIA Earth 3D', initialTarget: 'docked' });
   PanelRegistry.register('layertree', LayerTree, { title: 'Layer tree', initialTarget: 'floating', favoritePosition: { x: 1000, y: 100, width: 300, height: 400 } });
   PanelRegistry.register('timecontrol', TimeControl, {
@@ -384,6 +394,15 @@ export function registerDemoPanels() {
   PanelRegistry.register('table', TablePanel, { title: 'Attribute Table', initialTarget: 'docked' });
   PanelRegistry.register('toolpanels', ToolPanel, { title: 'Toolbox Panel', initialTarget: 'docked' });
   PanelRegistry.register('panelmanager', PanelManagerForm, { title: 'Panel Registry Form', initialTarget: 'floating', favoritePosition: { x: 400, y: 150, width: 500, height: 420 } });
-  PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { title: 'Intercept Form', initialTarget: 'floating', favoritePosition: { x: 350, y: 150, width: 450, height: 420 } });
-  PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { title: 'Intercept Editor', initialTarget: 'docked' });
+  PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { 
+    title: 'Intercept Form', 
+    initialTarget: 'floating', 
+    favoritePosition: { x: 350, y: 150, width: 450, height: 420 },
+    renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
+  });
+  PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { 
+    title: 'Intercept Editor', 
+    initialTarget: 'docked',
+    renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
+  });
 }

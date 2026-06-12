@@ -212,24 +212,37 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
     openPanel(id, 'luciadMap', { title: `Leaflet Map`, initialTarget: 'floating' });
   };
 
-  const resetWorkspaceLayout = () => {
+  const resetWorkspaceLayout = React.useCallback(() => {
     const initialConfig = JSON.stringify({
       gridRoot: {
         type: 'branch',
-        orientation: 'vertical',
-        sizes: [0.65, 0.35],
+        orientation: 'horizontal',
+        sizes: [0.72, 0.28],
         children: [
           {
-            type: 'leaf',
-            id: 'group-left-top',
-            panels: ['main-map', 'main-editor'],
-            activePanelId: 'main-map',
+            type: 'branch',
+            orientation: 'vertical',
+            sizes: [0.65, 0.35],
+            children: [
+              {
+                type: 'leaf',
+                id: 'group-left-top',
+                panels: ['main-map', 'main-editor'],
+                activePanelId: 'main-editor',
+              },
+              {
+                type: 'leaf',
+                id: 'group-left-bottom',
+                panels: ['system-console', 'help-docs'],
+                activePanelId: 'system-console',
+              }
+            ]
           },
           {
             type: 'leaf',
-            id: 'group-left-bottom',
-            panels: ['system-console', 'help-docs'],
-            activePanelId: 'system-console',
+            id: 'group-right-sidebar',
+            panels: ['control-center'],
+            activePanelId: 'control-center',
           }
         ]
       },
@@ -239,44 +252,57 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'main-map': { id: 'main-map', title: 'Main Map', component: 'mainMap', state: 'docked' },
         'main-editor': { id: 'main-editor', title: 'Code Editor', component: 'editor', state: 'docked' },
         'system-console': { id: 'system-console', title: 'Console Output', component: 'terminal', state: 'docked' },
-        'help-docs': { id: 'help-docs', title: 'Help Center', component: 'help', state: 'docked' }
+        'help-docs': { id: 'help-docs', title: 'Help Center', component: 'help', state: 'docked' },
+        'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
     loadLayout(initialConfig);
-  };
+  }, [loadLayout]);
 
-  const applyDeveloperLayout = () => {
-    // 3-zone layout: Map | Editor on top, Console spanning full bottom
+  const applyDeveloperLayout = React.useCallback(() => {
     const devConfig = JSON.stringify({
       gridRoot: {
         type: 'branch',
-        orientation: 'vertical',
-        sizes: [0.65, 0.35],
+        orientation: 'horizontal',
+        sizes: [0.72, 0.28],
         children: [
           {
             type: 'branch',
-            orientation: 'horizontal',
-            sizes: [0.55, 0.45],
+            orientation: 'vertical',
+            sizes: [0.65, 0.35],
             children: [
               {
-                type: 'leaf',
-                id: 'dev-map',
-                panels: ['main-map'],
-                activePanelId: 'main-map',
+                type: 'branch',
+                orientation: 'horizontal',
+                sizes: [0.55, 0.45],
+                children: [
+                  {
+                    type: 'leaf',
+                    id: 'dev-map',
+                    panels: ['main-map'],
+                    activePanelId: 'main-map',
+                  },
+                  {
+                    type: 'leaf',
+                    id: 'dev-editor',
+                    panels: ['main-editor', 'help-docs'],
+                    activePanelId: 'main-editor',
+                  }
+                ]
               },
               {
                 type: 'leaf',
-                id: 'dev-editor',
-                panels: ['main-editor', 'help-docs'],
-                activePanelId: 'main-editor',
+                id: 'dev-console',
+                panels: ['system-console'],
+                activePanelId: 'system-console',
               }
             ]
           },
           {
             type: 'leaf',
-            id: 'dev-console',
-            panels: ['system-console'],
-            activePanelId: 'system-console',
+            id: 'dev-control',
+            panels: ['control-center'],
+            activePanelId: 'control-center',
           }
         ]
       },
@@ -289,14 +315,14 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'main-editor': { id: 'main-editor', title: 'Code Editor', component: 'editor', state: 'docked' },
         'system-console': { id: 'system-console', title: 'Console Output', component: 'terminal', state: 'docked' },
         'help-docs': { id: 'help-docs', title: 'Help Center', component: 'help', state: 'docked' },
-        'dev-layertree': { id: 'dev-layertree', title: 'Layer Tree', component: 'layertree', state: 'floating' }
+        'dev-layertree': { id: 'dev-layertree', title: 'Layer Tree', component: 'layertree', state: 'floating' },
+        'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
     loadLayout(devConfig);
-  };
+  }, [loadLayout]);
 
-  const applyEditorOnlyLayout = () => {
-    // Focused coding layout: editor takes full screen, sandbox preview floats
+  const applyEditorOnlyLayout = React.useCallback(() => {
     const editorConfig = JSON.stringify({
       gridRoot: {
         type: 'branch',
@@ -304,16 +330,29 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         sizes: [0.72, 0.28],
         children: [
           {
-            type: 'leaf',
-            id: 'editor-main',
-            panels: ['main-editor'],
-            activePanelId: 'main-editor'
+            type: 'branch',
+            orientation: 'vertical',
+            sizes: [0.75, 0.25],
+            children: [
+              {
+                type: 'leaf',
+                id: 'editor-main',
+                panels: ['main-editor'],
+                activePanelId: 'main-editor'
+              },
+              {
+                type: 'leaf',
+                id: 'editor-console',
+                panels: ['system-console'],
+                activePanelId: 'system-console'
+              }
+            ]
           },
           {
             type: 'leaf',
-            id: 'editor-console',
-            panels: ['system-console'],
-            activePanelId: 'system-console'
+            id: 'editor-control',
+            panels: ['control-center'],
+            activePanelId: 'control-center'
           }
         ]
       },
@@ -324,44 +363,57 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       panels: {
         'main-editor': { id: 'main-editor', title: 'Code Editor', component: 'editor', state: 'docked' },
         'system-console': { id: 'system-console', title: 'Console Output', component: 'terminal', state: 'docked' },
-        'editor-preview': { id: 'editor-preview', title: 'Sandbox Widget', component: 'preview', state: 'floating' }
+        'editor-preview': { id: 'editor-preview', title: 'Sandbox Widget', component: 'preview', state: 'floating' },
+        'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
     loadLayout(editorConfig);
-  };
+  }, [loadLayout]);
 
-  const applyDataAnalysisLayout = () => {
-    // Data-centric layout: table + map side by side, with overview map floating
+  const applyDataAnalysisLayout = React.useCallback(() => {
     const dataConfig = JSON.stringify({
       gridRoot: {
         type: 'branch',
-        orientation: 'vertical',
-        sizes: [0.6, 0.4],
+        orientation: 'horizontal',
+        sizes: [0.72, 0.28],
         children: [
           {
             type: 'branch',
-            orientation: 'horizontal',
+            orientation: 'vertical',
             sizes: [0.6, 0.4],
             children: [
               {
-                type: 'leaf',
-                id: 'data-map',
-                panels: ['main-map'],
-                activePanelId: 'main-map'
+                type: 'branch',
+                orientation: 'horizontal',
+                sizes: [0.6, 0.4],
+                children: [
+                  {
+                    type: 'leaf',
+                    id: 'data-map',
+                    panels: ['main-map'],
+                    activePanelId: 'main-map'
+                  },
+                  {
+                    type: 'leaf',
+                    id: 'data-tools',
+                    panels: ['help-docs', 'toolpanels-main'],
+                    activePanelId: 'help-docs'
+                  }
+                ]
               },
               {
                 type: 'leaf',
-                id: 'data-tools',
-                panels: ['help-docs', 'toolpanels-main'],
-                activePanelId: 'help-docs'
+                id: 'data-table',
+                panels: ['table-main'],
+                activePanelId: 'table-main'
               }
             ]
           },
           {
             type: 'leaf',
-            id: 'data-table',
-            panels: ['table-main'],
-            activePanelId: 'table-main'
+            id: 'data-control',
+            panels: ['control-center'],
+            activePanelId: 'control-center'
           }
         ]
       },
@@ -374,11 +426,46 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'help-docs': { id: 'help-docs', title: 'Help Center', component: 'help', state: 'docked' },
         'toolpanels-main': { id: 'toolpanels-main', title: 'Toolbox', component: 'toolpanels', state: 'docked' },
         'table-main': { id: 'table-main', title: 'Attribute Table', component: 'table', state: 'docked' },
-        'data-overview': { id: 'data-overview', title: 'Overview Map', component: 'overviewmap', state: 'floating' }
+        'data-overview': { id: 'data-overview', title: 'Overview Map', component: 'overviewmap', state: 'floating' },
+        'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
     loadLayout(dataConfig);
-  };
+  }, [loadLayout]);
+
+  // Listen for control center custom events
+  useEffect(() => {
+    const handleSkin = (e: any) => setSkin(e.detail);
+    const handleTheme = () => toggleTheme();
+    const handleLayout = (e: any) => {
+      switch (e.detail) {
+        case 'default': resetWorkspaceLayout(); break;
+        case 'developer': applyDeveloperLayout(); break;
+        case 'editor': applyEditorOnlyLayout(); break;
+        case 'data': applyDataAnalysisLayout(); break;
+      }
+    };
+
+    window.addEventListener('demo-change-skin', handleSkin);
+    window.addEventListener('demo-change-theme', handleTheme);
+    window.addEventListener('demo-apply-layout', handleLayout);
+
+    return () => {
+      window.removeEventListener('demo-change-skin', handleSkin);
+      window.removeEventListener('demo-change-theme', handleTheme);
+      window.removeEventListener('demo-apply-layout', handleLayout);
+    };
+  }, [toggleTheme, resetWorkspaceLayout, applyDeveloperLayout, applyEditorOnlyLayout, applyDataAnalysisLayout]);
+
+  // Initial layout loading effect
+  useEffect(() => {
+    const saved = localStorage.getItem('custom_window_layout');
+    if (saved) {
+      loadLayout(saved);
+    } else {
+      resetWorkspaceLayout();
+    }
+  }, [loadLayout, resetWorkspaceLayout]);
 
   // Save/Load layout helpers
   const handleSaveToLocalStorage = () => {
@@ -607,7 +694,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       {/* Top Navbar */}
       <Navbar collapseOnSelect expand="lg" bg={theme} variant={theme} className="border-bottom border-secondary-subtle py-2 px-3 shadow-sm" style={{ zIndex: 10000 }}>
         <Container fluid>
-          <Navbar.Brand href="#home" className="fw-bold d-flex align-items-center gap-2">
+          <Navbar.Brand className="fw-bold d-flex align-items-center gap-2" style={{ cursor: 'default' }}>
             <svg
               width="24"
               height="24"
@@ -623,13 +710,15 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
               <path d="M9 3v18" />
               <path d="M16 12H9" />
             </svg>
-            <span>Custom Desktop dashboard</span>
+            <span>Dockable Desktop</span>
           </Navbar.Brand>
 
           <Navbar.Toggle aria-controls="responsive-navbar-nav" />
           <Navbar.Collapse id="responsive-navbar-nav">
-            <Nav className="me-auto font-monospace" style={{ fontSize: '0.85rem' }}>
-              <Nav.Link href="#home">Home</Nav.Link>
+            <Nav className="me-auto font-monospace align-items-center" style={{ fontSize: '0.85rem' }}>
+              <span className="navbar-text me-3 font-monospace text-primary bg-primary bg-opacity-10 px-2 py-0.5 rounded border border-primary border-opacity-25" style={{ fontSize: '0.75rem' }}>
+                🚀 Interactive Showcase
+              </span>
 
               {/* Presets and layout control */}
               <NavDropdownMenu title="Workspace Presets" id="presets-dropdown">

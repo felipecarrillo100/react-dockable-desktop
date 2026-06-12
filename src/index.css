@@ -16,6 +16,7 @@
   --border-color: rgba(255, 255, 255, 0.08);
   --accent-color: #38bdf8; /* Modern Cyan/Sky-blue accent */
   --accent-glow: rgba(56, 189, 248, 0.15);
+  --header-button-gap: 4px; /* Configurable gap spacing between titlebar action buttons */
   /* Window skins variables */
   --window-bg: rgba(20, 22, 28, var(--window-opacity, 0.85));
   --window-border: rgba(255, 255, 255, 0.08);
@@ -952,13 +953,13 @@ body.resizing-col-active * {
   display: none !important;
 }
 [data-workspace-skin="macos"] .btn-close-tab {
-  background-color: #ff5f56 !important;
+  background-color: #ff5f56 !important; /* Red (Close) */
 }
-[data-workspace-skin="macos"] .custom-tab-btn:nth-child(2) {
-  background-color: #ffbd2e !important;
+[data-workspace-skin="macos"] .btn-minimize-tab {
+  background-color: #ffbd2e !important; /* Yellow (Minimize) */
 }
-[data-workspace-skin="macos"] .custom-tab-btn:nth-child(3) {
-  background-color: #27c93f !important;
+[data-workspace-skin="macos"] .btn-maximize-tab {
+  background-color: #27c93f !important; /* Green (Maximize) */
 }
 [data-workspace-skin="macos"] .btn-anchor-tab {
   /* Default: Neutral Graphite/Slate dot when inactive */

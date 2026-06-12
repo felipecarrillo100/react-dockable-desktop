@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PanelRegistry, useFormContainer, usePanelContext } from '../src/index';
+import {
+  PanelRegistry,
+  useFormContainer,
+  usePanelContext,
+  useWindowManagerState,
+  useWindowManagerActions,
+  usePanelActions,
+  ConfirmationForm,
+} from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import Editor from '@monaco-editor/react';
 import L from 'leaflet';
@@ -14,8 +22,421 @@ L.Icon.Default.mergeOptions({
 });
 
 // ==========================================
+// 0. API Code Snippets for Live Inspection
+// ==========================================
+
+const CODE_SNIPPETS: Record<string, string> = {
+  editor: `// Code Editor Component Registration
+PanelRegistry.register('editor', CodeEditor, {
+  title: 'Code Editor',
+  icon: '📝',
+  initialTarget: 'docked'
+});
+
+// Marking a form/editor as containing unsaved changes (dirty state)
+const container = useFormContainer();
+container.setDirty(true); // Blocks close and triggers ConfirmationForm`,
+
+  dirtyForm: `// Unsaved Changes Confirmation Prompt Setup
+PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, {
+  title: 'Intercept Form',
+  icon: '⚠️',
+  initialTarget: 'floating'
+});
+
+// When close is clicked, WindowManager calls requestClosePanel(id, {
+//   onConfirm: (customOpts) => new Promise((resolve) => {
+//     openModal(ConfirmationForm, {
+//       title: customOpts?.title || "Unsaved Changes",
+//       message: "Discard your changes and close the panel?",
+//       onOK: () => resolve(true),      // Confirms close
+//       onCancel: () => resolve(false)  // Cancels close
+//     });
+//   })
+// })`,
+
+  mainMap: `// 1. Locked Main Map Panel (Persistent Layout Anchor)
+PanelRegistry.register('mainMap', MainMap, {
+  title: 'Main Map',
+  icon: '🗺️',
+  initialTarget: 'docked',
+  canClose: false,      // Locked: cannot be closed
+  canMinimize: false,   // Locked: cannot be minimized
+  canDrag: false,       // Locked: cannot be dragged out of layout
+  disableLivePreview: true, // Live thumbnail preview disabled
+  renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
+});`,
+  luciadMap: `// 2. Leaflet Map Panel (Supports multiple floating/draggable instances)
+PanelRegistry.register('luciadMap', LeafletMapPanel, {
+  title: 'Leaflet Map',
+  icon: '🌍',
+  initialTarget: 'docked',  // Can be spawned as a floating window dynamically
+  disableLivePreview: true, // Live thumbnail preview disabled for interactive map
+  // Note: Inherits default behavior (canClose: true, canMinimize: true, canDrag: true)
+  renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="luciadMap" />
+});`,
+
+  showcaseControl: `// Dockable Control Center Dashboard Setup
+PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
+  title: 'Control Center',
+  icon: '🚀',
+  initialTarget: 'docked'
+});
+
+// Modifying the layout dynamically
+const { loadLayout } = useWindowManagerActions();
+loadLayout(JSON_LAYOUT_STRING);`
+};
+
+export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({ panelId, type }) => {
+  const { openModal } = usePanelActions();
+  const snippet = CODE_SNIPPETS[type] || '// No snippet available';
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const SnippetModal: React.FC = () => {
+      const { requestClose } = useFormContainer();
+      const [copied, setCopied] = useState(false);
+
+      const handleCopy = () => {
+        navigator.clipboard.writeText(snippet);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      return (
+        <div className="p-3 text-white text-start d-flex flex-column h-100 font-monospace" style={{ minHeight: '320px' }}>
+          <div className="flex-grow-1 overflow-auto bg-dark bg-opacity-40 p-3 rounded border border-secondary border-opacity-35 position-relative">
+            <pre className="m-0 text-info" style={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap', fontFamily: 'var(--bs-font-monospace)' }}>
+              {snippet}
+            </pre>
+            <button
+              onClick={handleCopy}
+              className={`btn btn-xs position-absolute end-0 top-0 m-2 font-monospace ${copied ? 'btn-success' : 'btn-outline-light'}`}
+              style={{ fontSize: '0.7rem' }}
+            >
+              {copied ? '✅ Copied!' : '📋 Copy'}
+            </button>
+          </div>
+          <div className="d-flex justify-content-end mt-3 border-top border-secondary border-opacity-30 pt-3">
+            <button className="btn btn-sm btn-outline-secondary" onClick={() => requestClose()}>
+              Close
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    openModal(SnippetModal, {}, { title: `✏️ API Blueprint: ${type}`, size: 'medium' });
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="btn btn-link p-0 d-flex align-items-center justify-content-center rounded-circle border-0 text-secondary"
+      style={{
+        width: '20px',
+        height: '20px',
+        backgroundColor: 'var(--panel-card-border)',
+        opacity: 0.8,
+        transition: 'all 0.2s ease',
+      }}
+      title="Inspect Panel API Code"
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ verticalAlign: 'middle' }}>
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+      </svg>
+    </button>
+  );
+};
+
+// ==========================================
 // 1. Panel Mockup Components
 // ==========================================
+
+export const ShowcaseControlCenter: React.FC = () => {
+  const state = useWindowManagerState();
+  const { openPanel } = useWindowManagerActions();
+  const { openLeftPanel, openRightPanel } = usePanelActions();
+  const [activeTab, setActiveTab] = useState<'tour' | 'presets' | 'theme' | 'monitor'>('tour');
+
+  // Tutorial checklist state
+  const [steps, setSteps] = useState({
+    drag: false,
+    float: false,
+    minimize: false,
+    dirty: false,
+    drawer: false,
+  });
+
+  const markStep = (step: keyof typeof steps) => {
+    setSteps(prev => ({ ...prev, [step]: true }));
+  };
+
+  // Helper to change skin
+  const changeSkin = (skin: string) => {
+    window.dispatchEvent(new CustomEvent('demo-change-skin', { detail: skin }));
+  };
+
+  // Helper to toggle theme
+  const toggleTheme = () => {
+    window.dispatchEvent(new CustomEvent('demo-change-theme'));
+  };
+
+  // Helper for drawers
+  const triggerDrawer = (side: 'left' | 'right') => {
+    markStep('drawer');
+    if (side === 'left') {
+      openLeftPanel(
+        PanelRegistry.get('dirtyForm')?.Component || (() => null),
+        {},
+        { title: 'Left Side Panel (Dirty Intercept)' }
+      );
+    } else {
+      openRightPanel(
+        PanelRegistry.get('dirtyForm')?.Component || (() => null),
+        {},
+        { title: 'Right Side Panel (Dirty Intercept)' }
+      );
+    }
+  };
+
+  // Preset Layout Configs
+  const resetLayout = () => {
+    window.dispatchEvent(new CustomEvent('demo-apply-layout', { detail: 'default' }));
+  };
+
+  const applyDev = () => {
+    window.dispatchEvent(new CustomEvent('demo-apply-layout', { detail: 'developer' }));
+  };
+
+  const applyEditor = () => {
+    window.dispatchEvent(new CustomEvent('demo-apply-layout', { detail: 'editor' }));
+  };
+
+  const applyData = () => {
+    window.dispatchEvent(new CustomEvent('demo-apply-layout', { detail: 'data' }));
+  };
+
+  // Check if any floating window exists or was closed
+  useEffect(() => {
+    if (state.floating.length > 0) {
+      markStep('float');
+    }
+    if (state.minimized.length > 0) {
+      markStep('minimize');
+    }
+  }, [state.floating, state.minimized]);
+
+  return (
+    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex flex-column" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
+      <div className="border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between" style={{ borderColor: 'var(--panel-card-border)' }}>
+        <h5 className="m-0 text-primary fw-bold d-flex align-items-center gap-2" style={{ fontSize: '1.05rem' }}>
+          🚀 Control Center
+        </h5>
+        <span className="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-35 font-monospace small px-2 py-0.5" style={{ fontSize: '0.7rem' }}>
+          Interactive
+        </span>
+      </div>
+
+      {/* Tabs */}
+      <div className="d-flex border-bottom mb-3" style={{ borderColor: 'var(--panel-card-border)', fontSize: '0.8rem' }}>
+        <button
+          className={`btn btn-link py-1 px-2 text-decoration-none font-monospace ${activeTab === 'tour' ? 'text-primary border-bottom border-primary fw-bold' : 'text-secondary'}`}
+          onClick={() => setActiveTab('tour')}
+          style={{ fontSize: '0.75rem' }}
+        >
+          🎓 Tour Guide
+        </button>
+        <button
+          className={`btn btn-link py-1 px-2 text-decoration-none font-monospace ${activeTab === 'presets' ? 'text-primary border-bottom border-primary fw-bold' : 'text-secondary'}`}
+          onClick={() => setActiveTab('presets')}
+          style={{ fontSize: '0.75rem' }}
+        >
+          🗂 Presets
+        </button>
+        <button
+          className={`btn btn-link py-1 px-2 text-decoration-none font-monospace ${activeTab === 'theme' ? 'text-primary border-bottom border-primary fw-bold' : 'text-secondary'}`}
+          onClick={() => setActiveTab('theme')}
+          style={{ fontSize: '0.75rem' }}
+        >
+          🎨 Customizer
+        </button>
+        <button
+          className={`btn btn-link py-1 px-2 text-decoration-none font-monospace ${activeTab === 'monitor' ? 'text-primary border-bottom border-primary fw-bold' : 'text-secondary'}`}
+          onClick={() => setActiveTab('monitor')}
+          style={{ fontSize: '0.75rem' }}
+        >
+          📊 Stats
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-grow-1 overflow-auto pe-1" style={{ fontSize: '0.8rem' }}>
+        {activeTab === 'tour' && (
+          <div className="d-flex flex-column gap-3">
+            <div className="p-2 rounded bg-body-tertiary bg-opacity-10 border border-secondary border-opacity-20 text-muted small">
+              Welcome to the Interactive Workspace Showcase! Walk through the tasks below to master the desktop features.
+            </div>
+
+            <div className="d-flex flex-column gap-2">
+              {/* Step 1 */}
+              <div className="p-2 rounded border" style={{ borderColor: steps.drag ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="fw-semibold">1. Grid Drag & Split</span>
+                  <input type="checkbox" className="form-check-input" checked={steps.drag} onChange={(e) => setSteps(s => ({ ...s, drag: e.target.checked }))} />
+                </div>
+                <p className="text-secondary small mt-1 mb-2">Drag any tab header to the edge of another tab or the grid border to tile the layout.</p>
+                <button className="btn btn-xs btn-outline-primary py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => { markStep('drag'); openPanel(`new-test-${Date.now()}`, 'help', { title: 'Test Widget' }); }}>
+                  ➕ Spawn Drag-Test Tab
+                </button>
+              </div>
+
+              {/* Step 2 */}
+              <div className="p-2 rounded border" style={{ borderColor: steps.float ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="fw-semibold">2. Floating Windows</span>
+                  <input type="checkbox" className="form-check-input" checked={steps.float} readOnly />
+                </div>
+                <p className="text-secondary small mt-1 mb-2">Float a tab using the double window icon in the header, or spawn a floating window directly.</p>
+                <button className="btn btn-xs btn-outline-primary py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => openPanel(`floating-tool-${Date.now()}`, 'help', { title: 'Floating Utility', initialTarget: 'floating' })}>
+                  🪟 Spawn Floating Window
+                </button>
+              </div>
+
+              {/* Step 3 */}
+              <div className="p-2 rounded border" style={{ borderColor: steps.minimize ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="fw-semibold">3. Minimize & Taskbar</span>
+                  <input type="checkbox" className="form-check-input" checked={steps.minimize} readOnly />
+                </div>
+                <p className="text-secondary small mt-1 mb-2">Minimize a floating window to see it shrink into the bottom taskbar. Click the taskbar item to restore it.</p>
+              </div>
+
+              {/* Step 4 */}
+              <div className="p-2 rounded border" style={{ borderColor: steps.dirty ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="fw-semibold">4. Unsaved Close Intercept</span>
+                  <input type="checkbox" className="form-check-input" checked={steps.dirty} onChange={(e) => setSteps(s => ({ ...s, dirty: e.target.checked }))} />
+                </div>
+                <p className="text-secondary small mt-1 mb-2">Edit content in the editor to make it "dirty", then close it to trigger the custom confirmation prompt.</p>
+                <button className="btn btn-xs btn-outline-warning text-dark py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => { markStep('dirty'); openPanel('dirtyeditor-main', 'dirtyEditor'); }}>
+                  ⚠️ Open Dirty Editor
+                </button>
+              </div>
+
+              {/* Step 5 */}
+              <div className="p-2 rounded border" style={{ borderColor: steps.drawer ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="fw-semibold">5. Slide Drawer Menus</span>
+                  <input type="checkbox" className="form-check-input" checked={steps.drawer} readOnly />
+                </div>
+                <p className="text-secondary small mt-1 mb-2">Open collapsible side drawer panels (left or right) to access sidebar utilities.</p>
+                <div className="d-flex gap-2">
+                  <button className="btn btn-xs btn-outline-info py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => triggerDrawer('left')}>
+                    🚪 Left Drawer
+                  </button>
+                  <button className="btn btn-xs btn-outline-info py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => triggerDrawer('right')}>
+                    🚪 Right Drawer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'presets' && (
+          <div className="d-flex flex-column gap-3">
+            <h6 className="text-uppercase font-monospace text-secondary mb-1" style={{ fontSize: '0.75rem' }}>Layout Templates</h6>
+            <div className="d-flex flex-column gap-2">
+              <button className="btn btn-sm btn-outline-light text-start p-2 d-flex flex-column gap-1" onClick={applyDev}>
+                <span className="fw-bold">🗺️ Developer Layout</span>
+                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Map and Code Editor on top, System Console on bottom.</span>
+              </button>
+              <button className="btn btn-sm btn-outline-light text-start p-2 d-flex flex-column gap-1" onClick={applyEditor}>
+                <span className="fw-bold">✏️ Code Editor Focus</span>
+                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Maximize editor window with a floating terminal preview.</span>
+              </button>
+              <button className="btn btn-sm btn-outline-light text-start p-2 d-flex flex-column gap-1" onClick={applyData}>
+                <span className="fw-bold">📊 Data Analysis</span>
+                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Full screen map and docked Attribute Database table.</span>
+              </button>
+              <button className="btn btn-sm btn-outline-danger text-start p-2 d-flex flex-column gap-1" onClick={resetLayout}>
+                <span className="fw-bold text-danger">🔄 Reset Default Layout</span>
+                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Restore original workspace split grid configuration.</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'theme' && (
+          <div className="d-flex flex-column gap-3">
+            <div>
+              <h6 className="text-uppercase font-monospace text-secondary mb-2" style={{ fontSize: '0.75rem' }}>Select Skin</h6>
+              <div className="row g-2">
+                {['vscode', 'macos', 'chrome', 'slate', 'nord', 'obsidian', 'tokyo'].map((s) => (
+                  <div key={s} className="col-6">
+                    <button
+                      className={`btn btn-sm w-100 text-capitalize py-1 ${state.skin === s ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => changeSkin(s)}
+                      style={{ fontSize: '0.7rem' }}
+                    >
+                      {s === 'macos' ? 'macOS Glass' : s}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-top border-secondary border-opacity-25 pt-3">
+              <h6 className="text-uppercase font-monospace text-secondary mb-2" style={{ fontSize: '0.75rem' }}>Global Theme</h6>
+              <button className="btn btn-sm btn-outline-secondary w-100 py-1.5 font-monospace" onClick={toggleTheme}>
+                🌓 Toggle Dark / Light Mode
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'monitor' && (
+          <div className="d-flex flex-column gap-3 font-monospace small">
+            <div className="p-2.5 rounded bg-body-tertiary bg-opacity-25 border border-secondary border-opacity-15">
+              <div className="d-flex justify-content-between mb-1.5">
+                <span className="text-secondary">Open Panels:</span>
+                <span className="text-white fw-bold">{Object.keys(state.panels).length}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-1.5">
+                <span className="text-secondary">Floating Windows:</span>
+                <span className="text-warning fw-bold">{state.floating.length}</span>
+              </div>
+              <div className="d-flex justify-content-between mb-1.5">
+                <span className="text-secondary">Minimized to Taskbar:</span>
+                <span className="text-info fw-bold">{state.minimized.length}</span>
+              </div>
+            </div>
+
+            <div>
+              <h6 className="text-uppercase font-monospace text-secondary mb-2" style={{ fontSize: '0.75rem' }}>Active Panels list</h6>
+              <div className="d-flex flex-column gap-1.5 max-height-200 overflow-auto">
+                {Object.values(state.panels).map(p => (
+                  <div key={p.id} className="d-flex justify-content-between align-items-center p-1 rounded border border-secondary border-opacity-10 bg-body-tertiary bg-opacity-10">
+                    <span className="text-truncate" style={{ maxWidth: '120px' }}>{p.icon} {p.title}</span>
+                    <span className={`badge ${p.state === 'floating' ? 'bg-warning text-dark' : p.state === 'minimized' ? 'bg-info' : 'bg-secondary'}`} style={{ fontSize: '0.65rem' }}>
+                      {p.state}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 const defaultCode = `import React from 'react';
 import { WindowManager, WindowManagerProvider } from 'dockable-windows';
@@ -686,40 +1107,53 @@ export function registerDemoPanels() {
         canClose: false,
         canMinimize: false,
         canDrag: false,
-        disableLivePreview: true
+        disableLivePreview: true,
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
     PanelRegistry.register('editor', CodeEditor, { 
         title: 'Code Editor', 
         icon: '⚛️',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
     PanelRegistry.register('terminal', TerminalConsole, { 
         title: 'Console Output', 
         icon: '💻',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
     PanelRegistry.register('preview', PreviewOutput, { 
         title: 'Sandbox Widget', 
         icon: '📦',
-        initialTarget: 'floating' 
+        initialTarget: 'floating',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
     PanelRegistry.register('help', HelpCenter, { 
         title: 'Workspace Help', 
         icon: '❓',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
+    });
+    PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
+        title: 'Control Center',
+        icon: '🚀',
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
     });
     PanelRegistry.register('luciadMap', LeafletMapPanel, { 
         title: 'Leaflet Map', 
         icon: '🌍',
         initialTarget: 'docked',
-        disableLivePreview: true 
+        disableLivePreview: true,
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="luciadMap" />
     });
     PanelRegistry.register('layertree', LayerTree, { 
         title: 'Layer tree', 
         icon: '🌿',
         initialTarget: 'floating', 
         favoritePosition: { x: 10, y: 50, width: 300, height: 400 }, 
-        defaultStickyRight: true 
+        defaultStickyRight: true,
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
     PanelRegistry.register('timecontrol', TimeControl, {
         title: 'Time Control bar',
@@ -730,39 +1164,46 @@ export function registerDemoPanels() {
             y: 'calc(100% - 130px)',
             width: 'calc(100% - 20px)',
             height: '100px'
-        }
+        },
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
     PanelRegistry.register('overviewmap', OverviewMap, { 
         title: 'Overview locator', 
         icon: '👁️',
         initialTarget: 'floating', 
-        favoritePosition: { x: 80, y: 500, width: 220, height: 180 } 
+        favoritePosition: { x: 80, y: 500, width: 220, height: 180 },
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
     PanelRegistry.register('table', TablePanel, { 
         title: 'Attribute Table', 
         icon: '📋',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
     PanelRegistry.register('toolpanels', ToolPanel, { 
         title: 'Toolbox Panel', 
         icon: '🔧',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
     PanelRegistry.register('panelmanager', PanelManagerForm, { 
         title: 'Panel Registry Form', 
         icon: '⚙️',
         initialTarget: 'floating', 
-        favoritePosition: { x: 400, y: 150, width: 500, height: 420 } 
+        favoritePosition: { x: 400, y: 150, width: 500, height: 420 },
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
     });
     PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { 
         title: 'Intercept Form', 
         icon: '⚠️',
         initialTarget: 'floating', 
-        favoritePosition: { x: 350, y: 150, width: 450, height: 420 } 
+        favoritePosition: { x: 350, y: 150, width: 450, height: 420 },
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
     PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { 
         title: 'Intercept Editor', 
         icon: '📝',
-        initialTarget: 'docked' 
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
 }
