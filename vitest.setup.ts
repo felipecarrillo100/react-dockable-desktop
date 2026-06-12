@@ -20,3 +20,19 @@ if (typeof globalThis.MutationObserver === 'undefined') {
     takeRecords() { return []; }
   };
 }
+
+// jsdom does not implement Pointer Events capture APIs — stub them out
+if (typeof Element.prototype.setPointerCapture === 'undefined') {
+  Element.prototype.setPointerCapture = function(_pointerId: number) {};
+}
+if (typeof Element.prototype.releasePointerCapture === 'undefined') {
+  Element.prototype.releasePointerCapture = function(_pointerId: number) {};
+}
+if (typeof Element.prototype.hasPointerCapture === 'undefined') {
+  Element.prototype.hasPointerCapture = function(_pointerId: number) { return false; };
+}
+
+// jsdom does not implement navigator.vibrate — stub it out
+if (typeof navigator.vibrate === 'undefined') {
+  Object.defineProperty(navigator, 'vibrate', { value: () => true, configurable: true });
+}

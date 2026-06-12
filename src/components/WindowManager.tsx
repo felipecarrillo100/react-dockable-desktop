@@ -311,7 +311,7 @@ interface WorkspaceGridProps {
   onTabRightClick: (id: string, e: React.MouseEvent) => void;
   activeDropZone: { leafId: string; position: DropPosition } | null;
   onHoverDropZone: (leafId: string, position: DropPosition | null) => void;
-  onTabDragStart: (id: string, e: React.MouseEvent) => void;
+  onTabDragStart: (id: string, e: React.PointerEvent) => void;
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
@@ -327,47 +327,44 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
 
   const isRow = node.orientation === 'horizontal';
 
-  const handleResizerMouseDown = (idx: number, e: React.MouseEvent) => {
+  const handleResizerPointerDown = (idx: number, e: React.PointerEvent) => {
     e.preventDefault();
+    const resizerEl = e.currentTarget as HTMLDivElement;
+    resizerEl.setPointerCapture(e.pointerId);
+
     const startOffset = isRow ? e.clientX : e.clientY;
     const startSizes = [...node.sizes];
 
-    // Add active classes directly for zero-latency DOM responsiveness during drag
-    const resizerEl = e.currentTarget as HTMLDivElement;
     resizerEl.classList.add('active');
     document.body.classList.add('resizing-active', isRow ? 'resizing-row-active' : 'resizing-col-active');
 
-    // Capture the parent element and its size synchronously on mousedown
-    const parentEl = e.currentTarget.parentElement;
+    const parentEl = resizerEl.parentElement;
     const parentSize = parentEl
       ? (isRow ? parentEl.clientWidth : parentEl.clientHeight)
       : (isRow ? 1000 : 800);
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const currentOffset = isRow ? moveEvent.clientX : moveEvent.clientY;
-      const delta = currentOffset - startOffset;
-
+    const onMove = (me: PointerEvent) => {
+      const delta = (isRow ? me.clientX : me.clientY) - startOffset;
       const deltaPercentage = delta / parentSize;
-
       const newSizes = [...startSizes];
       newSizes[idx] += deltaPercentage;
       newSizes[idx + 1] -= deltaPercentage;
-
-      // Restrict range bounds
       if (newSizes[idx] > 0.1 && newSizes[idx + 1] > 0.1) {
         updateSplitSizes(path, newSizes);
       }
     };
 
-    const handleMouseUp = () => {
+    const onEnd = () => {
       resizerEl.classList.remove('active');
       document.body.classList.remove('resizing-active', 'resizing-row-active', 'resizing-col-active');
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      resizerEl.removeEventListener('pointermove', onMove);
+      resizerEl.removeEventListener('pointerup', onEnd);
+      resizerEl.removeEventListener('pointercancel', onEnd);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    resizerEl.addEventListener('pointermove', onMove);
+    resizerEl.addEventListener('pointerup', onEnd);
+    resizerEl.addEventListener('pointercancel', onEnd);
   };
 
   return (
@@ -383,7 +380,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
             </div>
             {idx < node.children.length - 1 && (
               <div
-                onMouseDown={(e) => handleResizerMouseDown(idx, e)}
+                onPointerDown={(e) => handleResizerPointerDown(idx, e)}
                 style={{
                   cursor: isRow ? 'col-resize' : 'row-resize',
                   width: isRow ? '1px' : '100%',
@@ -405,7 +402,7 @@ interface LeafGroupProps {
   onTabRightClick: (id: string, e: React.MouseEvent) => void;
   activeDropZone: { leafId: string; position: DropPosition } | null;
   onHoverDropZone: (leafId: string, position: DropPosition | null) => void;
-  onTabDragStart: (id: string, e: React.MouseEvent) => void;
+  onTabDragStart: (id: string, e: React.PointerEvent) => void;
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
@@ -436,12 +433,12 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         <div
           className="tab-headers-container"
           style={{ scrollbarWidth: 'none' }}
-          onMouseMove={(e) => {
+          onPointerMove={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
               onTabHover(leaf.id, 'EMPTY', leaf.panels.length, 'right');
             }
           }}
-          onMouseLeave={(e) => {
+          onPointerLeave={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
               onTabHover(leaf.id, '', -1, null);
             }
@@ -470,22 +467,25 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             return (
               <div
                 key={id}
+                data-tab-id={id}
+                data-leaf-id={leaf.id}
+                data-tab-index={String(idx)}
                 onClick={() => selectTab(id)}
-                onMouseDown={(e) => {
+                onPointerDown={(e) => {
                   if (options?.canDrag !== false) {
                     onTabDragStart(id, e);
                   }
                 }}
                 onContextMenu={(e) => onTabRightClick(id, e)}
-                onMouseMove={(e) => {
-                  if (state.draggedPanelId) {
+                onPointerMove={(e) => {
+                  if (state.draggedPanelId && e.pointerType !== 'touch') {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const relativeX = e.clientX - rect.left;
                     const side = relativeX < rect.width / 2 ? 'left' : 'right';
                     onTabHover(leaf.id, id, idx, side);
                   }
                 }}
-                onMouseLeave={() => {
+                onPointerLeave={() => {
                   if (state.draggedPanelId) {
                     onTabHover(leaf.id, '', -1, null);
                   }
@@ -504,7 +504,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                   <span
                     className="tab-header-actions"
                     onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     {options.renderHeaderActions(id)}
                   </span>
@@ -560,40 +560,50 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             <div className="dock-target-cross">
               {/* Top target */}
               <div
-                onMouseEnter={() => onHoverDropZone(leaf.id, 'top')}
-                onMouseLeave={() => onHoverDropZone(leaf.id, null)}
+                data-leaf-id={leaf.id}
+                data-drop-zone="top"
+                onPointerEnter={() => onHoverDropZone(leaf.id, 'top')}
+                onPointerLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-top"
               >
                 ▲
               </div>
               {/* Bottom target */}
               <div
-                onMouseEnter={() => onHoverDropZone(leaf.id, 'bottom')}
-                onMouseLeave={() => onHoverDropZone(leaf.id, null)}
+                data-leaf-id={leaf.id}
+                data-drop-zone="bottom"
+                onPointerEnter={() => onHoverDropZone(leaf.id, 'bottom')}
+                onPointerLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-bottom"
               >
                 ▼
               </div>
               {/* Left target */}
               <div
-                onMouseEnter={() => onHoverDropZone(leaf.id, 'left')}
-                onMouseLeave={() => onHoverDropZone(leaf.id, null)}
+                data-leaf-id={leaf.id}
+                data-drop-zone="left"
+                onPointerEnter={() => onHoverDropZone(leaf.id, 'left')}
+                onPointerLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-left"
               >
                 ◀
               </div>
               {/* Right target */}
               <div
-                onMouseEnter={() => onHoverDropZone(leaf.id, 'right')}
-                onMouseLeave={() => onHoverDropZone(leaf.id, null)}
+                data-leaf-id={leaf.id}
+                data-drop-zone="right"
+                onPointerEnter={() => onHoverDropZone(leaf.id, 'right')}
+                onPointerLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-right"
               >
                 ▶
               </div>
               {/* Center target */}
               <div
-                onMouseEnter={() => onHoverDropZone(leaf.id, 'center')}
-                onMouseLeave={() => onHoverDropZone(leaf.id, null)}
+                data-leaf-id={leaf.id}
+                data-drop-zone="center"
+                onPointerEnter={() => onHoverDropZone(leaf.id, 'center')}
+                onPointerLeave={() => onHoverDropZone(leaf.id, null)}
                 className="dock-target-box dock-target-center"
               >
                 ▣
@@ -715,72 +725,181 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     activeDropZoneRef.current = val;
   };
 
-  const handleTabDragStart = (id: string, e: React.MouseEvent) => {
-    // Only handle left click drags
-    if (e.button !== 0) return;
+  // Used during touch drag (pointer capture suppresses hover events on other elements)
+  const updateHoverFromPoint = (x: number, y: number) => {
+    const elements = document.elementsFromPoint(x, y);
+    let foundDropZone = false;
+    let foundEdge = false;
+    let foundTab = false;
 
+    for (const el of elements) {
+      if (!(el instanceof HTMLElement)) continue;
+
+      if (!foundDropZone && el.dataset.dropZone) {
+        const leafId = el.dataset.leafId;
+        if (leafId) {
+          const pos = el.dataset.dropZone as DropPosition;
+          setActiveDropZone({ leafId, position: pos });
+          activeDropZoneRef.current = { leafId, position: pos };
+          foundDropZone = true;
+        }
+      }
+
+      if (!foundEdge && el.dataset.edgeTrigger) {
+        setActiveEdgeDrop(el.dataset.edgeTrigger as SplitDirection);
+        foundEdge = true;
+      }
+
+      if (!foundTab && el.dataset.tabId) {
+        const leafId = el.dataset.leafId;
+        const tabIdx = parseInt(el.dataset.tabIndex || '0', 10);
+        if (leafId) {
+          const rect = el.getBoundingClientRect();
+          const side = (x - rect.left) < rect.width / 2 ? 'left' : 'right';
+          setHoveredTab({ leafId, panelId: el.dataset.tabId, index: tabIdx, side });
+          hoveredTabRef.current = { leafId, panelId: el.dataset.tabId, index: tabIdx, side };
+          foundTab = true;
+        }
+      }
+
+      if (foundDropZone && foundEdge && foundTab) break;
+    }
+
+    if (!foundDropZone) { setActiveDropZone(null); activeDropZoneRef.current = null; }
+    if (!foundEdge) setActiveEdgeDrop(null);
+    if (!foundTab) { setHoveredTab(null); hoveredTabRef.current = null; }
+  };
+
+  const LONG_PRESS_MS = 300;
+  const CANCEL_MOVE_PX = 8;
+
+  const clearDragState = () => {
+    setDraggedPanelId(null);
+    setActiveDropZone(null);
+    activeDropZoneRef.current = null;
+    setHoveredTab(null);
+    hoveredTabRef.current = null;
+    setActiveEdgeDrop(null);
+  };
+
+  const executeDrop = (id: string, me: PointerEvent) => {
+    const dropZone = activeDropZoneRef.current;
+    const targetTab = hoveredTabRef.current;
+    const edgeDrop = activeEdgeDropRef.current;
+
+    if (edgeDrop) {
+      dockPanelToWorkspaceEdge(id, edgeDrop);
+    } else if (targetTab) {
+      let targetIndex = targetTab.index;
+      if (targetTab.side === 'right') targetIndex += 1;
+      movePanelOrder(id, targetTab.leafId, targetIndex);
+    } else if (dropZone) {
+      dockPanelToGroup(id, dropZone.leafId, dropZone.position);
+    } else {
+      floatPanel(id, { x: me.clientX - 150, y: me.clientY - 15, width: 450, height: 350 });
+    }
+    clearDragState();
+  };
+
+  const handleTabDragStart = (id: string, e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    const el = e.currentTarget as HTMLElement;
     const startX = e.clientX;
     const startY = e.clientY;
-    let dragStarted = false;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
+    if (e.pointerType === 'touch') {
+      const pointerId = e.pointerId;
+      let cancelled = false;
 
-      // Threshold trigger (5px)
-      if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        dragStarted = true;
-        setDraggedPanelId(id);
-      }
+      const cancel = () => {
+        cancelled = true;
+        clearTimeout(timer);
+        el.removeEventListener('pointermove', onPreMove);
+        el.removeEventListener('pointerup', cancel);
+        el.removeEventListener('pointercancel', cancel);
+      };
 
-      if (dragStarted) {
-        setDragPos({ x: moveEvent.clientX, y: moveEvent.clientY });
-      }
-    };
+      const onPreMove = (me: PointerEvent) => {
+        if (Math.hypot(me.clientX - startX, me.clientY - startY) > CANCEL_MOVE_PX) cancel();
+      };
 
-    const handleMouseUp = (moveEvent: MouseEvent) => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUpWrapper);
+      const timer = setTimeout(() => {
+        if (cancelled) return;
+        el.removeEventListener('pointermove', onPreMove);
+        el.removeEventListener('pointerup', cancel);
+        el.removeEventListener('pointercancel', cancel);
 
-      if (dragStarted) {
-        const dropZone = activeDropZoneRef.current;
-        const targetTab = hoveredTabRef.current;
-        const edgeDrop = activeEdgeDropRef.current;
+        try { el.setPointerCapture(pointerId); } catch { return; }
+        el.classList.add('long-press-active');
+        if (navigator.vibrate) navigator.vibrate(10);
 
-        if (edgeDrop) {
-          dockPanelToWorkspaceEdge(id, edgeDrop);
-        } else if (targetTab) {
-          let targetIndex = targetTab.index;
-          if (targetTab.side === 'right') {
-            targetIndex += 1;
+        // Long-press captured: move → drag, release → context menu
+        let dragStarted = false;
+
+        const onMove = (me: PointerEvent) => {
+          if (!dragStarted) {
+            dragStarted = true;
+            setDraggedPanelId(id);
           }
-          movePanelOrder(id, targetTab.leafId, targetIndex);
-        } else if (dropZone) {
-          dockPanelToGroup(id, dropZone.leafId, dropZone.position);
-        } else {
-          // Float at dropped coordinates
-          floatPanel(id, {
-            x: moveEvent.clientX - 150,
-            y: moveEvent.clientY - 15,
-            width: 450,
-            height: 350
-          });
+          setDragPos({ x: me.clientX, y: me.clientY });
+          updateHoverFromPoint(me.clientX, me.clientY);
+        };
+
+        const onEnd = (me: PointerEvent) => {
+          el.classList.remove('long-press-active');
+          el.removeEventListener('pointermove', onMove);
+          el.removeEventListener('pointerup', onEnd);
+          el.removeEventListener('pointercancel', onCancel);
+
+          if (dragStarted) {
+            executeDrop(id, me);
+          } else {
+            // Release without drag → context menu
+            handleTabRightClick(id, me as unknown as React.MouseEvent);
+          }
+        };
+
+        const onCancel = () => {
+          el.classList.remove('long-press-active');
+          el.removeEventListener('pointermove', onMove);
+          el.removeEventListener('pointerup', onEnd);
+          el.removeEventListener('pointercancel', onCancel);
+          if (dragStarted) clearDragState();
+        };
+
+        el.addEventListener('pointermove', onMove);
+        el.addEventListener('pointerup', onEnd);
+        el.addEventListener('pointercancel', onCancel);
+      }, LONG_PRESS_MS);
+
+      el.addEventListener('pointermove', onPreMove);
+      el.addEventListener('pointerup', cancel);
+      el.addEventListener('pointercancel', cancel);
+    } else {
+      // Mouse / pen: window-level listeners WITHOUT setPointerCapture so that
+      // onPointerEnter/Leave on drop zones and edge triggers still fire normally.
+      let dragStarted = false;
+
+      const onMove = (me: PointerEvent) => {
+        const dx = me.clientX - startX;
+        const dy = me.clientY - startY;
+        if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+          dragStarted = true;
+          setDraggedPanelId(id);
         }
-        setDraggedPanelId(null);
-        setActiveDropZone(null);
-        activeDropZoneRef.current = null;
-        setHoveredTab(null);
-        hoveredTabRef.current = null;
-        setActiveEdgeDrop(null);
-      }
-    };
+        if (dragStarted) setDragPos({ x: me.clientX, y: me.clientY });
+      };
 
-    const handleMouseUpWrapper = (moveEvent: MouseEvent) => {
-      handleMouseUp(moveEvent);
-    };
+      const onEnd = (me: PointerEvent) => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        if (dragStarted) executeDrop(id, me);
+      };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUpWrapper);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+    }
   };
 
   const handleTabRightClick = (id: string, e: React.MouseEvent) => {
@@ -1027,14 +1146,14 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     });
   }, [workspaceSize, state.floating, updateFloatingPosition]);
 
-  // Global Window Focus Event Delegation (Left-click anywhere inside a window or grid panel focuses it)
+  // Global Window Focus Event Delegation (Left-click/touch anywhere inside a window or grid panel focuses it)
   useEffect(() => {
-    const handleMouseDownGlobal = (e: MouseEvent) => {
-      // Only handle left clicks (button === 0)
+    const handlePointerDownGlobal = (e: PointerEvent) => {
+      // Only handle primary button (left-click or first touch point)
       if (e.button !== 0) return;
 
       const target = e.target as HTMLElement | null;
-      if (!target) return;
+      if (!target || typeof target.closest !== 'function') return;
 
       // 1. Check if click is inside a floating window
       const windowEl = target.closest('.floating-window') as HTMLElement | null;
@@ -1057,149 +1176,196 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       }
     };
 
-    document.addEventListener('mousedown', handleMouseDownGlobal);
+    document.addEventListener('pointerdown', handlePointerDownGlobal);
     return () => {
-      document.removeEventListener('mousedown', handleMouseDownGlobal);
+      document.removeEventListener('pointerdown', handlePointerDownGlobal);
     };
   }, [focusPanel, setActivePanel]);
 
   // Floating Window dragging handler
-  const startDrag = (id: string, e: React.MouseEvent) => {
+  const startDrag = (id: string, e: React.PointerEvent) => {
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
     focusPanel(id);
 
+    const el = e.currentTarget as HTMLDivElement;
+    const windowEl = el.closest('.floating-window') as HTMLDivElement | null;
     const startX = e.clientX;
     const startY = e.clientY;
-    const titlebarEl = e.currentTarget as HTMLDivElement;
-    const windowEl = titlebarEl.closest('.floating-window') as HTMLDivElement | null;
     const startPosX = windowEl ? windowEl.offsetLeft : 0;
     const startPosY = windowEl ? windowEl.offsetTop : 0;
-    let dragStarted = false;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
+    const executeFWDrop = () => {
+      const dropZone = activeDropZoneRef.current;
+      const targetTab = hoveredTabRef.current;
+      const edgeDrop = activeEdgeDropRef.current;
+      if (edgeDrop) {
+        dockPanelToWorkspaceEdge(id, edgeDrop);
+      } else if (targetTab) {
+        let targetIndex = targetTab.index;
+        if (targetTab.side === 'right') targetIndex += 1;
+        movePanelOrder(id, targetTab.leafId, targetIndex);
+      } else if (dropZone) {
+        dockPanelToGroup(id, dropZone.leafId, dropZone.position);
+      }
+      clearDragState();
+    };
 
-      if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        dragStarted = true;
+    if (e.pointerType === 'touch') {
+      const pointerId = e.pointerId;
+      let cancelled = false;
+
+      const cancel = () => {
+        cancelled = true;
+        clearTimeout(timer);
+        el.removeEventListener('pointermove', onPreMove);
+        el.removeEventListener('pointerup', cancel);
+        el.removeEventListener('pointercancel', cancel);
+      };
+
+      const onPreMove = (me: PointerEvent) => {
+        if (Math.hypot(me.clientX - startX, me.clientY - startY) > CANCEL_MOVE_PX) cancel();
+      };
+
+      const timer = setTimeout(() => {
+        if (cancelled) return;
+        el.removeEventListener('pointermove', onPreMove);
+        el.removeEventListener('pointerup', cancel);
+        el.removeEventListener('pointercancel', cancel);
+
+        try { el.setPointerCapture(pointerId); } catch { return; }
+        el.classList.add('long-press-active');
         setDraggedPanelId(id);
-      }
 
-      if (dragStarted) {
-        const newX = startPosX + dx;
-        const newY = startPosY + dy;
+        const onMove = (me: PointerEvent) => {
+          const dx = me.clientX - startX;
+          const dy = me.clientY - startY;
+          updateFloatingPosition(id, { x: startPosX + dx, y: startPosY + dy, stickyRight: false, stickyBottom: false });
+          updateHoverFromPoint(me.clientX, me.clientY);
+        };
 
-        // Dragging clears all sticky anchoring
-        updateFloatingPosition(id, {
-          x: newX,
-          y: newY,
-          stickyRight: false,
-          stickyBottom: false
-        });
-      }
-    };
+        const onEnd = () => {
+          el.classList.remove('long-press-active');
+          el.removeEventListener('pointermove', onMove);
+          el.removeEventListener('pointerup', onEnd);
+          el.removeEventListener('pointercancel', onCancel);
+          executeFWDrop();
+        };
 
-    const handleMouseUp = () => {
-      if (dragStarted) {
-        const dropZone = activeDropZoneRef.current;
-        const targetTab = hoveredTabRef.current;
-        const edgeDrop = activeEdgeDropRef.current;
+        const onCancel = () => {
+          el.classList.remove('long-press-active');
+          el.removeEventListener('pointermove', onMove);
+          el.removeEventListener('pointerup', onEnd);
+          el.removeEventListener('pointercancel', onCancel);
+          clearDragState();
+        };
 
-        if (edgeDrop) {
-          dockPanelToWorkspaceEdge(id, edgeDrop);
-        } else if (targetTab) {
-          let targetIndex = targetTab.index;
-          if (targetTab.side === 'right') {
-            targetIndex += 1;
-          }
-          movePanelOrder(id, targetTab.leafId, targetIndex);
-        } else if (dropZone) {
-          dockPanelToGroup(id, dropZone.leafId, dropZone.position);
+        el.addEventListener('pointermove', onMove);
+        el.addEventListener('pointerup', onEnd);
+        el.addEventListener('pointercancel', onCancel);
+      }, LONG_PRESS_MS);
+
+      el.addEventListener('pointermove', onPreMove);
+      el.addEventListener('pointerup', cancel);
+      el.addEventListener('pointercancel', cancel);
+    } else {
+      // Mouse / pen: window-level listeners WITHOUT setPointerCapture so that
+      // onPointerEnter/Leave on drop zones and edge triggers still fire normally.
+      let dragStarted = false;
+
+      const onMove = (me: PointerEvent) => {
+        const dx = me.clientX - startX;
+        const dy = me.clientY - startY;
+        if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+          dragStarted = true;
+          setDraggedPanelId(id);
         }
-        setDraggedPanelId(null);
-        setActiveDropZone(null);
-        activeDropZoneRef.current = null;
-        setHoveredTab(null);
-        hoveredTabRef.current = null;
-        setActiveEdgeDrop(null);
-      }
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+        if (dragStarted) {
+          updateFloatingPosition(id, { x: startPosX + dx, y: startPosY + dy, stickyRight: false, stickyBottom: false });
+        }
+      };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+      const onEnd = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        if (dragStarted) executeFWDrop();
+      };
+
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+    }
   };
 
-  // Floating Window resizing handler
-  const startResize = (id: string, e: React.MouseEvent) => {
+  type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+
+  // Floating Window resizing handler — supports 8 directions
+  const startResize = (id: string, dir: ResizeDir, e: React.PointerEvent) => {
     e.stopPropagation();
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
     focusPanel(id);
 
+    const el = e.currentTarget as HTMLDivElement;
+    el.setPointerCapture(e.pointerId);
+
     const startX = e.clientX;
     const startY = e.clientY;
-    const handleEl = e.currentTarget as HTMLDivElement;
-    const windowEl = handleEl.closest('.floating-window') as HTMLDivElement | null;
+    const windowEl = el.closest('.floating-window') as HTMLDivElement | null;
     const startW = windowEl ? windowEl.offsetWidth : 400;
     const startH = windowEl ? windowEl.offsetHeight : 300;
+    const startPosX = windowEl ? windowEl.offsetLeft : 0;
+    const startPosY = windowEl ? windowEl.offsetTop : 0;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dw = moveEvent.clientX - startX;
-      const dh = moveEvent.clientY - startY;
+    const viewW = workspaceSize.width;
+    const viewH = workspaceSize.height;
+    const parsedX = typeof floatingWin.x === 'string' ? parseFloat(floatingWin.x) : floatingWin.x;
+    const parsedY = typeof floatingWin.y === 'string' ? parseFloat(floatingWin.y) : floatingWin.y;
+    const parsedW = typeof floatingWin.width === 'string' ? parseFloat(floatingWin.width) : floatingWin.width;
+    const parsedH = typeof floatingWin.height === 'string' ? parseFloat(floatingWin.height) : floatingWin.height;
+    const isRightSnapped = dir === 'se' && Math.abs(parsedX + parsedW - viewW) < 4;
+    const isBottomSnapped = dir === 'se' && Math.abs(parsedY + parsedH - viewH) < 4;
 
-      let newWidth = Math.max(200, startW + dw);
-      let newHeight = Math.max(150, startH + dh);
+    const onMove = (me: PointerEvent) => {
+      const dx = me.clientX - startX;
+      const dy = me.clientY - startY;
 
-      let newX = floatingWin.x;
-      let newY = floatingWin.y;
+      let newX = startPosX;
+      let newY = startPosY;
+      let newW = startW;
+      let newH = startH;
 
-      const viewW = workspaceSize.width;
-      const viewH = workspaceSize.height;
+      if (dir.includes('e')) newW = Math.max(200, startW + dx);
+      if (dir.includes('w')) { newW = Math.max(200, startW - dx); newX = startPosX + startW - newW; }
+      if (dir.includes('s')) newH = Math.max(150, startH + dy);
+      if (dir.includes('n')) { newH = Math.max(150, startH - dy); newY = startPosY + startH - newH; }
 
-      const parsedX = typeof floatingWin.x === 'string' ? parseFloat(floatingWin.x) : floatingWin.x;
-      const parsedY = typeof floatingWin.y === 'string' ? parseFloat(floatingWin.y) : floatingWin.y;
-      const parsedW = typeof floatingWin.width === 'string' ? parseFloat(floatingWin.width) : floatingWin.width;
-      const parsedH = typeof floatingWin.height === 'string' ? parseFloat(floatingWin.height) : floatingWin.height;
-
-      const isRightSnapped = Math.abs(parsedX + parsedW - viewW) < 4;
-      const isBottomSnapped = Math.abs(parsedY + parsedH - viewH) < 4;
-
+      // Snap adjustments for SE corner when previously snapped to workspace edges
       if (isRightSnapped) {
-        newX = viewW - newWidth;
-        if (newX < 0) {
-          newX = 0;
-          newWidth = viewW;
-        }
+        newX = viewW - newW;
+        if (newX < 0) { newX = 0; newW = viewW; }
       }
-
       if (isBottomSnapped) {
-        newY = viewH - newHeight;
-        if (newY < 0) {
-          newY = 0;
-          newHeight = viewH;
-        }
+        newY = viewH - newH;
+        if (newY < 0) { newY = 0; newH = viewH; }
       }
 
       updateFloatingPosition(id, {
-        x: newX,
-        y: newY,
-        width: newWidth,
-        height: newHeight,
+        x: newX, y: newY,
+        width: newW, height: newH,
         stickyRight: isRightSnapped,
         stickyBottom: isBottomSnapped
       });
     };
 
-    const handleMouseUp = () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+    const onEnd = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onEnd);
+      el.removeEventListener('pointercancel', onEnd);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onEnd);
+    el.addEventListener('pointercancel', onEnd);
   };
 
   // horizontal scroll for minimized taskbar
@@ -1241,24 +1407,28 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         {state.draggedPanelId !== null && (
           <>
             <div
+              data-edge-trigger="left"
               className="workspace-edge-trigger edge-trigger-left"
-              onMouseEnter={() => setActiveEdgeDrop('left')}
-              onMouseLeave={() => setActiveEdgeDrop(null)}
+              onPointerEnter={() => setActiveEdgeDrop('left')}
+              onPointerLeave={() => setActiveEdgeDrop(null)}
             />
             <div
+              data-edge-trigger="right"
               className="workspace-edge-trigger edge-trigger-right"
-              onMouseEnter={() => setActiveEdgeDrop('right')}
-              onMouseLeave={() => setActiveEdgeDrop(null)}
+              onPointerEnter={() => setActiveEdgeDrop('right')}
+              onPointerLeave={() => setActiveEdgeDrop(null)}
             />
             <div
+              data-edge-trigger="top"
               className="workspace-edge-trigger edge-trigger-top"
-              onMouseEnter={() => setActiveEdgeDrop('top')}
-              onMouseLeave={() => setActiveEdgeDrop(null)}
+              onPointerEnter={() => setActiveEdgeDrop('top')}
+              onPointerLeave={() => setActiveEdgeDrop(null)}
             />
             <div
+              data-edge-trigger="bottom"
               className="workspace-edge-trigger edge-trigger-bottom"
-              onMouseEnter={() => setActiveEdgeDrop('bottom')}
-              onMouseLeave={() => setActiveEdgeDrop(null)}
+              onPointerEnter={() => setActiveEdgeDrop('bottom')}
+              onPointerLeave={() => setActiveEdgeDrop(null)}
             />
           </>
         )}
@@ -1307,7 +1477,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 key={w.id}
                 data-window-id={w.id}
                 dir={state.dir}
-                onMouseDownCapture={() => {
+                onPointerDownCapture={() => {
                   setActivePanel(w.id);
                   focusPanel(w.id);
                 }}
@@ -1325,7 +1495,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 {/* Title Bar */}
                 <div
                   onDoubleClick={() => maximizePanel(w.id)}
-                  onMouseDown={(e) => {
+                  onPointerDown={(e) => {
                     if (options?.canDrag !== false) {
                       startDrag(w.id, e);
                     }
@@ -1340,7 +1510,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       {panel.dirty ? ' *' : ''}
                     </span>
                   </span>
-                  <div className="fw-titlebar-actions" style={{ gap: 'var(--header-button-gap, 4px)' }} onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="fw-titlebar-actions" style={{ gap: 'var(--header-button-gap, 4px)' }} onPointerDown={(e) => e.stopPropagation()}>
                     {options?.renderHeaderActions && (
                       <div className="window-header-actions">
                         {options.renderHeaderActions(w.id)}
@@ -1449,21 +1619,18 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   <PreservedDOMWrapper key={w.id} panelId={w.id} />
                 </div>
 
-                {/* Resize Handle */}
+                {/* 8-direction resize handles */}
                 {!isMaximized && (
-                  <div
-                    onMouseDown={(e) => startResize(w.id, e)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      bottom: 0,
-                      width: '14px',
-                      height: '14px',
-                      cursor: 'se-resize',
-                      zIndex: 30,
-                      background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%)'
-                    }}
-                  />
+                  <>
+                    <div onPointerDown={(e) => startResize(w.id, 'n',  e)} className="resize-handle resize-n"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'ne', e)} className="resize-handle resize-ne" />
+                    <div onPointerDown={(e) => startResize(w.id, 'e',  e)} className="resize-handle resize-e"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'se', e)} className="resize-handle resize-se" />
+                    <div onPointerDown={(e) => startResize(w.id, 's',  e)} className="resize-handle resize-s"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'sw', e)} className="resize-handle resize-sw" />
+                    <div onPointerDown={(e) => startResize(w.id, 'w',  e)} className="resize-handle resize-w"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'nw', e)} className="resize-handle resize-nw" />
+                  </>
                 )}
               </div>
             );
@@ -1500,7 +1667,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     restorePanel(m.id);
                   }}
                   onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
-                  onMouseEnter={(e) => {
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'touch') return;
                     if (isContextMenuOpen) return;
                     if (minimizedTooltipTimeoutRef.current) {
                       clearTimeout(minimizedTooltipTimeoutRef.current);
@@ -1515,7 +1683,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     if (!isInside) return;
                     setHoveredMinimized({ id: m.id, rect, title: m.title, component: m.component });
                   }}
-                  onMouseLeave={() => {
+                  onPointerLeave={() => {
                     minimizedTooltipTimeoutRef.current = setTimeout(() => {
                       setHoveredMinimized(null);
                     }, 150);
@@ -1553,12 +1721,12 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 pointerEvents: 'auto',
                 zIndex: 999999
               }}
-              onMouseEnter={() => {
+              onPointerEnter={() => {
                 if (minimizedTooltipTimeoutRef.current) {
                   clearTimeout(minimizedTooltipTimeoutRef.current);
                 }
               }}
-              onMouseLeave={() => {
+              onPointerLeave={() => {
                 setHoveredMinimized(null);
               }}
               onClick={() => {
