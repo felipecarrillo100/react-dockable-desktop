@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { PanelRegistry } from './PanelRegistry';
+import { PanelRegistry, type PanelRegistryClass } from './PanelRegistry';
+import type { WorkspaceClient } from '../WorkspaceClient';
 import { defaultPredefinedMessages } from './predefinedMessages';
 import type { PredefinedMessageKey } from './predefinedMessages';
 export type { PredefinedMessageKey } from './predefinedMessages';
@@ -207,6 +208,11 @@ const StyleClassContext = createContext<StyleClasses>({});
 /** Custom hook to read configured style class contexts. */
 export const useStyleClasses = () => useContext(StyleClassContext);
 
+const RegistryContext = createContext<PanelRegistryClass>(PanelRegistry);
+
+/** Custom hook to read the scoped panel registry for the current provider. */
+export const useRegistry = () => useContext(RegistryContext);
+
 // Event Bus class for pub-sub communication between panels
 class PanelEventBus {
   private listeners: Record<string, ((data: any) => void)[]> = {};
@@ -228,40 +234,38 @@ class PanelEventBus {
   }
 }
 
-const initialLayout: LayoutNode = {
-  type: 'branch',
-  orientation: 'vertical',
-  sizes: [0.75, 0.25],
-  children: [
-    {
-      type: 'leaf',
-      id: 'group-left-top',
-      panels: ['main-map', 'main-editor'],
-      activePanelId: 'main-map',
-    },
-    {
-      type: 'leaf',
-      id: 'group-left-bottom',
-      panels: ['system-console', 'help-docs'],
-      activePanelId: 'system-console',
+const EMPTY_LEAF: LayoutLeafNode = {
+  type: 'leaf',
+  id: 'group-default',
+  panels: [],
+  activePanelId: null,
+};
+
+function parseInitialState(json: string | null): Pick<WindowState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
+  if (json) {
+    try {
+      const parsed = JSON.parse(json);
+      if (parsed.gridRoot && Array.isArray(parsed.floating) && Array.isArray(parsed.minimized) && parsed.panels) {
+        return {
+          gridRoot: parsed.gridRoot,
+          floating: parsed.floating,
+          minimized: parsed.minimized,
+          panels: parsed.panels,
+          activePanelId: Object.keys(parsed.panels)[0] ?? null,
+        };
+      }
+    } catch {
+      // fall through to empty canvas
     }
-  ]
-};
-
-const initialPanels: Record<string, PanelInfo> = {
-  'main-map': { id: 'main-map', title: 'Main Map', component: 'mainMap', state: 'docked' },
-  'main-editor': { id: 'main-editor', title: 'Code Editor', component: 'editor', state: 'docked' },
-  'system-console': { id: 'system-console', title: 'Console Output', component: 'terminal', state: 'docked' },
-  'help-docs': { id: 'help-docs', title: 'Help Center', component: 'help', state: 'docked' },
-  'live-preview': { id: 'live-preview', title: 'Live Preview Output', component: 'preview', state: 'floating' }
-};
-
-const initialFloating: FloatingWindow[] = [
-  { id: 'live-preview', x: 450, y: 200, width: 320, height: 250, z: 1000 }
-];
+  }
+  return { gridRoot: EMPTY_LEAF, floating: [], minimized: [], panels: {}, activePanelId: null };
+}
 
 export interface WindowManagerProviderProps {
   children: React.ReactNode;
+  /** WorkspaceClient instance created outside the React tree. When provided, its registry
+   *  and config take precedence over the individual props below. */
+  client?: WorkspaceClient;
   formatMessage?: MessageFormatter;
   predefinedMessages?: Record<string, ContextMenuPredefinedMessage>;
   dir?: 'ltr' | 'rtl';
@@ -275,6 +279,7 @@ export interface WindowManagerProviderProps {
 
 export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   children,
+  client,
   formatMessage,
   predefinedMessages,
   dir: dirProp,
@@ -285,15 +290,22 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   windowClass,
   windowBodyClass
 }) => {
-  const [state, setState] = useState<WindowState>({
-    gridRoot: initialLayout,
-    floating: initialFloating,
-    minimized: [],
-    panels: initialPanels,
-    draggedPanelId: null,
-    activePanelId: 'main-map',
-    dir: dirProp || 'ltr',
-    isRtl: dirProp === 'rtl'
+  // Scoped registry: client's own instance, or fall back to the global singleton for backward compat
+  const registry = useRef(client?.registry ?? PanelRegistry).current;
+
+  // Effective config: client props take precedence over individual provider props
+  const effectiveFormatMessage = client?.config.formatMessage ?? formatMessage;
+  const effectivePredefinedMessages = client?.config.predefinedMessages ?? predefinedMessages;
+  const effectiveDir = client?.config.dir ?? dirProp;
+
+  const [state, setState] = useState<WindowState>(() => {
+    const layout = parseInitialState(client?.initialState ?? null);
+    return {
+      ...layout,
+      draggedPanelId: null,
+      dir: effectiveDir || 'ltr',
+      isRtl: effectiveDir === 'rtl',
+    };
   });
 
   const stateRef = useRef(state);
@@ -303,8 +315,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   const mergedMessages = useMemo(() => ({
     ...defaultPredefinedMessages,
-    ...predefinedMessages
-  }), [predefinedMessages]);
+    ...effectivePredefinedMessages
+  }), [effectivePredefinedMessages]);
 
   const eventBusRef = useRef(new PanelEventBus());
   const maxZRef = useRef(1000);
@@ -457,7 +469,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => {
     setState(prev => {
       const exists = prev.panels[id];
-      const entry = PanelRegistry.get(component);
+      const entry = registry.get(component);
       const title = options?.title || options?.title || entry?.defaultOptions?.title || id;
       const target = options?.initialTarget || entry?.defaultOptions?.initialTarget || 'docked';
       const favPos = entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
@@ -477,7 +489,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
               panels: { ...prev.panels, [id]: { ...exists, state: 'floating' } }
             };
           } else {
-            const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-left-top';
+            const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-default';
             return {
               ...prev,
               minimized: nextMinimized,
@@ -541,7 +553,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           panels: nextPanels
         };
       } else {
-        const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-left-top';
+        const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-default';
         return {
           ...prev,
           gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, id),
@@ -556,7 +568,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const panel = prev.panels[id];
       if (!panel) return prev;
 
-      const registryEntry = PanelRegistry.get(panel.component);
+      const registryEntry = registry.get(panel.component);
       if (registryEntry?.defaultOptions?.canClose === false) {
         return prev;
       }
@@ -645,7 +657,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const panel = prev.panels[id];
       if (!panel || panel.state === 'minimized') return prev;
 
-      const registryEntry = PanelRegistry.get(panel.component);
+      const registryEntry = registry.get(panel.component);
       if (registryEntry?.defaultOptions?.canMinimize === false) {
         return prev;
       }
@@ -710,7 +722,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
       if (prevState === 'floating') {
         maxZRef.current += 1;
-        const entry = PanelRegistry.get(panel.component);
+        const entry = registry.get(panel.component);
         const favPos = panel.lastFloatingRect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
         const cascaded = getCascadedPosition(favPos, prev.floating);
         return {
@@ -735,7 +747,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         };
 
         const parentLeafExists = panel.lastLeafId && leafExists(prev.gridRoot, panel.lastLeafId);
-        const entry = PanelRegistry.get(panel.component);
+        const entry = registry.get(panel.component);
         const canDrag = entry?.defaultOptions?.canDrag !== false;
 
         if (parentLeafExists) {
@@ -767,7 +779,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           };
         } else {
           // Leaf group ceased to exist but not floatable: dock into fallback leaf group
-          const targetLeafId = findFirstLeafId(prev.gridRoot) || 'group-left-top';
+          const targetLeafId = findFirstLeafId(prev.gridRoot) || 'group-default';
           return {
             ...prev,
             minimized: nextMinimized,
@@ -784,12 +796,12 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const panel = prev.panels[id];
       if (!panel) return prev;
 
-      const registryEntry = PanelRegistry.get(panel.component);
+      const registryEntry = registry.get(panel.component);
       if (registryEntry?.defaultOptions?.canDrag === false) {
         return prev;
       }
 
-      const entry = PanelRegistry.get(panel.component);
+      const entry = registry.get(panel.component);
       const favPos = rect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
 
       const cleanRoot = removePanelFromTree(prev.gridRoot, id);
@@ -815,7 +827,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
       const nextFloating = prev.floating.filter(w => w.id !== id);
       const cleanRoot = removePanelFromTree(prev.gridRoot, id);
-      const leafId = targetLeafId || findFirstLeafId(cleanRoot || prev.gridRoot) || 'group-left-top';
+      const leafId = targetLeafId || findFirstLeafId(cleanRoot || prev.gridRoot) || 'group-default';
 
       return {
         ...prev,
@@ -1049,12 +1061,12 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   const saveLayout = useCallback(() => {
     return JSON.stringify({
-      gridRoot: state.gridRoot,
-      floating: state.floating,
-      minimized: state.minimized,
-      panels: state.panels
+      gridRoot: stateRef.current.gridRoot,
+      floating: stateRef.current.floating,
+      minimized: stateRef.current.minimized,
+      panels: stateRef.current.panels
     });
-  }, [state]);
+  }, []);
 
   const loadLayout = useCallback((layoutJson: string) => {
     try {
@@ -1091,13 +1103,13 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, []);
 
   useEffect(() => {
-    if (dirProp) {
+    if (effectiveDir) {
       setState(prev => {
-        if (prev.dir === dirProp) return prev;
-        return { ...prev, dir: dirProp, isRtl: dirProp === 'rtl' };
+        if (prev.dir === effectiveDir) return prev;
+        return { ...prev, dir: effectiveDir, isRtl: effectiveDir === 'rtl' };
       });
     }
-  }, [dirProp]);
+  }, [effectiveDir]);
 
   const actions = useMemo<WindowActions>(() => ({
     openPanel,
@@ -1174,17 +1186,26 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     windowBodyClass
   }), [modalClass, modalBodyClass, sidePanelClass, sidePanelBodyClass, windowClass, windowBodyClass]);
 
+  useEffect(() => {
+    if (client) {
+      client._connect(actions);
+      return () => { client._disconnect(); };
+    }
+  }, [client, actions]);
+
   return (
     <StyleClassContext.Provider value={styleClasses}>
-      <WindowStateContext.Provider value={state}>
-        <WindowActionsContext.Provider value={actions}>
-          <WindowI18nContext.Provider value={formatMessage || defaultFormatMessage}>
-            <WindowPredefinedMessagesContext.Provider value={mergedMessages}>
-              {children}
-            </WindowPredefinedMessagesContext.Provider>
-          </WindowI18nContext.Provider>
-        </WindowActionsContext.Provider>
-      </WindowStateContext.Provider>
+      <RegistryContext.Provider value={registry}>
+        <WindowStateContext.Provider value={state}>
+          <WindowActionsContext.Provider value={actions}>
+            <WindowI18nContext.Provider value={effectiveFormatMessage || defaultFormatMessage}>
+              <WindowPredefinedMessagesContext.Provider value={mergedMessages}>
+                {children}
+              </WindowPredefinedMessagesContext.Provider>
+            </WindowI18nContext.Provider>
+          </WindowActionsContext.Provider>
+        </WindowStateContext.Provider>
+      </RegistryContext.Provider>
     </StyleClassContext.Provider>
   );
 };

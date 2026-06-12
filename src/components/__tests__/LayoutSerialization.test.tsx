@@ -126,6 +126,19 @@ describe('Layout Serialization (saveLayout / loadLayout)', () => {
 
   it('saveLayout round-trip preserves split sizes', () => {
     mount();
+    // Establish a branch layout first — updateSplitSizes is a no-op on a leaf root.
+    act(() => {
+      lastActions.loadLayout(JSON.stringify({
+        gridRoot: {
+          type: 'branch', orientation: 'vertical', sizes: [0.5, 0.5],
+          children: [
+            { type: 'leaf', id: 'top',    panels: [], activePanelId: null },
+            { type: 'leaf', id: 'bottom', panels: [], activePanelId: null },
+          ],
+        },
+        floating: [], minimized: [], panels: {},
+      }));
+    });
     act(() => { lastActions.updateSplitSizes([], [0.3, 0.7]); });
 
     const snapshot = JSON.parse(lastActions.saveLayout());

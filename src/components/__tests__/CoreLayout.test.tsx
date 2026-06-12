@@ -3,12 +3,30 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { WorkspaceClient } from '../../WorkspaceClient';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
-PanelRegistry.register('map', MockPanel);
-PanelRegistry.register('editor', MockPanel);
 
+const STANDARD_LAYOUT = JSON.stringify({
+  gridRoot: {
+    type: 'branch',
+    orientation: 'vertical',
+    sizes: [0.75, 0.25],
+    children: [
+      { type: 'leaf', id: 'group-left-top', panels: ['main-map', 'main-editor'], activePanelId: 'main-map' },
+      { type: 'leaf', id: 'group-left-bottom', panels: ['system-console'], activePanelId: 'system-console' },
+    ],
+  },
+  floating: [],
+  minimized: [],
+  panels: {
+    'main-map':      { id: 'main-map',      title: 'Main Map',     component: 'map',    state: 'docked' },
+    'main-editor':   { id: 'main-editor',   title: 'Code Editor',  component: 'editor', state: 'docked' },
+    'system-console':{ id: 'system-console',title: 'Console',      component: 'editor', state: 'docked' },
+  },
+});
+
+let client: WorkspaceClient;
 let lastState: any = null;
 let lastActions: any = null;
 
@@ -27,6 +45,13 @@ describe('WindowManager Core Layout Operations', () => {
     document.body.appendChild(container);
     lastState = null;
     lastActions = null;
+    client = new WorkspaceClient({
+      panels: {
+        map:    { component: MockPanel },
+        editor: { component: MockPanel },
+      },
+      initialState: STANDARD_LAYOUT,
+    });
   });
 
   afterEach(() => {
@@ -42,7 +67,7 @@ describe('WindowManager Core Layout Operations', () => {
     act(() => {
       root = createRoot(container!);
       root.render(
-        <WindowManagerProvider>
+        <WindowManagerProvider client={client}>
           <StateExtractor />
         </WindowManagerProvider>
       );
@@ -58,12 +83,9 @@ describe('WindowManager Core Layout Operations', () => {
   it('should remove panel and normalize parent orientation structure', () => {
     mount();
     act(() => {
-      // Close editor from group-left-top
       lastActions.closePanel('main-editor');
     });
-    // main-editor should be deleted
     expect(lastState.panels['main-editor']).toBeUndefined();
-    // group-left-top should still contain main-map
     expect(lastState.gridRoot.children[0].panels).toContain('main-map');
   });
 
@@ -81,40 +103,37 @@ describe('WindowManager Core Layout Operations', () => {
       lastActions.closePanel('main-map');
       lastActions.closePanel('main-editor');
     });
-    // Both left-top panels closed, leaf group-left-top should be removed, collapsing layout structure
-    expect(lastState.gridRoot.type).toBe('leaf'); // Grid collapsed to single leaf group-left-bottom
+    expect(lastState.gridRoot.type).toBe('leaf');
     expect(lastState.gridRoot.id).toBe('group-left-bottom');
   });
 
   it('should retain empty leaf groups if keepOnEmpty is true', () => {
     mount();
-    // Make group-left-top persist even when empty
     act(() => {
-      const initialConfig = JSON.stringify({
+      const config = JSON.stringify({
         gridRoot: {
           type: 'branch',
           orientation: 'vertical',
           sizes: [0.5, 0.5],
           children: [
             { type: 'leaf', id: 'group-top', panels: ['main-map'], activePanelId: 'main-map', keepOnEmpty: true },
-            { type: 'leaf', id: 'group-bottom', panels: ['system-console'], activePanelId: 'system-console' }
-          ]
+            { type: 'leaf', id: 'group-bottom', panels: ['system-console'], activePanelId: 'system-console' },
+          ],
         },
         floating: [],
         minimized: [],
         panels: {
-          'main-map': { id: 'main-map', title: 'Main Map', component: 'map', state: 'docked' },
-          'system-console': { id: 'system-console', title: 'Console', component: 'editor', state: 'docked' }
-        }
+          'main-map':       { id: 'main-map',       title: 'Main Map', component: 'map',    state: 'docked' },
+          'system-console': { id: 'system-console', title: 'Console',  component: 'editor', state: 'docked' },
+        },
       });
-      lastActions.loadLayout(initialConfig);
+      lastActions.loadLayout(config);
     });
 
     act(() => {
       lastActions.closePanel('main-map');
     });
 
-    // Top group is empty but must remain because keepOnEmpty is true
     expect(lastState.gridRoot.type).toBe('branch');
     expect(lastState.gridRoot.children[0].panels.length).toBe(0);
   });
@@ -122,7 +141,6 @@ describe('WindowManager Core Layout Operations', () => {
   it('should focus correct panel when selecting tabs', () => {
     mount();
     act(() => {
-      // Focus main-editor tab in left-top group
       lastActions.openPanel('main-editor', 'editor');
     });
     expect(lastState.gridRoot.children[0].activePanelId).toBe('main-editor');

@@ -791,7 +791,7 @@ body.resizing-col-active * {
 }
 
 /* --- Theme Variables for Sidebar and Tabs --- */
-[data-bs-theme="dark"] {
+[data-color-scheme="dark"] {
   --sidebar-bg: #1e2024;
   --sidebar-tabs-bg: #141619;
   --sidebar-border: rgba(255, 255, 255, 0.08);
@@ -812,7 +812,7 @@ body.resizing-col-active * {
   --tab-btn-active-bg: #1e2024; /* Seamless merge look */
 }
 
-[data-bs-theme="light"] {
+[data-color-scheme="light"] {
   --bg-primary: #f8f9fa;
   --bg-workspace: #f1f5f9;
   --bg-panel: #ffffff;
@@ -922,7 +922,7 @@ body.resizing-col-active * {
   --panel-card-border: rgba(255, 255, 255, 0.08);
 }
 
-[data-workspace-skin="macos"][data-bs-theme="light"] {
+[data-workspace-skin="macos"][data-color-scheme="light"] {
   --bg-primary: #f3f4f6;
   --bg-workspace: #e5e7eb;
   --bg-panel: rgba(255, 255, 255, 0.7);
@@ -1029,7 +1029,7 @@ body.resizing-col-active * {
 [data-workspace-skin="macos"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
   background-color: #8e8e93 !important;
 }
-[data-workspace-skin="macos"][data-bs-theme="light"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
+[data-workspace-skin="macos"][data-color-scheme="light"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
   background-color: #a4a4a8 !important;
 }
 
@@ -1106,7 +1106,7 @@ body.resizing-col-active * {
   --panel-text: #e8eaed;
 }
 
-[data-workspace-skin="chrome"][data-bs-theme="light"] {
+[data-workspace-skin="chrome"][data-color-scheme="light"] {
   --bg-workspace: #dee1e6;
   --bg-panel: #ffffff;
   --bg-tab-bar: #dee1e6;
@@ -1164,7 +1164,7 @@ body.resizing-col-active * {
   --panel-text: #f8fafc;
 }
 
-[data-workspace-skin="slate"][data-bs-theme="light"] {
+[data-workspace-skin="slate"][data-color-scheme="light"] {
   --bg-workspace: #f1f5f9;
   --bg-panel: #ffffff;
   --bg-tab-bar: #f1f5f9;
@@ -1218,7 +1218,7 @@ body.resizing-col-active * {
   --panel-text: #eceff4;
 }
 
-[data-workspace-skin="nord"][data-bs-theme="light"] {
+[data-workspace-skin="nord"][data-color-scheme="light"] {
   --bg-workspace: #e5e9f0;
   --bg-panel: #eceff4;
   --bg-tab-bar: #e5e9f0;
@@ -1269,7 +1269,7 @@ body.resizing-col-active * {
   --panel-text: #ffffff;
 }
 
-[data-workspace-skin="obsidian"][data-bs-theme="light"] {
+[data-workspace-skin="obsidian"][data-color-scheme="light"] {
   --bg-workspace: #ffffff;
   --bg-panel: #fafafa;
   --bg-tab-bar: #ffffff;
@@ -1302,10 +1302,10 @@ body.resizing-col-active * {
 [data-workspace-skin="obsidian"] .floating-window.v2-window-focused {
   box-shadow: 0 24px 50px rgba(255, 255, 255, 0.06), 0 0 1px rgba(255, 255, 255, 0.4) !important;
 }
-[data-workspace-skin="obsidian"][data-bs-theme="light"] .floating-window {
+[data-workspace-skin="obsidian"][data-color-scheme="light"] .floating-window {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1) !important;
 }
-[data-workspace-skin="obsidian"][data-bs-theme="light"] .floating-window.v2-window-focused {
+[data-workspace-skin="obsidian"][data-color-scheme="light"] .floating-window.v2-window-focused {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.2) !important;
 }
 
@@ -1336,7 +1336,7 @@ body.resizing-col-active * {
   --panel-text: #c0caf5;
 }
 
-[data-workspace-skin="tokyo"][data-bs-theme="light"] {
+[data-workspace-skin="tokyo"][data-color-scheme="light"] {
   --bg-workspace: #e1e2e7;
   --bg-panel: #f2f4f8;
   --bg-tab-bar: #d5d6db;
@@ -1435,7 +1435,7 @@ body.resizing-col-active * {
   background-color: rgba(255, 255, 255, 0.05) !important;
   transform: scale(1.05);
 }
-[data-bs-theme="light"] .sidebar-tab-btn:not(.active):hover {
+[data-color-scheme="light"] .sidebar-tab-btn:not(.active):hover {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
@@ -2200,12 +2200,12 @@ html:not(.enable-animations) *::after {
   color: var(--text-primary, #f1f5f9);
 }
 
-[data-bs-theme="light"] .dw-btn-outline {
+[data-color-scheme="light"] .dw-btn-outline {
   border-color: #6c757d;
   color: #6c757d;
 }
 
-[data-bs-theme="light"] .dw-btn-outline:hover {
+[data-color-scheme="light"] .dw-btn-outline:hover {
   background: rgba(0, 0, 0, 0.05);
   border-color: #495057;
   color: #495057;
@@ -2221,6 +2221,6 @@ html:not(.enable-animations) *::after {
   filter: brightness(1.1);
 }
 
-[data-bs-theme="light"] .dw-btn-primary {
+[data-color-scheme="light"] .dw-btn-primary {
   color: #ffffff;
 }

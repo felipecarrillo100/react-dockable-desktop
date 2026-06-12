@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
 import { PanelProvider } from '../PanelProviderContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { WorkspaceClient } from '../../WorkspaceClient';
 import WindowManager from '../WindowManager';
 
 const MockPanel: React.FC<{ panelId: string }> = ({ panelId }) => (
@@ -13,9 +13,23 @@ const MockPanel: React.FC<{ panelId: string }> = ({ panelId }) => (
   </div>
 );
 
-PanelRegistry.register('map', MockPanel);
-PanelRegistry.register('editor', MockPanel);
+// Standard 2-leaf layout: needed for the stress test that targets group-left-top/bottom by ID.
+const STANDARD_LAYOUT = JSON.stringify({
+  gridRoot: {
+    type: 'branch',
+    orientation: 'vertical',
+    sizes: [0.75, 0.25],
+    children: [
+      { type: 'leaf', id: 'group-left-top',    panels: [], activePanelId: null, keepOnEmpty: true },
+      { type: 'leaf', id: 'group-left-bottom', panels: [], activePanelId: null, keepOnEmpty: true },
+    ],
+  },
+  floating: [],
+  minimized: [],
+  panels: {},
+});
 
+let client: WorkspaceClient;
 let lastState: any = null;
 let lastActions: any = null;
 
@@ -43,6 +57,13 @@ describe('WindowManager DOM Stability & Preservation', () => {
     lastActions = null;
     consoleErrors = [];
     consoleWarnings = [];
+    client = new WorkspaceClient({
+      panels: {
+        map:    { component: MockPanel },
+        editor: { component: MockPanel },
+      },
+      initialState: STANDARD_LAYOUT,
+    });
 
     errorSpy = vi.spyOn(console, 'error').mockImplementation((msg: unknown) => {
       if (typeof msg === 'string' && msg.includes('testing environment is not configured to support act')) {
@@ -78,7 +99,7 @@ describe('WindowManager DOM Stability & Preservation', () => {
     act(() => {
       root = createRoot(container!);
       root.render(
-        <WindowManagerProvider>
+        <WindowManagerProvider client={client}>
           <PanelProvider>
             <StateExtractor />
             <WindowManager />
@@ -105,7 +126,7 @@ describe('WindowManager DOM Stability & Preservation', () => {
             floating: [],
             minimized: [],
             panels: {
-              'map-view': { id: 'map-view', title: 'Map View', component: 'map', state: 'docked' },
+              'map-view':    { id: 'map-view',    title: 'Map View',    component: 'map',    state: 'docked' },
               'editor-view': { id: 'editor-view', title: 'Editor View', component: 'editor', state: 'docked' },
             },
           })

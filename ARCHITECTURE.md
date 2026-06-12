@@ -19,6 +19,7 @@ react-dockable-desktop/
 │   ├── components/          # Core engine: state, layout, renderers
 │   ├── forms/               # Reusable ConfirmationForm modal
 │   ├── utils/               # Shared utilities (RTL detection)
+│   ├── WorkspaceClient.ts       # WorkspaceClient class (scoped registry + imperative API)
 │   ├── index.ts             # Public API surface
 │   └── index.css            # CSS variable-driven design tokens
 │
@@ -246,7 +247,41 @@ interface ContextMenuPredefinedMessage {
 
 ### PanelRegistry
 
-`PanelRegistry` is a module-level singleton (`Map<string, RegistryEntry>`). It is not React state. `PanelRegistry.register(key, Component, defaultOptions)` stores a mapping of string key → component + metadata. The `WindowManager` calls `PanelRegistry.get(componentKey)` at render time to resolve which component to mount into a panel slot. This breaks the circular dependency problem that would arise from panels importing each other or from the layout engine importing every possible panel component.
+`PanelRegistry` is a module-level singleton (`Map<string, RegistryEntry>`) kept for backward compatibility. `PanelRegistry.register(key, Component, defaultOptions)` stores a mapping of string key → component + metadata.
+
+`PanelRegistryClass` is now exported so each `WorkspaceClient` can hold its own scoped instance — enabling multiple independent workspaces on the same page without shared global state. The global `PanelRegistry` singleton is an instance of `PanelRegistryClass` and continues to work unchanged for existing code.
+
+`WindowManager`, `LeafGroup`, and `PreviewDOMWrapper` resolve panel components via the `useRegistry()` hook, which reads the scoped `PanelRegistryClass` instance from `RegistryContext` rather than importing the global singleton directly. When the `client` prop is omitted from `WindowManagerProvider`, `RegistryContext` falls back to the global singleton.
+
+---
+
+### WorkspaceClient
+
+`WorkspaceClient` is the recommended way to configure a workspace. It follows the same pattern as TanStack `QueryClient` and Redux `store` — created once outside the React tree and passed to the provider:
+
+```typescript
+const client = new WorkspaceClient({
+  panels: {
+    map:    { component: MapPanel, defaultOptions: { title: 'Map', canClose: false } },
+    editor: { component: EditorPanel, defaultOptions: { title: 'Editor' } },
+  },
+  initialState: localStorage.getItem('workspace-layout'), // null → empty canvas
+  formatMessage: (msg) => intl.formatMessage(msg),
+  dir: 'ltr',
+});
+
+<WindowManagerProvider client={client}>
+  ...
+</WindowManagerProvider>
+```
+
+**Why outside the React tree?** Placing configuration and imperative calls outside avoids stale-closure problems and allows any module in the application to call `client.saveLayout()`, `client.openPanel()`, etc. without needing a hook.
+
+**Scoped registry** — each `WorkspaceClient` holds its own `PanelRegistryClass` instance (`client.registry`). When the provider mounts, it passes the scoped registry through `RegistryContext` so all rendering components (`WindowManager`, `LeafGroup`, `PreviewDOMWrapper`) resolve panel components from the correct registry. This enables multiple independent `WorkspaceClient` instances on the same page.
+
+**Empty canvas default** — when `initialState` is `null` or omitted, the provider initialises with a single empty `LayoutLeafNode` (`EMPTY_LEAF`). No panels are pre-opened. The old hard-coded default layout was removed.
+
+**Backward compatibility** — the `client` prop is optional. When omitted, the provider falls back to the global `PanelRegistry` singleton and an empty canvas. Existing code using `PanelRegistry.register` at module scope continues to work unchanged.
 
 ---
 
@@ -254,7 +289,7 @@ interface ContextMenuPredefinedMessage {
 
 `WindowManager` accepts a `skin` prop (default `'vscode'`) applied as `data-workspace-skin={skin}` on the root element. All visual styling uses CSS custom properties, so skins override variables without touching component code.
 
-Bootstrap's `data-bs-theme` attribute is observed via `MutationObserver` and synced onto the workspace root, ensuring Bootstrap utility classes resolve correctly inside the workspace even when the host app switches themes dynamically.
+The `data-color-scheme` attribute (`"dark"` | `"light"`) is observed via `MutationObserver` on `document.documentElement` and synced onto the workspace root, ensuring CSS custom property overrides for light mode resolve correctly inside the workspace even when the host app switches themes dynamically.
 
 ---
 
@@ -285,6 +320,11 @@ Exported from `src/index.ts`:
 | `WindowManager` | Component | Main workspace renderer |
 | `WindowManagerProvider` | Component | State context provider |
 | `PanelRegistry` | Singleton | Component registration catalog |
+| `WorkspaceClient` | Class | Configuration + imperative API object (create outside React tree) |
+| `WorkspaceClientConfig` | Type | Constructor config: `panels`, `initialState`, `formatMessage`, `predefinedMessages`, `dir` |
+| `PanelDefinition` | Type | `{ component, defaultOptions? }` — panel entry in `WorkspaceClientConfig.panels` |
+| `PanelRegistryClass` | Class | Exported registry class for scoped instances (used by `WorkspaceClient`) |
+| `useRegistry` | Hook | Returns the scoped `PanelRegistryClass` for the current provider |
 | `useWindowManagerState` | Hook | Read layout state |
 | `useWindowManagerActions` | Hook | Mutate layout (open, close, float, dock…) |
 | `useFormatMessage` | Hook | Active message formatter |

@@ -7,6 +7,11 @@
 // Core Components and Layouts
 export { default as WindowManager } from './components/WindowManager';
 export { PanelRegistry } from './components/PanelRegistry';
+export type { PanelRegistryEntry } from './components/PanelRegistry';
+
+// WorkspaceClient — primary configuration and imperative API object
+export { WorkspaceClient } from './WorkspaceClient';
+export type { WorkspaceClientConfig, PanelDefinition } from './WorkspaceClient';
 
 // State Actions and Context Providers
 export {

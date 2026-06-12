@@ -3,12 +3,30 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { WorkspaceClient } from '../../WorkspaceClient';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
-PanelRegistry.register('map', MockPanel);
-PanelRegistry.register('editor', MockPanel);
 
+const STANDARD_LAYOUT = JSON.stringify({
+  gridRoot: {
+    type: 'branch',
+    orientation: 'vertical',
+    sizes: [0.75, 0.25],
+    children: [
+      { type: 'leaf', id: 'group-left-top',    panels: ['main-map', 'main-editor'], activePanelId: 'main-map' },
+      { type: 'leaf', id: 'group-left-bottom', panels: ['system-console'],          activePanelId: 'system-console' },
+    ],
+  },
+  floating: [],
+  minimized: [],
+  panels: {
+    'main-map':      { id: 'main-map',       title: 'Main Map',    component: 'map',    state: 'docked' },
+    'main-editor':   { id: 'main-editor',    title: 'Code Editor', component: 'editor', state: 'docked' },
+    'system-console':{ id: 'system-console', title: 'Console',     component: 'editor', state: 'docked' },
+  },
+});
+
+let client: WorkspaceClient;
 let lastState: any = null;
 let lastActions: any = null;
 
@@ -27,6 +45,13 @@ describe('WindowManager Tab Operations', () => {
     document.body.appendChild(container);
     lastState = null;
     lastActions = null;
+    client = new WorkspaceClient({
+      panels: {
+        map:    { component: MockPanel },
+        editor: { component: MockPanel },
+      },
+      initialState: STANDARD_LAYOUT,
+    });
   });
 
   afterEach(() => {
@@ -42,7 +67,7 @@ describe('WindowManager Tab Operations', () => {
     act(() => {
       root = createRoot(container!);
       root.render(
-        <WindowManagerProvider>
+        <WindowManagerProvider client={client}>
           <StateExtractor />
         </WindowManagerProvider>
       );
@@ -51,7 +76,6 @@ describe('WindowManager Tab Operations', () => {
 
   it('should change order of tabs in a group', () => {
     mount();
-    // Initially, order in group-left-top is ['main-map', 'main-editor']
     expect(lastState.gridRoot.children[0].panels).toEqual(['main-map', 'main-editor']);
 
     act(() => {
@@ -67,7 +91,6 @@ describe('WindowManager Tab Operations', () => {
       lastActions.dockPanelToGroup('main-editor', 'group-left-bottom', 'right');
     });
 
-    // The grid should now split group-left-bottom horizontally
     const leftBottomBranch = lastState.gridRoot.children[1];
     expect(leftBottomBranch.type).toBe('branch');
     expect(leftBottomBranch.orientation).toBe('horizontal');
@@ -79,14 +102,12 @@ describe('WindowManager Tab Operations', () => {
       lastActions.movePanelOrder('main-editor', 'group-left-bottom', 1);
     });
 
-    // main-editor should be removed from left-top and appended to left-bottom
     expect(lastState.gridRoot.children[0].panels).not.toContain('main-editor');
     expect(lastState.gridRoot.children[1].panels).toContain('main-editor');
   });
 
   it('should support dragging custom header elements without errors', () => {
     mount();
-    // Simulate setting draggedPanelId
     act(() => {
       lastState.draggedPanelId = 'main-map';
     });

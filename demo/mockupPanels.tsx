@@ -476,14 +476,14 @@ export const CodeEditor: React.FC = () => {
 
   useEffect(() => {
     const updateTheme = () => {
-      const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+      const currentTheme = document.documentElement.getAttribute('data-color-scheme');
       setEditorTheme(currentTheme === 'light' ? 'light' : 'vs-dark');
     };
 
     updateTheme();
 
     const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
     return () => observer.disconnect();
   }, []);
 
@@ -735,7 +735,7 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
+    const isLight = document.documentElement.getAttribute('data-color-scheme') === 'light';
     const tileUrl = isLight
       ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -745,7 +745,7 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
     tileLayerRef.current = tileLayer;
 
     const updateMapTheme = () => {
-      const light = document.documentElement.getAttribute('data-bs-theme') === 'light';
+      const light = document.documentElement.getAttribute('data-color-scheme') === 'light';
       const newUrl = light
         ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -754,7 +754,7 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
       }
     };
     const observer = new MutationObserver(updateMapTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
 
     const resizeObserver = new ResizeObserver(() => {
       map.invalidateSize();
@@ -848,7 +848,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
+    const isLight = document.documentElement.getAttribute('data-color-scheme') === 'light';
     const tileUrl = isLight
       ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -914,7 +914,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     layerGroupsRef.current['polylines'] = polylinesGroup;
 
     const updateMapTheme = () => {
-      const light = document.documentElement.getAttribute('data-bs-theme') === 'light';
+      const light = document.documentElement.getAttribute('data-color-scheme') === 'light';
       const newUrl = light
         ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -923,7 +923,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
       }
     };
     const observer = new MutationObserver(updateMapTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
 
     const resizeObserver = new ResizeObserver(() => {
       map.invalidateSize();
