@@ -5,12 +5,22 @@ import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProvide
 import { useFormatMessage, formatLabel, useStyleClasses } from './WindowManagerContext';
 import { DirtyWarningOverlay } from './DirtyWarningOverlay';
 
+/**
+ * Props for the internal {@link SidePanelRendererItem} component.
+ */
 interface SidePanelRendererItemProps {
+  /** The panel instance containing metadata, component type, and rendering state. */
   panel: PanelInstance;
+  /** Floating anchor edge side for the drawer panel. */
   position: 'left' | 'right';
+  /** Default width applied if no panel override configuration is provided. */
   defaultWidth?: number | string;
 }
 
+/**
+ * SidePanelRendererItem component renders an individual left or right drawer panel instance
+ * wrapped inside the FormContainerProvider context. Handles dirty state verification before close.
+ */
 const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, position, defaultWidth }) => {
   const { close, updateInstance, setDirty, registerCloseHandler, unregisterCloseHandler } = usePanelActions();
   const { modals } = usePanelState();
@@ -158,6 +168,10 @@ export interface SidePanelRendererProps {
   defaultWidth?: number | string;
 }
 
+/**
+ * SidePanelRenderer component acts as the global container rendering both
+ * left and right side drawers if they are currently active.
+ */
 export const SidePanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { leftPanel, rightPanel } = usePanelState();
   return (
@@ -168,12 +182,18 @@ export const SidePanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWid
   );
 };
 
+/**
+ * LeftPanelRenderer component renders ONLY the left side drawer if it is currently active.
+ */
 export const LeftPanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { leftPanel } = usePanelState();
   if (!leftPanel) return null;
   return <SidePanelRendererItem key={leftPanel.id} panel={leftPanel} position="left" defaultWidth={defaultWidth} />;
 };
 
+/**
+ * RightPanelRenderer component renders ONLY the right side drawer if it is currently active.
+ */
 export const RightPanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { rightPanel } = usePanelState();
   if (!rightPanel) return null;

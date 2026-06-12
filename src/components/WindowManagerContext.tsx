@@ -5,95 +5,178 @@ import type { PredefinedMessageKey } from './predefinedMessages';
 export type { PredefinedMessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 
+/**
+ * Structure representing localizable message descriptors used in context menus.
+ */
 export interface ContextMenuPredefinedMessage {
+  /** Translation dictionary key. */
   id: string;
+  /** Fallback label text if translation key is missing. */
   defaultMessage?: string;
+  /** Values injected into the translated text placeholder. */
   values?: Record<string, string | number>;
 }
 
+/** Function type interface responsible for resolving localizable messages to flat strings. */
 export type MessageFormatter = (msg: ContextMenuPredefinedMessage) => string;
 
+/** Orientation modifier indicating split directions. */
 export type SplitOrientation = 'horizontal' | 'vertical';
 
+/**
+ * Grid layout branch node containing nested splits and relative flex sizes.
+ */
 export interface LayoutGridNode {
   type: 'branch';
+  /** Split orientation orientation indicator. */
   orientation: SplitOrientation;
+  /** Children branches or leaf panels. */
   children: LayoutNode[];
+  /** Relative percentage sizes of each child layout block. */
   sizes: number[];
 }
 
+/**
+ * Grid layout leaf node containing active tab groups and panel arrays.
+ */
 export interface LayoutLeafNode {
   type: 'leaf';
+  /** Unique leaf identifier. */
   id: string;
+  /** Array of panel IDs mounted inside this group. */
   panels: string[];
+  /** The currently active panel tab ID. */
   activePanelId: string | null;
+  /** If false, close menu buttons are disabled for this group's tabs. */
   canClose?: boolean;
-  /** When true the leaf group persists in the layout even after its last panel
-   *  is closed/floated/minimised. Defaults to false (auto-remove). */
+  /** When true, the group persists in the layout even after its last panel is closed. */
   keepOnEmpty?: boolean;
 }
 
+/** Union type representing either a branch or a leaf node in the layout grid. */
 export type LayoutNode = LayoutGridNode | LayoutLeafNode;
 
+/**
+ * Bounds and depth metadata for floated panel windows.
+ */
 export interface FloatingWindow {
+  /** Unique ID of the floating window. */
   id: string;
+  /** CSS left position offset (supports number/px or percentage strings). */
   x: number | string;
+  /** CSS top position offset. */
   y: number | string;
+  /** CSS width value. */
   width: number | string;
+  /** CSS height value. */
   height: number | string;
+  /** Rendering depth stack index layer. */
   z: number;
+  /** True if the window is currently maximized to full workspace bounds. */
   maximized?: boolean;
+  /** Sticky right flag. */
   stickyRight?: boolean;
+  /** Sticky bottom flag. */
   stickyBottom?: boolean;
 }
 
+/**
+ * Stores active runtime properties and status metadata for individual panel instances.
+ */
 export interface PanelInfo {
+  /** Unique panel identifier. */
   id: string;
+  /** Plain text label or localizable message descriptor. */
   title: string | ContextMenuPredefinedMessage;
+  /** String matching the component registration ID in the {@link PanelRegistry}. */
   component: string;
+  /** Current workspace placement mode. */
   state: 'docked' | 'floating' | 'minimized';
+  /** Last state held before panel was minimized. */
   previousState?: 'docked' | 'floating';
+  /** Saved position boundaries used when returning the panel to a floating state. */
   lastFloatingRect?: { x: number; y: number; width: number; height: number; stickyRight?: boolean; stickyBottom?: boolean };
+  /** The leaf group ID this panel was docked in prior to being floated. */
   lastLeafId?: string;
+  /** True if the panel contains unsaved user edits. */
   dirty?: boolean;
 }
 
+/**
+ * Global window manager state tree representing grid nodes, windows, and panels.
+ */
 export interface WindowState {
+  /** Root branch node representing the grid. */
   gridRoot: LayoutNode;
+  /** Array of active floated windows. */
   floating: FloatingWindow[];
+  /** Array of minimized panels waiting in the taskbar dock. */
   minimized: { id: string; title: string | ContextMenuPredefinedMessage; component: string }[];
+  /** Map indexing panel metadata descriptors. */
   panels: Record<string, PanelInfo>;
+  /** The ID of the panel tab currently being dragged. */
   draggedPanelId: string | null;
+  /** Close execution warning intercept status container, or null. */
   pendingClose: { id: string; resolve: (discard: boolean) => void } | null;
+  /** The ID of the active/focused panel. */
   activePanelId: string | null;
 }
 
+/**
+ * Interface mapping layout actions, event bus handles, and serialization methods.
+ */
 export interface WindowActions {
+  /** Instantiates a registered panel into the workspace. */
   openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => void;
+  /** Directly closes a panel by ID, bypassing close confirmation dialogs. */
   closePanel: (id: string) => void;
+  /** Minimizes a panel to the bottom taskbar, saving its current layout positioning. */
   minimizePanel: (id: string) => void;
+  /** Restores a minimized panel back to its previous position in the grid or as a float. */
   restorePanel: (id: string) => void;
+  /** Detaches a docked panel, turning it into a floating resizable window. */
   floatPanel: (id: string, rect?: { x: number; y: number; width: number; height: number }) => void;
+  /** Returns a floating window back to a docked grid tab group. */
   dockPanel: (id: string, targetLeafId?: string) => void;
+  /** Maximizes a floating window to cover the entire layout screen boundaries. */
   maximizePanel: (id: string) => void;
+  /** Resizes flex dimensions of children inside split layout rows/columns. */
   updateSplitSizes: (path: number[], sizes: number[]) => void;
+  /** Updates bounds or positioning attributes on a floating window. */
   updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'stickyRight' | 'stickyBottom'>>) => void;
+  /** Pushes a floating window z-index layer to render on top of others. */
   bringToFront: (id: string) => void;
+  /** Serializes the active grid node structures and panel targets to JSON. */
   saveLayout: () => string;
+  /** Rebuilds the grid layouts and floating window placements from a JSON string. */
   loadLayout: (layoutJson: string) => void;
+  /** Publishes an event to the global inter-panel message bus. */
   publish: (event: string, data: any) => void;
+  /** Subscribes callback listeners to inter-panel event messages. */
   subscribe: (event: string, callback: (data: any) => void) => () => void;
+  /** Stores reference to the active tab ID being dragged. */
   setDraggedPanelId: (id: string | null) => void;
+  /** Splits an existing tab group to dock a dragged panel next to it. */
   dockPanelToGroup: (id: string, targetLeafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center') => void;
+  /** Reorders tab indices inside a docked leaf group. */
   movePanelOrder: (panelId: string, targetLeafId: string, targetIndex: number) => void;
+  /** Closes an empty split group. */
   closeLeafGroup: (leafId: string) => void;
+  /** Binds a close intercept confirmation guard. */
   registerCloseGuard: (id: string, guard: () => boolean | Promise<boolean>) => void;
+  /** Removes close confirmation guards. */
   unregisterCloseGuard: (id: string) => void;
+  /** Set panel dirty state flag. */
   setPanelDirty: (id: string, dirty: boolean) => void;
+  /** Change title header. */
   updatePanelTitle: (id: string, title: string | ContextMenuPredefinedMessage) => void;
+  /** Intercepts close panel requests, prompting warning dialogs if dirty. */
   requestClosePanel: (id: string, options?: { force?: boolean }) => Promise<void>;
+  /** Dispatches decision choice when discarding or cancelling close events. */
   resolvePendingClose: (discard: boolean) => void;
+  /** Docks a panel directly to workspace edges. */
   dockPanelToWorkspaceEdge: (id: string, position: 'left' | 'right' | 'top' | 'bottom') => void;
+  /** Update active focused tab reference. */
   setActivePanel: (id: string | null) => void;
 }
 
@@ -103,6 +186,7 @@ const WindowI18nContext = createContext<MessageFormatter | null>(null);
 
 const WindowPredefinedMessagesContext = createContext<Record<PredefinedMessageKey, ContextMenuPredefinedMessage>>(defaultPredefinedMessages);
 
+/** Represents custom CSS classes injected into layout parts. */
 export interface StyleClasses {
   modalClass?: string;
   modalBodyClass?: string;
@@ -113,6 +197,8 @@ export interface StyleClasses {
 }
 
 const StyleClassContext = createContext<StyleClasses>({});
+
+/** Custom hook to read configured style class contexts. */
 export const useStyleClasses = () => useContext(StyleClassContext);
 
 // Event Bus class for pub-sub communication between panels
@@ -1087,18 +1173,29 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   );
 };
 
+/**
+ * React hook to retrieve the active Window Manager layout state.
+ * @throws Error if used outside of a {@link WindowManagerProvider}.
+ */
 export const useWindowManagerState = () => {
   const ctx = useContext(WindowStateContext);
   if (!ctx) throw new Error('useWindowManagerState must be used within WindowManagerProvider');
   return ctx;
 };
 
+/**
+ * React hook to retrieve layouts mutation actions (dock, float, minimize, save/load).
+ * @throws Error if used outside of a {@link WindowManagerProvider}.
+ */
 export const useWindowManagerActions = () => {
   const ctx = useContext(WindowActionsContext);
   if (!ctx) throw new Error('useWindowManagerActions must be used within WindowManagerProvider');
   return ctx;
 };
 
+/**
+ * React hook to retrieve the active i18n formatter.
+ */
 export const useFormatMessage = () => {
   const formatter = useContext(WindowI18nContext);
   return formatter || ((msg) => {
@@ -1112,6 +1209,9 @@ export const useFormatMessage = () => {
   });
 };
 
+/**
+ * Helper to resolve dynamic label strings or localizable descriptor objects into text.
+ */
 export const formatLabel = (
   label: string | ContextMenuPredefinedMessage | undefined,
   formatter: MessageFormatter
@@ -1121,12 +1221,17 @@ export const formatLabel = (
   return formatter(label);
 };
 
-// Panel level communication hook
+/**
+ * React hook providing pub-sub helper methods for inter-panel event messaging.
+ */
 export const usePanelContext = () => {
   const { publish, subscribe } = useWindowManagerActions();
   return { publish, subscribe };
 };
 
+/**
+ * React hook to fetch the localizable predefined message map catalog.
+ */
 export const usePredefinedMessages = () => {
   return useContext(WindowPredefinedMessagesContext);
 };

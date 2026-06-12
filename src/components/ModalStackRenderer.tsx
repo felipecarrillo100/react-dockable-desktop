@@ -5,12 +5,22 @@ import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderCon
 import { useFormatMessage, formatLabel, useStyleClasses } from './WindowManagerContext';
 import { DirtyWarningOverlay } from './DirtyWarningOverlay';
 
+/**
+ * Interface representing props for the internal {@link ModalRenderer} component.
+ */
 interface ModalRendererProps {
+  /** The panel instance containing component structure, state, and option flags. */
   modal: PanelInstance;
+  /** The 0-based depth index of the modal within the active stack. */
   index: number;
+  /** True if this modal is currently at the top of the stack. */
   isTopmost: boolean;
 }
 
+/**
+ * ModalRenderer component renders a single modal window wrapped inside
+ * the FormContainerProvider context, enabling subcomponents to request closes and set dirty states.
+ */
 const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }) => {
   const { close, updateInstance, setDirty } = usePanelActions();
   const formatMessage = useFormatMessage();
@@ -149,6 +159,10 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
   );
 };
 
+/**
+ * ModalStackRenderer component acts as the global container rendering
+ * all active stacked modal windows in the workspace.
+ */
 export const ModalStackRenderer: React.FC = () => {
   const { modals } = usePanelState();
 

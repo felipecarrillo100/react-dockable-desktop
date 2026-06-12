@@ -1,14 +1,27 @@
 import React, { useEffect, useRef } from 'react';
 import { useFormatMessage } from './WindowManagerContext';
 
+/**
+ * Props for the {@link DirtyWarningOverlay} component.
+ */
 export interface DirtyWarningOverlayProps {
+  /** The z-index applied to the modal overlay container to ensure it renders on top. */
   zIndex: number;
+  /** Callback fired when the user decides to discard unsaved changes and close the panel. */
   onDiscard: () => void;
+  /** Callback fired when the user cancels the close request, keeping the panel open. */
   onCancel: () => void;
+  /** Optional custom warning description message. */
   message?: string;
+  /** Optional custom title for the warning modal dialog. */
   title?: string;
 }
 
+/**
+ * DirtyWarningOverlay component renders a confirmation dialog to intercept
+ * closing panels that have unsaved changes (dirty state).
+ * Binds the 'Escape' key to cancel the close action and focuses the cancel button on mount.
+ */
 export const DirtyWarningOverlay: React.FC<DirtyWarningOverlayProps> = ({
   zIndex,
   onDiscard,

@@ -1,5 +1,7 @@
 /**
- * Default English messages for every action exposed by Dockable Desktop.
+ * @file predefinedMessages.ts
+ * @description Provides the default localizable message catalogs and translation keys
+ * utilized by Dockable Desktop's context menus, headers, and tooltips.
  *
  * Each value's `id` is the react-intl message ID that the consumer should
  * define in their IntlProvider messages table. The `defaultMessage` is used

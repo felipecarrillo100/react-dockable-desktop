@@ -1,3 +1,9 @@
+/**
+ * @file index.ts
+ * @description Core entry point for react-dockable-desktop.
+ * Exports public window manager components, contexts, hooks, type definitions, sidebar layouts, and overlay renderers.
+ */
+
 // Core Components and Layouts
 export { default as WindowManager } from './components/WindowManager';
 export { PanelRegistry } from './components/PanelRegistry';

@@ -1,3 +1,9 @@
+/**
+ * @file Sidebar.tsx
+ * @description Sidebar navigation strip and drawer container component.
+ * Supports eager/lazy mounting, state preservation (display: none), and positioning (left/right).
+ */
+
 import React, {
   useState,
   useEffect,
@@ -76,6 +82,10 @@ export interface SidebarHandle {
 // Component
 // ==========================================
 
+/**
+ * Sidebar component rendering a tab strip and a collapsible content drawer.
+ * Supports imperative method bindings like openTab and closeDrawer via forwardRef.
+ */
 export const Sidebar = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
   {
     position = 'right',

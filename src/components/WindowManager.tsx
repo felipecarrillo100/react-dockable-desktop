@@ -1,3 +1,10 @@
+/**
+ * @file WindowManager.tsx
+ * @description Core component for react-dockable-desktop layout engine.
+ * Renders the workspace desktop containing docked splits, tabbed panels, floated windows,
+ * resize handles, context menus, and taskbar docks. Exposes lifecycle event listeners.
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses } from './WindowManagerContext';

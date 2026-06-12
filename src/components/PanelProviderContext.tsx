@@ -1,55 +1,97 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 
+/** Unique string identifier for panel/modal instances. */
 export type PanelInstanceId = string;
 
+/**
+ * Descriptor object for localizable panel titles, supporting context translation systems.
+ */
 export interface PanelTitleDescriptor {
+  /** The translation dictionary key. */
   id: string;
+  /** Fallback string if translation key is missing. */
   defaultMessage?: string;
+  /** Parameters to inject into the translated text string. */
   values?: Record<string, string | number>;
 }
 
+/** Union type representing either a plain string or a localizable title descriptor. */
 export type PanelTitle = string | PanelTitleDescriptor;
 
+/** Configuration options applied when opening a SidePanel. */
 export interface SidePanelOptions {
+  /** Display title for the side-panel header. */
   title?: PanelTitle;
+  /** Icon displayed next to the panel title. */
   icon?: React.ReactNode;
+  /** Specific CSS width (e.g. 300, '40%') for the panel container. */
   width?: number | string;
 }
 
+/** Configuration options applied when opening a Modal. */
 export interface ModalOptions {
+  /** Display title for the modal header. */
   title?: PanelTitle;
+  /** Icon displayed in the modal title bar. */
   icon?: React.ReactNode;
+  /** Size modifier affecting CSS max-width rules. */
   size?: 'small' | 'medium' | 'large' | 'fullscreen' | 'auto';
+  /** If false, hides the modal backdrop exit click and header close button. */
   closable?: boolean;
 }
 
+/**
+ * Represents a rendered instance of a panel or modal in the layout.
+ */
 export interface PanelInstance {
+  /** Unique ID generated for this instance. */
   id: PanelInstanceId;
+  /** React Component to mount inside the panel. */
   Component: ComponentType<any>;
+  /** Property props passed to the Component. */
   props: Record<string, any>;
+  /** The target rendering layout zone. */
   containerType: 'left-panel' | 'right-panel' | 'modal';
+  /** Configuration metadata settings. */
   options: SidePanelOptions | ModalOptions;
+  /** True if the form container has unsaved user edits. */
   dirty?: boolean;
 }
 
+/** Stores the active layout structures for floating overlays. */
 export interface PanelState {
+  /** The currently open left drawer panel instance, or null. */
   leftPanel: PanelInstance | null;
+  /** The currently open right drawer panel instance, or null. */
   rightPanel: PanelInstance | null;
+  /** Stack containing all active floating modal instances. */
   modals: PanelInstance[];
 }
 
+/** Exposes methods to trigger state actions on drawers and modals. */
 export interface PanelActions {
+  /** Mounts a panel in the left-side container drawer. */
   openLeftPanel: <P extends object>(Component: ComponentType<P>, props: P, options?: SidePanelOptions) => Promise<PanelInstanceId | null>;
+  /** Mounts a panel in the right-side container drawer. */
   openRightPanel: <P extends object>(Component: ComponentType<P>, props: P, options?: SidePanelOptions) => Promise<PanelInstanceId | null>;
+  /** Pushes a new modal component instance to the top of the stack. */
   openModal: <P extends object>(Component: ComponentType<P>, props: P, options?: ModalOptions) => PanelInstanceId;
+  /** Closes an instance by ID. */
   close: (id: PanelInstanceId) => void;
+  /** Closes all drawers and modals in a single action. */
   closeAll: () => void;
+  /** Closes all open modals. */
   closeAllModals: () => void;
+  /** Retrieves metadata for an active instance by ID. */
   getInstance: (id: PanelInstanceId) => PanelInstance | undefined;
+  /** Updates the props, configuration options, or dirty flag of an active panel. */
   updateInstance: (id: PanelInstanceId, updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty'>>) => void;
+  /** Flags an instance as dirty (contains unsaved changes). */
   setDirty: (id: PanelInstanceId, dirty: boolean) => void;
+  /** Subscribes a custom close confirmation intercept handler. */
   registerCloseHandler: (id: PanelInstanceId, handler: () => Promise<boolean>) => void;
+  /** Unsubscribes close confirmation handler. */
   unregisterCloseHandler: (id: PanelInstanceId) => void;
 }
 
@@ -67,6 +109,10 @@ const initialState: PanelState = {
 const PanelStateContext = createContext<PanelState | null>(null);
 const PanelActionsContext = createContext<PanelActions | null>(null);
 
+/**
+ * PanelProvider component manages the state and action handlers
+ * for drawers (left/right) and active stacked modal overlays.
+ */
 export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<PanelState>(initialState);
 
@@ -247,12 +293,20 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 };
 
+/**
+ * React hook to retrieve the active floating/drawer panels state.
+ * @throws Error if used outside of a {@link PanelProvider}.
+ */
 export const usePanelState = (): PanelState => {
   const ctx = useContext(PanelStateContext);
   if (!ctx) throw new Error('usePanelState must be used within PanelProvider');
   return ctx;
 };
 
+/**
+ * React hook to retrieve actions enabling drawer toggles and modal push actions.
+ * @throws Error if used outside of a {@link PanelProvider}.
+ */
 export const usePanelActions = (): PanelActions => {
   const ctx = useContext(PanelActionsContext);
   if (!ctx) throw new Error('usePanelActions must be used within PanelProvider');

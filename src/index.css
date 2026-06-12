@@ -1,3 +1,11 @@
+/*
+ * @file index.css
+ * @description Core stylesheet for the react-dockable-desktop layout engine.
+ * Contains the styling variables for design system tokens (Nord, Tokyo Night, macOS skins),
+ * layout splits, resizers, floating window shadows, sidebars, modal rendering,
+ * and specialized scaling overrides for embedded web canvases.
+ */
+
 :root {
   --bg-primary: #090b11;
   --bg-workspace: #0f111a;
@@ -1853,7 +1861,19 @@ html:not(.enable-animations) *::after {
   height: 30%;
 }
 
-/* Counteract scale for canvas and its siblings inside Luciad containers */
+/* 
+ * Counteract scale for canvas and its siblings inside Luciad containers.
+ * 
+ * When rendering a panel's mini hover-preview in the taskbar, the parent container 
+ * is scaled down using CSS transform scale(var(--preview-scale)). For standard HTML UI, 
+ * this works natively. However, for web maps (like WebGL / canvas-based engines such as 
+ * LuciadRIA), scaling down the browser container causes the rendering canvas and its absolute 
+ * siblings (e.g. HTML overlays, labels, shapes) to blur or offset.
+ *
+ * To counteract this, we apply a reverse scale transform (1 / scale) and multiply the size 
+ * of the canvas and its siblings by the scale factor. This forces the map engine to render 
+ * at full resolution inside the preview container without positioning glitches.
+ */
 .taskbar-item-preview-host .luciad canvas,
 .taskbar-item-preview-host .luciad canvas ~ * {
   transform: scale(calc(1 / var(--preview-scale, 1))) !important;

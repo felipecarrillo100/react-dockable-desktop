@@ -1,16 +1,30 @@
 import React, { useEffect, useRef } from 'react';
 import { useFormContainer } from '../components/FormContainerContext';
 
+/**
+ * Props for the {@link ConfirmationForm} component.
+ */
 export interface ConfirmationFormProps {
+  /** Optional custom title text or localizable descriptor for the dialog container. */
   title?: string | { id: string; defaultMessage?: string; values?: any };
+  /** Main message text or localizable descriptor to display. */
   message: string | { id: string; defaultMessage?: string; values?: any };
+  /** Optional auxiliary top alert notification text. */
   alert?: string;
+  /** Type style classification for the alert notice banner. */
   alertType?: 'info' | 'warning' | 'success' | 'danger';
+  /** If true, changes action button labels to 'Yes' and 'No' instead of 'OK' and 'Cancel'. */
   useYesNoTitles?: boolean;
+  /** Callback fired when the user selects the confirm button. */
   onOK?: () => void;
+  /** Callback fired when the user selects the cancel button. */
   onCancel?: () => void;
 }
 
+/**
+ * ConfirmationForm component renders a standard dialog content layout,
+ * allowing users to confirm actions or abort them. Exposes action callbacks.
+ */
 export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
   title,
   message,
