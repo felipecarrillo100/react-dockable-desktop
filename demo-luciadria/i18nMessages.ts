@@ -27,6 +27,15 @@ export const enMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Restore Size',
   'dockable-desktop-close':           'Close',
   'dockable-desktop-closeEmptyGroup': 'Close empty split group',
+  'dockable-desktop-unsavedChangesTitle': 'Unsaved Changes',
+  'dockable-desktop-unsavedChangesMessage': '"{title}" has unsaved changes. Do you want to discard your changes and close?',
+  'dockable-desktop-discardChanges': 'Discard Changes',
+  'dockable-desktop-cancel': 'Cancel',
+  'dockable-desktop-yes': 'Yes',
+  'dockable-desktop-no': 'No',
+  'dockable-desktop-ok': 'OK',
+  'dockable-desktop-closePanelTooltip': 'Close panel',
+  'dockable-desktop-closeTooltip': 'Close',
 };
 
 // ── Spanish ───────────────────────────────────────────────────────────────────
@@ -43,6 +52,15 @@ export const esMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Restaurar tamaño',
   'dockable-desktop-close':           'Cerrar',
   'dockable-desktop-closeEmptyGroup': 'Cerrar grupo vacío',
+  'dockable-desktop-unsavedChangesTitle': 'Cambios sin guardar',
+  'dockable-desktop-unsavedChangesMessage': '"{title}" tiene cambios sin guardar. ¿Quieres descartar tus cambios y cerrar?',
+  'dockable-desktop-discardChanges': 'Descartar cambios',
+  'dockable-desktop-cancel': 'Cancelar',
+  'dockable-desktop-yes': 'Sí',
+  'dockable-desktop-no': 'No',
+  'dockable-desktop-ok': 'Aceptar',
+  'dockable-desktop-closePanelTooltip': 'Cerrar panel',
+  'dockable-desktop-closeTooltip': 'Cerrar',
 };
 
 // ── Dutch ─────────────────────────────────────────────────────────────────────
@@ -59,6 +77,15 @@ export const nlMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Grootte herstellen',
   'dockable-desktop-close':           'Sluiten',
   'dockable-desktop-closeEmptyGroup': 'Lege splitsingsgroep sluiten',
+  'dockable-desktop-unsavedChangesTitle': 'Niet-opgeslagen wijzigingen',
+  'dockable-desktop-unsavedChangesMessage': '"{title}" heeft niet-opgeslagen wijzigingen. Wilt u uw wijzigingen weggooien en sluiten?',
+  'dockable-desktop-discardChanges': 'Wijzigingen weggooien',
+  'dockable-desktop-cancel': 'Annuleren',
+  'dockable-desktop-yes': 'Ja',
+  'dockable-desktop-no': 'Nee',
+  'dockable-desktop-ok': 'OK',
+  'dockable-desktop-closePanelTooltip': 'Paneel sluiten',
+  'dockable-desktop-closeTooltip': 'Sluiten',
 };
 
 // ── French ────────────────────────────────────────────────────────────────────
@@ -75,4 +102,13 @@ export const frMessages: DockableMessages = {
   'dockable-desktop-restoreSize':     'Restaurer la taille',
   'dockable-desktop-close':           'Fermer',
   'dockable-desktop-closeEmptyGroup': 'Fermer le groupe vide',
+  'dockable-desktop-unsavedChangesTitle': 'Modifications non enregistrées',
+  'dockable-desktop-unsavedChangesMessage': '"{title}" a des modifications non enregistrées. Voulez-vous annuler vos modifications et fermer ?',
+  'dockable-desktop-discardChanges': 'Annuler les modifications',
+  'dockable-desktop-cancel': 'Annuler',
+  'dockable-desktop-yes': 'Oui',
+  'dockable-desktop-no': 'Non',
+  'dockable-desktop-ok': 'OK',
+  'dockable-desktop-closePanelTooltip': 'Fermer le panneau',
+  'dockable-desktop-closeTooltip': 'Fermer',
 };

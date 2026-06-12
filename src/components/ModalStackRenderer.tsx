@@ -2,8 +2,8 @@ import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
 import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderContext';
-import { useFormatMessage, formatLabel, useStyleClasses } from './WindowManagerContext';
-import { DirtyWarningOverlay } from './DirtyWarningOverlay';
+import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages } from './WindowManagerContext';
+import ConfirmationForm from '../forms/ConfirmationForm';
 
 /**
  * Interface representing props for the internal {@link ModalRenderer} component.
@@ -22,15 +22,13 @@ interface ModalRendererProps {
  * the FormContainerProvider context, enabling subcomponents to request closes and set dirty states.
  */
 const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }) => {
-  const { close, updateInstance, setDirty } = usePanelActions();
+  const { close, openModal, updateInstance, setDirty } = usePanelActions();
   const formatMessage = useFormatMessage();
+  const predefinedMessages = usePredefinedMessages();
   const { modalClass, modalBodyClass } = useStyleClasses();
   const closeHandlerRef = useRef<(() => boolean | Promise<boolean>) | null>(null);
 
-  const [showDirtyWarning, setShowDirtyWarning] = useState(false);
-  const dirtyResolverRef = useRef<((discard: boolean) => void) | null>(null);
-
-  const { id, Component, props, options, dirty } = modal;
+  const { id, Component, props, options, dirty, dirtyOptions } = modal;
   const modalOptions = options as ModalOptions;
 
   const [icon, setIconState] = useState<React.ReactNode>(modalOptions.icon || null);
@@ -38,24 +36,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
   const optionsRef = useRef(modalOptions);
   optionsRef.current = modalOptions;
 
-  const promptDirtyWarning = useCallback((): Promise<boolean> => {
-    return new Promise((resolve) => {
-      dirtyResolverRef.current = resolve;
-      setShowDirtyWarning(true);
-    });
-  }, []);
-
-  const handleDirtyDiscard = useCallback(() => {
-    dirtyResolverRef.current?.(true);
-    dirtyResolverRef.current = null;
-    setShowDirtyWarning(false);
-  }, []);
-
-  const handleDirtyCancel = useCallback(() => {
-    dirtyResolverRef.current?.(false);
-    dirtyResolverRef.current = null;
-    setShowDirtyWarning(false);
-  }, []);
+  const baseTitle = formatLabel(modalOptions.title, formatMessage);
 
   const handleClose = useCallback(async (options?: CloseOptions) => {
     if (options?.force) {
@@ -71,14 +52,29 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
     }
 
     if (dirty) {
-      const shouldDiscard = await promptDirtyWarning();
-      if (!shouldDiscard) return;
+      openModal(
+        ConfirmationForm,
+        {
+          title: dirtyOptions?.title || predefinedMessages.unsavedChangesTitle,
+          message: dirtyOptions?.message || {
+            id: predefinedMessages.unsavedChangesMessage.id,
+            defaultMessage: predefinedMessages.unsavedChangesMessage.defaultMessage,
+            values: { title: baseTitle }
+          },
+          alert: dirtyOptions?.alert,
+          alertType: dirtyOptions?.alertType || 'danger',
+          useYesNoTitles: true,
+          onOK: () => close(id),
+        },
+        { size: 'small' }
+      );
+      return;
     }
 
     close(id);
-  }, [close, id, dirty, promptDirtyWarning]);
+  }, [close, openModal, id, dirty, dirtyOptions, baseTitle, predefinedMessages]);
 
-  const handleSetDirty = useCallback((dirty: boolean) => setDirty(id, dirty), [setDirty, id]);
+  const handleSetDirty = useCallback((dirty: boolean, options?: any) => setDirty(id, dirty, options), [setDirty, id]);
   const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id]);
   const handleSetIcon = useCallback((newIcon: React.ReactNode) => setIconState(newIcon), []);
   const handleOnCloseRequested = useCallback((handler: () => boolean | Promise<boolean>) => {
@@ -96,14 +92,13 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
     instanceId: id,
   }), [handleClose, handleSetDirty, handleSetTitle, handleSetIcon, handleOnCloseRequested, id]);
 
-  const baseTitle = formatLabel(modalOptions.title, formatMessage);
   const displayTitle = dirty ? `${baseTitle} *` : baseTitle;
 
   const sizeClass = modalOptions.size ? `v2-modal-size-${modalOptions.size}` : 'v2-modal-size-auto';
   const showCloseButton = modalOptions.closable !== false;
 
   useEffect(() => {
-    if (!isTopmost || !showCloseButton || showDirtyWarning) return;
+    if (!isTopmost || !showCloseButton) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -113,49 +108,38 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleClose, showCloseButton, isTopmost, showDirtyWarning]);
+  }, [handleClose, showCloseButton, isTopmost]);
 
   const baseZIndex = 10000;
   const modalZIndex = baseZIndex + (index * 10);
-  const dirtyWarningZIndex = modalZIndex + 5;
 
   return (
-    <>
-      <div className="v2-modal-overlay" style={{ zIndex: modalZIndex }}>
-        <div className="v2-modal-curtain" onClick={showCloseButton ? () => handleClose() : undefined} />
-        <div className={`v2-modal-window ${sizeClass} ${modalClass ?? ''}`}>
-          <div className="v2-modal-header">
-            {icon && <div className="v2-modal-icon">{icon}</div>}
-            <h4 className="v2-modal-title">{displayTitle}</h4>
-            {showCloseButton && (
-              <button
-                className="v2-modal-close-button"
-                onClick={() => handleClose()}
-                title="Close"
-                type="button"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className={`v2-modal-body ${modalBodyClass ?? ''}`}>
-            <FormContainerProvider value={contract}>
-              <Component {...props} panelId={id} />
-            </FormContainerProvider>
-          </div>
+    <div className="v2-modal-overlay" style={{ zIndex: modalZIndex }}>
+      <div className="v2-modal-curtain" onClick={showCloseButton ? () => handleClose() : undefined} />
+      <div className={`v2-modal-window ${sizeClass} ${modalClass ?? ''}`}>
+        <div className="v2-modal-header">
+          {icon && <div className="v2-modal-icon">{icon}</div>}
+          <h4 className="v2-modal-title">{displayTitle}</h4>
+          {showCloseButton && (
+            <button
+              className="v2-modal-close-button"
+              onClick={() => handleClose()}
+              title={formatMessage(predefinedMessages.closeTooltip)}
+              type="button"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className={`v2-modal-body ${modalBodyClass ?? ''}`}>
+          <FormContainerProvider value={contract}>
+            <Component {...props} panelId={id} />
+          </FormContainerProvider>
         </div>
       </div>
-
-      {showDirtyWarning && (
-        <DirtyWarningOverlay
-          zIndex={dirtyWarningZIndex}
-          onDiscard={handleDirtyDiscard}
-          onCancel={handleDirtyCancel}
-        />
-      )}
-    </>
+    </div>
   );
 };
 

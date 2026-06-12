@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { DirtyStateOptions } from './dirtyOptions';
 
 /**
  * Options used when requesting to close a container.
@@ -19,7 +20,7 @@ export interface FormContainerContract {
   /** Request the container to close itself. Bypassed by default unless options.force is true. */
   requestClose: (options?: CloseOptions) => void;
   /** Mark the form's content as dirty (having unsaved changes), triggering alert dialogs on close. */
-  setDirty: (dirty: boolean) => void;
+  setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
   /** Register a custom close guard handler. Returning false or a promise resolving to false blocks closing. */
   onCloseRequested: (handler: () => boolean | Promise<boolean>) => (() => void);
   /** Change the display title of the containing tab or window dynamically. */

@@ -1476,102 +1476,7 @@ html:not(.enable-animations) *::after {
   animation: none !important;
 }
 
-/* Dirty Close Interception Warning Modal */
-.close-warning-overlay {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(9, 11, 17, 0.7);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200000;
-  animation: fadeIn 0.2s ease-out;
-}
 
-.close-warning-modal {
-  background: rgba(20, 23, 34, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  width: 420px;
-  max-width: 90%;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  font-family: 'Outfit', 'Inter', sans-serif;
-  color: var(--text-primary);
-  animation: scaleUp 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.close-warning-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.close-warning-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-}
-
-.close-warning-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.close-warning-message {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-.close-warning-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.btn-warning-action {
-  font-size: 0.82rem;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border: none;
-  font-family: inherit;
-}
-
-.btn-warning-cancel {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.btn-warning-cancel:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.btn-warning-discard {
-  background-color: #ef4444;
-  color: #ffffff;
-}
-
-.btn-warning-discard:hover {
-  background-color: #dc2626;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
-}
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -1611,6 +1516,7 @@ html:not(.enable-animations) *::after {
   flex-direction: column;
   color: var(--text-primary);
   max-width: 90%;
+  max-height: 90vh;
   animation: scaleUp 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
@@ -1657,21 +1563,19 @@ html:not(.enable-animations) *::after {
 
 .v2-modal-body {
   padding: 10px;
-  overflow: auto;
+  overflow-y: auto;
+  max-height: calc(90vh - 70px);
 }
 
 /* Modal Sizes */
 .v2-modal-size-small { 
-  width: 360px; 
-  max-height: 270px; /* 4:3 aspect ratio */
+  width: 420px; 
 }
 .v2-modal-size-medium { 
   width: 560px; 
-  max-height: 420px; /* ~4:3 aspect ratio */
 }
 .v2-modal-size-large { 
   width: 800px; 
-  max-height: 500px; /* ~16:10 aspect ratio */
 }
 .v2-modal-size-fullscreen {
   width: 98vw;
@@ -1680,7 +1584,6 @@ html:not(.enable-animations) *::after {
 .v2-modal-size-auto { 
   width: auto; 
   min-width: 300px; 
-  max-height: 80vh; /* Safe aspect ratio threshold for auto content */
 }
 
 /* Side Drawer Panels */

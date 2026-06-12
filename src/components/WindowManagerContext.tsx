@@ -4,6 +4,8 @@ import { defaultPredefinedMessages } from './predefinedMessages';
 import type { PredefinedMessageKey } from './predefinedMessages';
 export type { PredefinedMessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
+import type { DirtyStateOptions } from './dirtyOptions';
+export type { DirtyStateOptions };
 
 /**
  * Structure representing localizable message descriptors used in context menus.
@@ -100,6 +102,8 @@ export interface PanelInfo {
   lastLeafId?: string;
   /** True if the panel contains unsaved user edits. */
   dirty?: boolean;
+  /** Custom options applied to the automatic unsaved changes modal. */
+  dirtyOptions?: DirtyStateOptions;
 }
 
 /**
@@ -116,8 +120,6 @@ export interface WindowState {
   panels: Record<string, PanelInfo>;
   /** The ID of the panel tab currently being dragged. */
   draggedPanelId: string | null;
-  /** Close execution warning intercept status container, or null. */
-  pendingClose: { id: string; resolve: (discard: boolean) => void } | null;
   /** The ID of the active/focused panel. */
   activePanelId: string | null;
 }
@@ -167,13 +169,11 @@ export interface WindowActions {
   /** Removes close confirmation guards. */
   unregisterCloseGuard: (id: string) => void;
   /** Set panel dirty state flag. */
-  setPanelDirty: (id: string, dirty: boolean) => void;
+  setPanelDirty: (id: string, dirty: boolean, options?: DirtyStateOptions) => void;
   /** Change title header. */
   updatePanelTitle: (id: string, title: string | ContextMenuPredefinedMessage) => void;
   /** Intercepts close panel requests, prompting warning dialogs if dirty. */
-  requestClosePanel: (id: string, options?: { force?: boolean }) => Promise<void>;
-  /** Dispatches decision choice when discarding or cancelling close events. */
-  resolvePendingClose: (discard: boolean) => void;
+  requestClosePanel: (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => Promise<void>;
   /** Docks a panel directly to workspace edges. */
   dockPanelToWorkspaceEdge: (id: string, position: 'left' | 'right' | 'top' | 'bottom') => void;
   /** Update active focused tab reference. */
@@ -283,7 +283,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     minimized: [],
     panels: initialPanels,
     draggedPanelId: null,
-    pendingClose: null,
     activePanelId: 'main-map'
   });
 
@@ -576,7 +575,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     delete closeGuardsRef.current[id];
   }, []);
 
-  const setPanelDirty = useCallback((id: string, dirty: boolean) => {
+  const setPanelDirty = useCallback((id: string, dirty: boolean, options?: DirtyStateOptions) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -584,7 +583,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         ...prev,
         panels: {
           ...prev.panels,
-          [id]: { ...panel, dirty }
+          [id]: { ...panel, dirty, dirtyOptions: options }
         }
       };
     });
@@ -604,15 +603,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     });
   }, []);
 
-  const resolvePendingClose = useCallback((discard: boolean) => {
-    setState(prev => {
-      if (!prev.pendingClose) return prev;
-      prev.pendingClose.resolve(discard);
-      return { ...prev, pendingClose: null };
-    });
-  }, []);
-
-  const requestClosePanel = useCallback(async (id: string, options?: { force?: boolean }) => {
+  const requestClosePanel = useCallback(async (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
     if (options?.force) {
       closePanel(id);
       return;
@@ -628,13 +619,12 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     // 2. Check automatic dirty flag
     const panel = stateRef.current.panels[id];
     if (panel?.dirty) {
-      const discard = await new Promise<boolean>(resolve => {
-        setState(prev => ({
-          ...prev,
-          pendingClose: { id, resolve }
-        }));
-      });
-      if (!discard) return;
+      if (options?.onConfirm) {
+        const discard = await options.onConfirm(panel.dirtyOptions);
+        if (!discard) return;
+      } else {
+        return;
+      }
     }
 
     closePanel(id);
@@ -1067,7 +1057,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           minimized: parsed.minimized,
           panels: parsed.panels,
           draggedPanelId: null,
-          pendingClose: null,
           activePanelId: firstActive
         });
       }
@@ -1107,7 +1096,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     setPanelDirty,
     updatePanelTitle,
     requestClosePanel,
-    resolvePendingClose,
     dockPanelToWorkspaceEdge,
     setActivePanel
   }), [
@@ -1134,7 +1122,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     setPanelDirty,
     updatePanelTitle,
     requestClosePanel,
-    resolvePendingClose,
     dockPanelToWorkspaceEdge,
     setActivePanel
   ]);

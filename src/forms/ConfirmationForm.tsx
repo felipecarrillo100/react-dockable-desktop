@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useFormContainer } from '../components/FormContainerContext';
+import { useFormatMessage, usePredefinedMessages } from '../components/WindowManagerContext';
 
 /**
  * Props for the {@link ConfirmationForm} component.
@@ -35,27 +36,34 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
   onCancel,
 }) => {
   const { requestClose, setIcon, setTitle } = useFormContainer();
+  const formatMessage = useFormatMessage();
+  const predefinedMessages = usePredefinedMessages();
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (title) {
-      const resolvedTitle = typeof title === 'string' ? title : title.defaultMessage || title.id;
+      const resolvedTitle = typeof title === 'string' ? title : formatMessage(title);
       setTitle(resolvedTitle);
     }
     
     if (setIcon) {
       setIcon(<span>❓</span>);
     }
-  }, [title, setTitle, setIcon]);
+  }, [title, setTitle, setIcon, formatMessage]);
 
   useEffect(() => {
     confirmButtonRef.current?.focus();
   }, []);
 
-  const resolvedMessage = typeof message === 'string' ? message : message.defaultMessage || message.id;
+  const resolvedMessage = typeof message === 'string' ? message : formatMessage(message);
 
-  const cancelLabel = useYesNoTitles ? 'No' : 'Cancel';
-  const confirmLabel = useYesNoTitles ? 'Yes' : 'OK';
+  const cancelLabel = useYesNoTitles
+    ? formatMessage(predefinedMessages.no)
+    : formatMessage(predefinedMessages.cancel);
+
+  const confirmLabel = useYesNoTitles
+    ? formatMessage(predefinedMessages.yes)
+    : formatMessage(predefinedMessages.ok);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

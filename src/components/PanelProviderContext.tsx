@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import type { ComponentType, ReactNode } from 'react';
+import type { DirtyStateOptions } from './dirtyOptions';
+export type { DirtyStateOptions };
 
 /** Unique string identifier for panel/modal instances. */
 export type PanelInstanceId = string;
@@ -57,6 +59,8 @@ export interface PanelInstance {
   options: SidePanelOptions | ModalOptions;
   /** True if the form container has unsaved user edits. */
   dirty?: boolean;
+  /** Custom warning options applied to the automatic unsaved changes modal. */
+  dirtyOptions?: DirtyStateOptions;
 }
 
 /** Stores the active layout structures for floating overlays. */
@@ -86,9 +90,9 @@ export interface PanelActions {
   /** Retrieves metadata for an active instance by ID. */
   getInstance: (id: PanelInstanceId) => PanelInstance | undefined;
   /** Updates the props, configuration options, or dirty flag of an active panel. */
-  updateInstance: (id: PanelInstanceId, updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty'>>) => void;
+  updateInstance: (id: PanelInstanceId, updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>) => void;
   /** Flags an instance as dirty (contains unsaved changes). */
-  setDirty: (id: PanelInstanceId, dirty: boolean) => void;
+  setDirty: (id: PanelInstanceId, dirty: boolean, options?: DirtyStateOptions) => void;
   /** Subscribes a custom close confirmation intercept handler. */
   registerCloseHandler: (id: PanelInstanceId, handler: () => Promise<boolean>) => void;
   /** Unsubscribes close confirmation handler. */
@@ -240,7 +244,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateInstance = useCallback(
     (
       id: PanelInstanceId,
-      updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty'>>
+      updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>
     ) => {
       setState(s => ({
         leftPanel: s.leftPanel?.id === id ? { ...s.leftPanel, ...updates } : s.leftPanel,
@@ -251,8 +255,8 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     []
   );
 
-  const setDirty = useCallback((id: PanelInstanceId, dirty: boolean) => {
-    updateInstance(id, { dirty });
+  const setDirty = useCallback((id: PanelInstanceId, dirty: boolean, options?: DirtyStateOptions) => {
+    updateInstance(id, { dirty, dirtyOptions: options });
   }, [updateInstance]);
 
   const actions = useMemo<PanelActions>(

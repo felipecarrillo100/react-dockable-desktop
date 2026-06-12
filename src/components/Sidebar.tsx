@@ -12,6 +12,8 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+import { useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
+
 
 // ==========================================
 // Types
@@ -98,6 +100,8 @@ export const Sidebar = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
   ref
 ) {
   const isControlled = controlledActiveTabId !== undefined;
+  const formatMessage = useFormatMessage();
+  const predefinedMessages = usePredefinedMessages();
 
   // Internal active tab state (used when uncontrolled)
   const [internalActiveTabId, setInternalActiveTabId] = useState<string | null>(null);
@@ -253,8 +257,8 @@ export const Sidebar = forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
                 onClick={handleClose}
                 className="btn btn-link p-0 text-secondary d-flex align-items-center"
                 style={{ textDecoration: 'none' }}
-                title="Close panel"
-                aria-label="Close panel"
+                title={formatMessage(predefinedMessages.closePanelTooltip)}
+                aria-label={formatMessage(predefinedMessages.closePanelTooltip)}
               >
                 <svg
                   width="16"

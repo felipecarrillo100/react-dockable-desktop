@@ -14,6 +14,8 @@ import { JsonContextMenu, type JsonContextMenuRef } from 'replace-react-contexif
 import 'replace-react-contexify/styles.css';
 import { FormContainerProvider } from './FormContainerContext';
 import type { FormContainerContract } from './FormContainerContext';
+import { usePanelActions } from './PanelProviderContext';
+import ConfirmationForm from '../forms/ConfirmationForm';
 
 // DOM Element Cache for preserving contexts (WebGL map, text area etc.)
 const domCache = new Map<string, HTMLDivElement>();
@@ -294,13 +296,14 @@ interface WorkspaceGridProps {
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
+  onRequestClosePanel: (id: string) => void;
 }
 
-const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon }) => {
+const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
   const { updateSplitSizes } = useWindowManagerActions();
 
   if (node.type === 'leaf') {
-    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} />;
+    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} />;
   }
 
   const isRow = node.orientation === 'horizontal';
@@ -358,7 +361,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
         return (
           <React.Fragment key={idx}>
             <div style={{ flexGrow: node.sizes[idx], flexBasis: `${size}%`, overflow: 'hidden', position: 'relative' }}>
-              <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} />
+              <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} />
             </div>
             {idx < node.children.length - 1 && (
               <div
@@ -388,11 +391,12 @@ interface LeafGroupProps {
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
+  onRequestClosePanel: (id: string) => void;
 }
 
-const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon }) => {
+const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
   const state = useWindowManagerState();
-  const { requestClosePanel, openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActions();
+  const { openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
@@ -481,7 +485,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                   <span
                     onClick={(e) => {
                       e.stopPropagation();
-                      requestClosePanel(id);
+                      onRequestClosePanel(id);
                     }}
                     title={formatLabel(messages.closeTab, formatMessage)}
                     className="close-tab-x ms-auto d-flex align-items-center justify-content-center"
@@ -599,9 +603,38 @@ export interface WindowManagerProps {
 
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
   const state = useWindowManagerState();
-  const { restorePanel, minimizePanel, requestClosePanel, resolvePendingClose, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel } = useWindowManagerActions();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, bringToFront, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel } = useWindowManagerActions();
+  const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
+
+  const handleRequestClose = React.useCallback((id: string) => {
+    const panel = state.panels[id];
+    requestClosePanel(id, {
+      onConfirm: (customOpts) => new Promise<boolean>((resolve) => {
+        const opts = customOpts || panel?.dirtyOptions;
+        const baseTitle = panel ? formatLabel(panel.title, formatMessage) : 'Panel';
+        openModal(
+          ConfirmationForm,
+          {
+            title: opts?.title || messages.unsavedChangesTitle,
+            message: opts?.message || {
+              id: messages.unsavedChangesMessage.id,
+              defaultMessage: messages.unsavedChangesMessage.defaultMessage,
+              values: { title: baseTitle }
+            },
+            alert: opts?.alert,
+            alertType: opts?.alertType || 'danger',
+            useYesNoTitles: true,
+            onOK: () => resolve(true),
+            onCancel: () => resolve(false),
+          },
+          { size: 'small' }
+        );
+      })
+    });
+  }, [requestClosePanel, state.panels, formatMessage, openModal, messages]);
+
   const { windowClass, windowBodyClass } = useStyleClasses();
   const taskbarRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<JsonContextMenuRef>(null);
@@ -747,7 +780,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     if (options?.canClose !== false) {
       items.push({
         label: formatLabel(messages.closeTab, formatMessage),
-        action: () => requestClosePanel(id)
+        action: () => handleRequestClose(id)
       });
     }
 
@@ -777,7 +810,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           { separator: true },
           {
             label: formatLabel(messages.closePanel, formatMessage),
-            action: () => requestClosePanel(id)
+            action: () => handleRequestClose(id)
           }
         ]
       }
@@ -1150,6 +1183,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               hoveredTab={hoveredTab}
               onTabHover={handleTabHover}
               defaultPanelIcon={defaultPanelIcon}
+              onRequestClosePanel={handleRequestClose}
             />
           ) : (
             <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted font-monospace small">
@@ -1295,7 +1329,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       <button
                         type="button"
                         title={formatLabel(messages.close, formatMessage)}
-                        onClick={() => requestClosePanel(w.id)}
+                        onClick={() => handleRequestClose(w.id)}
                         className="custom-tab-btn btn-close-tab"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -1439,7 +1473,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   <span
                     onClick={(e) => {
                       e.stopPropagation();
-                      requestClosePanel(hoveredMinimized.id);
+                      handleRequestClose(hoveredMinimized.id);
                       setHoveredMinimized(null);
                     }}
                     title={formatLabel(messages.closePanel, formatMessage)}
@@ -1510,40 +1544,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         </div>
       )}
 
-      {/* 6. Dirty warning dialog overlay */}
-      {state.pendingClose && (() => {
-        const pendingPanel = state.panels[state.pendingClose.id];
-        const panelTitle = pendingPanel ? formatLabel(pendingPanel.title, formatMessage) : 'Panel';
-        return (
-          <div className="close-warning-overlay">
-            <div className="close-warning-modal">
-              <div className="close-warning-header">
-                <div className="close-warning-icon">⚠️</div>
-                <h5 className="close-warning-title">Unsaved Changes</h5>
-              </div>
-              <p className="close-warning-message">
-                "{panelTitle}" has unsaved changes. Do you want to discard your changes and close the panel?
-              </p>
-              <div className="close-warning-footer">
-                <button
-                  type="button"
-                  className="btn-warning-action btn-warning-cancel"
-                  onClick={() => resolvePendingClose(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn-warning-action btn-warning-discard"
-                  onClick={() => resolvePendingClose(true)}
-                >
-                  Discard Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+
 
     </div>
   );

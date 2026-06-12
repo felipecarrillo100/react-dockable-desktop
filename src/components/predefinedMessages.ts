@@ -26,6 +26,15 @@ export const defaultPredefinedMessages = {
   anchorToRightEdge: { id: 'dockable-desktop-anchorToRightEdge', defaultMessage: 'Anchor to Right Edge' },
   anchorToBottomEdge: { id: 'dockable-desktop-anchorToBottomEdge', defaultMessage: 'Anchor to Bottom Edge' },
   windowAnchoringOptions: { id: 'dockable-desktop-windowAnchoringOptions', defaultMessage: 'Window Anchoring Options' },
+  unsavedChangesTitle: { id: 'dockable-desktop-unsavedChangesTitle', defaultMessage: 'Unsaved Changes' },
+  unsavedChangesMessage: { id: 'dockable-desktop-unsavedChangesMessage', defaultMessage: '"{title}" has unsaved changes. Do you want to discard your changes and close?' },
+  discardChanges: { id: 'dockable-desktop-discardChanges', defaultMessage: 'Discard Changes' },
+  cancel: { id: 'dockable-desktop-cancel', defaultMessage: 'Cancel' },
+  yes: { id: 'dockable-desktop-yes', defaultMessage: 'Yes' },
+  no: { id: 'dockable-desktop-no', defaultMessage: 'No' },
+  ok: { id: 'dockable-desktop-ok', defaultMessage: 'OK' },
+  closePanelTooltip: { id: 'dockable-desktop-closePanelTooltip', defaultMessage: 'Close panel' },
+  closeTooltip: { id: 'dockable-desktop-closeTooltip', defaultMessage: 'Close' },
 } as const;
 
 /**
