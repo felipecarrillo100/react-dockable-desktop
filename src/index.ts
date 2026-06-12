@@ -11,7 +11,10 @@ export type { PanelRegistryEntry } from './components/PanelRegistry';
 
 // WorkspaceClient — primary configuration and imperative API object
 export { WorkspaceClient } from './WorkspaceClient';
-export type { WorkspaceClientConfig, PanelDefinition } from './WorkspaceClient';
+export type { WorkspaceClientConfig, PanelDefinition, BuiltInPanelEvents } from './WorkspaceClient';
+
+// Composite provider — wraps WindowManagerProvider + PanelProvider in correct order
+export { DockableDesktopProvider } from './components/DockableDesktopProvider';
 
 // State Actions and Context Providers
 export {
@@ -24,7 +27,8 @@ export {
   usePanelContext,
   usePredefinedMessages,
   defaultPredefinedMessages,
-  useStyleClasses
+  useStyleClasses,
+  usePanelId
 } from './components/WindowManagerContext';
 
 // TypeScript Types and Interfaces

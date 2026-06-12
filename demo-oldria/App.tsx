@@ -4,12 +4,11 @@ import 'react-bootstrap-submenu/dist/index.css';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { NavDropdownMenu, DropdownSubmenu } from 'react-bootstrap-submenu';
 import {
-    WindowManagerProvider,
+    DockableDesktopProvider,
     useWindowManagerState,
     useWindowManagerActions,
     WindowManager,
     defaultPredefinedMessages,
-    PanelProvider,
     SidePanelRenderer,
     ModalStackRenderer,
     usePanelActions,
@@ -888,11 +887,9 @@ function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
   };
 
   return (
-    <WindowManagerProvider formatMessage={handleFormatMessage} predefinedMessages={defaultPredefinedMessages}>
-      <PanelProvider>
-        <AppContent locale={locale} onLocaleChange={onLocaleChange} />
-      </PanelProvider>
-    </WindowManagerProvider>
+    <DockableDesktopProvider formatMessage={handleFormatMessage} predefinedMessages={defaultPredefinedMessages}>
+      <AppContent locale={locale} onLocaleChange={onLocaleChange} />
+    </DockableDesktopProvider>
   );
 }
 

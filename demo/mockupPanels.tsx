@@ -6,6 +6,7 @@ import {
   useWindowManagerState,
   useWindowManagerActions,
   usePanelActions,
+  usePanelId,
   ConfirmationForm,
 } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
@@ -86,6 +87,33 @@ PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
 // Modifying the layout dynamically
 const { loadLayout } = useWindowManagerActions();
 loadLayout(JSON_LAYOUT_STRING);`,
+
+  v3features: `// v3.0: F6 — DockableDesktopProvider (wraps both providers)
+<DockableDesktopProvider client={workspace}>
+  <WindowManager />
+  <ModalStackRenderer />
+</DockableDesktopProvider>
+
+// v3.0: F7 — usePanelId() — no prop drilling needed
+function MyPanel() {
+  const panelId = usePanelId();
+  return <button onClick={() => ws.closePanel(panelId)}>Close me</button>;
+}
+
+// v3.0: F4 — State Selector (skips re-renders on unrelated changes)
+const activeId = useWindowManagerState(s => s.activePanelId);
+const count   = useWindowManagerState(s => Object.keys(s.panels).length);
+
+// v3.0: F5 — Lifecycle callbacks via WorkspaceClient
+workspace.onPanelOpen((id, component) =>
+  analytics.track('panel_open', { id, component })
+);
+
+// v3.0: F8 — Typed WorkspaceClient<TUserEvents>
+interface AppEvents { 'layer:toggle': { layerId: string; visible: boolean } }
+const ws = new WorkspaceClient<AppEvents>({ panels });
+ws.publish('layer:toggle', { layerId: 'markers', visible: true }); // typed
+ws.subscribe('panel:opened', d => console.log(d.id));             // built-in`,
 
   rtlShowcase: `// RTL Content Showcase Panel
 PanelRegistry.register('rtlShowcase', RTLShowcasePanel, {
@@ -176,7 +204,29 @@ export const ShowcaseControlCenter: React.FC = () => {
   const state = useWindowManagerState();
   const { openPanel } = useWindowManagerActions();
   const { openLeftPanel, openRightPanel } = usePanelActions();
-  const [activeTab, setActiveTab] = useState<'tour' | 'presets' | 'theme' | 'monitor'>('tour');
+  const [activeTab, setActiveTab] = useState<'tour' | 'presets' | 'theme' | 'monitor' | 'v3'>('tour');
+
+  // F4 — state selectors: only re-render this hook when these specific values change
+  const activePanelId = useWindowManagerState(s => s.activePanelId);
+  const panelCount = useWindowManagerState(s => Object.keys(s.panels).length);
+  const floatingCount = useWindowManagerState(s => s.floating.length);
+
+  // F5 — lifecycle event log via panel event bus
+  const [lifecycleLog, setLifecycleLog] = useState<Array<{ type: string; id: string }>>([]);
+  const { subscribe } = usePanelContext();
+  useEffect(() => {
+    const addLog = (type: string) => (d: unknown) => {
+      const { id } = d as { id: string };
+      setLifecycleLog(prev => [{ type, id }, ...prev].slice(0, 12));
+    };
+    const unsubs = [
+      subscribe('panel:opened', addLog('opened')),
+      subscribe('panel:closed', addLog('closed')),
+      subscribe('panel:minimized', addLog('minimized')),
+      subscribe('panel:restored', addLog('restored')),
+    ];
+    return () => unsubs.forEach(u => u());
+  }, [subscribe]);
 
   // Tutorial checklist state
   const [steps, setSteps] = useState({
@@ -286,6 +336,13 @@ export const ShowcaseControlCenter: React.FC = () => {
           style={{ fontSize: '0.75rem' }}
         >
           📊 Stats
+        </button>
+        <button
+          className={`btn btn-link py-1 px-2 text-decoration-none font-monospace ${activeTab === 'v3' ? 'text-primary border-bottom border-primary fw-bold' : 'text-secondary'}`}
+          onClick={() => setActiveTab('v3')}
+          style={{ fontSize: '0.75rem' }}
+        >
+          ⚡ v3
         </button>
       </div>
 
@@ -447,6 +504,57 @@ export const ShowcaseControlCenter: React.FC = () => {
             </div>
           </div>
         )}
+
+        {activeTab === 'v3' && (
+          <div className="d-flex flex-column gap-3 font-monospace small">
+
+            {/* F4 — State Selectors */}
+            <div>
+              <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F4 — State Selectors (live)</h6>
+              <div className="p-2 rounded border border-secondary border-opacity-15" style={{ background: 'var(--panel-card-bg)' }}>
+                <div className="d-flex justify-content-between mb-1">
+                  <span className="text-secondary" style={{ fontSize: '0.7rem' }}>activePanelId:</span>
+                  <span className="text-info" style={{ fontSize: '0.7rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activePanelId || '—'}</span>
+                </div>
+                <div className="d-flex justify-content-between mb-1">
+                  <span className="text-secondary" style={{ fontSize: '0.7rem' }}>panel count:</span>
+                  <span className="text-success fw-bold" style={{ fontSize: '0.7rem' }}>{panelCount}</span>
+                </div>
+                <div className="d-flex justify-content-between">
+                  <span className="text-secondary" style={{ fontSize: '0.7rem' }}>floating count:</span>
+                  <span className="text-warning fw-bold" style={{ fontSize: '0.7rem' }}>{floatingCount}</span>
+                </div>
+                <pre className="mt-2 mb-0 text-muted" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap' }}>{`// Only re-renders when activePanelId changes:\nconst id = useWindowManagerState(\n  s => s.activePanelId\n);`}</pre>
+              </div>
+            </div>
+
+            {/* F5 — Lifecycle Events */}
+            <div>
+              <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F5 — Lifecycle Events (live log)</h6>
+              <div className="p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ background: 'var(--panel-card-bg)', maxHeight: '120px' }}>
+                {lifecycleLog.length === 0 ? (
+                  <span className="text-muted" style={{ fontSize: '0.7rem' }}>No events yet — open or close a panel</span>
+                ) : (
+                  lifecycleLog.map((entry, i) => (
+                    <div key={i} className="d-flex gap-2" style={{ fontSize: '0.7rem' }}>
+                      <span className={`${entry.type === 'opened' ? 'text-success' : entry.type === 'closed' ? 'text-danger' : 'text-info'}`} style={{ minWidth: '62px' }}>
+                        {entry.type}
+                      </span>
+                      <span className="text-white text-truncate" style={{ maxWidth: '130px' }}>{entry.id}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* F6/F7/F8 — Quick References */}
+            <div>
+              <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F6/F7/F8 — Quick Reference</h6>
+              <pre className="mb-0 text-muted p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap', background: 'var(--panel-card-bg)', maxHeight: '120px' }}>{`// F6: one provider replaces two\n<DockableDesktopProvider client={ws}>\n  ...\n</DockableDesktopProvider>\n\n// F7: panel reads own ID without props\nconst id = usePanelId();\n\n// F8: fully-typed event bus\nconst ws = new WorkspaceClient<MyEvents>({...});\nws.publish('layer:toggle', { id: 'a' });`}</pre>
+            </div>
+
+          </div>
+        )}
       </div>
     </div>
   );
@@ -580,16 +688,24 @@ export const PreviewOutput: React.FC = () => {
   );
 };
 
-export const HelpCenter: React.FC = () => (
-  <div className="w-100 h-100 p-4 bg-transparent text-start" style={{ color: 'var(--panel-text)', opacity: 0.85, overflow: 'auto' }}>
-    <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }}>Workspace Guide</h5>
-    <ul className="small d-flex flex-column gap-2 ps-3">
-      <li><strong>Float Tabs:</strong> Click the "▢" in a tab header or right-click to float a docked tab.</li>
-      <li><strong>Minimize:</strong> Minimize panels to see them slide into the macOS taskbar at the bottom.</li>
-      <li><strong>Save & Restore:</strong> Save your customized layout to JSON and restore it instantly.</li>
-    </ul>
-  </div>
-);
+export const HelpCenter: React.FC = () => {
+  const panelId = usePanelId();
+  return (
+    <div className="w-100 h-100 p-4 bg-transparent text-start" style={{ color: 'var(--panel-text)', opacity: 0.85, overflow: 'auto' }}>
+      <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }}>Workspace Guide</h5>
+      <ul className="small d-flex flex-column gap-2 ps-3">
+        <li><strong>Float Tabs:</strong> Click the "▢" in a tab header or right-click to float a docked tab.</li>
+        <li><strong>Minimize:</strong> Minimize panels to see them slide into the macOS taskbar at the bottom.</li>
+        <li><strong>Save & Restore:</strong> Save your customized layout to JSON and restore it instantly.</li>
+      </ul>
+      <div className="mt-4 pt-3 border-top small font-monospace d-flex align-items-center gap-2" style={{ borderColor: 'var(--panel-card-border)' }}>
+        <span className="text-secondary" style={{ fontSize: '0.75rem' }}>usePanelId()</span>
+        <span className="text-muted">→</span>
+        <code className="text-info" style={{ fontSize: '0.75rem' }}>{panelId}</code>
+      </div>
+    </div>
+  );
+};
 
 const LAYER_DEFINITIONS = [
   { id: 'basemap', name: '🗺️ CartoDB Dark/Voyager', defaultVisible: true, locked: true },
@@ -1305,11 +1421,11 @@ export function registerDemoPanels() {
         initialTarget: 'floating',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
-    PanelRegistry.register('help', HelpCenter, { 
-        title: 'Workspace Help', 
+    PanelRegistry.register('help', HelpCenter, {
+        title: 'Workspace Help',
         icon: '❓',
         initialTarget: 'docked',
-        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="v3features" />
     });
     PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
         title: 'Control Center',

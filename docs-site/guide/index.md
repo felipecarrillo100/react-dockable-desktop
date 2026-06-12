@@ -31,7 +31,7 @@ import 'replace-react-contexify/styles.css';
 import 'react-dockable-desktop/styles.css';
 ```
 
-> **C5 warning:** In development mode, the provider will print a `console.warn` if the `replace-react-contexify` stylesheet is not detected. Context menus will not render correctly without it.
+> **C5 warning:** In development mode, the provider will print a `console.error` if the `replace-react-contexify` stylesheet is not detected. Context menus will not render correctly without it.
 
 ## Next steps
 

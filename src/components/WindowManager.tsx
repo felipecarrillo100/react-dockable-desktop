@@ -882,6 +882,12 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const observer = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
       const rect = entries[0].contentRect;
+      if (process.env.NODE_ENV === 'development' && rect.height < 10) {
+        console.warn(
+          '[react-dockable-desktop] Workspace height is near zero. ' +
+          'Add: html, body, #root { height: 100%; overflow: hidden; }'
+        );
+      }
       setWorkspaceSize({
         width: Math.max(100, rect.width),
         height: Math.max(100, rect.height)

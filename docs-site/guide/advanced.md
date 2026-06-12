@@ -117,6 +117,14 @@ const wsB = new WorkspaceClient({ panels: { map: { component: MapB } } });
 </div>
 ```
 
+## DockableDesktopProvider, state selectors, lifecycle callbacks, `usePanelId()`
+
+These v3 features are documented in the dedicated guides:
+
+- [Panel Lifecycle & Forms →](./forms-and-panels) — `usePanelId()`, `useFormContainer()`, lifecycle hooks
+- [Event Bus & Communication →](./event-bus) — `onPanelOpen/Close/Minimize/Restore`, typed events, state subscriptions
+- [WorkspaceClient →](./workspace-client) — `DockableDesktopProvider`, `useWindowManagerState` selectors, CSS class overrides
+
 ## i18n / custom messages
 
 Pass a `formatMessage` function to translate all built-in strings:

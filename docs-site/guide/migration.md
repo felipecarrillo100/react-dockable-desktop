@@ -1,4 +1,35 @@
-# Migration Guide: v1.x → v2.0.0
+# Migration Guide
+
+## v2.x → v3.0.0
+
+v3.0.0 is **fully backward-compatible** — no existing API was removed or changed. All additions are opt-in.
+
+### What's new
+
+| Feature | What changed |
+|---------|-------------|
+| **StrictMode compatibility** | `focusPanel` is now idempotent; calling it twice no longer double-increments z-index. `WorkspaceClient` guards against StrictMode's double `_connect` cycle. |
+| **CSS height warning** | `console.warn` fires in development when the workspace container height is near zero (missing `height: 100%` CSS). |
+| **Missing-client error** | Upgraded from `console.warn` (dev-only) to `console.error` (always). Fires after 5 s in production, 1 s in development. |
+| **State selectors** | `useWindowManagerState()` now accepts an optional selector. Components only re-render when the selected slice changes. |
+| **Lifecycle callbacks** | `WorkspaceClient` exposes `onPanelOpen`, `onPanelClose`, `onPanelMinimize`, `onPanelRestore` convenience methods. |
+| **`DockableDesktopProvider`** | New composite provider that wraps `WindowManagerProvider` + `PanelProvider` in the correct order. |
+| **`usePanelId()` hook** | Any component rendered inside a panel can call `usePanelId()` to discover its own panel instance ID — no prop needed. |
+| **Typed event bus** | `WorkspaceClient<TUserEvents>` is now generic. `publish` and `subscribe` are fully typed when you supply an event map. |
+
+### Upgrade steps
+
+1. Bump the package: `npm install react-dockable-desktop@3`
+2. Optionally replace `<WindowManagerProvider> + <PanelProvider>` nesting with `<DockableDesktopProvider>`.
+3. No further changes required.
+
+### Breaking changes
+
+None.
+
+---
+
+## v1.x → v2.0.0
 
 ## Overview
 

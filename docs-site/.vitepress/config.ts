@@ -17,10 +17,10 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
       {
-        text: 'v2.0.0',
+        text: 'v3.0.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/felipecarrillo100/react-dockable-desktop/releases' },
-          { text: 'Migration (v1 → v2)', link: '/guide/migration' },
+          { text: 'Migration Guide', link: '/guide/migration' },
         ],
       },
     ],
@@ -44,11 +44,20 @@ export default defineConfig({
           ],
         },
         {
+          text: 'Building Real Panels',
+          items: [
+            { text: 'Panel Lifecycle & Forms', link: '/guide/forms-and-panels' },
+            { text: 'Modals & Side Panels', link: '/guide/modals-and-drawers' },
+            { text: 'Event Bus & Communication', link: '/guide/event-bus' },
+          ],
+        },
+        {
           text: 'Advanced',
           items: [
             { text: 'Advanced Topics', link: '/guide/advanced' },
+            { text: 'Custom Theming', link: '/guide/theming' },
             { text: 'Best Practices', link: '/guide/best-practices' },
-            { text: 'Migration (v1 → v2)', link: '/guide/migration' },
+            { text: 'Migration Guide', link: '/guide/migration' },
           ],
         },
       ],
