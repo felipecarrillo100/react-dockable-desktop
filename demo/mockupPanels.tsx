@@ -252,7 +252,7 @@ export const ShowcaseControlCenter: React.FC = () => {
         <h5 className="m-0 text-primary fw-bold d-flex align-items-center gap-2" style={{ fontSize: '1.05rem' }}>
           🚀 Control Center
         </h5>
-        <span className="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-35 font-monospace small px-2 py-0.5" style={{ fontSize: '0.7rem' }}>
+        <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', padding: '2px 8px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: 'var(--accent-color, #38bdf8)', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
           Interactive
         </span>
       </div>
