@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type Context, type Provider } from 'react';
 import type { DirtyStateOptions } from './dirtyOptions';
 
 /**
@@ -60,8 +60,8 @@ const defaultContract: FormContainerContract = {
 /**
  * Context that supplies the {@link FormContainerContract} to panels inside the Window Manager.
  */
-export const FormContainerContext = createContext<FormContainerContract>(defaultContract);
-export const FormContainerProvider = FormContainerContext.Provider;
+export const FormContainerContext: Context<FormContainerContract> = createContext<FormContainerContract>(defaultContract);
+export const FormContainerProvider: Provider<FormContainerContract> = FormContainerContext.Provider;
 
 /**
  * React hook to retrieve the current {@link FormContainerContract} from context.

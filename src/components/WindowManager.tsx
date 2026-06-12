@@ -8,7 +8,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
-import type { LayoutNode, LayoutLeafNode } from './WindowManagerContext';
+import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
 import { isElementRtl } from '../utils/rtl';
 import { JsonContextMenu, type JsonContextMenuRef } from 'replace-react-contexify';
@@ -68,12 +68,14 @@ const renderPanelContent = (id: string, componentKey: string, registry: PanelReg
 
 const activePanelDimensions = new Map<string, { width: number; height: number }>();
 
-const panelLifecycleRegistry = new Map<string, {
+interface PanelLifecycleRegistry {
   onClose: Set<() => void>;
   onMinimize: Set<() => void>;
   onRestore: Set<() => void>;
   onResize: Set<(w: number, h: number) => void>;
-}>();
+}
+
+const panelLifecycleRegistry = new Map<string, PanelLifecycleRegistry>();
 
 const getOrCreateLifecycleRegistry = (panelId: string) => {
   let entry = panelLifecycleRegistry.get(panelId);
@@ -307,8 +309,8 @@ interface WorkspaceGridProps {
   node: LayoutNode;
   path: number[];
   onTabRightClick: (id: string, e: React.MouseEvent) => void;
-  activeDropZone: { leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null;
-  onHoverDropZone: (leafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center' | null) => void;
+  activeDropZone: { leafId: string; position: DropPosition } | null;
+  onHoverDropZone: (leafId: string, position: DropPosition | null) => void;
   onTabDragStart: (id: string, e: React.MouseEvent) => void;
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
@@ -401,8 +403,8 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
 interface LeafGroupProps {
   leaf: LayoutLeafNode;
   onTabRightClick: (id: string, e: React.MouseEvent) => void;
-  activeDropZone: { leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null;
-  onHoverDropZone: (leafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center' | null) => void;
+  activeDropZone: { leafId: string; position: DropPosition } | null;
+  onHoverDropZone: (leafId: string, position: DropPosition | null) => void;
   onTabDragStart: (id: string, e: React.MouseEvent) => void;
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
@@ -687,13 +689,13 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     }
   }, [state.minimized, hoveredMinimized]);
 
-  const [activeDropZone, setActiveDropZone] = useState<{ leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null>(null);
-  const activeDropZoneRef = useRef<{ leafId: string; position: 'left' | 'right' | 'top' | 'bottom' | 'center' } | null>(null);
+  const [activeDropZone, setActiveDropZone] = useState<{ leafId: string; position: DropPosition } | null>(null);
+  const activeDropZoneRef = useRef<{ leafId: string; position: DropPosition } | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const [activeEdgeDrop, setActiveEdgeDropState] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null);
-  const activeEdgeDropRef = useRef<'left' | 'right' | 'top' | 'bottom' | null>(null);
-  const setActiveEdgeDrop = (val: 'left' | 'right' | 'top' | 'bottom' | null) => {
+  const [activeEdgeDrop, setActiveEdgeDropState] = useState<SplitDirection | null>(null);
+  const activeEdgeDropRef = useRef<SplitDirection | null>(null);
+  const setActiveEdgeDrop = (val: SplitDirection | null) => {
     setActiveEdgeDropState(val);
     activeEdgeDropRef.current = val;
   };
@@ -707,7 +709,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     hoveredTabRef.current = val;
   };
 
-  const handleHoverDropZone = (leafId: string, position: 'left' | 'right' | 'top' | 'bottom' | 'center' | null) => {
+  const handleHoverDropZone = (leafId: string, position: DropPosition | null) => {
     const val = position ? { leafId, position } : null;
     setActiveDropZone(val);
     activeDropZoneRef.current = val;
