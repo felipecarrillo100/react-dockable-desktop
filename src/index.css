@@ -148,6 +148,37 @@ body,
   overflow-x: auto;
 }
 
+/* Tab bar scroll arrow buttons — appear when tabs overflow */
+.tab-scroll-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tab-inactive);
+  border: none;
+  border-right: 1px solid var(--border-panel);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-tab-inactive);
+  padding: 0;
+  z-index: 27;
+  user-select: none;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.tab-scroll-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tab-hover, var(--bg-drop-hover, rgba(255,255,255,0.08)));
+}
+
+.tab-scroll-btn-right {
+  border-right: none;
+  border-left: 1px solid var(--border-panel);
+}
+
 /* Premium Tab styling (VS Code Style) */
 .workspace-tab {
   position: relative;
@@ -167,6 +198,8 @@ body,
   user-select: none;
   height: 35px; /* VS Code standard height */
   box-sizing: border-box;
+  flex-shrink: 1;
+  min-width: 80px; /* compress before scrolling kicks in */
 }
 
 .workspace-tab > .text-truncate {
@@ -1781,7 +1814,7 @@ html:not(.enable-animations) *::after {
   top: 0;
   left: 24px;
   right: 24px;
-  height: 24px;
+  height: 10px; /* thin strip — keeps clear of tab bar (38px tall) */
 }
 
 .edge-trigger-bottom {
@@ -2326,6 +2359,15 @@ html:not(.enable-animations) *::after {
     width: 48px !important;
     height: 48px !important;
   }
+
+  /* Wider tab min-width on touch */
+  .workspace-tab { min-width: 88px; }
+
+  /* Wider scroll arrows on touch */
+  .tab-scroll-btn { width: 32px; height: 44px; }
+
+  /* Keep top edge trigger thin even on touch — avoids collision with tab bar */
+  .edge-trigger-top { height: 14px; }
 }
 
 /* Phase 4A: Long-press active animation (visual feedback during 300ms hold) */

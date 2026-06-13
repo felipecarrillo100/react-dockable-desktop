@@ -5,7 +5,7 @@
  * resize handles, context menus, and taskbar docks. Exposes lifecycle event listeners.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition } from './WindowManagerContext';
@@ -417,6 +417,32 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
 
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+  const [tabScroll, setTabScroll] = useState({ left: false, right: false });
+
+  const updateTabScroll = useCallback(() => {
+    const el = tabContainerRef.current;
+    if (!el) return;
+    setTabScroll({
+      left: el.scrollLeft > 0,
+      right: el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = tabContainerRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateTabScroll, { passive: true });
+    const ro = new ResizeObserver(updateTabScroll);
+    ro.observe(el);
+    updateTabScroll();
+    return () => { el.removeEventListener('scroll', updateTabScroll); ro.disconnect(); };
+  }, [updateTabScroll]);
+
+  const scrollTabs = (dir: 'left' | 'right') => {
+    tabContainerRef.current?.scrollBy({ left: dir === 'left' ? -120 : 120, behavior: 'smooth' });
+  };
+
   const selectTab = (id: string) => {
     openPanel(id, state.panels[id].component);
     setActivePanel(id);
@@ -430,7 +456,17 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
     >
       {/* Tab Headers */}
       <div className="workspace-tab-bar" style={{ minHeight: '38px' }}>
+        {tabScroll.left && (
+          <button
+            className="tab-scroll-btn tab-scroll-btn-left"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => scrollTabs('left')}
+            tabIndex={-1}
+            aria-label="Scroll tabs left"
+          >&#8249;</button>
+        )}
         <div
+          ref={tabContainerRef}
           className="tab-headers-container"
           style={{ scrollbarWidth: 'none' }}
           onPointerMove={(e) => {
@@ -528,6 +564,15 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             );
           })}
         </div>
+        {tabScroll.right && (
+          <button
+            className="tab-scroll-btn tab-scroll-btn-right"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => scrollTabs('right')}
+            tabIndex={-1}
+            aria-label="Scroll tabs right"
+          >&#8250;</button>
+        )}
 
         {/* Empty group close button — only visible when keepOnEmpty keeps the group alive */}
         {leaf.panels.length === 0 && leaf.keepOnEmpty && leaf.canClose !== false && (
@@ -745,11 +790,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         }
       }
 
-      if (!foundEdge && el.dataset.edgeTrigger) {
-        setActiveEdgeDrop(el.dataset.edgeTrigger as SplitDirection);
-        foundEdge = true;
-      }
-
+      // Tabs checked before edge triggers — precise tab intent beats the coarse edge zone
       if (!foundTab && el.dataset.tabId) {
         const leafId = el.dataset.leafId;
         const tabIdx = parseInt(el.dataset.tabIndex || '0', 10);
@@ -760,6 +801,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           hoveredTabRef.current = { leafId, panelId: el.dataset.tabId, index: tabIdx, side };
           foundTab = true;
         }
+      }
+
+      if (!foundEdge && el.dataset.edgeTrigger) {
+        setActiveEdgeDrop(el.dataset.edgeTrigger as SplitDirection);
+        foundEdge = true;
       }
 
       if (foundDropZone && foundEdge && foundTab) break;
