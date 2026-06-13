@@ -1,5 +1,30 @@
 # Migration Guide
 
+## v3.0.x → v3.1.0
+
+v3.1.0 is **fully backward-compatible** — no existing API was removed or changed.
+
+### What's new
+
+| Feature | What changed |
+|---------|-------------|
+| **Touch & iPad/Android support** | All drag and resize surfaces (tab drag, split resizer, floating window drag, floating window resize) now use the Pointer Events API. Long-press (300ms) initiates tab drag on touch; instant capture on mouse/pen as before. |
+| **8-direction resize handles** | Floating windows now render N, NE, E, SE, S, SW, W, NW resize handles. The previous single SE handle is replaced by all eight. |
+| **Smart resizer hit areas** | The horizontal split resizer's invisible grab zone now extends only upward into the panel content area, not downward into the tab bar below. This eliminates accidental resizer activation when clicking tabs. |
+| **Cursor fix during drag** | The body-level cursor override applied during an active resize drag now matches the correct orientation. (Previously the cursor inverted on mousedown.) |
+| **`touch-action` surgery** | `touch-action: none` is applied to all drag/resize handles. The tab bar container no longer carries `touch-action: pan-x` or `-webkit-overflow-scrolling: touch`, which previously caused `pointercancel` to fire before the long-press timer on iOS Safari. |
+
+### Upgrade steps
+
+1. `npm install react-dockable-desktop@3.1`
+2. No API changes required.
+
+### Breaking changes
+
+None.
+
+---
+
 ## v2.x → v3.0.0
 
 v3.0.0 is **fully backward-compatible** — no existing API was removed or changed. All additions are opt-in.

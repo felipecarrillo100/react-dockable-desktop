@@ -22,7 +22,9 @@ Each key is the `componentKey` argument to `openPanel(id, componentKey)`. Keys m
 
 ```ts
 interface PanelDefinition {
-  component: ComponentType<{ panelId: string }>;
+  // The library injects `panelId` as a prop automatically.
+  // Components that don't declare it in their props can use `usePanelId()` instead.
+  component: ComponentType<any>;
   defaultOptions?: PanelDefaultOptions;
 }
 ```
@@ -35,12 +37,11 @@ All fields are optional. They set the per-panel defaults; most can be overridden
 |--------|------|---------|-------------|
 | `title` | `string \| MessageDescriptor` | — | Tab and window title. |
 | `icon` | `ReactNode` | — | Icon shown in the tab and taskbar. |
-| `initialTarget` | `string` | — | ID of the leaf panel to dock into when first opened. |
-| `favoritePosition` | `number \| string` | — | Preferred pixel size or CSS percentage used when the panel splits into a new leaf. |
+| `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | `'docked'` | Initial placement when the panel is first opened. |
+| `favoritePosition` | `{ x, y, width, height }` | — | Default floating bounds (position + size) when the panel is first floated. All four values accept numbers (px) or CSS strings (`'50%'`). |
 | `canClose` | `boolean` | `true` | Show or hide the × close button. |
 | `canMinimize` | `boolean` | `true` | Show or hide the minimize button. |
-| `canFloat` | `boolean` | `true` | Allow the panel to be detached as a floating window. |
-| `canDrag` | `boolean` | `true` | Allow the tab to be dragged to a different leaf or position. |
+| `canDrag` | `boolean` | `true` | Allow the tab to be dragged to a different leaf or position. When `false`, the panel cannot be floated via drag. |
 | `defaultStickyRight` | `boolean` | `false` | Snap to the right edge of the viewport when floating. |
 | `defaultStickyBottom` | `boolean` | `false` | Snap to the bottom edge of the viewport when floating. |
 | `disableLivePreview` | `boolean` | `false` | Do not render a thumbnail preview when the panel is not the active tab. |
