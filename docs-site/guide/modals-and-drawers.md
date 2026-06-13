@@ -267,6 +267,96 @@ const activeTab = sidebarRef.current?.getActiveTab();  // → string | null
 | `closeDrawer()` | `void` | Collapse the drawer. |
 | `getActiveTab()` | `string \| null` | Currently active tab ID, or `null` if collapsed. |
 
+### Sidebar hooks
+
+Two hooks let panels control the Sidebar without a ref or prop drilling.
+
+#### `useSidebar()`
+
+Available to **any component inside a `<Sidebar>` tree** — including floating panels and docked panels rendered via `{children}`:
+
+```tsx
+import { useSidebar } from 'react-dockable-desktop';
+
+function LayerTree() {
+  const { openTab, closeDrawer, getActiveTab } = useSidebar();
+
+  return (
+    <button onClick={() => openTab('search')}>
+      Show Search Results
+    </button>
+  );
+}
+```
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `openTab(tabId)` | `(tabId: string) => void` | Expand the drawer and activate the given tab. |
+| `closeDrawer()` | `() => void` | Collapse the drawer. |
+| `getActiveTab()` | `() => string \| null` | Returns the current tab ID, or `null` if collapsed. |
+
+::: tip
+`useSidebar()` returns a no-op object (and logs a warning) when called outside a `<Sidebar>` tree. This makes it safe to use in reusable panel components that may be rendered with or without a surrounding Sidebar.
+:::
+
+#### `useSidebarTab()`
+
+Available to components rendered inside a tab's `renderContent` tree. Provides both self-control and cross-tab navigation:
+
+```tsx
+import { useSidebarTab } from 'react-dockable-desktop';
+
+function SearchResultsPanel() {
+  const { tabId, onOpen, onClose, openTab } = useSidebarTab();
+
+  return (
+    <div>
+      <button onClick={onClose}>Collapse</button>
+      <button onClick={() => openTab('settings')}>Open Settings</button>
+    </div>
+  );
+}
+
+// In your tab config — the content must be a React component, not an inline arrow function,
+// because useSidebarTab() uses React hooks internally:
+{
+  id: 'search',
+  label: 'Search Results',
+  icon: <SearchIcon />,
+  renderContent: () => <SearchResultsPanel />,
+}
+```
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `tabId` | `string` | The ID of this tab. |
+| `onOpen()` | `() => void` | Expand the drawer and activate this tab. |
+| `onClose()` | `() => void` | Collapse the drawer. |
+| `openTab(tabId)` | `(tabId: string) => void` | Switch to a different tab. |
+
+#### Cross-panel pattern: floating window → sidebar tab
+
+A floating panel can open a sidebar tab and broadcast data in a single action:
+
+```tsx
+import { useSidebar, usePanelContext } from 'react-dockable-desktop';
+
+function LayerTree() {
+  const { openTab } = useSidebar();
+  const { publish } = usePanelContext();
+
+  const handleSearch = (query: string) => {
+    const results = performSearch(query);
+    publish('search:results', results);   // SearchResultsPanel subscribes to this
+    openTab('search');                    // expand sidebar to show it
+  };
+
+  // ...
+}
+```
+
+For the reactive variant — where the sidebar tab opens itself when it receives data — see [Event Bus & Communication →](./event-bus).
+
 ### Opening a tab in response to data
 
 Use `eagerMount` + `onOpen` when a background process needs to surface data in the sidebar before the user has clicked:

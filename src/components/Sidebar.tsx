@@ -10,6 +10,9 @@ import React, {
   useRef,
   useCallback,
   useImperativeHandle,
+  useContext,
+  useMemo,
+  createContext,
   forwardRef,
 } from 'react';
 import { useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
@@ -78,6 +81,64 @@ export interface SidebarHandle {
   closeDrawer: () => void;
   /** Returns the currently active tab id, or null if the drawer is collapsed. */
   getActiveTab: () => string | null;
+}
+
+/**
+ * Value provided by `useSidebar()`. Available to any component inside the
+ * `<Sidebar>` React tree, including panels rendered via `{children}`.
+ */
+export interface SidebarContextValue {
+  /** Expand the drawer and activate the tab with the given id. */
+  openTab: (tabId: string) => void;
+  /** Collapse the drawer. */
+  closeDrawer: () => void;
+  /** Returns the currently active tab id, or null if the drawer is collapsed. */
+  getActiveTab: () => string | null;
+}
+
+/**
+ * Value provided by `useSidebarTab()`. Available only to components rendered
+ * inside a sidebar tab's `renderContent` tree.
+ */
+export interface SidebarTabContextValue {
+  /** The id of this tab. */
+  tabId: string;
+  /** Expand the drawer and activate this tab. */
+  onOpen: () => void;
+  /** Collapse the drawer. */
+  onClose: () => void;
+  /** Expand the drawer and switch to a different tab. */
+  openTab: (tabId: string) => void;
+}
+
+// ==========================================
+// Contexts
+// ==========================================
+
+const SidebarContext = createContext<SidebarContextValue | null>(null);
+const SidebarTabContext = createContext<SidebarTabContextValue | null>(null);
+
+// ==========================================
+// SidebarTabProvider (internal)
+// ==========================================
+
+interface SidebarTabProviderProps {
+  tabId: string;
+  onClose: () => void;
+  onOpen: () => void;
+  setActiveTabId: (id: string | null) => void;
+  children: React.ReactNode;
+}
+
+function SidebarTabProvider({ tabId, onClose, onOpen, setActiveTabId, children }: SidebarTabProviderProps) {
+  const value = useMemo<SidebarTabContextValue>(() => ({
+    tabId,
+    onClose,
+    onOpen,
+    openTab: (otherId: string) => setActiveTabId(otherId),
+  }), [tabId, onClose, onOpen, setActiveTabId]);
+
+  return <SidebarTabContext.Provider value={value}>{children}</SidebarTabContext.Provider>;
 }
 
 // ==========================================
@@ -165,6 +226,13 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
   };
 
   const handleClose = useCallback(() => setActiveTabId(null), [setActiveTabId]);
+
+  // Stable context value for useSidebar() consumers
+  const sidebarContextValue = useMemo<SidebarContextValue>(() => ({
+    openTab: (tabId: string) => setActiveTabId(tabId),
+    closeDrawer: () => setActiveTabId(null),
+    getActiveTab: () => activeTabIdRef.current,
+  }), [setActiveTabId]);
 
   // On first open of a non-eager tab, add it to mounted set
   useEffect(() => {
@@ -272,7 +340,14 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
             {/* Drawer body — consumer-supplied content */}
             <div className="sidebar-drawer-body">
-              {tab.renderContent(tab.id, handleClose, onOpen)}
+              <SidebarTabProvider
+                tabId={tab.id}
+                onClose={handleClose}
+                onOpen={onOpen}
+                setActiveTabId={setActiveTabId}
+              >
+                {tab.renderContent(tab.id, handleClose, onOpen)}
+              </SidebarTabProvider>
             </div>
           </div>
         );
@@ -281,14 +356,48 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
   );
 
   return (
-    <>
+    <SidebarContext.Provider value={sidebarContextValue}>
       {position === 'left' && tabStrip}
       {position === 'left' && drawer}
       {children}
       {position === 'right' && drawer}
       {position === 'right' && tabStrip}
-    </>
+    </SidebarContext.Provider>
   );
 });
+
+// ==========================================
+// Hooks
+// ==========================================
+
+/**
+ * Returns sidebar control functions from anywhere inside a `<Sidebar>` tree,
+ * including floating panels rendered via `{children}`.
+ *
+ * Returns a no-op object with a console warning when called outside a Sidebar.
+ */
+export function useSidebar(): SidebarContextValue {
+  const ctx = useContext(SidebarContext);
+  if (!ctx) {
+    console.warn('useSidebar() called outside a <Sidebar> tree. Returning no-op.');
+    return { openTab: () => {}, closeDrawer: () => {}, getActiveTab: () => null };
+  }
+  return ctx;
+}
+
+/**
+ * Returns tab-specific control functions for components rendered inside a
+ * sidebar tab's `renderContent` tree.
+ *
+ * Returns a no-op object with a console warning when called outside tab content.
+ */
+export function useSidebarTab(): SidebarTabContextValue {
+  const ctx = useContext(SidebarTabContext);
+  if (!ctx) {
+    console.warn('useSidebarTab() called outside a <Sidebar> tab renderContent tree. Returning no-op.');
+    return { tabId: '', onOpen: () => {}, onClose: () => {}, openTab: () => {} };
+  }
+  return ctx;
+}
 
 export default Sidebar;
