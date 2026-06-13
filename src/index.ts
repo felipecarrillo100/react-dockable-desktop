@@ -100,3 +100,16 @@ export type { ConfirmationFormProps } from './forms/ConfirmationForm';
 export { Sidebar, useSidebar, useSidebarTab } from './components/Sidebar';
 export type { SidebarTab, SidebarProps, SidebarHandle, SidebarContextValue, SidebarTabContextValue } from './components/Sidebar';
 
+// Toolbar
+export { Toolbar, useToolbar, ToolbarProvider } from './components/Toolbar';
+export type {
+  ToolbarItem,
+  ToolbarActionItem,
+  ToolbarRadioItem,
+  ToolbarToggleItem,
+  ToolbarSeparator,
+  ToolbarProps,
+  ToolbarHandle,
+  ToolbarContextValue,
+} from './components/Toolbar';
+

@@ -14,12 +14,13 @@ import {
     usePanelActions,
     ConfirmationForm,
     Sidebar,
+    Toolbar,
     useFormContainer,
     type ContextMenuPredefinedMessage,
     useFormatMessage,
     formatLabel,
 } from '../src/index';
-import type { SidebarTab, SidebarHandle } from '../src/index';
+import type { SidebarTab, SidebarHandle, ToolbarItem } from '../src/index';
 import { PanelRegistry } from '../src/index';
 import { IntlProvider, useIntl } from 'react-intl';
 import { enMessages, esMessages, nlMessages, frMessages, zhMessages, arMessages } from './i18nMessages';
@@ -37,6 +38,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [windowOpacity, setWindowOpacity] = useState<number>(85);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
+  const [showToolbar, setShowToolbar] = useState<boolean>(true);
+  const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const sidebarRef = React.useRef<SidebarHandle>(null);
   const state = useWindowManagerState();
   const { openPanel, loadLayout, saveLayout } = useWindowManagerActions();
@@ -489,6 +492,87 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const visiblePanels = openPanelsList.slice(0, N);
   const hasMore = openPanelsList.length > N;
 
+  // ---- Toolbar item definitions ----
+  const toolbarItems: ToolbarItem[] = [
+    {
+      type: 'radio', id: 'tool-cursor', group: 'tool', label: 'Select / Cursor',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 2l9 5.5-4 1L6.5 13 3 2z" />
+        </svg>
+      ),
+    },
+    {
+      type: 'radio', id: 'tool-pen', group: 'tool', label: 'Draw / Pen',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 2l3 3-8 8H3v-3L11 2z" />
+        </svg>
+      ),
+    },
+    {
+      type: 'radio', id: 'tool-ruler', group: 'tool', label: 'Measure / Ruler',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="6" width="12" height="4" rx="0.5" />
+          <line x1="5" y1="6" x2="5" y2="8" />
+          <line x1="8" y1="6" x2="8" y2="9" />
+          <line x1="11" y1="6" x2="11" y2="8" />
+        </svg>
+      ),
+    },
+    {
+      type: 'radio', id: 'tool-eraser', group: 'tool', label: 'Erase',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 3L13 6 6 13H3v-3L10 3z" />
+          <line x1="7" y1="5" x2="11" y2="9" />
+        </svg>
+      ),
+    },
+    { type: 'separator' },
+    {
+      type: 'toggle', id: 'snap-to-grid', label: 'Snap to Grid',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="4" cy="4" r="1" />
+          <circle cx="8" cy="4" r="1" />
+          <circle cx="12" cy="4" r="1" />
+          <circle cx="4" cy="8" r="1" />
+          <circle cx="8" cy="8" r="1.5" />
+          <circle cx="12" cy="8" r="1" />
+          <circle cx="4" cy="12" r="1" />
+          <circle cx="8" cy="12" r="1" />
+          <circle cx="12" cy="12" r="1" />
+        </svg>
+      ),
+    },
+    {
+      type: 'toggle', id: 'show-grid-overlay', label: 'Show Grid Overlay',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="2" width="12" height="12" rx="1" />
+          <line x1="6.67" y1="2" x2="6.67" y2="14" />
+          <line x1="10.33" y1="2" x2="10.33" y2="14" />
+          <line x1="2" y1="6.67" x2="14" y2="6.67" />
+          <line x1="2" y1="10.33" x2="14" y2="10.33" />
+        </svg>
+      ),
+    },
+    { type: 'separator' },
+    {
+      type: 'action', id: 'open-layers', label: 'Open Layer Tree',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="8 2 2 5.5 8 9 14 5.5 8 2" />
+          <polyline points="2 10.5 8 14 14 10.5" />
+          <polyline points="2 7.5 8 11 14 7.5" />
+        </svg>
+      ),
+      onClick: () => openPanel('layertree-main', 'layertree'),
+    },
+  ];
+
   // ---- Sidebar Tab definitions (all state captured by closure) ----
   const sidebarTabs: SidebarTab[] = [
     {
@@ -666,6 +750,14 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             <div className="form-check form-switch">
               <input className="form-check-input" type="checkbox" id="animationSwitch" checked={enableAnimations} onChange={e => setEnableAnimations(e.target.checked)} />
               <label className="form-check-input-label text-white ms-1" htmlFor="animationSwitch">Enable Animations</label>
+            </div>
+            <div className="form-check form-switch">
+              <input className="form-check-input" type="checkbox" id="toolbarVisSwitch" checked={showToolbar} onChange={e => setShowToolbar(e.target.checked)} />
+              <label className="form-check-input-label text-white ms-1" htmlFor="toolbarVisSwitch">Show Toolbar</label>
+            </div>
+            <div className="form-check form-switch">
+              <input className="form-check-input" type="checkbox" id="sidebarVisSwitch" checked={showSidebar} onChange={e => setShowSidebar(e.target.checked)} />
+              <label className="form-check-input-label text-white ms-1" htmlFor="sidebarVisSwitch">Show Sidebar</label>
             </div>
             <div className="mt-2 border-top border-secondary-subtle pt-3">
               <label className="form-label d-block mb-1 text-white small font-monospace text-uppercase">Sidebar Position</label>
@@ -887,16 +979,24 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         </Container>
       </Navbar>
 
-      {/* Main Container: Sidebar + WindowManager */}
+      {/* Main Container: Toolbar + Sidebar + WindowManager */}
       <div className="flex-grow-1 w-100 d-flex flex-row overflow-hidden" style={{ position: 'relative' }}>
+        <Toolbar
+          position="left"
+          items={toolbarItems}
+          visible={showToolbar}
+          onVisibilityChange={setShowToolbar}
+        />
         <Sidebar
           ref={sidebarRef}
           position={sidebarPosition}
           tabs={sidebarTabs}
           drawerWidth="220px"
+          visible={showSidebar}
+          onVisibilityChange={setShowSidebar}
         >
-          <WindowManager 
-            skin={skin} 
+          <WindowManager
+            skin={skin}
             defaultPanelIcon={
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', opacity: 0.85 }}>
                 <polygon points="12 2 2 7 12 12 22 7 12 2" />
