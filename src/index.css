@@ -734,7 +734,7 @@ body.resizing-col-active * {
 }
 
 .react-contexify .react-contexify__item-row {
-  gap: 0 !important;
+  gap: 8px !important;
 }
 
 .react-contexify .react-contexify__item-label {
