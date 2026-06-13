@@ -18,6 +18,16 @@ import type { FormContainerContract } from './FormContainerContext';
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 
+const findLeaf = (node: LayoutNode | null, leafId: string): LayoutLeafNode | null => {
+  if (!node) return null;
+  if (node.type === 'leaf') return node.id === leafId ? node : null;
+  for (const child of node.children) {
+    const found = findLeaf(child, leafId);
+    if (found) return found;
+  }
+  return null;
+};
+
 // DOM Element Cache for preserving contexts (WebGL map, text area etc.)
 const domCache = new Map<string, HTMLDivElement>();
 const hiddenContainerId = 'preserved-dom-container';
@@ -838,6 +848,14 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     } else if (targetTab) {
       let targetIndex = targetTab.index;
       if (targetTab.side === 'right') targetIndex += 1;
+      // DOM tab indices are pre-removal. movePanelOrder removes the panel before
+      // inserting, shifting subsequent positions down by 1 in the same leaf.
+      // Compensate when the dragged panel currently sits before the drop target.
+      const targetLeaf = findLeaf(state.gridRoot, targetTab.leafId);
+      if (targetLeaf) {
+        const currentIdx = targetLeaf.panels.indexOf(id);
+        if (currentIdx !== -1 && currentIdx < targetIndex) targetIndex -= 1;
+      }
       movePanelOrder(id, targetTab.leafId, targetIndex);
     } else if (dropZone) {
       dockPanelToGroup(id, dropZone.leafId, dropZone.position);
