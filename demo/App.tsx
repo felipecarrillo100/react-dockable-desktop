@@ -735,40 +735,40 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       renderContent: (_tabId, _onClose, _onOpen) => (
         <div className="p-3">
           <h6 className="text-uppercase font-monospace text-secondary mb-3" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Settings</h6>
-          <div className="small text-white-50 text-start d-flex flex-column gap-3">
+          <div className="small text-start d-flex flex-column gap-3" style={{ color: 'var(--sidebar-text-body, var(--panel-text))' }}>
             <div>
-              <label className="form-label d-block mb-1 text-white">Window Opacity</label>
+              <label className="form-label d-block mb-1" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Window Opacity</label>
               <div className="d-flex align-items-center gap-2">
                 <input type="range" className="form-range" min="20" max="100" value={windowOpacity} onChange={e => setWindowOpacity(Number(e.target.value))} />
-                <span className="text-white font-monospace small">{windowOpacity}%</span>
+                <span className="font-monospace small" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>{windowOpacity}%</span>
               </div>
             </div>
             <div className="form-check form-switch">
               <input className="form-check-input" type="checkbox" id="gridSwitch" checked={showGrid} onChange={e => setShowGrid(e.target.checked)} />
-              <label className="form-check-input-label text-white ms-1" htmlFor="gridSwitch">Show Grid Pattern</label>
+              <label className="form-check-label ms-1" htmlFor="gridSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Show Grid Pattern</label>
             </div>
             <div className="form-check form-switch">
               <input className="form-check-input" type="checkbox" id="animationSwitch" checked={enableAnimations} onChange={e => setEnableAnimations(e.target.checked)} />
-              <label className="form-check-input-label text-white ms-1" htmlFor="animationSwitch">Enable Animations</label>
+              <label className="form-check-label ms-1" htmlFor="animationSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Enable Animations</label>
             </div>
             <div className="form-check form-switch">
               <input className="form-check-input" type="checkbox" id="toolbarVisSwitch" checked={showToolbar} onChange={e => setShowToolbar(e.target.checked)} />
-              <label className="form-check-input-label text-white ms-1" htmlFor="toolbarVisSwitch">Show Toolbar</label>
+              <label className="form-check-label ms-1" htmlFor="toolbarVisSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Show Toolbar</label>
             </div>
             <div className="form-check form-switch">
               <input className="form-check-input" type="checkbox" id="sidebarVisSwitch" checked={showSidebar} onChange={e => setShowSidebar(e.target.checked)} />
-              <label className="form-check-input-label text-white ms-1" htmlFor="sidebarVisSwitch">Show Sidebar</label>
+              <label className="form-check-label ms-1" htmlFor="sidebarVisSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Show Sidebar</label>
             </div>
-            <div className="mt-2 border-top border-secondary-subtle pt-3">
-              <label className="form-label d-block mb-1 text-white small font-monospace text-uppercase">Sidebar Position</label>
-              <select className="form-select form-select-sm bg-dark border-secondary text-white font-monospace" value={sidebarPosition} onChange={e => setSidebarPosition(e.target.value as 'left' | 'right')}>
+            <div className="mt-2 border-top pt-3" style={{ borderColor: 'var(--panel-card-border)' }}>
+              <label className="form-label d-block mb-1 small font-monospace text-uppercase" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Sidebar Position</label>
+              <select className="form-select form-select-sm font-monospace" style={{ backgroundColor: 'var(--bg-panel)', color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }} value={sidebarPosition} onChange={e => setSidebarPosition(e.target.value as 'left' | 'right')}>
                 <option value="right">Right Side</option>
                 <option value="left">Left Side</option>
               </select>
             </div>
-            <div className="mt-2 border-top border-secondary-subtle pt-3">
-              <label className="form-label d-block mb-1 text-white small font-monospace text-uppercase">Workspace Language</label>
-              <select className="form-select form-select-sm bg-dark border-secondary text-white font-monospace" value={locale} onChange={e => onLocaleChange?.(e.target.value)}>
+            <div className="mt-2 border-top pt-3" style={{ borderColor: 'var(--panel-card-border)' }}>
+              <label className="form-label d-block mb-1 small font-monospace text-uppercase" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Workspace Language</label>
+              <select className="form-select form-select-sm font-monospace" style={{ backgroundColor: 'var(--bg-panel)', color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }} value={locale} onChange={e => onLocaleChange?.(e.target.value)}>
                 <option value="en">English (EN)</option>
                 <option value="es">Español (ES)</option>
                 <option value="nl">Nederlands (NL)</option>
