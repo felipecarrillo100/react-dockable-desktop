@@ -28,7 +28,8 @@ export {
   usePredefinedMessages,
   defaultPredefinedMessages,
   useStyleClasses,
-  usePanelId
+  usePanelId,
+  usePanelContextMenu
 } from './components/WindowManagerContext';
 
 // TypeScript Types and Interfaces
@@ -49,6 +50,9 @@ export type {
   PredefinedMessageKey,
   StyleClasses
 } from './components/WindowManagerContext';
+
+// Context menu item types — re-exported so consumers don't import directly from replace-react-contexify
+export type { ContextMenuItem, ContextMenuSimpleItem, ContextMenuSeparator, ContextMenuSubMenu } from 'replace-react-contexify';
 
 // Form Container Context Contract
 export {

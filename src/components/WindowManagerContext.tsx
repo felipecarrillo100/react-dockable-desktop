@@ -8,6 +8,7 @@ export type { PredefinedMessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 import type { DirtyStateOptions } from './dirtyOptions';
 export type { DirtyStateOptions };
+import type { ContextMenuItem } from 'replace-react-contexify';
 
 /**
  * Structure representing localizable message descriptors used in context menus.
@@ -358,6 +359,10 @@ export interface WindowActions {
 export interface InternalWindowActions extends WindowActions {
   /** @internal */
   setActivePanel: (id: string | null) => void;
+  /** @internal */
+  registerPanelContextMenu: (panelId: string, getItems: () => ContextMenuItem[]) => () => void;
+  /** @internal */
+  getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
 }
 
 const WindowStateContext = createContext<WindowState | null>(null);
@@ -1339,6 +1344,21 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }
   }, [effectiveDir]);
 
+  const customMenuGettersRef = useRef<Map<string, () => ContextMenuItem[]>>(new Map());
+
+  const registerPanelContextMenu = useCallback(
+    (panelId: string, getItems: () => ContextMenuItem[]) => {
+      customMenuGettersRef.current.set(panelId, getItems);
+      return () => { customMenuGettersRef.current.delete(panelId); };
+    }, []
+  );
+
+  const getPanelContextMenuItems = useCallback(
+    (panelId: string): ContextMenuItem[] =>
+      customMenuGettersRef.current.get(panelId)?.() ?? [],
+    []
+  );
+
   const actions = useMemo<InternalWindowActions>(() => ({
     openPanel,
     closePanel,
@@ -1367,7 +1387,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     requestClosePanel,
     dockPanelToWorkspaceEdge,
     setActivePanel,
-    setDirection
+    setDirection,
+    registerPanelContextMenu,
+    getPanelContextMenuItems
   }), [
     openPanel,
     closePanel,
@@ -1396,7 +1418,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     requestClosePanel,
     dockPanelToWorkspaceEdge,
     setActivePanel,
-    setDirection
+    setDirection,
+    registerPanelContextMenu,
+    getPanelContextMenuItems
   ]);
 
   const defaultFormatMessage: MessageFormatter = (msg) => {
@@ -1626,3 +1650,35 @@ export const usePredefinedMessages = (): Record<PredefinedMessageKey, ContextMen
  * ```
  */
 export const usePanelId = (): string => useFormContainer().instanceId;
+
+/**
+ * React hook for injecting custom context menu items into a panel's context menu from inside the panel component.
+ * Items are dynamic — the array is re-read each time the menu opens, so state-driven changes (enable/disable, add/remove) work automatically.
+ * The hook reads the panel ID internally via {@link usePanelId} — no prop needed.
+ *
+ * @param items - Array of `ContextMenuItem` entries (simple items, separators, submenus).
+ * @example
+ * ```tsx
+ * import { usePanelContextMenu } from 'dockable-windows';
+ *
+ * function MyPanel() {
+ *   const [dirty, setDirty] = useState(false);
+ *   usePanelContextMenu([
+ *     { label: 'Save', action: () => save() },
+ *     { label: 'Revert', action: () => revert() },
+ *   ]);
+ *   return <Editor onChange={() => setDirty(true)} />;
+ * }
+ * ```
+ */
+export function usePanelContextMenu(items: ContextMenuItem[]): void {
+  const ctx = useContext(WindowActionsContext);
+  const panelId = usePanelId();
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  useEffect(() => {
+    if (!ctx?.registerPanelContextMenu || !panelId) return;
+    return ctx.registerPanelContextMenu(panelId, () => itemsRef.current);
+  }, [panelId, ctx?.registerPanelContextMenu]);
+}
