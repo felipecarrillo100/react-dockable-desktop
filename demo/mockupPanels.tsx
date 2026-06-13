@@ -7,8 +7,10 @@ import {
   useWindowManagerActions,
   usePanelActions,
   usePanelId,
+  usePanelContextMenu,
   ConfirmationForm,
 } from '../src/index';
+import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import Editor from '@monaco-editor/react';
 import L from 'leaflet';
@@ -114,6 +116,34 @@ interface AppEvents { 'layer:toggle': { layerId: string; visible: boolean } }
 const ws = new WorkspaceClient<AppEvents>({ panels });
 ws.publish('layer:toggle', { layerId: 'markers', visible: true }); // typed
 ws.subscribe('panel:opened', d => console.log(d.id));             // built-in`,
+
+  contextMenu: `// Custom context menu entries via usePanelContextMenu hook
+// Items live inside the panel — no central config needed.
+// The array is re-read each time the menu opens, so items
+// can react to component state (dirty, selection, mode, etc.)
+
+import { usePanelContextMenu } from 'dockable-windows';
+import type { ContextMenuItem } from 'dockable-windows';
+
+function DirtyEditor() {
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Always provide an icon — keeps text aligned with system items.
+  // Items update automatically when isDirty changes.
+  const menuItems: ContextMenuItem[] = isDirty
+    ? [
+        { label: 'Save Changes', icon: <SaveIcon />, action: () => save() },
+        { separator: true },
+        { label: 'Reset Content', icon: <ResetIcon />, action: () => reset() },
+      ]
+    : [{ label: 'Reset Content', icon: <ResetIcon />, action: () => reset() }];
+
+  usePanelContextMenu(menuItems);
+  // ...
+}
+
+// Tab  → right-click → system items + separator + custom items
+// Float → ⋮ button  → custom items only (button absent if empty)`,
 
   rtlShowcase: `// RTL Content Showcase Panel
 PanelRegistry.register('rtlShowcase', RTLShowcasePanel, {
@@ -1187,9 +1217,11 @@ export const DirtyFormDemoPanel: React.FC = () => {
   );
 };
 
+const dirtyEditorDefault = '// Type something here, changes make the tab dirty.\n// Click Save to clear the dirty state.';
+
 export const DirtyEditorDemoPanel: React.FC = () => {
   const container = useFormContainer();
-  const [content, setContent] = useState('// Type something here, changes make the tab dirty.\n// Click Save to clear the dirty state.');
+  const [content, setContent] = useState(dirtyEditorDefault);
   const [isDirty, setIsDirty] = useState(false);
 
   const handleEdit = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -1205,6 +1237,42 @@ export const DirtyEditorDemoPanel: React.FC = () => {
     container.setDirty(false);
     alert('Changes saved successfully!');
   };
+
+  const handleReset = () => {
+    setContent(dirtyEditorDefault);
+    setIsDirty(false);
+    container.setDirty(false);
+  };
+
+  const iconSave = (
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+    </span>
+  );
+  const iconReset = (
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+    </span>
+  );
+
+  // Dynamic context menu: "Save Changes" only appears when there is something to save.
+  // The array is rebuilt on every render — the hook re-reads it each time the menu opens.
+  const menuItems: ContextMenuItem[] = isDirty
+    ? [
+        { label: 'Save Changes', icon: iconSave, action: handleSave },
+        { separator: true },
+        { label: 'Reset Content', icon: iconReset, action: handleReset },
+      ]
+    : [{ label: 'Reset Content', icon: iconReset, action: handleReset }];
+
+  usePanelContextMenu(menuItems);
 
   return (
     <div className="w-100 h-100 p-3 bg-transparent text-body text-start d-flex flex-column gap-2" style={{ overflow: 'hidden' }}>
@@ -1493,11 +1561,11 @@ export function registerDemoPanels() {
         favoritePosition: { x: 350, y: 150, width: 450, height: 420 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
-    PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { 
-        title: 'Intercept Editor', 
+    PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, {
+        title: 'Intercept Editor',
         icon: '📝',
         initialTarget: 'docked',
-        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="contextMenu" />
     });
     PanelRegistry.register('rtlShowcase', RTLShowcasePanel, { 
         title: 'RTL Showcase', 

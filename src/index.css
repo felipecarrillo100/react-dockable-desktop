@@ -705,36 +705,53 @@ body.resizing-col-active * {
   cursor: grabbing;
 }
 
-/* VS Code Theme overrides for replace-react-contexify */
+/* VS Code-style context menu */
 .react-contexify {
   background-color: #1e1e1e !important;
-  border: 1px solid #3c3c3c !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-  border-radius: 3px !important;
+  border: 1px solid #454545 !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 5px !important;
   padding: 4px 0 !important;
-  min-width: 150px !important;
+  min-width: 220px !important;
   z-index: 99999 !important;
 }
 
 .react-contexify .react-contexify__item__content {
   color: #cccccc !important;
-  font-family: 'Inter', system-ui, sans-serif !important;
-  font-size: 0.75rem !important;
-  padding: 6px 14px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+  font-size: 13px !important;
+  padding: 5px 22px 5px 10px !important;
+  letter-spacing: 0.01em !important;
 }
 
 .react-contexify .react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
-  background-color: #094771 !important; /* VS Code Blue selection background */
+  background-color: #094771 !important;
   color: #ffffff !important;
 }
 
 .react-contexify .react-contexify__separator {
-  background-color: #3c3c3c !important;
+  background-color: #454545 !important;
   margin: 4px 0 !important;
 }
 
 .react-contexify .react-contexify__item-row {
-  gap: 8px !important;
+  gap: 10px !important;
+}
+
+/* Let the wrapper class own the column width — library container defers to it */
+.react-contexify .react-contexify__item-icon {
+  width: auto !important;
+  flex-shrink: 0 !important;
+}
+
+/* Icon slot: fixed width so all text aligns regardless of SVG size.
+   Override this class to change the icon column width globally. */
+.wm-menu-icon {
+  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .react-contexify .react-contexify__item-label {

@@ -44,34 +44,44 @@ const DefaultGridIcon = (
 const ContextMenuIcons = {
   // Two offset equal rects — Windows "restore-down / new window" language
   float: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <rect x="2" y="8" width="14" height="14" rx="1"/>
-      <rect x="8" y="2" width="14" height="14" rx="1"/>
-    </svg>
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <rect x="2" y="8" width="14" height="14" rx="1"/>
+        <rect x="8" y="2" width="14" height="14" rx="1"/>
+      </svg>
+    </span>
   ),
   // Single horizontal dash — Windows minimize language
   minimize: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: 'block' }}>
-      <line x1="4" y1="18" x2="20" y2="18"/>
-    </svg>
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: 'block' }}>
+        <line x1="4" y1="18" x2="20" y2="18"/>
+      </svg>
+    </span>
   ),
   // Single inset rect — restore to normal windowed state
   restore: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <rect x="4" y="4" width="16" height="16" rx="1"/>
-    </svg>
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <rect x="4" y="4" width="16" height="16" rx="1"/>
+      </svg>
+    </span>
   ),
   // Near-full rect — maximize / fill workspace
   maximize: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <rect x="2" y="2" width="20" height="20" rx="1"/>
-    </svg>
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <rect x="2" y="2" width="20" height="20" rx="1"/>
+      </svg>
+    </span>
   ),
   // × — close
   close: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <path d="M18 6L6 18M6 6l12 12"/>
-    </svg>
+    <span className="wm-menu-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </span>
   ),
 };
 
@@ -732,7 +742,7 @@ export interface WindowManagerProps {
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always' }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
-  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection } = useWindowManagerActionsInternal();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection, getPanelContextMenuItems } = useWindowManagerActionsInternal();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
@@ -1052,9 +1062,12 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
     if (items.length === 0) return;
 
+    const custom = getPanelContextMenuItems(id);
+    const finalItems = custom.length > 0 ? [...items, { separator: true as const }, ...custom] : items;
+
     contextMenuRef.current?.show({
       event: e,
-      contextMenu: { items }
+      contextMenu: { items: finalItems }
     });
   };
 
@@ -1654,6 +1667,28 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       <div className="window-header-actions">
                         {options.renderHeaderActions(w.id)}
                       </div>
+                    )}
+                    {getPanelContextMenuItems(w.id).length > 0 && (
+                      <button
+                        type="button"
+                        className="custom-tab-btn btn-more-actions"
+                        title="More actions"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const customItems = getPanelContextMenuItems(w.id);
+                          if (customItems.length === 0) return;
+                          contextMenuRef.current?.show({
+                            event: e,
+                            contextMenu: { items: customItems }
+                          });
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+                          <circle cx="12" cy="5" r="2"/>
+                          <circle cx="12" cy="12" r="2"/>
+                          <circle cx="12" cy="19" r="2"/>
+                        </svg>
+                      </button>
                     )}
                     {options?.canDrag !== false && (
                       <button
