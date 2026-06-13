@@ -188,7 +188,6 @@ body,
   border-right: 1px solid var(--border-panel) !important; /* crisp separator */
   padding: 0 6px 0 14px !important;
   font-size: 0.75rem;
-  transition: background-color 0.1s ease, color 0.1s ease;
   display: flex;
   align-items: center;
   border-radius: 0 !important; /* Square edges */
@@ -200,6 +199,7 @@ body,
   box-sizing: border-box;
   flex-shrink: 1;
   min-width: 80px; /* compress before scrolling kicks in */
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
 
 .workspace-tab > .text-truncate {
@@ -792,12 +792,14 @@ body.resizing-col-active * {
   color: var(--accent-color);
 }
 
-/* Drag hover indicators for tab reordering */
+/* Drag hover indicators: glowing insertion line */
 .workspace-tab.drag-hover-left {
-  border-left: 2px solid var(--accent-color, #00f0ff) !important;
+  box-shadow: -3px 0 0 0 var(--accent-color, #38bdf8),
+              -10px 0 10px -2px var(--accent-glow, rgba(56,189,248,0.35));
 }
 .workspace-tab.drag-hover-right {
-  border-right: 2px solid var(--accent-color, #00f0ff) !important;
+  box-shadow: 3px 0 0 0 var(--accent-color, #38bdf8),
+              10px 0 10px -2px var(--accent-glow, rgba(56,189,248,0.35));
 }
 
 /* Close button for empty LeafGroups inside header */
@@ -1898,6 +1900,15 @@ html:not(.enable-animations) *::after {
   border-right: none !important;
   border-left: 1px solid var(--border-panel) !important;
   padding: 0 14px 0 6px !important;
+}
+
+[dir="rtl"] .workspace-tab.drag-hover-left {
+  box-shadow: 3px 0 0 0 var(--accent-color, #38bdf8),
+              10px 0 10px -2px var(--accent-glow, rgba(56,189,248,0.35));
+}
+[dir="rtl"] .workspace-tab.drag-hover-right {
+  box-shadow: -3px 0 0 0 var(--accent-color, #38bdf8),
+              -10px 0 10px -2px var(--accent-glow, rgba(56,189,248,0.35));
 }
 
 [dir="rtl"] .workspace-tab > .text-truncate {
