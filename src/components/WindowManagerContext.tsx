@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useState, useRef, useMemo, useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useFormContainer } from './FormContainerContext';
 import { PanelRegistry, type PanelRegistryClass } from './PanelRegistry';
 import type { WorkspaceClient } from '../WorkspaceClient';
@@ -507,7 +507,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   const stateSubscribersRef = useRef<Set<() => void>>(new Set());
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     stateSubscribersRef.current.forEach(cb => cb());
   }, [state]);
 
@@ -1517,7 +1517,7 @@ export function useWindowManagerState<T>(selector?: (state: WindowState) => T): 
   selectorRef.current = selector;
 
   const syncResult = useSyncExternalStore(
-    syncCtx?.subscribeToState ?? noopSubscribe,
+    selector ? (syncCtx?.subscribeToState ?? noopSubscribe) : noopSubscribe,
     (): T => {
       const snap = syncCtx?.getSnapshot() ?? stateCtx!;
       return (selectorRef.current ? selectorRef.current(snap) : snap) as T;

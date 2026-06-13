@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'react-bootstrap-submenu/dist/index.css';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
@@ -489,7 +489,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const hasMore = openPanelsList.length > N;
 
   // ---- Sidebar Tab definitions (all state captured by closure) ----
-  const sidebarTabs: SidebarTab[] = [
+  const sidebarTabs = useMemo<SidebarTab[]>(() => [
     {
       id: 'search',
       label: 'Search Results',
@@ -686,7 +686,10 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         </div>
       ),
     },
-  ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [state.panels, state.floating, state.minimized, formatMessage,
+      focusPanel, minimizePanel, maximizePanel, closePanel, restorePanel,
+      windowOpacity, showGrid, enableAnimations, sidebarPosition, locale, onLocaleChange]);
 
   return (
     <div className="full-viewport-layout">
