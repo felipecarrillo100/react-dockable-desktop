@@ -692,9 +692,10 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 export interface WindowManagerProps {
   skin?: string;
   defaultPanelIcon?: React.ReactNode;
+  taskbarVisibility?: 'always' | 'compact' | 'autohide';
 }
 
-export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon }) => {
+export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always' }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection } = useWindowManagerActionsInternal();
@@ -732,6 +733,9 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const { windowClass, windowBodyClass } = useStyleClasses();
   const taskbarRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<JsonContextMenuRef>(null);
+  const [taskbarExpanded, setTaskbarExpanded] = useState(false);
+  const taskbarCollapseTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const prevMinimizedLengthRef = useRef(state.minimized.length);
 
   const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string } | null>(null);
   const minimizedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -1440,6 +1444,24 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     }
   };
 
+  const expandTaskbar = useCallback(() => {
+    if (taskbarCollapseTimerRef.current) clearTimeout(taskbarCollapseTimerRef.current);
+    setTaskbarExpanded(true);
+  }, []);
+
+  const scheduleCollapseTaskbar = useCallback(() => {
+    taskbarCollapseTimerRef.current = setTimeout(() => setTaskbarExpanded(false), 400);
+  }, []);
+
+  useEffect(() => {
+    if (taskbarVisibility === 'autohide' && state.minimized.length > prevMinimizedLengthRef.current) {
+      if (taskbarCollapseTimerRef.current) clearTimeout(taskbarCollapseTimerRef.current);
+      setTaskbarExpanded(true);
+      taskbarCollapseTimerRef.current = setTimeout(() => setTaskbarExpanded(false), 2000);
+    }
+    prevMinimizedLengthRef.current = state.minimized.length;
+  }, [state.minimized.length, taskbarVisibility]);
+
   // Fetch the active color-scheme from documentElement to make sure nested variables resolve correctly
   const [currentColorScheme, setCurrentColorScheme] = useState<'dark' | 'light'>('dark');
   useEffect(() => {
@@ -1457,7 +1479,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     <div
       data-workspace-skin={skin}
       data-color-scheme={currentColorScheme}
-      style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
+      style={{ display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
       dir={state.dir}
     >
 
@@ -1703,8 +1725,18 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       </div>
 
       {/* 2. macOS / Windows 11-style Taskbar Sibling Footer (Flex-shrinked at bottom) */}
-      {state.minimized.length > 0 && (
-        <div className="taskbar-footer-container" style={{ height: '48px', zIndex: 100 }}>
+      {(taskbarVisibility === 'always' || state.minimized.length > 0) && (
+        <div
+          className={[
+            'taskbar-footer-container',
+            `taskbar-mode-${taskbarVisibility}`,
+            taskbarVisibility === 'autohide' && taskbarExpanded ? 'taskbar-expanded' : '',
+          ].filter(Boolean).join(' ')}
+          style={{ height: '48px', zIndex: 100 }}
+          onPointerEnter={taskbarVisibility === 'autohide' ? expandTaskbar : undefined}
+          onPointerLeave={taskbarVisibility === 'autohide' ? scheduleCollapseTaskbar : undefined}
+        >
+          {taskbarVisibility === 'autohide' && <div className="taskbar-peek-handle" />}
           <button
             type="button"
             onClick={() => scrollTaskbar('left')}
