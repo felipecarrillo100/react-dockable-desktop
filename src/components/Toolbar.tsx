@@ -6,7 +6,7 @@
  */
 
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { useToolbar, ToolbarProvider } from './ToolbarContext';
+import { useToolbar } from './ToolbarContext';
 import type { ToolbarContextValue } from './ToolbarContext';
 
 // ==========================================
