@@ -737,8 +737,9 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const taskbarCollapseTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const prevMinimizedLengthRef = useRef(state.minimized.length);
 
-  const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string } | null>(null);
+  const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string; fromTouch?: boolean } | null>(null);
   const minimizedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const lastTaskbarPointerTypeRef = useRef<string>('mouse');
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -757,6 +758,18 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       }
     }
   }, [state.minimized, hoveredMinimized]);
+
+  useEffect(() => {
+    if (!hoveredMinimized?.fromTouch) return;
+    const handler = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      const tooltip = document.querySelector('.taskbar-item-tooltip');
+      if (tooltip?.contains(e.target as Node)) return;
+      setHoveredMinimized(null);
+    };
+    document.addEventListener('pointerdown', handler, { capture: true });
+    return () => document.removeEventListener('pointerdown', handler, { capture: true });
+  }, [hoveredMinimized?.fromTouch]);
 
   const [activeDropZone, setActiveDropZone] = useState<{ leafId: string; position: DropPosition } | null>(null);
   const activeDropZoneRef = useRef<{ leafId: string; position: DropPosition } | null>(null);
@@ -1759,10 +1772,58 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 <div
                   key={m.id}
                   onClick={() => {
+                    if (lastTaskbarPointerTypeRef.current === 'touch') return;
                     setHoveredMinimized(null);
                     restorePanel(m.id);
                   }}
                   onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
+                  onPointerDown={(e) => {
+                    lastTaskbarPointerTypeRef.current = e.pointerType;
+                    if (e.pointerType !== 'touch') return;
+                    const el = e.currentTarget as HTMLElement;
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const pointerId = e.pointerId;
+                    let cancelled = false;
+                    const cancel = () => {
+                      cancelled = true;
+                      clearTimeout(timer);
+                      el.removeEventListener('pointermove', onPreMove);
+                      el.removeEventListener('pointerup', onShortTap);
+                      el.removeEventListener('pointercancel', cancel);
+                    };
+                    const onShortTap = () => {
+                      cancel();
+                      const rect = el.getBoundingClientRect();
+                      if (hoveredMinimized?.id === m.id) {
+                        restorePanel(m.id);
+                        setHoveredMinimized(null);
+                      } else {
+                        setHoveredMinimized({ id: m.id, rect, title: m.title, component: m.component, fromTouch: true });
+                      }
+                    };
+                    const onPreMove = (me: PointerEvent) => {
+                      if (Math.hypot(me.clientX - startX, me.clientY - startY) > CANCEL_MOVE_PX) cancel();
+                    };
+                    const timer = setTimeout(() => {
+                      if (cancelled) return;
+                      el.removeEventListener('pointermove', onPreMove);
+                      el.removeEventListener('pointerup', onShortTap);
+                      el.removeEventListener('pointercancel', cancel);
+                      try { el.setPointerCapture(pointerId); } catch { return; }
+                      if (navigator.vibrate) navigator.vibrate(10);
+                      const onEnd = (me: PointerEvent) => {
+                        el.removeEventListener('pointerup', onEnd);
+                        el.removeEventListener('pointercancel', onEnd);
+                        handleMinimizedRightClick(m.id, me as unknown as React.MouseEvent);
+                      };
+                      el.addEventListener('pointerup', onEnd);
+                      el.addEventListener('pointercancel', onEnd);
+                    }, LONG_PRESS_MS);
+                    el.addEventListener('pointermove', onPreMove);
+                    el.addEventListener('pointerup', onShortTap);
+                    el.addEventListener('pointercancel', cancel);
+                  }}
                   onPointerEnter={(e) => {
                     if (e.pointerType === 'touch') return;
                     if (isContextMenuOpen) return;
@@ -1822,12 +1883,51 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   clearTimeout(minimizedTooltipTimeoutRef.current);
                 }
               }}
-              onPointerLeave={() => {
+              onPointerLeave={(e) => {
+                if (e.pointerType === 'touch') return;
                 setHoveredMinimized(null);
               }}
               onClick={() => {
                 restorePanel(hoveredMinimized.id);
                 setHoveredMinimized(null);
+              }}
+              onContextMenu={(e) => handleMinimizedRightClick(hoveredMinimized.id, e)}
+              onPointerDown={(e) => {
+                if (e.pointerType !== 'touch') return;
+                const tooltipId = hoveredMinimized.id;
+                const el = e.currentTarget as HTMLElement;
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const pointerId = e.pointerId;
+                let cancelled = false;
+                const cancel = () => {
+                  cancelled = true;
+                  clearTimeout(timer);
+                  el.removeEventListener('pointermove', onPreMove);
+                  el.removeEventListener('pointerup', cancel);
+                  el.removeEventListener('pointercancel', cancel);
+                };
+                const onPreMove = (me: PointerEvent) => {
+                  if (Math.hypot(me.clientX - startX, me.clientY - startY) > CANCEL_MOVE_PX) cancel();
+                };
+                const timer = setTimeout(() => {
+                  if (cancelled) return;
+                  el.removeEventListener('pointermove', onPreMove);
+                  el.removeEventListener('pointerup', cancel);
+                  el.removeEventListener('pointercancel', cancel);
+                  try { el.setPointerCapture(pointerId); } catch { return; }
+                  if (navigator.vibrate) navigator.vibrate(10);
+                  const onEnd = (me: PointerEvent) => {
+                    el.removeEventListener('pointerup', onEnd);
+                    el.removeEventListener('pointercancel', onEnd);
+                    handleMinimizedRightClick(tooltipId, me as unknown as React.MouseEvent);
+                  };
+                  el.addEventListener('pointerup', onEnd);
+                  el.addEventListener('pointercancel', onEnd);
+                }, LONG_PRESS_MS);
+                el.addEventListener('pointermove', onPreMove);
+                el.addEventListener('pointerup', cancel);
+                el.addEventListener('pointercancel', cancel);
               }}
             >
                <div className="tooltip-header-row">
