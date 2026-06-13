@@ -65,6 +65,10 @@ export interface SidebarProps {
   activeTabId?: string | null;
   /** Called when the active tab changes in uncontrolled mode. */
   onActiveTabChange?: (tabId: string | null) => void;
+  /** Collapse the entire sidebar strip and drawer to zero width. State is preserved — no unmount. Default: true */
+  visible?: boolean;
+  /** Called when show/hide/toggle is invoked on the imperative handle. */
+  onVisibilityChange?: (visible: boolean) => void;
   /** Main workspace content, rendered between the strip and drawer (or around them). */
   children?: React.ReactNode;
 }
@@ -81,6 +85,12 @@ export interface SidebarHandle {
   closeDrawer: () => void;
   /** Returns the currently active tab id, or null if the drawer is collapsed. */
   getActiveTab: () => string | null;
+  /** Show the sidebar strip (calls onVisibilityChange(true)). */
+  show: () => void;
+  /** Hide the sidebar strip (calls onVisibilityChange(false)). */
+  hide: () => void;
+  /** Toggle sidebar visibility (calls onVisibilityChange(!current)). */
+  toggle: () => void;
 }
 
 /**
@@ -156,6 +166,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     drawerWidth = '220px',
     activeTabId: controlledActiveTabId,
     onActiveTabChange,
+    visible,
+    onVisibilityChange,
     children,
   },
   ref
@@ -217,8 +229,11 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       openTab: (tabId: string) => setActiveTabId(tabId),
       closeDrawer: () => setActiveTabId(null),
       getActiveTab: () => activeTabIdRef.current,
+      show: () => onVisibilityChange?.(true),
+      hide: () => onVisibilityChange?.(false),
+      toggle: () => onVisibilityChange?.(visible === false ? true : false),
     }),
-    [setActiveTabId]
+    [setActiveTabId, visible, onVisibilityChange]
   );
 
   const handleTabClick = (tabId: string) => {
@@ -264,8 +279,19 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
   // ---- Render helpers ----
 
+  const isVisible = visible !== false;
+
   const tabStrip = (
-    <div className={`sidebar-tabs-strip ${position}`} style={{ width: '56px', height: '100%' }}>
+    <div
+      className={`sidebar-tabs-strip ${position}`}
+      style={{
+        width: isVisible ? '56px' : '0px',
+        height: '100%',
+        overflow: 'hidden',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        flexShrink: 0,
+      }}
+    >
       {tabs.map(tab => {
         const isActive = activeTabId === tab.id;
         return (
@@ -288,8 +314,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     <div
       className={`sidebar-content-drawer h-100 ${position}`}
       style={{
-        width: activeTabId ? drawerWidth : '0px',
-        minWidth: activeTabId ? drawerWidth : '0px',
+        width: isVisible && activeTabId ? drawerWidth : '0px',
+        minWidth: isVisible && activeTabId ? drawerWidth : '0px',
         overflow: 'hidden',
         flexShrink: 0,
       }}

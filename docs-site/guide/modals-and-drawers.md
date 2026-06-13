@@ -244,6 +244,8 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | `drawerWidth` | `string` | `'220px'` | Width of the open drawer. |
 | `activeTabId` | `string \| null` | — | Controlled active tab. Use with `onActiveTabChange` for fully-controlled mode. |
 | `onActiveTabChange` | `(tabId: string \| null) => void` | — | Called when the active tab changes. |
+| `visible` | `boolean` | `true` | Collapse the entire sidebar strip and drawer to zero width via CSS transition. State is preserved — no unmount. |
+| `onVisibilityChange` | `(visible: boolean) => void` | — | Called when `show/hide/toggle` is invoked on the imperative handle. Wire to your `useState` setter. |
 | `children` | `ReactNode` | — | Main content (rendered in the area beside the sidebar). |
 
 ### `SidebarHandle` imperative ref
@@ -266,6 +268,9 @@ const activeTab = sidebarRef.current?.getActiveTab();  // → string | null
 | `openTab(tabId)` | `void` | Expand drawer and activate the specified tab. |
 | `closeDrawer()` | `void` | Collapse the drawer. |
 | `getActiveTab()` | `string \| null` | Currently active tab ID, or `null` if collapsed. |
+| `show()` | `void` | Show the sidebar strip (calls `onVisibilityChange(true)`). |
+| `hide()` | `void` | Hide the sidebar strip (calls `onVisibilityChange(false)`). |
+| `toggle()` | `void` | Toggle sidebar visibility. |
 
 ### Sidebar hooks
 

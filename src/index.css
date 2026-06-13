@@ -903,6 +903,15 @@ body.resizing-col-active * {
   --tab-icon-active: #38bdf8;
   --tab-icon-inactive: #9ea4b0;
   --tab-btn-active-bg: #1e2024; /* Seamless merge look */
+  --sidebar-btn-hover-bg: rgba(255, 255, 255, 0.05);
+  --sidebar-card-hover-border: rgba(56, 189, 248, 0.25);
+  --sidebar-card-hover-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-card-active-shadow: rgba(56, 189, 248, 0.08);
+  --sidebar-drawer-header-bg: rgba(0, 0, 0, 0.12);
+  --toolbar-btn-hover-bg: rgba(255, 255, 255, 0.06);
+  --toolbar-btn-radio-active-bg: rgba(56, 189, 248, 0.14);
+  --toolbar-btn-toggle-active-bg: rgba(56, 189, 248, 0.08);
+  --toolbar-separator-color: rgba(255, 255, 255, 0.09);
 }
 
 [data-color-scheme="light"] {
@@ -932,6 +941,15 @@ body.resizing-col-active * {
   --tab-icon-active: #0066cc;
   --tab-icon-inactive: #555c66;
   --tab-btn-active-bg: #f8f9fa; /* Seamless merge look */
+  --sidebar-btn-hover-bg: rgba(0, 0, 0, 0.05);
+  --sidebar-card-hover-border: rgba(0, 102, 204, 0.3);
+  --sidebar-card-hover-bg: rgba(0, 0, 0, 0.03);
+  --sidebar-card-active-shadow: rgba(0, 102, 204, 0.08);
+  --sidebar-drawer-header-bg: rgba(0, 0, 0, 0.04);
+  --toolbar-btn-hover-bg: rgba(0, 0, 0, 0.05);
+  --toolbar-btn-radio-active-bg: rgba(0, 102, 204, 0.1);
+  --toolbar-btn-toggle-active-bg: rgba(0, 102, 204, 0.06);
+  --toolbar-separator-color: rgba(0, 0, 0, 0.1);
   /* Light skin window overrides */
   --window-bg: rgba(243, 244, 246, var(--window-opacity, 0.9));
   --window-border: rgba(0, 0, 0, 0.08);
@@ -1197,6 +1215,9 @@ body.resizing-col-active * {
   --panel-card-border: #3c4043;
   --window-text: #ffffff;
   --panel-text: #e8eaed;
+  --tab-icon-active: #8ab4f8;
+  --toolbar-btn-radio-active-bg: rgba(138, 180, 248, 0.14);
+  --toolbar-btn-toggle-active-bg: rgba(138, 180, 248, 0.08);
 }
 
 [data-workspace-skin="chrome"][data-color-scheme="light"] {
@@ -1219,6 +1240,9 @@ body.resizing-col-active * {
   --panel-title-color: #1a73e8;
   --close-btn-color: #474747;
   --close-btn-active-color: #1f1f1f;
+  --tab-icon-active: #1a73e8;
+  --toolbar-btn-radio-active-bg: rgba(26, 115, 232, 0.12);
+  --toolbar-btn-toggle-active-bg: rgba(26, 115, 232, 0.07);
 }
 
 /* Chrome tab angled geometry shapes */
@@ -1277,6 +1301,9 @@ body.resizing-col-active * {
   --panel-title-color: #0078d4;
   --close-btn-color: #475569;
   --close-btn-active-color: #0f172a;
+  --tab-icon-active: #0078d4;
+  --toolbar-btn-radio-active-bg: rgba(0, 120, 212, 0.10);
+  --toolbar-btn-toggle-active-bg: rgba(0, 120, 212, 0.06);
 }
 
 [data-workspace-skin="slate"] .workspace-tab.active::before {
@@ -1309,6 +1336,9 @@ body.resizing-col-active * {
   --scrollbar-thumb-hover: rgba(136, 192, 208, 0.4);
   --window-text: #eceff4;
   --panel-text: #eceff4;
+  --tab-icon-active: #88c0d0;
+  --toolbar-btn-radio-active-bg: rgba(136, 192, 208, 0.14);
+  --toolbar-btn-toggle-active-bg: rgba(136, 192, 208, 0.08);
 }
 
 [data-workspace-skin="nord"][data-color-scheme="light"] {
@@ -1333,6 +1363,9 @@ body.resizing-col-active * {
   --window-text: #2e3440;
   --panel-text: #2e3440;
   --panel-title-color: #5e81ac;
+  --tab-icon-active: #5e81ac;
+  --toolbar-btn-radio-active-bg: rgba(94, 129, 172, 0.12);
+  --toolbar-btn-toggle-active-bg: rgba(94, 129, 172, 0.07);
 }
 
 /* --------------------------------------------------------------------------
@@ -1360,6 +1393,9 @@ body.resizing-col-active * {
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
   --window-text: #ffffff;
   --panel-text: #ffffff;
+  --tab-icon-active: #ffffff;
+  --toolbar-btn-radio-active-bg: rgba(255, 255, 255, 0.10);
+  --toolbar-btn-toggle-active-bg: rgba(255, 255, 255, 0.06);
 }
 
 [data-workspace-skin="obsidian"][data-color-scheme="light"] {
@@ -1385,6 +1421,9 @@ body.resizing-col-active * {
   --window-text: #000000;
   --panel-text: #000000;
   --panel-title-color: #000000;
+  --tab-icon-active: #000000;
+  --toolbar-btn-radio-active-bg: rgba(0, 0, 0, 0.10);
+  --toolbar-btn-toggle-active-bg: rgba(0, 0, 0, 0.06);
 }
 
 /* Obsidian custom borderless panel elevations */
@@ -1427,6 +1466,9 @@ body.resizing-col-active * {
   --scrollbar-thumb-hover: rgba(187, 154, 247, 0.4);
   --window-text: #c0caf5;
   --panel-text: #c0caf5;
+  --tab-icon-active: #7aa2f7;
+  --toolbar-btn-radio-active-bg: rgba(122, 162, 247, 0.14);
+  --toolbar-btn-toggle-active-bg: rgba(122, 162, 247, 0.08);
 }
 
 [data-workspace-skin="tokyo"][data-color-scheme="light"] {
@@ -1452,6 +1494,9 @@ body.resizing-col-active * {
   --window-text: #383e56;
   --panel-text: #383e56;
   --panel-title-color: #9854f1;
+  --tab-icon-active: #385af6;
+  --toolbar-btn-radio-active-bg: rgba(56, 90, 246, 0.12);
+  --toolbar-btn-toggle-active-bg: rgba(56, 90, 246, 0.07);
 }
 
 /* --- Modern Sidebar and Tabs UI Theme Customizations --- */
@@ -1525,11 +1570,8 @@ body.resizing-col-active * {
 /* Micro-interactions & hover tactile feedback for inactive buttons */
 .sidebar-tab-btn:not(.active):hover {
   color: var(--sidebar-text-title);
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: var(--sidebar-btn-hover-bg) !important;
   transform: scale(1.05);
-}
-[data-color-scheme="light"] .sidebar-tab-btn:not(.active):hover {
-  background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
 .sidebar-tab-btn.active {
@@ -1570,14 +1612,14 @@ body.resizing-col-active * {
 }
 
 .sidebar-window-card:hover {
-  border-color: rgba(56, 189, 248, 0.2);
-  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--sidebar-card-hover-border) !important;
+  background-color: var(--sidebar-card-hover-bg) !important;
 }
 
 .sidebar-window-card.active {
   background-color: var(--sidebar-card-active-bg) !important;
   border-color: var(--sidebar-card-active-border) !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.04);
+  box-shadow: 0 0 10px var(--sidebar-card-active-shadow);
 }
 
 /* Custom Outlined Front Button */
@@ -2242,7 +2284,7 @@ html:not(.enable-animations) *::after {
   border-bottom: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08));
   padding: 0 0.75rem;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--sidebar-drawer-header-bg);
   min-height: 38px;
 }
 
@@ -2268,6 +2310,113 @@ html:not(.enable-animations) *::after {
 .sidebar-drawer-body {
   flex-grow: 1;
   overflow: auto;
+}
+
+/* ==========================================================================
+   TOOLBAR STRIP
+   ========================================================================== */
+
+.toolbar-strip {
+  background-color: var(--sidebar-tabs-bg);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.toolbar-strip.left,
+.toolbar-strip.right {
+  flex-direction: column;
+  width: 48px;
+  height: 100%;
+  padding: 8px 0;
+  gap: 4px;
+}
+
+.toolbar-strip.top,
+.toolbar-strip.bottom {
+  flex-direction: row;
+  width: 100%;
+  height: 48px;
+  padding: 0 8px;
+  gap: 4px;
+}
+
+.toolbar-strip.left  { border-right:  1px solid var(--sidebar-border); }
+.toolbar-strip.right { border-left:   1px solid var(--sidebar-border); }
+.toolbar-strip.top   { border-bottom: 1px solid var(--sidebar-border); }
+.toolbar-strip.bottom{ border-top:    1px solid var(--sidebar-border); }
+
+/* Base button */
+.toolbar-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--tab-icon-inactive);
+  cursor: pointer;
+  flex-shrink: 0;
+  outline: none !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background-color: var(--toolbar-btn-hover-bg);
+  color: var(--sidebar-text-title);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Radio active — 3px accent bar on the workspace-facing edge */
+.toolbar-btn-radio.active {
+  color: var(--tab-icon-active);
+  background-color: var(--toolbar-btn-radio-active-bg);
+}
+
+.toolbar-strip.left   .toolbar-btn-radio.active { border-left:   3px solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
+.toolbar-strip.right  .toolbar-btn-radio.active { border-right:  3px solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
+.toolbar-strip.top    .toolbar-btn-radio.active { border-bottom: 3px solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
+.toolbar-strip.bottom .toolbar-btn-radio.active { border-top:    3px solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
+
+/* Toggle active — lighter tint, no directional border */
+.toolbar-btn-toggle.active {
+  color: var(--tab-icon-active);
+  background-color: var(--toolbar-btn-toggle-active-bg);
+}
+
+/* Separators */
+.toolbar-strip.left .toolbar-separator,
+.toolbar-strip.right .toolbar-separator {
+  width: 24px;
+  height: 1px;
+  background-color: var(--toolbar-separator-color);
+  flex-shrink: 0;
+  margin: 4px 0;
+  align-self: center;
+}
+
+.toolbar-strip.top .toolbar-separator,
+.toolbar-strip.bottom .toolbar-separator {
+  height: 24px;
+  width: 1px;
+  background-color: var(--toolbar-separator-color);
+  flex-shrink: 0;
+  margin: 0 4px;
+  align-self: center;
+}
+
+/* Touch targets on coarse-pointer devices */
+@media (pointer: coarse) {
+  .toolbar-btn { width: 44px; height: 44px; }
+  .toolbar-strip.left, .toolbar-strip.right { width: 56px; }
+  .toolbar-strip.top, .toolbar-strip.bottom { height: 56px; }
 }
 
 /* Button base — used in ConfirmationForm and similar dialogs */

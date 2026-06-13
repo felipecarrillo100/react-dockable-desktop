@@ -2,6 +2,7 @@ import React from 'react';
 import { WindowManagerProvider } from './WindowManagerContext';
 import type { WindowManagerProviderProps } from './WindowManagerContext';
 import { PanelProvider } from './PanelProviderContext';
+import { ToolbarProvider } from './ToolbarContext';
 
 /**
  * Composite provider that wraps both `WindowManagerProvider` and `PanelProvider`
@@ -19,11 +20,13 @@ import { PanelProvider } from './PanelProviderContext';
  * ```
  */
 export const DockableDesktopProvider: React.FC<WindowManagerProviderProps> = (props): React.ReactElement => (
-  <WindowManagerProvider {...props}>
-    <PanelProvider>
-      {props.children}
-    </PanelProvider>
-  </WindowManagerProvider>
+  <ToolbarProvider>
+    <WindowManagerProvider {...props}>
+      <PanelProvider>
+        {props.children}
+      </PanelProvider>
+    </WindowManagerProvider>
+  </ToolbarProvider>
 );
 
 export default DockableDesktopProvider;

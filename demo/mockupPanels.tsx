@@ -4,6 +4,7 @@ import {
   useFormContainer,
   usePanelContext,
   useSidebar,
+  useToolbar,
   useWindowManagerState,
   useWindowManagerActions,
   usePanelActions,
@@ -748,6 +749,8 @@ const LAYER_DEFINITIONS = [
 export const LayerTree: React.FC = () => {
   const { publish } = usePanelContext();
   const { openTab, closeDrawer } = useSidebar();
+  const { getActiveInGroup } = useToolbar();
+  const activeTool = getActiveInGroup('tool');
   const [visibility, setVisibility] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     LAYER_DEFINITIONS.forEach(l => { initial[l.id] = l.defaultVisible; });
@@ -774,6 +777,9 @@ export const LayerTree: React.FC = () => {
   return (
     <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
       <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Layer Catalog Explorer</h6>
+      <div className="p-2 rounded mb-2 font-monospace small" style={{ background: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)', color: 'var(--panel-title-color)' }}>
+        Active tool: <strong>{activeTool ?? 'none'}</strong>
+      </div>
       <div className="d-flex gap-1 mb-1">
         <button
           type="button"
