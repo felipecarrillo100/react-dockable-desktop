@@ -1840,7 +1840,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     if (!isInside) return;
                     setHoveredMinimized({ id: m.id, rect, title: m.title, component: m.component });
                   }}
-                  onPointerLeave={() => {
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === 'touch') return;
                     minimizedTooltipTimeoutRef.current = setTimeout(() => {
                       setHoveredMinimized(null);
                     }, 150);
