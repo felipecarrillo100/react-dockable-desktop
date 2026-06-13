@@ -282,8 +282,10 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
   const isVisible = visible !== false;
 
   const tabStrip = (
+    // Outer div handles the collapse transition with overflow:hidden.
+    // The inner sidebar-tabs-strip must NOT have overflow:hidden so the active
+    // tab's negative margin can extend into the drawer border area without clipping.
     <div
-      className={`sidebar-tabs-strip ${position}`}
       style={{
         width: isVisible ? '56px' : '0px',
         height: '100%',
@@ -292,6 +294,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
         flexShrink: 0,
       }}
     >
+      <div className={`sidebar-tabs-strip ${position}`} style={{ width: '56px', height: '100%' }}>
       {tabs.map(tab => {
         const isActive = activeTabId === tab.id;
         return (
@@ -307,6 +310,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           </button>
         );
       })}
+      </div>
     </div>
   );
 

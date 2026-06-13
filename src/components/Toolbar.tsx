@@ -152,7 +152,7 @@ function renderItem(item: ToolbarItem, index: number, toolbar: ToolbarContextVal
 // Component
 // ==========================================
 
-export const Toolbar = forwardRef<ToolbarHandle, ToolbarProps>(function Toolbar(
+export const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAttributes<ToolbarHandle>> = forwardRef<ToolbarHandle, ToolbarProps>(function Toolbar(
   { position = 'left', items, visible, onVisibilityChange, className, style },
   ref
 ) {
