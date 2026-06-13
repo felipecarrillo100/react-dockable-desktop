@@ -41,6 +41,40 @@ const DefaultGridIcon = (
   </svg>
 );
 
+const ContextMenuIcons = {
+  // Two offset equal rects — Windows "restore-down / new window" language
+  float: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <rect x="2" y="8" width="14" height="14" rx="1"/>
+      <rect x="8" y="2" width="14" height="14" rx="1"/>
+    </svg>
+  ),
+  // Single horizontal dash — Windows minimize language
+  minimize: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: 'block' }}>
+      <line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  ),
+  // Single inset rect — restore to normal windowed state
+  restore: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <rect x="4" y="4" width="16" height="16" rx="1"/>
+    </svg>
+  ),
+  // Near-full rect — maximize / fill workspace
+  maximize: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <rect x="2" y="2" width="20" height="20" rx="1"/>
+    </svg>
+  ),
+  // × — close
+  close: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  ),
+};
+
 const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
   let el = domCache.get(id);
   if (!el) {
@@ -994,12 +1028,14 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     if (options?.canDrag !== false) {
       items.push({
         label: formatLabel(messages.floatWindow, formatMessage),
+        icon: ContextMenuIcons.float,
         action: () => floatPanel(id)
       });
     }
     if (options?.canMinimize !== false) {
       items.push({
         label: formatLabel(messages.minimizePanel, formatMessage),
+        icon: ContextMenuIcons.minimize,
         action: () => minimizePanel(id)
       });
     }
@@ -1009,6 +1045,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     if (options?.canClose !== false) {
       items.push({
         label: formatLabel(messages.closeTab, formatMessage),
+        icon: ContextMenuIcons.close,
         action: () => handleRequestClose(id)
       });
     }
@@ -1030,15 +1067,18 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         items: [
           {
             label: formatLabel(messages.restorePanel, formatMessage),
+            icon: ContextMenuIcons.restore,
             action: () => restorePanel(id)
           },
           {
             label: formatLabel(messages.maximizePanel, formatMessage),
+            icon: ContextMenuIcons.maximize,
             action: () => maximizePanel(id)
           },
           { separator: true },
           {
             label: formatLabel(messages.closePanel, formatMessage),
+            icon: ContextMenuIcons.close,
             action: () => handleRequestClose(id)
           }
         ]
