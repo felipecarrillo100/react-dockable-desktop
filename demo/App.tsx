@@ -24,7 +24,10 @@ import type { SidebarTab, SidebarHandle, ToolbarItem } from '../src/index';
 import { PanelRegistry } from '../src/index';
 import { IntlProvider, useIntl } from 'react-intl';
 import { enMessages, esMessages, nlMessages, frMessages, zhMessages, arMessages } from './i18nMessages';
-import {EditAndMeasureIcon, SearchResultsIcon, SettingsIcon, WindowsIcon} from "./resources/SvgIcons.tsx";
+import {
+    EditAndMeasureIcon, SearchResultsIcon, SettingsIcon, WindowsIcon,
+    MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon,
+} from "./resources/SvgIcons.tsx";
 
 interface AppProps {
   locale?: string;
@@ -581,26 +584,29 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       icon: (SearchResultsIcon),
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       renderContent: (_tabId, _onClose, _onOpen) => (
-        <div className="p-3">
-          <h6 className="text-uppercase font-monospace text-secondary mb-3" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Search Results</h6>
-          <div className="d-flex flex-column gap-3 text-start small">
-            <div className="position-relative">
-              <input type="text" className="form-control form-control-sm bg-dark border-secondary text-white pe-4" placeholder="Search workspace..." defaultValue="Workspace" />
-              <span className="position-absolute end-0 top-50 translate-middle-y me-2 text-secondary">🔍</span>
+        <div className="sb-section">
+          <div className="sb-section-title">Search Results</div>
+          <div className="sb-field">
+            <div style={{ position: 'relative' }}>
+              <input type="text" className="sb-input" placeholder="Search workspace..." defaultValue="Workspace"
+                style={{ paddingRight: '28px' }} />
+              <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.45, display: 'flex' }}>
+                {SearchResultsIcon}
+              </span>
             </div>
-            <div className="text-secondary mb-1">3 matches found:</div>
-            <div className="p-2 bg-dark-subtle rounded border border-secondary-subtle">
-              <div className="fw-semibold text-info">Workspace.tsx</div>
-              <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>Line 18: const DockableWorkspace...</div>
-            </div>
-            <div className="p-2 bg-dark-subtle rounded border border-secondary-subtle">
-              <div className="fw-semibold text-info">App.tsx</div>
-              <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>Line 213: &lt;Workspace onApiReady...</div>
-            </div>
-            <div className="p-2 bg-dark-subtle rounded border border-secondary-subtle">
-              <div className="fw-semibold text-info">index.css</div>
-              <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>Line 40: .workspace-grid &#123;</div>
-            </div>
+          </div>
+          <div className="sb-empty-state" style={{ textAlign: 'left', marginBottom: '8px' }}>3 matches found:</div>
+          <div className="sb-card">
+            <div className="sb-card-title">Workspace.tsx</div>
+            <div className="sb-card-meta">Line 18: const DockableWorkspace...</div>
+          </div>
+          <div className="sb-card">
+            <div className="sb-card-title">App.tsx</div>
+            <div className="sb-card-meta">Line 213: &lt;Workspace onApiReady...</div>
+          </div>
+          <div className="sb-card">
+            <div className="sb-card-title">index.css</div>
+            <div className="sb-card-meta">Line 40: .workspace-grid &#123;</div>
           </div>
         </div>
       ),
@@ -612,30 +618,27 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       eagerMount: true,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       renderContent: (_tabId, _onClose, _onOpen) => (
-        <div className="p-3">
-          <h6 className="text-uppercase font-monospace text-secondary mb-3" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Edit &amp; Measure</h6>
-          <div className="small text-white-50 text-start d-flex flex-column gap-3">
-            <div>
-              <label className="form-label d-block mb-1 text-white small">Measurement Mode</label>
-              <select className="form-select form-select-sm bg-dark border-secondary text-white">
-                <option>Ruler (Distance)</option>
-                <option>Protractor (Angle)</option>
-                <option>Area Calculator</option>
-              </select>
-            </div>
-            <div>
-              <label className="form-label d-block mb-1 text-white small">Edit Brush Size</label>
-              <div className="d-flex align-items-center gap-2">
-                <input type="range" className="form-range" min="1" max="50" defaultValue="15" />
-                <span className="text-white font-monospace">15px</span>
-              </div>
-            </div>
-            <div className="d-flex flex-column gap-2 mt-2">
-                <button type="button" className="btn btn-sm btn-outline-light w-100" onClick={_onClose}>Close</button>
-                <button type="button" className="btn btn-sm btn-outline-light w-100">Clear Measure Guides</button>
-              <button type="button" className="btn btn-sm btn-primary w-100">Apply Edits</button>
+        <div className="sb-section">
+          <div className="sb-section-title">Edit &amp; Measure</div>
+          <div className="sb-field">
+            <label className="sb-label">Measurement Mode</label>
+            <select className="sb-select">
+              <option>Ruler (Distance)</option>
+              <option>Protractor (Angle)</option>
+              <option>Area Calculator</option>
+            </select>
+          </div>
+          <div className="sb-field">
+            <label className="sb-label">Edit Brush Size</label>
+            <div className="sb-field-row">
+              <input type="range" className="sb-range" min="1" max="50" defaultValue="15" />
+              <span className="sb-field-value">15px</span>
             </div>
           </div>
+          <div className="sb-separator" />
+          <button type="button" className="sb-btn-outline" style={{ width: '100%' }} onClick={_onClose}>Close Panel</button>
+          <button type="button" className="sb-btn-outline" style={{ width: '100%', marginTop: '8px' }}>Clear Measure Guides</button>
+          <button type="button" className="sb-btn" style={{ width: '100%', marginTop: '8px' }}>Apply Edits</button>
         </div>
       ),
     },
@@ -671,57 +674,56 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         });
 
         return (
-          <div className="p-3 text-start">
-            <h6 className="text-uppercase font-monospace text-secondary mb-3" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Open Windows ({openPanels.length})</h6>
+          <div className="sb-section">
+            <div className="sb-section-title">Open Windows ({openPanels.length})</div>
             {openPanels.length === 0 ? (
-              <div className="text-muted small mb-4">No active windows</div>
+              <div className="sb-empty-state">No active windows</div>
             ) : (
-              <div className="d-flex flex-column gap-2 mb-4">
-                {openPanels.map(panel => (
-                  <div key={panel.id} className="sidebar-window-card">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <span className="sidebar-card-title">{panel.title}</span>
-                      <span className="badge-pill-dark">{panel.isFloating ? 'Float' : 'Grid'}</span>
-                    </div>
-                    <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="btn-pill-outline" onClick={() => focusPanel(panel.id)}>Front</button>
-                      <div className="d-flex gap-2">
-                        {panel.canMinimize && (
-                          <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Minimize" onClick={() => minimizePanel(panel.id)} style={{ fontSize: '0.85rem' }}>_</button>
-                        )}
-                        {panel.isFloating && (
-                          <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Maximize" onClick={() => maximizePanel(panel.id)} style={{ fontSize: '0.8rem' }}>{panel.isMaximized ? '🗗' : '🗖'}</button>
-                        )}
-                        {panel.canClose && (
-                          <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
-                        )}
-                      </div>
-                    </div>
+              openPanels.map(panel => (
+                <div key={panel.id} className="sb-card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span className="sb-card-title">{panel.title}</span>
+                    <span className="sb-badge">{panel.isFloating ? 'Float' : 'Grid'}</span>
                   </div>
-                ))}
-              </div>
-            )}
-
-            <h6 className="text-uppercase font-monospace text-secondary mb-3" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Minimized ({minimizedList.length})</h6>
-            {minimizedList.length === 0 ? (
-              <div className="text-muted small">No minimized windows</div>
-            ) : (
-              <div className="d-flex flex-column gap-2">
-                {minimizedList.map(panel => (
-                  <div key={panel.id} className="sidebar-window-card">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <span className="sidebar-card-title">{panel.title}</span>
-                      <span className="badge-pill-dark">Min</span>
-                    </div>
-                    <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="btn-pill-outline" onClick={() => restorePanel(panel.id)}>Restore</button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button type="button" className="sb-btn-outline" onClick={() => focusPanel(panel.id)}>Front</button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {panel.canMinimize && (
+                        <button type="button" className="sb-btn-ghost" title="Minimize" onClick={() => minimizePanel(panel.id)}>{MinimizeIcon}</button>
+                      )}
+                      {panel.isFloating && (
+                        <button type="button" className="sb-btn-ghost" title={panel.isMaximized ? 'Restore' : 'Maximize'} onClick={() => maximizePanel(panel.id)}>
+                          {panel.isMaximized ? RestoreIcon : MaximizeIcon}
+                        </button>
+                      )}
                       {panel.canClose && (
-                        <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
+                        <button type="button" className="sb-btn-ghost danger" title="Close" onClick={() => closePanel(panel.id)}>{CloseIcon}</button>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
+            )}
+
+            <div className="sb-separator" />
+            <div className="sb-section-title">Minimized ({minimizedList.length})</div>
+            {minimizedList.length === 0 ? (
+              <div className="sb-empty-state">No minimized windows</div>
+            ) : (
+              minimizedList.map(panel => (
+                <div key={panel.id} className="sb-card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span className="sb-card-title">{panel.title}</span>
+                    <span className="sb-badge">Min</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button type="button" className="sb-btn-outline" onClick={() => restorePanel(panel.id)}>Restore</button>
+                    {panel.canClose && (
+                      <button type="button" className="sb-btn-ghost danger" title="Close" onClick={() => closePanel(panel.id)}>{CloseIcon}</button>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         );
@@ -733,50 +735,54 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       icon: (SettingsIcon),
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       renderContent: (_tabId, _onClose, _onOpen) => (
-        <div className="p-3">
-          <h6 className="text-uppercase font-monospace text-secondary mb-3" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Settings</h6>
-          <div className="small text-start d-flex flex-column gap-3" style={{ color: 'var(--sidebar-text-body, var(--panel-text))' }}>
-            <div>
-              <label className="form-label d-block mb-1" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Window Opacity</label>
-              <div className="d-flex align-items-center gap-2">
-                <input type="range" className="form-range" min="20" max="100" value={windowOpacity} onChange={e => setWindowOpacity(Number(e.target.value))} />
-                <span className="font-monospace small" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>{windowOpacity}%</span>
-              </div>
+        <div className="sb-section">
+          <div className="sb-section-title">Settings</div>
+
+          <div className="sb-field">
+            <label className="sb-label">Window Opacity</label>
+            <div className="sb-field-row">
+              <input type="range" className="sb-range" min="20" max="100" value={windowOpacity} onChange={e => setWindowOpacity(Number(e.target.value))} />
+              <span className="sb-field-value">{windowOpacity}%</span>
             </div>
-            <div className="form-check form-switch">
-              <input className="form-check-input" type="checkbox" id="gridSwitch" checked={showGrid} onChange={e => setShowGrid(e.target.checked)} />
-              <label className="form-check-label ms-1" htmlFor="gridSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Show Grid Pattern</label>
-            </div>
-            <div className="form-check form-switch">
-              <input className="form-check-input" type="checkbox" id="animationSwitch" checked={enableAnimations} onChange={e => setEnableAnimations(e.target.checked)} />
-              <label className="form-check-label ms-1" htmlFor="animationSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Enable Animations</label>
-            </div>
-            <div className="form-check form-switch">
-              <input className="form-check-input" type="checkbox" id="toolbarVisSwitch" checked={showToolbar} onChange={e => setShowToolbar(e.target.checked)} />
-              <label className="form-check-label ms-1" htmlFor="toolbarVisSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Show Toolbar</label>
-            </div>
-            <div className="form-check form-switch">
-              <input className="form-check-input" type="checkbox" id="sidebarVisSwitch" checked={showSidebar} onChange={e => setShowSidebar(e.target.checked)} />
-              <label className="form-check-label ms-1" htmlFor="sidebarVisSwitch" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Show Sidebar</label>
-            </div>
-            <div className="mt-2 border-top pt-3" style={{ borderColor: 'var(--panel-card-border)' }}>
-              <label className="form-label d-block mb-1 small font-monospace text-uppercase" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Sidebar Position</label>
-              <select className="form-select form-select-sm font-monospace" style={{ backgroundColor: 'var(--bg-panel)', color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }} value={sidebarPosition} onChange={e => setSidebarPosition(e.target.value as 'left' | 'right')}>
-                <option value="right">Right Side</option>
-                <option value="left">Left Side</option>
-              </select>
-            </div>
-            <div className="mt-2 border-top pt-3" style={{ borderColor: 'var(--panel-card-border)' }}>
-              <label className="form-label d-block mb-1 small font-monospace text-uppercase" style={{ color: 'var(--sidebar-text-title, var(--panel-text))' }}>Workspace Language</label>
-              <select className="form-select form-select-sm font-monospace" style={{ backgroundColor: 'var(--bg-panel)', color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }} value={locale} onChange={e => onLocaleChange?.(e.target.value)}>
-                <option value="en">English (EN)</option>
-                <option value="es">Español (ES)</option>
-                <option value="nl">Nederlands (NL)</option>
-                <option value="fr">Français (FR)</option>
-                <option value="zh">中文 (ZH)</option>
-                <option value="ar">العربية (AR)</option>
-              </select>
-            </div>
+          </div>
+
+          <div className="sb-toggle-row">
+            <input type="checkbox" id="gridSwitch" checked={showGrid} onChange={e => setShowGrid(e.target.checked)} />
+            <label className="sb-toggle-label" htmlFor="gridSwitch">Show Grid Pattern</label>
+          </div>
+          <div className="sb-toggle-row">
+            <input type="checkbox" id="animationSwitch" checked={enableAnimations} onChange={e => setEnableAnimations(e.target.checked)} />
+            <label className="sb-toggle-label" htmlFor="animationSwitch">Enable Animations</label>
+          </div>
+          <div className="sb-toggle-row">
+            <input type="checkbox" id="toolbarVisSwitch" checked={showToolbar} onChange={e => setShowToolbar(e.target.checked)} />
+            <label className="sb-toggle-label" htmlFor="toolbarVisSwitch">Show Toolbar</label>
+          </div>
+          <div className="sb-toggle-row">
+            <input type="checkbox" id="sidebarVisSwitch" checked={showSidebar} onChange={e => setShowSidebar(e.target.checked)} />
+            <label className="sb-toggle-label" htmlFor="sidebarVisSwitch">Show Sidebar</label>
+          </div>
+
+          <div className="sb-separator" />
+
+          <div className="sb-field">
+            <label className="sb-label">Sidebar Position</label>
+            <select className="sb-select" value={sidebarPosition} onChange={e => setSidebarPosition(e.target.value as 'left' | 'right')}>
+              <option value="right">Right Side</option>
+              <option value="left">Left Side</option>
+            </select>
+          </div>
+
+          <div className="sb-field">
+            <label className="sb-label">Workspace Language</label>
+            <select className="sb-select" value={locale} onChange={e => onLocaleChange?.(e.target.value)}>
+              <option value="en">English (EN)</option>
+              <option value="es">Español (ES)</option>
+              <option value="nl">Nederlands (NL)</option>
+              <option value="fr">Français (FR)</option>
+              <option value="zh">中文 (ZH)</option>
+              <option value="ar">العربية (AR)</option>
+            </select>
           </div>
         </div>
       ),

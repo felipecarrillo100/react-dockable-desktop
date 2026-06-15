@@ -18,6 +18,13 @@
  * - SB16: useSidebarTab() outside Sidebar returns no-op + console.warn
  * - SB17: position='left' places strip before drawer in DOM order
  * - SB18: onActiveTabChange is called when tab selection changes
+ * - SB19: defaultWidth initializes drawer width in pixels
+ * - SB20: drawerWidth deprecated alias parses pixels from string
+ * - SB21: setWidth/getWidth imperative methods
+ * - SB22: setWidth clamps to minWidth and maxWidth bounds
+ * - SB23: stripVisible=false collapses only the strip, drawer unaffected
+ * - SB24: showStrip/hideStrip imperative methods call onStripVisibilityChange
+ * - SB25: resize handle renders only when drawer is open
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
@@ -378,8 +385,10 @@ describe('SB17: position controls strip and drawer order', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} position="left" activeTabId="a" />);
     });
-    // SidebarContext.Provider renders no DOM node — strip and drawer are direct children of container
-    const allChildren = Array.from(container.children);
+    // SidebarContext.Provider renders no DOM node — container.children[0] is the root flex div.
+    // Strip is inside a transition wrapper div; drawer is a direct child of the root flex div.
+    const rootFlexDiv = container.children[0];
+    const allChildren = Array.from(rootFlexDiv.children);
     const stripIdx = allChildren.findIndex(el => el.querySelector('.sidebar-tabs-strip'));
     const drawerIdx = allChildren.findIndex(el => el.classList.contains('sidebar-content-drawer'));
     expect(stripIdx).toBeGreaterThanOrEqual(0);
@@ -393,7 +402,8 @@ describe('SB17: position controls strip and drawer order', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} position="right" activeTabId="a" />);
     });
-    const allChildren = Array.from(container.children);
+    const rootFlexDiv = container.children[0];
+    const allChildren = Array.from(rootFlexDiv.children);
     const stripIdx = allChildren.findIndex(el => el.querySelector('.sidebar-tabs-strip'));
     const drawerIdx = allChildren.findIndex(el => el.classList.contains('sidebar-content-drawer'));
     expect(stripIdx).toBeGreaterThanOrEqual(0);
@@ -428,5 +438,224 @@ describe('SB18: onActiveTabChange is called on tab selection changes', () => {
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+});
+
+// ─── SB19: defaultWidth initializes drawer flex-basis ────────────────────────
+
+describe('SB19: defaultWidth initializes drawer width in pixels', () => {
+  it('drawer flex-basis reflects defaultWidth prop', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={300} activeTabId="a" />);
+    });
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('300px');
+  });
+
+  it('defaults to 220px when defaultWidth is omitted', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} activeTabId="a" />);
+    });
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('220px');
+  });
+});
+
+// ─── SB20: drawerWidth deprecated alias ──────────────────────────────────────
+
+describe('SB20: drawerWidth deprecated alias parses pixels from string', () => {
+  it('initializes from drawerWidth="280px" when defaultWidth is absent', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} drawerWidth="280px" activeTabId="a" />);
+    });
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('280px');
+  });
+
+  it('defaultWidth takes precedence over drawerWidth', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={350} drawerWidth="280px" activeTabId="a" />);
+    });
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('350px');
+  });
+});
+
+// ─── SB21: setWidth / getWidth imperative methods ────────────────────────────
+
+describe('SB21: setWidth/getWidth imperative methods', () => {
+  it('setWidth updates drawer flex-basis', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={220} activeTabId="a" />);
+    });
+    act(() => { ref.current!.setWidth(400); });
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('400px');
+  });
+
+  it('getWidth returns the current pixel width', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={260} />);
+    });
+    expect(ref.current!.getWidth()).toBe(260);
+  });
+
+  it('getWidth reflects width after setWidth', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={220} />);
+    });
+    act(() => { ref.current!.setWidth(380); });
+    expect(ref.current!.getWidth()).toBe(380);
+  });
+
+  it('setWidth fires onWidthChange callback', () => {
+    const onWidthChange = vi.fn();
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} onWidthChange={onWidthChange} />);
+    });
+    act(() => { ref.current!.setWidth(340); });
+    expect(onWidthChange).toHaveBeenCalledWith(340);
+  });
+});
+
+// ─── SB22: setWidth clamps to min/max bounds ─────────────────────────────────
+
+describe('SB22: setWidth clamps to minWidth and maxWidth bounds', () => {
+  it('setWidth below minWidth is clamped to minWidth', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} minWidth={150} maxWidth={600} activeTabId="a" />);
+    });
+    act(() => { ref.current!.setWidth(50); });
+    expect(ref.current!.getWidth()).toBe(150);
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('150px');
+  });
+
+  it('setWidth above maxWidth is clamped to maxWidth', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} minWidth={150} maxWidth={600} activeTabId="a" />);
+    });
+    act(() => { ref.current!.setWidth(800); });
+    expect(ref.current!.getWidth()).toBe(600);
+    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    expect(drawer.style.flexBasis).toBe('600px');
+  });
+});
+
+// ─── SB23: stripVisible prop ─────────────────────────────────────────────────
+
+describe('SB23: stripVisible=false collapses only the strip', () => {
+  it('strip wrapper collapses to 0px when stripVisible=false', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} stripVisible={false} />);
+    });
+    const rootFlexDiv = container.children[0];
+    const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.sidebar-tabs-strip')) as HTMLElement | undefined;
+    expect(stripWrapper).toBeDefined();
+    expect(stripWrapper!.style.width).toBe('0px');
+  });
+
+  it('strip wrapper is visible (56px) when stripVisible is omitted', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    const rootFlexDiv = container.children[0];
+    const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.sidebar-tabs-strip')) as HTMLElement | undefined;
+    expect(stripWrapper).toBeDefined();
+    expect(stripWrapper!.style.width).toBe('56px');
+  });
+
+  it('stripVisible=false does not hide the drawer when a tab is open', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} activeTabId="a" stripVisible={false} />);
+    });
+    const content = container.querySelector('[data-content="a"]');
+    expect(content).not.toBeNull();
+  });
+});
+
+// ─── SB24: showStrip / hideStrip imperative methods ──────────────────────────
+
+describe('SB24: showStrip/hideStrip call onStripVisibilityChange', () => {
+  it('showStrip() calls onStripVisibilityChange(true)', () => {
+    const onStripVisibilityChange = vi.fn();
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} onStripVisibilityChange={onStripVisibilityChange} />);
+    });
+    act(() => { ref.current!.showStrip(); });
+    expect(onStripVisibilityChange).toHaveBeenCalledWith(true);
+  });
+
+  it('hideStrip() calls onStripVisibilityChange(false)', () => {
+    const onStripVisibilityChange = vi.fn();
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar ref={ref} tabs={tabs} onStripVisibilityChange={onStripVisibilityChange} />);
+    });
+    act(() => { ref.current!.hideStrip(); });
+    expect(onStripVisibilityChange).toHaveBeenCalledWith(false);
+  });
+});
+
+// ─── SB25: resize handle present only when drawer is open ────────────────────
+
+describe('SB25: resize handle renders only when drawer is open', () => {
+  it('no .resizer-bar when no tab is active', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    expect(container.querySelector('.resizer-bar')).toBeNull();
+  });
+
+  it('.resizer-bar is present when a tab is active', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} activeTabId="a" />);
+    });
+    expect(container.querySelector('.resizer-bar')).not.toBeNull();
   });
 });

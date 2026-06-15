@@ -1503,7 +1503,12 @@ body.resizing-col-active * {
 .sidebar-content-drawer {
   background-color: var(--sidebar-bg) !important;
   color: var(--sidebar-text-title) !important;
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+}
+
+/* Suppress all drawer transitions during pointer-drag resize */
+.sidebar-resizing .sidebar-content-drawer {
+  transition: none !important;
 }
 
 /* Position-specific drawer border and shadow alignment */
@@ -2288,29 +2293,256 @@ html:not(.enable-animations) *::after {
   min-height: 38px;
 }
 
-/* Sidebar drawer close button */
-.sidebar-close-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: var(--text-secondary, #94a3b8);
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: color 0.15s ease;
-  text-decoration: none;
-}
-
-.sidebar-close-btn:hover {
-  color: var(--text-primary, #f1f5f9);
-}
-
 /* Sidebar drawer content body */
 .sidebar-drawer-body {
   flex-grow: 1;
   overflow: auto;
 }
+
+/* ==========================================================================
+   SIDEBAR CONTENT PRIMITIVES (.sb-*)
+   Library-native classes for building sidebar tab content.
+   All values reference CSS variables — override via theme or custom CSS.
+   ========================================================================== */
+
+/* Section wrapper — use to group related controls */
+.sb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+/* Section heading — UPPERCASE monospace label */
+.sb-section-title {
+  font-family: monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sidebar-text-muted, var(--text-secondary));
+  margin: 0 0 4px 0;
+}
+
+/* Horizontal rule between sections */
+.sb-separator {
+  border: none;
+  border-top: 1px solid var(--sidebar-border);
+  margin: 4px 0;
+}
+
+/* Empty state placeholder */
+.sb-empty-state {
+  font-size: 0.8rem;
+  color: var(--sidebar-text-muted, var(--text-secondary));
+  text-align: center;
+  padding: 16px 12px;
+}
+
+/* Item card */
+.sb-card {
+  background-color: var(--sidebar-card-bg);
+  border: 1px solid var(--sidebar-card-border);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.sb-card:hover {
+  border-color: var(--sidebar-card-hover-border);
+  background-color: var(--sidebar-card-hover-bg);
+}
+.sb-card.active {
+  background-color: var(--sidebar-card-active-bg);
+  border-color: var(--sidebar-card-active-border);
+  box-shadow: 0 0 10px var(--sidebar-card-active-shadow);
+}
+
+/* Card title — truncated single line */
+.sb-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sidebar-text-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Card metadata row — secondary info, badges, action buttons */
+.sb-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Status badge */
+.sb-badge {
+  background-color: var(--sidebar-badge-bg);
+  color: var(--sidebar-badge-text);
+  font-family: monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Primary filled button */
+.sb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--accent-color);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.sb-btn:hover { opacity: 0.88; transform: scale(1.02); }
+.sb-btn:active { transform: scale(0.98); }
+
+/* Outlined accent button */
+.sb-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--sidebar-btn-front-text);
+  border: 1px solid var(--sidebar-btn-front-border);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  line-height: 1;
+}
+.sb-btn-outline:hover {
+  background-color: var(--sidebar-btn-front-hover-bg);
+  transform: scale(1.03);
+}
+
+/* Icon-only ghost button — for card action rows */
+.sb-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 4px;
+  padding: 3px 5px;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.sb-btn-ghost:hover {
+  color: var(--text-primary);
+  background-color: var(--sidebar-btn-hover-bg);
+}
+.sb-btn-ghost.danger:hover { color: #f87171; }
+
+/* Field: label + control */
+.sb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Field label */
+.sb-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sidebar-text-title);
+}
+
+/* Text input */
+.sb-input {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+  outline: none;
+}
+.sb-input:focus { border-color: var(--accent-color); }
+.sb-input::placeholder { color: var(--text-secondary); }
+
+/* Select control */
+.sb-select {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  outline: none;
+}
+.sb-select:focus { border-color: var(--accent-color); }
+
+/* Range slider */
+.sb-range {
+  width: 100%;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+/* Inline row of controls (e.g. range + value label) */
+.sb-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Monospace value readout next to a range */
+.sb-field-value {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Toggle switch row: label on left, switch on right */
+.sb-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sb-toggle-label {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+/* Deprecated aliases — keep existing consumer code working for one release */
+.sidebar-window-card { background-color: var(--sidebar-card-bg) !important; border: 1px solid var(--sidebar-card-border) !important; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; transition: all 0.15s ease; }
+.sidebar-window-card:hover { border-color: var(--sidebar-card-hover-border) !important; background-color: var(--sidebar-card-hover-bg) !important; }
+.sidebar-window-card.active { background-color: var(--sidebar-card-active-bg) !important; border-color: var(--sidebar-card-active-border) !important; box-shadow: 0 0 10px var(--sidebar-card-active-shadow); }
+.btn-pill-outline { border: 1px solid var(--sidebar-btn-front-border) !important; color: var(--sidebar-btn-front-text) !important; background: var(--sidebar-btn-front-bg) !important; font-size: 0.68rem !important; font-weight: 500 !important; border-radius: 12px !important; padding: 2px 10px !important; transition: all 0.15s ease !important; line-height: 1 !important; text-decoration: none !important; }
+.btn-pill-outline:hover { background: var(--sidebar-btn-front-hover-bg) !important; transform: scale(1.03); }
+.badge-pill-dark { background-color: var(--sidebar-badge-bg) !important; color: var(--sidebar-badge-text) !important; font-size: 0.65rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+.sidebar-card-title { font-size: 0.82rem; font-weight: 600; color: var(--sidebar-text-title); max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ==========================================================================
    TOOLBAR STRIP
