@@ -912,6 +912,16 @@ body.resizing-col-active * {
   --toolbar-btn-radio-active-bg: rgba(56, 189, 248, 0.14);
   --toolbar-btn-toggle-active-bg: rgba(56, 189, 248, 0.08);
   --toolbar-separator-color: rgba(255, 255, 255, 0.09);
+  /* Sidebar active-tab design tokens */
+  --tab-btn-active-width: 100%;
+  --tab-btn-active-radius: 0px;
+  --tab-btn-active-shadow: none;
+  --tab-btn-active-glow: none;
+  --tab-accent-bar-width: 3px;
+  /* Toolbar active-button design tokens */
+  --toolbar-btn-active-shadow: none;
+  --toolbar-btn-active-glow: none;
+  --toolbar-accent-bar-width: 3px;
 }
 
 [data-color-scheme="light"] {
@@ -1499,6 +1509,241 @@ body.resizing-col-active * {
   --toolbar-btn-toggle-active-bg: rgba(56, 90, 246, 0.07);
 }
 
+/* ==========================================================================
+   PER-SKIN ACTIVE TAB & TOOLBAR DESIGN LANGUAGE
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   vscode — Accent Bar (2 px bar, fully transparent fill — faithful to VS Code)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="vscode"] {
+  --tab-btn-active-bg: transparent;
+  --tab-accent-bar-width: 2px;
+  --toolbar-btn-radio-active-bg: transparent;
+  --toolbar-accent-bar-width: 2px;
+}
+[data-workspace-skin="vscode"] .sidebar-tab-btn.active {
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+}
+
+/* --------------------------------------------------------------------------
+   chrome — Tab Shape (sidebar bridge, toolbar accent-tinted)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="chrome"] {
+  --tab-btn-active-bg: var(--sidebar-bg);
+  --tab-accent-bar-width: 0px;
+  --toolbar-accent-bar-width: 2px;
+}
+[data-workspace-skin="chrome"] .sidebar-tabs-strip.left .sidebar-tab-btn.active {
+  border-radius: 0 10px 10px 0 !important;
+  border-left: none !important;
+}
+[data-workspace-skin="chrome"] .sidebar-tabs-strip.right .sidebar-tab-btn.active {
+  border-radius: 10px 0 0 10px !important;
+  border-right: none !important;
+  border-top: 1px solid var(--sidebar-border) !important;
+  border-bottom: 1px solid var(--sidebar-border) !important;
+}
+
+/* --------------------------------------------------------------------------
+   slate — Fluent Pill (floating capsule, accent-tinted)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="slate"] {
+  --tab-btn-active-bg: rgba(96, 165, 250, 0.14);
+  --tab-btn-active-width: 36px;
+  --tab-btn-active-radius: 8px;
+  --tab-accent-bar-width: 0px;
+  --toolbar-btn-radio-active-bg: rgba(96, 165, 250, 0.14);
+  --toolbar-accent-bar-width: 0px;
+}
+[data-workspace-skin="slate"] .sidebar-tab-btn.active {
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  margin: 0 !important;
+}
+[data-workspace-skin="slate"] .toolbar-strip .toolbar-btn-radio.active,
+[data-workspace-skin="slate"] .toolbar-strip .toolbar-btn-group.active {
+  border-radius: 8px !important;
+}
+[data-workspace-skin="slate"][data-color-scheme="light"] {
+  --tab-btn-active-bg: rgba(0, 120, 212, 0.12);
+  --toolbar-btn-radio-active-bg: rgba(0, 120, 212, 0.12);
+}
+
+/* --------------------------------------------------------------------------
+   nord — Nordic Line (zero fill, zero bar, 16×2 px accent line via ::after)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="nord"] {
+  --tab-btn-active-bg: transparent;
+  --tab-btn-active-width: 44px;
+  --tab-btn-active-radius: 6px;
+  --tab-accent-bar-width: 0px;
+  --toolbar-btn-radio-active-bg: transparent;
+  --toolbar-accent-bar-width: 0px;
+}
+[data-workspace-skin="nord"] .sidebar-tab-btn.active {
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+[data-workspace-skin="nord"] .sidebar-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--tab-icon-active);
+}
+[data-workspace-skin="nord"] .toolbar-strip .toolbar-btn-radio.active,
+[data-workspace-skin="nord"] .toolbar-strip .toolbar-btn-group.active {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+}
+[data-workspace-skin="nord"] .toolbar-strip.left  .toolbar-btn-radio.active::after,
+[data-workspace-skin="nord"] .toolbar-strip.left  .toolbar-btn-group.active::after,
+[data-workspace-skin="nord"] .toolbar-strip.right .toolbar-btn-radio.active::after,
+[data-workspace-skin="nord"] .toolbar-strip.right .toolbar-btn-group.active::after,
+[data-workspace-skin="nord"] .toolbar-strip.top   .toolbar-btn-radio.active::after,
+[data-workspace-skin="nord"] .toolbar-strip.top   .toolbar-btn-group.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--tab-icon-active);
+}
+[data-workspace-skin="nord"] .toolbar-strip.bottom .toolbar-btn-radio.active::after,
+[data-workspace-skin="nord"] .toolbar-strip.bottom .toolbar-btn-group.active::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--tab-icon-active);
+}
+
+/* --------------------------------------------------------------------------
+   obsidian — Deep Glow (near-black fill, 2 px bar, inner glow, icon shadow)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="obsidian"] {
+  --tab-btn-active-bg: rgba(255, 255, 255, 0.03);
+  --tab-btn-active-shadow: inset 0 0 12px rgba(255, 255, 255, 0.06);
+  --tab-btn-active-glow: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  --tab-accent-bar-width: 2px;
+  --toolbar-btn-radio-active-bg: rgba(255, 255, 255, 0.03);
+  --toolbar-btn-active-shadow: inset 0 0 12px rgba(255, 255, 255, 0.06);
+  --toolbar-btn-active-glow: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  --toolbar-accent-bar-width: 2px;
+}
+[data-workspace-skin="obsidian"] .sidebar-tabs-strip.left .sidebar-tab-btn.active {
+  box-shadow: var(--tab-btn-active-shadow), inset 3px 0 8px rgba(255, 255, 255, 0.08) !important;
+}
+[data-workspace-skin="obsidian"] .sidebar-tabs-strip.right .sidebar-tab-btn.active {
+  box-shadow: var(--tab-btn-active-shadow), inset -3px 0 8px rgba(255, 255, 255, 0.08) !important;
+}
+[data-workspace-skin="obsidian"] .toolbar-strip.left .toolbar-btn-radio.active,
+[data-workspace-skin="obsidian"] .toolbar-strip.left .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset 3px 0 8px rgba(255, 255, 255, 0.08) !important;
+}
+[data-workspace-skin="obsidian"] .toolbar-strip.right .toolbar-btn-radio.active,
+[data-workspace-skin="obsidian"] .toolbar-strip.right .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset -3px 0 8px rgba(255, 255, 255, 0.08) !important;
+}
+[data-workspace-skin="obsidian"] .toolbar-strip.top .toolbar-btn-radio.active,
+[data-workspace-skin="obsidian"] .toolbar-strip.top .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset 0 -3px 8px rgba(255, 255, 255, 0.08) !important;
+}
+[data-workspace-skin="obsidian"] .toolbar-strip.bottom .toolbar-btn-radio.active,
+[data-workspace-skin="obsidian"] .toolbar-strip.bottom .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset 0 3px 8px rgba(255, 255, 255, 0.08) !important;
+}
+[data-workspace-skin="obsidian"][data-color-scheme="light"] {
+  --tab-btn-active-shadow: inset 0 0 12px rgba(0, 0, 0, 0.06);
+  --tab-btn-active-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+  --toolbar-btn-active-shadow: inset 0 0 12px rgba(0, 0, 0, 0.06);
+  --toolbar-btn-active-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+
+/* --------------------------------------------------------------------------
+   tokyo — Neon Pulse (accent-blue tint, vivid neon glow)
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="tokyo"] {
+  --tab-btn-active-bg: rgba(122, 162, 247, 0.10);
+  --tab-btn-active-shadow: inset 0 0 16px rgba(122, 162, 247, 0.12);
+  --tab-btn-active-glow: drop-shadow(0 0 6px rgba(122, 162, 247, 0.65));
+  --tab-accent-bar-width: 2px;
+  --toolbar-btn-radio-active-bg: rgba(122, 162, 247, 0.10);
+  --toolbar-btn-active-shadow: inset 0 0 16px rgba(122, 162, 247, 0.12);
+  --toolbar-btn-active-glow: drop-shadow(0 0 6px rgba(122, 162, 247, 0.65));
+  --toolbar-accent-bar-width: 2px;
+}
+[data-workspace-skin="tokyo"] .sidebar-tabs-strip.left .sidebar-tab-btn.active {
+  box-shadow: var(--tab-btn-active-shadow), inset 3px 0 12px rgba(122, 162, 247, 0.18) !important;
+}
+[data-workspace-skin="tokyo"] .sidebar-tabs-strip.right .sidebar-tab-btn.active {
+  box-shadow: var(--tab-btn-active-shadow), inset -3px 0 12px rgba(122, 162, 247, 0.18) !important;
+}
+[data-workspace-skin="tokyo"] .toolbar-strip.left .toolbar-btn-radio.active,
+[data-workspace-skin="tokyo"] .toolbar-strip.left .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset 3px 0 12px rgba(122, 162, 247, 0.18) !important;
+}
+[data-workspace-skin="tokyo"] .toolbar-strip.right .toolbar-btn-radio.active,
+[data-workspace-skin="tokyo"] .toolbar-strip.right .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset -3px 0 12px rgba(122, 162, 247, 0.18) !important;
+}
+[data-workspace-skin="tokyo"] .toolbar-strip.top .toolbar-btn-radio.active,
+[data-workspace-skin="tokyo"] .toolbar-strip.top .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset 0 -3px 12px rgba(122, 162, 247, 0.18) !important;
+}
+[data-workspace-skin="tokyo"] .toolbar-strip.bottom .toolbar-btn-radio.active,
+[data-workspace-skin="tokyo"] .toolbar-strip.bottom .toolbar-btn-group.active {
+  box-shadow: var(--toolbar-btn-active-shadow), inset 0 3px 12px rgba(122, 162, 247, 0.18) !important;
+}
+
+/* --------------------------------------------------------------------------
+   macos — Glass Chip (full-round floating chip, accent fill + white ring)
+   Inspired by macOS app icon strip conventions: Xcode, Logic Pro, System Settings.
+   A contained chip that floats inside the strip — not an edge-connecting bridge.
+   -------------------------------------------------------------------------- */
+[data-workspace-skin="macos"] {
+  --tab-btn-active-bg: rgba(56, 189, 248, 0.2);
+  --tab-btn-active-width: 36px;
+  --tab-btn-active-radius: 10px;
+  --tab-btn-active-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  --tab-accent-bar-width: 0px;
+  --toolbar-btn-radio-active-bg: rgba(56, 189, 248, 0.2);
+  --toolbar-btn-active-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  --toolbar-accent-bar-width: 0px;
+}
+[data-workspace-skin="macos"] .sidebar-tab-btn.active {
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  margin: 0 !important;
+}
+[data-workspace-skin="macos"] .toolbar-strip .toolbar-btn-radio.active,
+[data-workspace-skin="macos"] .toolbar-strip .toolbar-btn-group.active {
+  border-radius: 10px !important;
+}
+[data-workspace-skin="macos"][data-color-scheme="light"] {
+  --tab-btn-active-bg: rgba(0, 102, 204, 0.16);
+  --tab-btn-active-shadow: inset 0 0 0 1px rgba(0, 102, 204, 0.3);
+  --toolbar-btn-radio-active-bg: rgba(0, 102, 204, 0.16);
+  --toolbar-btn-active-shadow: inset 0 0 0 1px rgba(0, 102, 204, 0.3);
+}
+
 /* --- Modern Sidebar and Tabs UI Theme Customizations --- */
 .sidebar-content-drawer {
   background-color: var(--sidebar-bg) !important;
@@ -1580,27 +1825,29 @@ body.resizing-col-active * {
 }
 
 .sidebar-tab-btn.active {
-  width: 100% !important; /* Take full width of the 56px strip to touch the drawer and close the gap */
+  width: var(--tab-btn-active-width) !important;
   color: var(--tab-icon-active) !important;
   background-color: var(--tab-btn-active-bg) !important;
   border-top: 1px solid var(--sidebar-border) !important;
   border-bottom: 1px solid var(--sidebar-border) !important;
-  border-radius: 0 !important; /* Square edges to align flat and eliminate curved gap */
+  border-radius: var(--tab-btn-active-radius) !important;
+  box-shadow: var(--tab-btn-active-shadow);
+  filter: var(--tab-btn-active-glow);
   z-index: 6;
-  transition: color 0.15s ease; /* Prevent transition jumps on active state toggle */
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Position-specific active button border & margin alignments to cover separation lines completely */
+/* Position-specific active button border & margin alignments */
 .sidebar-tabs-strip.left .sidebar-tab-btn.active {
-  border-left: 3px solid var(--tab-icon-active) !important; /* Accent bar on the left edge */
-  border-right: none !important; /* Open right edge to merge with the drawer */
-  margin-right: -2px !important; /* Overlap right border of tab strip completely to eliminate gap */
+  border-left: var(--tab-accent-bar-width) solid var(--tab-icon-active) !important;
+  border-right: none !important;
+  margin-right: -2px !important;
   margin-left: 0 !important;
 }
 .sidebar-tabs-strip.right .sidebar-tab-btn.active {
-  border-left: none !important; /* Open left edge to connect directly with drawer */
-  border-right: 3px solid var(--tab-icon-active) !important; /* Accent bar on the right edge */
-  margin-left: -2px !important; /* Overlap left border of tab strip completely to eliminate gap */
+  border-left: none !important;
+  border-right: var(--tab-accent-bar-width) solid var(--tab-icon-active) !important;
+  margin-left: -2px !important;
   margin-right: 0 !important;
 }
 
@@ -2602,6 +2849,7 @@ html:not(.enable-animations) *::after {
   cursor: pointer;
   flex-shrink: 0;
   outline: none !important;
+  position: relative;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -2615,16 +2863,19 @@ html:not(.enable-animations) *::after {
   cursor: not-allowed;
 }
 
-/* Radio active — 3px accent bar on the workspace-facing edge */
+/* Radio active — accent bar on the outer edge */
 .toolbar-btn-radio.active {
   color: var(--tab-icon-active);
   background-color: var(--toolbar-btn-radio-active-bg);
+  box-shadow: var(--toolbar-btn-active-shadow);
+  filter: var(--toolbar-btn-active-glow);
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.toolbar-strip.left   .toolbar-btn-radio.active { border-left:   3px solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
-.toolbar-strip.right  .toolbar-btn-radio.active { border-right:  3px solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
-.toolbar-strip.top    .toolbar-btn-radio.active { border-bottom: 3px solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
-.toolbar-strip.bottom .toolbar-btn-radio.active { border-top:    3px solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
+.toolbar-strip.left   .toolbar-btn-radio.active { border-left:   var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
+.toolbar-strip.right  .toolbar-btn-radio.active { border-right:  var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
+.toolbar-strip.top    .toolbar-btn-radio.active { border-bottom: var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
+.toolbar-strip.bottom .toolbar-btn-radio.active { border-top:    var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
 
 /* Toggle active — lighter tint, no directional border */
 .toolbar-btn-toggle.active {
@@ -2654,12 +2905,15 @@ html:not(.enable-animations) *::after {
 .toolbar-btn-group.active {
   color: var(--tab-icon-active);
   background-color: var(--toolbar-btn-radio-active-bg);
+  box-shadow: var(--toolbar-btn-active-shadow);
+  filter: var(--toolbar-btn-active-glow);
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.toolbar-strip.left   .toolbar-btn-group.active { border-left:   3px solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
-.toolbar-strip.right  .toolbar-btn-group.active { border-right:  3px solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
-.toolbar-strip.top    .toolbar-btn-group.active { border-bottom: 3px solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
-.toolbar-strip.bottom .toolbar-btn-group.active { border-top:    3px solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
+.toolbar-strip.left   .toolbar-btn-group.active { border-left:   var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
+.toolbar-strip.right  .toolbar-btn-group.active { border-right:  var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
+.toolbar-strip.top    .toolbar-btn-group.active { border-bottom: var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
+.toolbar-strip.bottom .toolbar-btn-group.active { border-top:    var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
 
 /* Separators */
 .toolbar-strip.left .toolbar-separator,
