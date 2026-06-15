@@ -43,6 +43,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
   const [toolbarPosition, setToolbarPosition] = useState<'left' | 'right' | 'top' | 'bottom'>('left');
+  const [rtlLayout, setRtlLayout] = useState<boolean>(false);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const sidebarRef = React.useRef<SidebarHandle>(null);
@@ -191,6 +192,11 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       document.documentElement.classList.remove('enable-animations');
     }
   }, [enableAnimations]);
+
+  useEffect(() => {
+    document.documentElement.dir = rtlLayout ? 'rtl' : 'ltr';
+    return () => { document.documentElement.dir = 'ltr'; };
+  }, [rtlLayout]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', theme);
@@ -798,6 +804,10 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           <div className="sb-toggle-row">
             <input type="checkbox" id="sidebarVisSwitch" checked={showSidebar} onChange={e => setShowSidebar(e.target.checked)} />
             <label className="sb-toggle-label" htmlFor="sidebarVisSwitch">Show Sidebar</label>
+          </div>
+          <div className="sb-toggle-row">
+            <input type="checkbox" id="rtlSwitch" checked={rtlLayout} onChange={e => setRtlLayout(e.target.checked)} />
+            <label className="sb-toggle-label" htmlFor="rtlSwitch">RTL Layout</label>
           </div>
 
           <div className="sb-separator" />
