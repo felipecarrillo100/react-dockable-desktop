@@ -197,7 +197,7 @@ interface MenuState {
 
 const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [] };
 
-export const ContextMenu = forwardRef<ContextMenuHandle, ContextMenuProps>(
+export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & React.RefAttributes<ContextMenuHandle>> = forwardRef<ContextMenuHandle, ContextMenuProps>(
   ({ theme = 'dark', formatMessageProvider, onShow, onHide, onOpenChange, className, style }, ref) => {
     const [menuState, setMenuState] = useState<MenuState>(CLOSED);
     const [submenuIndex, setSubmenuIndex] = useState<number | null>(null);
