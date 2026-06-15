@@ -6,7 +6,7 @@
  * State is library-wide via DockableDesktopProvider / ToolbarContext.
  */
 
-import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useToolbar } from './ToolbarContext';
 import type { ToolbarContextValue } from './ToolbarContext';
@@ -159,13 +159,20 @@ interface ToolbarGroupButtonProps {
 function flyoutPosition(
   rect: DOMRect,
   position: 'left' | 'right' | 'top' | 'bottom',
+  isRtl = false,
   gap = 8,
 ): React.CSSProperties {
   switch (position) {
     case 'left':   return { left: rect.right + gap, top: rect.top };
     case 'right':  return { right: window.innerWidth - rect.left + gap, top: rect.top };
-    case 'top':    return { top: rect.bottom + gap, left: rect.left };
-    case 'bottom': return { bottom: window.innerHeight - rect.top + gap, left: rect.left };
+    case 'top':
+      return isRtl
+        ? { top: rect.bottom + gap, right: window.innerWidth - rect.right }
+        : { top: rect.bottom + gap, left: rect.left };
+    case 'bottom':
+      return isRtl
+        ? { bottom: window.innerHeight - rect.top + gap, right: window.innerWidth - rect.right }
+        : { bottom: window.innerHeight - rect.top + gap, left: rect.left };
   }
 }
 
@@ -191,6 +198,30 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
     }
     setIsOpen(prev => !prev);
   };
+
+  // Clamp flyout to viewport after it renders (runs before paint to avoid jitter)
+  useLayoutEffect(() => {
+    if (!isOpen || !flyoutRef.current) return;
+    const el = flyoutRef.current;
+    const r = el.getBoundingClientRect();
+    const PAD = 8;
+    if (r.right > window.innerWidth - PAD) {
+      el.style.left = `${Math.max(PAD, window.innerWidth - r.width - PAD)}px`;
+      el.style.right = 'auto';
+    }
+    if (r.left < PAD) {
+      el.style.left = `${PAD}px`;
+      el.style.right = 'auto';
+    }
+    if (r.bottom > window.innerHeight - PAD) {
+      el.style.top = `${Math.max(PAD, window.innerHeight - r.height - PAD)}px`;
+      el.style.bottom = 'auto';
+    }
+    if (r.top < PAD) {
+      el.style.top = `${PAD}px`;
+      el.style.bottom = 'auto';
+    }
+  }, [isOpen]);
 
   // Close flyout on click-away (exclude clicks inside the button or flyout itself)
   useEffect(() => {
@@ -233,7 +264,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
         <div
           ref={flyoutRef}
           className={`toolbar-group-flyout ${position}`}
-          style={flyoutPosition(btnRect, position)}
+          style={flyoutPosition(btnRect, position, document.documentElement.dir === 'rtl')}
           role="menu"
         >
           {item.items.map((entry, i) => {

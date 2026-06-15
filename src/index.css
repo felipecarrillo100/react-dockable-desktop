@@ -2965,12 +2965,11 @@ html:not(.enable-animations) *::after {
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* Horizontal layout for top/bottom toolbars */
-.toolbar-group-flyout.top,
-.toolbar-group-flyout.bottom {
-  flex-direction: row;
-  min-width: unset;
-}
+/* Animation origin matches the edge closest to the toolbar button */
+.toolbar-group-flyout.left   { transform-origin: top left; }
+.toolbar-group-flyout.right  { transform-origin: top right; }
+.toolbar-group-flyout.top    { transform-origin: top left; }
+.toolbar-group-flyout.bottom { transform-origin: bottom left; }
 
 .toolbar-group-flyout-item {
   display: flex;
@@ -3014,13 +3013,6 @@ html:not(.enable-animations) *::after {
   justify-content: center;
 }
 
-/* top/bottom flyout: icon only, hide label and shortcut */
-.toolbar-group-flyout.top .toolbar-group-flyout-label,
-.toolbar-group-flyout.bottom .toolbar-group-flyout-label,
-.toolbar-group-flyout.top .toolbar-group-flyout-shortcut,
-.toolbar-group-flyout.bottom .toolbar-group-flyout-shortcut {
-  display: none;
-}
 
 .toolbar-group-flyout-label {
   flex: 1;
@@ -3043,13 +3035,6 @@ html:not(.enable-animations) *::after {
   flex-shrink: 0;
 }
 
-/* Vertical separator for horizontal flyout */
-.toolbar-group-flyout.top .toolbar-group-flyout-sep,
-.toolbar-group-flyout.bottom .toolbar-group-flyout-sep {
-  width: 1px;
-  height: 16px;
-  margin: auto 2px;
-}
 
 /* Button base — used in ConfirmationForm and similar dialogs */
 .dw-btn {
