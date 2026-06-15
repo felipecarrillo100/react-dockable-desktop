@@ -21,6 +21,14 @@
  * - TB19: visible=false collapses a horizontal strip to height 0px
  * - TB20: Imperative handle show/hide/toggle calls onVisibilityChange
  * - TB21: Disabled buttons cannot be clicked
+ * - TB22: Group button renders with default icon when no sub-item active
+ * - TB23: Clicking group button renders flyout in document.body
+ * - TB24: Clicking sub-item activates it, closes flyout, calls onActivate
+ * - TB25: Active sub-item's label replaces default label on parent button
+ * - TB26: Parent button gets .active class when any sub-item is active
+ * - TB27: Clicking group button again closes flyout (toggle)
+ * - TB28: Sub-item separator renders with role="separator" inside flyout
+ * - TB29: Disabled group button does not open flyout
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { useRef, createRef } from 'react';
@@ -310,14 +318,15 @@ describe('TB18-TB19: Toolbar visibility', () => {
     expect(strip.style.width).toBe('0px');
   });
 
-  it('TB18b: visible=true (default) sets vertical strip width to 48px', () => {
+  it('TB18b: visible=true leaves width to CSS (no inline collapse override)', () => {
     const items: ToolbarItem[] = [];
     act(() => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} position="left" visible={true} />));
     });
     const strip = container.querySelector('.toolbar-strip') as HTMLElement;
-    expect(strip.style.width).toBe('48px');
+    // CSS owns open width; inline style must not force any width
+    expect(strip.style.width).toBe('');
   });
 
   it('TB19: visible=false collapses a horizontal (top) strip to height 0px', () => {
@@ -330,14 +339,15 @@ describe('TB18-TB19: Toolbar visibility', () => {
     expect(strip.style.height).toBe('0px');
   });
 
-  it('TB19b: visible=true sets horizontal strip height to 48px', () => {
+  it('TB19b: visible=true leaves height to CSS (no inline collapse override)', () => {
     const items: ToolbarItem[] = [];
     act(() => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} position="top" visible={true} />));
     });
     const strip = container.querySelector('.toolbar-strip') as HTMLElement;
-    expect(strip.style.height).toBe('48px');
+    // CSS owns open height; inline style must not force any height
+    expect(strip.style.height).toBe('');
   });
 });
 
@@ -429,5 +439,225 @@ describe('TB21: Disabled buttons', () => {
     });
     const btn = container.querySelector('button.toolbar-btn-radio') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
+  });
+});
+
+// ─── TB22-TB29: Group button / flyout ────────────────────────────────────────
+
+describe('TB22-TB29: Group button / flyout', () => {
+  const onActivate = vi.fn();
+
+  const groupItems: ToolbarItem[] = [
+    {
+      type: 'group',
+      id: 'draw-tool',
+      label: 'Drawing Tools',
+      defaultIcon: <svg data-testid="default-icon" />,
+      items: [
+        {
+          id: 'tool-pen',
+          label: 'Pen',
+          shortcut: 'P',
+          icon: <svg data-testid="pen-icon" />,
+          onActivate,
+        },
+        { type: 'separator' },
+        {
+          id: 'tool-eraser',
+          label: 'Eraser',
+          icon: <svg data-testid="eraser-icon" />,
+        },
+      ],
+    },
+  ];
+
+  beforeEach(() => {
+    onActivate.mockReset();
+  });
+
+  const mountGroup = () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(wrapInProvider(<Toolbar items={groupItems} />));
+    });
+  };
+
+  it('TB22: group button renders with default label when no sub-item active', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
+    expect(btn.getAttribute('aria-haspopup')).toBe('menu');
+    expect(btn.classList.contains('active')).toBe(false);
+  });
+
+  it('TB23: clicking group button renders flyout in document.body', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const flyout = document.body.querySelector('.toolbar-group-flyout');
+    expect(flyout).not.toBeNull();
+    expect(flyout!.getAttribute('role')).toBe('menu');
+  });
+
+  it('TB24: clicking sub-item activates it, closes flyout, calls onActivate', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    // First item is Pen
+    act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(document.body.querySelector('.toolbar-group-flyout')).toBeNull();
+    expect(onActivate).toHaveBeenCalledWith('tool-pen');
+  });
+
+  it('TB25: active sub-item label replaces default label on parent button', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(btn.getAttribute('aria-label')).toBe('Pen');
+  });
+
+  it('TB26: parent button gets .active class when any sub-item is active', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(btn.classList.contains('active')).toBe(true);
+  });
+
+  it('TB27: clicking group button again when open closes the flyout', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(document.body.querySelector('.toolbar-group-flyout')).not.toBeNull();
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(document.body.querySelector('.toolbar-group-flyout')).toBeNull();
+  });
+
+  it('TB28: separator entry renders with role="separator" inside flyout', () => {
+    mountGroup();
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const sep = document.body.querySelector('.toolbar-group-flyout-sep');
+    expect(sep).not.toBeNull();
+    expect(sep!.getAttribute('role')).toBe('separator');
+  });
+
+  it('TB29: disabled group button has disabled attribute and does not open flyout', () => {
+    const disabledItems: ToolbarItem[] = [
+      {
+        type: 'group',
+        id: 'disabled-group',
+        label: 'Disabled Group',
+        defaultIcon: <Icon />,
+        items: [{ id: 'sub1', label: 'Sub 1', icon: <Icon /> }],
+        disabled: true,
+      },
+    ];
+    act(() => {
+      root = createRoot(container);
+      root.render(wrapInProvider(<Toolbar items={disabledItems} />));
+    });
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(document.body.querySelector('.toolbar-group-flyout')).toBeNull();
+  });
+});
+
+// ─── TB30–TB33: Controlled mode ───────────────────────────────────────────────
+
+describe('TB30–TB33: Controlled mode', () => {
+  const controlledBase = {
+    type: 'group' as const,
+    id: 'draw-tool',
+    label: 'Drawing Tools',
+    defaultIcon: <svg data-testid="default-icon" />,
+    items: [
+      { id: 'tool-pen',    label: 'Pen',    icon: <svg data-testid="pen-icon" /> },
+      { id: 'tool-eraser', label: 'Eraser', icon: <svg data-testid="eraser-icon" /> },
+    ],
+  };
+
+  it('TB30: activeItemId="tool-pen" shows Pen label and .active class without context', () => {
+    const items: ToolbarItem[] = [{ ...controlledBase, activeItemId: 'tool-pen' }];
+    act(() => {
+      root = createRoot(container);
+      root.render(wrapInProvider(<Toolbar items={items} />));
+    });
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    expect(btn.getAttribute('aria-label')).toBe('Pen');
+    expect(btn.classList.contains('active')).toBe(true);
+  });
+
+  it('TB31: clicking sub-item fires onActiveItemChange and does NOT write to context', () => {
+    const onActiveItemChange = vi.fn();
+    let capturedToolbar: ReturnType<typeof useToolbar> | null = null;
+    const Probe: React.FC = () => { capturedToolbar = useToolbar(); return null; };
+
+    const items: ToolbarItem[] = [{ ...controlledBase, activeItemId: null, onActiveItemChange }];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <ToolbarProvider>
+          <Probe />
+          <Toolbar items={items} />
+        </ToolbarProvider>
+      );
+    });
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(onActiveItemChange).toHaveBeenCalledWith('tool-pen');
+    // context must remain untouched
+    expect(capturedToolbar!.getActiveInGroup('draw-tool')).toBeNull();
+  });
+
+  it('TB32: controlled group does not self-update after click (frozen until prop changes)', () => {
+    const onActiveItemChange = vi.fn();
+    const items: ToolbarItem[] = [{ ...controlledBase, activeItemId: null, onActiveItemChange }];
+    act(() => {
+      root = createRoot(container);
+      root.render(wrapInProvider(<Toolbar items={items} />));
+    });
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    // prop is still null — button must still show default label and no .active class
+    expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
+    expect(btn.classList.contains('active')).toBe(false);
+    expect(onActiveItemChange).toHaveBeenCalledWith('tool-pen');
+  });
+
+  it('TB33: activeItemId=null ignores context — shows defaultIcon and no .active', () => {
+    let capturedToolbar: ReturnType<typeof useToolbar> | null = null;
+    const Probe: React.FC = () => { capturedToolbar = useToolbar(); return null; };
+
+    const items: ToolbarItem[] = [{ ...controlledBase, activeItemId: null }];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <ToolbarProvider>
+          <Probe />
+          <Toolbar items={items} />
+        </ToolbarProvider>
+      );
+    });
+
+    // Manually write to context (simulates uncontrolled code writing a value)
+    act(() => { capturedToolbar!.setActiveInGroup('draw-tool', 'tool-pen'); });
+
+    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    // controlled prop is null → default label, no .active class despite context having a value
+    expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
+    expect(btn.classList.contains('active')).toBe(false);
   });
 });

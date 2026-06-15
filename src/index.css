@@ -2563,6 +2563,8 @@ html:not(.enable-animations) *::after {
   height: 100%;
   padding: 8px 0;
   gap: 4px;
+  overflow: hidden;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toolbar-strip.top,
@@ -2572,6 +2574,13 @@ html:not(.enable-animations) *::after {
   height: 48px;
   padding: 0 8px;
   gap: 4px;
+  overflow: hidden;
+  transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (pointer: coarse) {
+  .toolbar-strip.left, .toolbar-strip.right { width: 56px; }
+  .toolbar-strip.top, .toolbar-strip.bottom { height: 56px; }
 }
 
 .toolbar-strip.left  { border-right:  1px solid var(--sidebar-border); }
@@ -2623,6 +2632,35 @@ html:not(.enable-animations) *::after {
   background-color: var(--toolbar-btn-toggle-active-bg);
 }
 
+/* Group button — corner triangle indicator shows a sub-tool family */
+.toolbar-btn-group {
+  position: relative;
+}
+
+.toolbar-btn-group::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 0;
+  height: 0;
+  border: 3.5px solid transparent;
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+  opacity: 0.55;
+}
+
+/* Group active state — same directional accent as radio */
+.toolbar-btn-group.active {
+  color: var(--tab-icon-active);
+  background-color: var(--toolbar-btn-radio-active-bg);
+}
+
+.toolbar-strip.left   .toolbar-btn-group.active { border-left:   3px solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
+.toolbar-strip.right  .toolbar-btn-group.active { border-right:  3px solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
+.toolbar-strip.top    .toolbar-btn-group.active { border-bottom: 3px solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
+.toolbar-strip.bottom .toolbar-btn-group.active { border-top:    3px solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
+
 /* Separators */
 .toolbar-strip.left .toolbar-separator,
 .toolbar-strip.right .toolbar-separator {
@@ -2647,8 +2685,116 @@ html:not(.enable-animations) *::after {
 /* Touch targets on coarse-pointer devices */
 @media (pointer: coarse) {
   .toolbar-btn { width: 44px; height: 44px; }
-  .toolbar-strip.left, .toolbar-strip.right { width: 56px; }
-  .toolbar-strip.top, .toolbar-strip.bottom { height: 56px; }
+}
+
+/* ==========================================================================
+   TOOLBAR GROUP FLYOUT
+   ========================================================================== */
+
+.toolbar-group-flyout {
+  position: fixed;
+  z-index: 8000;
+  background: var(--sidebar-bg, var(--bg-panel));
+  border: 1px solid var(--sidebar-border);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: toolbar-flyout-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toolbar-flyout-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Horizontal layout for top/bottom toolbars */
+.toolbar-group-flyout.top,
+.toolbar-group-flyout.bottom {
+  flex-direction: row;
+  min-width: unset;
+}
+
+.toolbar-group-flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sidebar-text-title, var(--text-primary));
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.toolbar-group-flyout-item:hover:not(:disabled) {
+  background-color: var(--toolbar-btn-hover-bg);
+  color: var(--sidebar-text-title, var(--text-primary));
+}
+
+.toolbar-group-flyout-item:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.toolbar-group-flyout-item.active {
+  color: var(--tab-icon-active);
+  background-color: var(--toolbar-btn-radio-active-bg);
+}
+
+.toolbar-group-flyout-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* top/bottom flyout: icon only, hide label and shortcut */
+.toolbar-group-flyout.top .toolbar-group-flyout-label,
+.toolbar-group-flyout.bottom .toolbar-group-flyout-label,
+.toolbar-group-flyout.top .toolbar-group-flyout-shortcut,
+.toolbar-group-flyout.bottom .toolbar-group-flyout-shortcut {
+  display: none;
+}
+
+.toolbar-group-flyout-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-group-flyout-shortcut {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.toolbar-group-flyout-sep {
+  height: 1px;
+  background: var(--toolbar-separator-color);
+  margin: 3px 4px;
+  flex-shrink: 0;
+}
+
+/* Vertical separator for horizontal flyout */
+.toolbar-group-flyout.top .toolbar-group-flyout-sep,
+.toolbar-group-flyout.bottom .toolbar-group-flyout-sep {
+  width: 1px;
+  height: 16px;
+  margin: auto 2px;
 }
 
 /* Button base — used in ConfirmationForm and similar dialogs */
