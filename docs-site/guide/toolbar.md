@@ -59,6 +59,7 @@ export default function App() {
 | `'action'` | `onClick` | One-shot action button. Click fires `onClick` and does not change radio/toggle state. |
 | `'radio'` | `group`, `onActivate?` | Mutually-exclusive within a named `group`. Only one item per group can be active at a time. |
 | `'toggle'` | `onToggle?` | Independent on/off modifier. Multiple toggles can be active simultaneously. |
+| `'group'` | `defaultIcon`, `items`, `activeItemId?`, `onActiveItemChange?` | Collapsed tool-family that opens a flyout listing sub-tools with radio semantics. See [Group items](#group-items) below. |
 | `'separator'` | — | A thin visual divider between button groups. |
 
 Every item except `'separator'` also accepts:
@@ -69,6 +70,65 @@ Every item except `'separator'` also accepts:
 | `label` | `string` | Tooltip / accessible label. |
 | `icon` | `ReactNode` | Icon displayed in the button. Recommended: 16×16 SVG, `stroke="currentColor"`. |
 | `disabled?` | `boolean` | Disables the button; renders at 35% opacity. |
+
+## Group items
+
+A `'group'` item is a single button that expands into a flyout panel listing mutually-exclusive sub-tools. The button's icon morphs to show whichever sub-tool is currently active. Sub-tools have the same radio semantics as `'radio'` items — only one can be active at a time.
+
+```tsx
+const toolbarItems: ToolbarItem[] = [
+  {
+    type: 'group',
+    id: 'brush-tool',
+    label: 'Brush tools',
+    defaultIcon: <BrushIcon />,     // shown when nothing is selected
+    items: [
+      { id: 'brush-pencil', label: 'Pencil', icon: <PencilIcon />, shortcut: 'B',
+        onActivate: id => console.log('activated', id) },
+      { id: 'brush-eraser', label: 'Eraser', icon: <EraserIcon />, shortcut: 'E' },
+      { type: 'separator' },
+      { id: 'brush-fill',   label: 'Fill',   icon: <FillIcon /> },
+    ],
+  },
+];
+```
+
+### `ToolbarGroupItem` props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `type` | `'group'` | ✓ | Item type discriminant. |
+| `id` | `string` | ✓ | Button ID and radio group key in ToolbarContext. |
+| `label` | `string` | ✓ | Tooltip shown when no sub-item is active. |
+| `defaultIcon` | `ReactNode` | ✓ | Icon shown when no sub-item is active. |
+| `items` | `ToolbarGroupEntry[]` | ✓ | Sub-items and separators in the flyout. |
+| `disabled?` | `boolean` | — | Disables the entire group button. |
+| `activeItemId?` | `string \| null` | — | **Controlled mode.** When provided (even as `null`), the component reads this prop instead of ToolbarContext and calls `onActiveItemChange` on click without updating context. Omit for uncontrolled. |
+| `onActiveItemChange?` | `(id: string) => void` | — | **Controlled mode.** Called when the user selects a sub-item. You must update `activeItemId` in response. |
+
+### Controlled vs uncontrolled
+
+**Uncontrolled (default):** omit `activeItemId`. The active sub-item is stored in ToolbarContext and readable via `getActiveInGroup(id)`.
+
+```tsx
+// Uncontrolled — read via useToolbar()
+const { getActiveInGroup } = useToolbar();
+const activeBrush = getActiveInGroup('brush-tool'); // 'brush-pencil' | 'brush-eraser' | ... | null
+```
+
+**Controlled:** provide `activeItemId` and wire `onActiveItemChange` to your state. The Toolbar never modifies context — you are the single source of truth.
+
+```tsx
+const [activeBrush, setActiveBrush] = useState<string | null>(null);
+
+<Toolbar items={[{
+  type: 'group', id: 'brush-tool', label: 'Brush tools',
+  defaultIcon: <BrushIcon />,
+  items: brushSubItems,
+  activeItemId: activeBrush,
+  onActiveItemChange: setActiveBrush,
+}]} />
+```
 
 ## `ToolbarProps` reference
 
@@ -183,7 +243,7 @@ function MapController() {
 <Toolbar position="bottom" items={items} />   // border on the top
 ```
 
-The active accent border on radio items always faces the workspace (inward-facing edge). On a `left` toolbar, the accent bar is on the left edge of the button (flush with the workspace); on a `top` toolbar, it's on the bottom edge.
+The active accent border on radio items always faces the workspace (inward-facing edge). On a `left` toolbar, the accent bar is on the left edge of the button (flush with the workspace); on a `top` toolbar, it's on the bottom edge. On skins like `slate` and `macos` the bar is replaced entirely by a floating chip shape; on `nord` it becomes a short horizontal line drawn below the icon.
 
 ## Theming CSS variables
 
@@ -196,11 +256,15 @@ All toolbar colors use CSS custom properties that cascade from `[data-color-sche
 | `--toolbar-btn-toggle-active-bg` | `rgba(0,102,204,.06)` | `rgba(56,189,248,.08)` | Toggle active button background tint. |
 | `--toolbar-separator-color` | `rgba(0,0,0,.1)` | `rgba(255,255,255,.09)` | Separator line color. |
 | `--tab-icon-active` | `#0066cc` | `#38bdf8` | Accent color for active radio button icon and border. Shared with the Sidebar strip. |
+| `--toolbar-btn-active-shadow` | `none` | `none` | `box-shadow` on active radio/group buttons. Obsidian/Tokyo override with an inset ambient glow. |
+| `--toolbar-btn-active-glow` | `none` | `none` | `filter` on active radio/group buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--toolbar-accent-bar-width` | `3px` | `3px` | Width of the edge accent bar on active buttons. Set to `0px` to replace the bar with a chip shape. |
 
-The accent variables are automatically overridden per skin — Nord, Tokyo Night, Obsidian, Chrome, Slate, and macOS each set their own `--tab-icon-active` and toolbar background tints to match the WindowManager's accent color.
+The accent variables are automatically overridden per skin — Nord, Tokyo Night, Obsidian, Chrome, Slate, and macOS each set their own `--tab-icon-active` and toolbar active-state tokens to match their signature visual language. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) for details on customising this in your own skin.
 
 ## See also
 
 - [Sidebar →](./modals-and-drawers#sidebar-component) — collapsible tab strip, hooks
+- [Per-skin active state design language →](./theming#per-skin-active-state-design-language) — all 7 patterns, token reference, custom skin examples
 - [Event Bus & Communication →](./event-bus) — panels communicating via pub/sub
 - [Quick Start →](./quick-start) — provider setup

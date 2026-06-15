@@ -159,9 +159,10 @@ The selector overload was added in v3. The no-argument overload works exactly as
 |------|------|---------|-------------|
 | `skin` | `string` | `'vscode'` | Built-in visual theme or any custom skin name. Built-ins: `vscode`, `macos`, `chrome`, `slate`, `nord`, `obsidian`, `tokyo`. See [Custom Theming →](/guide/theming). |
 | `defaultPanelIcon` | `ReactNode` | — | Fallback icon used when a panel definition has no `icon`. |
+| `taskbarVisibility` | `'always' \| 'compact' \| 'autohide'` | `'always'` | Controls when the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows the bar only when at least one panel is minimized. `'autohide'` renders the bar as a full-screen overlay with an 8 px peek strip that expands on pointer-enter; briefly auto-expands for 2 s when a panel is minimized. |
 
 ```tsx
-<WindowManager skin="nord" defaultPanelIcon={<FolderIcon />} />
+<WindowManager skin="nord" taskbarVisibility="autohide" defaultPanelIcon={<FolderIcon />} />
 ```
 
 ## CSS class overrides

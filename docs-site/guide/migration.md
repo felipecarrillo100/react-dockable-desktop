@@ -1,23 +1,58 @@
 # Migration Guide
 
+## v3.1.x → v3.2.0
+
+v3.2.0 is a **documentation and CSS-only** release. No API was added, removed, or changed. Upgrading requires no code changes.
+
+### What's new
+
+- **Per-skin active state design language** — Sidebar tabs and Toolbar buttons now use a distinct per-skin visual pattern (transparent bar, floating chip, pill, line, neon glow), driven entirely by new CSS design tokens. Fully overridable in custom skins. See [Theming →](./theming#per-skin-active-state-design-language).
+- **Documentation overhaul** — All guides updated to reflect the full v3.1.0 API: Toolbar, Sidebar props, resizable drawer, new hooks, `taskbarVisibility`, and more.
+
+### Upgrade steps
+
+1. `npm install react-dockable-desktop@3.2`
+2. No code changes required.
+
+### Breaking changes
+
+None.
+
+---
+
 ## v3.0.x → v3.1.0
 
-v3.1.0 is **fully backward-compatible** — no existing API was removed or changed.
+v3.1.0 is **fully backward-compatible** with one small exception: `drawerWidth` (string) on `<Sidebar>` is deprecated in favour of `defaultWidth` (number, pixels).
 
 ### What's new
 
 | Feature | What changed |
 |---------|-------------|
-| **Touch & iPad/Android support** | All drag and resize surfaces (tab drag, split resizer, floating window drag, floating window resize) now use the Pointer Events API. Long-press (300ms) initiates tab drag on touch; instant capture on mouse/pen as before. |
-| **8-direction resize handles** | Floating windows now render N, NE, E, SE, S, SW, W, NW resize handles. The previous single SE handle is replaced by all eight. |
-| **Smart resizer hit areas** | The horizontal split resizer's invisible grab zone now extends only upward into the panel content area, not downward into the tab bar below. This eliminates accidental resizer activation when clicking tabs. |
-| **Cursor fix during drag** | The body-level cursor override applied during an active resize drag now matches the correct orientation. (Previously the cursor inverted on mousedown.) |
-| **`touch-action` surgery** | `touch-action: none` is applied to all drag/resize handles. The tab bar container no longer carries `touch-action: pan-x` or `-webkit-overflow-scrolling: touch`, which previously caused `pointercancel` to fire before the long-press timer on iOS Safari. |
+| **Touch & iPad/Android support** | All drag and resize surfaces use the Pointer Events API. Long-press (300 ms) initiates tab drag on touch; instant capture on mouse/pen as before. Taskbar chips also support hover preview and long-press context menu on touch. |
+| **8-direction resize handles** | Floating windows now render N, NE, E, SE, S, SW, W, NW resize handles. |
+| **Smart resizer hit areas** | The horizontal split resizer's grab zone extends only upward, eliminating accidental activation when clicking tabs below. |
+| **`taskbarVisibility` prop** | `<WindowManager taskbarVisibility="always" />` — three modes: `'always'` (permanent bar, new default), `'compact'` (show only with minimized panels), `'autohide'` (overlay with 8 px peek strip). |
+| **`<Toolbar>` component** | New vertical/horizontal strip hosting `action`, `radio`, `toggle`, `group`, and `separator` items. State lives in `DockableDesktopProvider`; `useToolbar()` reads/writes from any panel. See [Toolbar →](./toolbar). |
+| **`ToolbarGroupItem` (`type: 'group'`)** | Collapsed tool-family button with a sub-tool flyout. Supports uncontrolled and controlled (`activeItemId` / `onActiveItemChange`) modes. |
+| **Sidebar `visible` / `stripVisible`** | `visible` collapses the entire sidebar; `stripVisible` collapses only the activity bar strip. Both accept paired callbacks. |
+| **Resizable Sidebar drawer** | Users can drag the drawer edge to resize it. Props: `defaultWidth` (px), `minWidth`, `maxWidth`, `onWidthChange`. `drawerWidth` (string) is deprecated. |
+| **`SidebarHandle` additions** | `showStrip()`, `hideStrip()`, `setWidth(px)`, `getWidth()` added to the imperative ref. |
+| **`useSidebar()` hook** | Programmatic Sidebar control from any component in the tree — no ref or prop drilling. |
+| **`useSidebarTab()` hook** | Self-control for content inside a Sidebar tab: `tabId`, `onOpen`, `onClose`, `openTab`. |
+| **`usePanelContextMenu()` hook** | Inject dynamic right-click context menu items into a panel from inside the panel component. |
+| **Skin scope fix** | `data-workspace-skin` is now applied to `document.documentElement` so Toolbar and Sidebar always inherit the correct skin. |
+
+### Deprecated
+
+| Deprecated | Replacement |
+|---|---|
+| `<Sidebar drawerWidth="280px">` | `<Sidebar defaultWidth={280}>` — number (pixels). The old string prop still works but will be removed in a future major. |
 
 ### Upgrade steps
 
 1. `npm install react-dockable-desktop@3.1`
-2. No API changes required.
+2. Optionally replace `drawerWidth="280px"` → `defaultWidth={280}`.
+3. No other changes required.
 
 ### Breaking changes
 
