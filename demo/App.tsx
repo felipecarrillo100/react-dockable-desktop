@@ -42,6 +42,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
+  const [toolbarPosition, setToolbarPosition] = useState<'left' | 'right' | 'top' | 'bottom'>('left');
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const sidebarRef = React.useRef<SidebarHandle>(null);
@@ -802,6 +803,16 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           <div className="sb-separator" />
 
           <div className="sb-field">
+            <label className="sb-label">Toolbar Position</label>
+            <select className="sb-select" value={toolbarPosition} onChange={e => setToolbarPosition(e.target.value as 'left' | 'right' | 'top' | 'bottom')}>
+              <option value="left">Left Side</option>
+              <option value="right">Right Side</option>
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
+            </select>
+          </div>
+
+          <div className="sb-field">
             <label className="sb-label">Sidebar Position</label>
             <select className="sb-select" value={sidebarPosition} onChange={e => setSidebarPosition(e.target.value as 'left' | 'right')}>
               <option value="right">Right Side</option>
@@ -1022,13 +1033,18 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       </Navbar>
 
       {/* Main Container: Toolbar + Sidebar + WindowManager */}
-      <div className="flex-grow-1 w-100 d-flex flex-row overflow-hidden" style={{ position: 'relative' }}>
-        <Toolbar
-          position="left"
-          items={toolbarItems}
-          visible={showToolbar}
-          onVisibilityChange={setShowToolbar}
-        />
+      <div
+        className={`flex-grow-1 w-100 d-flex overflow-hidden ${toolbarPosition === 'top' || toolbarPosition === 'bottom' ? 'flex-column' : 'flex-row'}`}
+        style={{ position: 'relative' }}
+      >
+        {(toolbarPosition === 'left' || toolbarPosition === 'top') && (
+          <Toolbar
+            position={toolbarPosition}
+            items={toolbarItems}
+            visible={showToolbar}
+            onVisibilityChange={setShowToolbar}
+          />
+        )}
         <Sidebar
           ref={sidebarRef}
           position={sidebarPosition}
@@ -1048,6 +1064,14 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             }
           />
         </Sidebar>
+        {(toolbarPosition === 'right' || toolbarPosition === 'bottom') && (
+          <Toolbar
+            position={toolbarPosition}
+            items={toolbarItems}
+            visible={showToolbar}
+            onVisibilityChange={setShowToolbar}
+          />
+        )}
         <SidePanelRenderer />
       </div>
       <ModalStackRenderer />
