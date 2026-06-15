@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v3.1.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v3.2.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -331,7 +331,7 @@ All built-in skins include dark and light variants. Create your own skin by over
 | `bringToFront(id)` | `focusPanel(id)` — works for both floating and docked panels |
 | `setActivePanel(id)` | `focusPanel(id)` |
 
-Full details in the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration).
+Full details in the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) and the [Changelog](https://github.com/felipecarrillo100/react-dockable-desktop/releases).
 
 ---
 

@@ -37,7 +37,9 @@
     "docs:preview": "vitepress preview docs-site",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "version:sync": "node scripts/sync-version.js",
+    "version": "node scripts/sync-version.js && git add README.md CHANGELOG.md"
   },
   "peerDependencies": {
     "react": ">=16.8.0",
