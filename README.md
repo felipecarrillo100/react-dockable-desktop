@@ -146,6 +146,10 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `usePanelContext()` | `{ publish, subscribe }` | Inter-panel typed event bus |
 | `useFormContainer()` | `FormContainerContract` | Dirty state, close guards, dynamic panel title/icon |
 | `usePanelId()` | `string` | The panel's own instance ID — no prop drilling needed |
+| `useToolbar()` | `ToolbarContextValue` | Read/write Toolbar state (active tool, modifiers) from any panel |
+| `useSidebar()` | `SidebarContextValue` | Open/close Sidebar tabs from any component in the Sidebar tree |
+| `useSidebarTab()` | `SidebarTabContext` | Self-control for content inside a Sidebar tab |
+| `usePanelContextMenu(items)` | `void` | Inject dynamic context menu items into this panel's right-click menu |
 | `useRegistry()` | `PanelRegistryClass` | The scoped panel registry for the current provider |
 | `useFormatMessage()` | `MessageFormatter` | i18n formatter matching the current provider's locale |
 
@@ -281,19 +285,36 @@ workspace.setDirection('rtl');
 <WindowManager skin="tokyo" />
 ```
 
-**Built-in skins:** `vscode` · `macos` · `chrome` · `slate` · `nord` · `obsidian` · `tokyo`
+| Skin | Character | Active state (Sidebar & Toolbar) |
+|------|-----------|----------------------------------|
+| `vscode` | VS Code dark (default) | Transparent fill, 2 px accent bar |
+| `macos` | Glass Chip — accent fill, rounded corners | 36 px floating chip, white inner ring |
+| `chrome` | Google Chrome tab geometry | Sidebar: half-pill bridge. Toolbar: 2 px bar |
+| `slate` | Fluent Slate — deep navy | Floating 36 px accent-tinted pill |
+| `nord` | Arctic Frost — muted Nord palette | Short horizontal line below icon |
+| `obsidian` | Vercel Midnight — pure black/white | Deep glow + icon drop-shadow |
+| `tokyo` | Tokyo Night — purple accent | Neon glow + vivid icon drop-shadow |
 
-Create your own skin by overriding CSS custom properties under a `[data-workspace-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference.
+All built-in skins include dark and light variants. Create your own skin by overriding CSS custom properties under a `[data-workspace-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference and the [Per-skin active state guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#per-skin-active-state-design-language) to customise the Sidebar/Toolbar active indicator in your own skin.
 
 ---
 
 ## What's New
 
+### v3.2.0
+- **Per-skin active state design language** — Sidebar tabs and Toolbar buttons now use a per-skin visual pattern (transparent bar, floating chip, pill, line, neon glow), driven by new CSS design tokens — fully overridable in custom skins. CSS-only, no API changes.
+- **Documentation overhaul** — All guides updated to cover the full v3.1.0 API surface.
+
 ### v3.1.0
-- **Full touch & iPad/Android support** — Pointer Events API migration; long-press (300ms) activates tab drag; all drag/resize surfaces work with finger and Apple Pencil
-- **8-direction resize handles** — floating windows now have N, NE, E, SE, S, SW, W, NW resize handles
-- **Smart resizer hit areas** — horizontal resizer extends only upward into the safe content zone, preventing accidental activation when clicking tabs directly below
-- **Cursor bug fix** — cursor orientation during active resize drag now matches the visual handle correctly
+- **`<Toolbar>` component** — Vertical/horizontal strip hosting `action`, `radio`, `toggle`, `group`, and `separator` items. `useToolbar()` reads/writes state from any panel. `ToolbarGroupItem` adds a collapsed tool-family flyout with controlled mode support.
+- **`<WindowManager taskbarVisibility>`** — Three modes: `'always'` (permanent bar, new default), `'compact'` (shows only with minimized panels), `'autohide'` (overlay bar with 8 px peek strip).
+- **Sidebar resizable drawer** — Drag the drawer edge to resize. Props: `defaultWidth` (px), `minWidth`, `maxWidth`, `onWidthChange`. `drawerWidth` (string) deprecated.
+- **Sidebar `visible` / `stripVisible`** — `visible` collapses the entire sidebar; `stripVisible` collapses only the activity bar. New handle methods: `showStrip()`, `hideStrip()`, `setWidth(px)`, `getWidth()`.
+- **`useSidebar()` / `useSidebarTab()` hooks** — Programmatic Sidebar control from any component in the tree.
+- **`usePanelContextMenu()` hook** — Inject dynamic right-click context menu items from inside a panel component.
+- **Touch & iPad/Android support** — Pointer Events migration; long-press (300 ms) activates tab drag; taskbar chips support hover preview and long-press context menu on touch.
+- **8-direction resize handles** — Floating windows now have N, NE, E, SE, S, SW, W, NW resize handles.
+- **Skin scope fix** — `data-workspace-skin` now applied to `document.documentElement` so Toolbar and Sidebar always inherit the correct skin.
 
 ### v3.0.0
 - **`DockableDesktopProvider`** — single composite provider replaces the manual `WindowManagerProvider + PanelProvider` nesting

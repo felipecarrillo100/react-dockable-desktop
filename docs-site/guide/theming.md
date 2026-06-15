@@ -22,17 +22,105 @@ All child components inherit those variables. Because `skin` is typed as `string
 <WindowManager skin="vscode" />   {/* default */}
 ```
 
-| Skin | Character |
-|------|-----------|
-| `vscode` | VS Code dark — neutral dark blue-gray, cyan accent. The default. |
-| `macos` | Glassmorphic — frosted-glass panels, rounded tabs, macOS traffic-light buttons. |
-| `chrome` | Google Chrome — angled tab geometry, Google blue accent. |
-| `slate` | Fluent Slate — deep navy/slate palette, sky-blue accent. |
-| `nord` | Arctic Frost — muted blue-gray from the Nord color palette. |
-| `obsidian` | Vercel Midnight — pure black/white, high-contrast minimal. |
-| `tokyo` | Tokyo Night — purple accent on dark blue-gray, inspired by the popular editor theme. |
+| Skin | Character | Active state |
+|------|-----------|--------------|
+| `vscode` | VS Code dark — neutral dark blue-gray, cyan accent. The default. | Transparent fill, 2 px accent bar — identical to VS Code's own activity bar |
+| `macos` | Glass Chip — accent-tinted fill, rounded corners. | 36 px floating chip, 10 px radius, white inner ring — macOS icon strip convention |
+| `chrome` | Google Chrome — angled tab geometry, Google blue accent. | Sidebar: colour-matched half-pill bridge to drawer. Toolbar: 2 px accent bar |
+| `slate` | Fluent Slate — deep navy/slate palette, sky-blue accent. | Floating 36 px accent-tinted pill, 8 px radius — Fluent Design language |
+| `nord` | Arctic Frost — muted blue-gray from the Nord color palette. | Short horizontal line below the icon (no fill, no bar) |
+| `obsidian` | Vercel Midnight — pure black/white, high-contrast minimal. | Near-black fill, inset glow shadow, icon drop-shadow filter |
+| `tokyo` | Tokyo Night — purple accent on dark blue-gray, inspired by the popular editor theme. | Accent-tinted fill, neon glow, vivid icon drop-shadow filter |
 
 All built-in skins include both dark and light variants — see [Dark and light variants](#dark-and-light-variants) below.
+
+## Per-skin active state design language
+
+Every built-in skin applies a distinct visual pattern to active **Sidebar tabs** and active **Toolbar buttons**. Both components share the same CSS design tokens, so they always read as a matched pair — if a skin uses a floating chip in the Sidebar, it uses the same chip shape in the Toolbar.
+
+| Skin | Pattern | Visual idea |
+|------|---------|-------------|
+| `vscode` | Accent Bar | Transparent fill, 2 px bar at the inner edge — the same language VS Code's own activity bar uses |
+| `macos` | Glass Chip | 36 px contained chip, 10 px radius all corners, white inner ring — macOS icon strip selection |
+| `chrome` | Tab Bridge | Sidebar: colour-matched half-pill connecting icon to drawer. Toolbar: 2 px accent bar |
+| `slate` | Fluent Pill | 36 px floating accent-tinted pill, 8 px radius — Microsoft Fluent Design selection pattern |
+| `nord` | Line Indicator | Transparent fill, no bar — a short horizontal line drawn below the icon via `::after` |
+| `obsidian` | Deep Glow | Near-black fill, inset ambient glow shadow, icon drop-shadow — subtle without color |
+| `tokyo` | Neon Pulse | Accent-tinted fill, vivid neon inner glow, icon drop-shadow — high-energy Tokyo Night feel |
+
+### Design tokens
+
+These CSS custom properties drive the active state shape and effects. They are declared in `:root` with neutral defaults and overridden per skin.
+
+**Sidebar strip**
+
+| Token | Default | Controls |
+|-------|---------|---------|
+| `--tab-btn-active-bg` | `#1e2024` | Fill color of the active tab button. |
+| `--tab-btn-active-width` | `100%` | Button width. Chip skins (macos, slate) set `36px` for a contained floating shape. |
+| `--tab-btn-active-radius` | `0px` | Border-radius. Chip skins set `10px` or `8px` for rounded corners on all sides. |
+| `--tab-btn-active-shadow` | `none` | `box-shadow` on the button. Obsidian/Tokyo add an inset ambient glow. |
+| `--tab-btn-active-glow` | `none` | `filter` on the button. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--tab-accent-bar-width` | `3px` | Width of the edge accent bar. Set to `0px` to suppress it entirely. |
+
+**Toolbar strip**
+
+| Token | Default | Controls |
+|-------|---------|---------|
+| `--toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Fill color of the active radio/group button. |
+| `--toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. |
+| `--toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. |
+| `--toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. |
+
+Both strips share `--tab-icon-active` for the accent color — set it once and both update.
+
+### Customising the active state in your own skin
+
+Only override the tokens you want to change; all others inherit their `:root` defaults.
+
+**Minimal: narrower accent bar**
+
+```css
+[data-workspace-skin="my-skin"] {
+  --tab-accent-bar-width: 1px;
+  --toolbar-accent-bar-width: 1px;
+}
+```
+
+**Floating pill (like `slate`)**
+
+```css
+[data-workspace-skin="my-skin"] {
+  --tab-btn-active-bg:           rgba(255, 100, 80, 0.18);
+  --tab-btn-active-width:        36px;
+  --tab-btn-active-radius:       8px;
+  --tab-accent-bar-width:        0px;
+  --toolbar-btn-radio-active-bg: rgba(255, 100, 80, 0.18);
+  --toolbar-accent-bar-width:    0px;
+}
+[data-workspace-skin="my-skin"] .sidebar-tab-btn.active {
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  margin: 0 !important;
+}
+[data-workspace-skin="my-skin"] .toolbar-strip .toolbar-btn-radio.active,
+[data-workspace-skin="my-skin"] .toolbar-strip .toolbar-btn-group.active {
+  border-radius: 8px !important;
+}
+```
+
+**Icon glow (dark skin)**
+
+```css
+[data-workspace-skin="my-skin"] {
+  --tab-btn-active-glow:     drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
+  --toolbar-btn-active-glow: drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
+}
+```
+
+::: tip Keep Sidebar and Toolbar in sync
+Both components share `--tab-icon-active` for the accent color — set it once and both update. Match `--tab-accent-bar-width` to `--toolbar-accent-bar-width` (and the fill/glow tokens) so Sidebar and Toolbar always read as a consistent pair.
+:::
 
 ## Creating a custom skin
 
@@ -283,7 +371,14 @@ The `Sidebar` component uses a separate variable set. Override these if your ski
   --sidebar-btn-front-hover-bg:  rgba(56, 189, 248, 0.1);
   --tab-icon-active:             #38bdf8;
   --tab-icon-inactive:           #9ea4b0;
-  --tab-btn-active-bg:           #1e2024;
+  --tab-btn-active-bg:           #1e2024;  /* active tab fill */
+
+  /* Active tab shape and effects — see Per-skin active state design language */
+  --tab-btn-active-width:        100%;     /* set 36px for a floating chip */
+  --tab-btn-active-radius:       0px;      /* set 8px–10px for rounded chip */
+  --tab-btn-active-shadow:       none;     /* inset glow: inset 0 0 12px rgba(...) */
+  --tab-btn-active-glow:         none;     /* icon glow: drop-shadow(0 0 5px rgba(...)) */
+  --tab-accent-bar-width:        3px;      /* set 0px to use a shape-only indicator */
 }
 ```
 
@@ -419,6 +514,21 @@ These are set by `[data-color-scheme]` globally, not by `[data-workspace-skin]`.
 | `--tab-icon-active` | `#38bdf8` | Active tab icon color in the strip. |
 | `--tab-icon-inactive` | `#9ea4b0` | Inactive tab icon color. |
 | `--tab-btn-active-bg` | `#1e2024` | Active tab button background (merges with drawer). |
+| `--tab-btn-active-width` | `100%` | Width of the active tab button. Chip skins (macos, slate) set `36px` for a contained floating shape. |
+| `--tab-btn-active-radius` | `0px` | Border-radius of the active tab button. |
+| `--tab-btn-active-shadow` | `none` | `box-shadow` on the active tab. Obsidian/Tokyo add an inset ambient glow. |
+| `--tab-btn-active-glow` | `none` | `filter` on the active tab. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--tab-accent-bar-width` | `3px` | Width of the sidebar edge accent bar. Set to `0px` to suppress it. |
+
+### Toolbar strip active state
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Background tint of the active radio/group toolbar button. |
+| `--toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. Obsidian/Tokyo override with an inset glow. |
+| `--toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. Set to `0px` for chip-shaped skins. |
+| `--toolbar-separator-color` | `rgba(255,255,255,0.09)` | Separator line color between toolbar item groups. |
 
 ## Adding structural CSS
 

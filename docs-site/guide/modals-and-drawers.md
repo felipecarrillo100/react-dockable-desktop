@@ -241,12 +241,20 @@ const sidebarRef = useRef<SidebarHandle>(null);
 |------|------|---------|-------------|
 | `tabs` | `SidebarTab[]` | — | **Required.** Tab definitions. |
 | `position` | `'left' \| 'right'` | `'right'` | Side the tab strip and drawer appear on. |
-| `drawerWidth` | `string` | `'220px'` | Width of the open drawer. |
+| `defaultWidth` | `number` | `220` | Initial drawer width in pixels. |
+| `minWidth` | `number` | `150` | Minimum drawer width in pixels during drag-resize. |
+| `maxWidth` | `number` | `600` | Maximum drawer width in pixels during drag-resize. |
+| `onWidthChange` | `(px: number) => void` | — | Called during drag-resize and when `setWidth()` is invoked. |
 | `activeTabId` | `string \| null` | — | Controlled active tab. Use with `onActiveTabChange` for fully-controlled mode. |
 | `onActiveTabChange` | `(tabId: string \| null) => void` | — | Called when the active tab changes. |
-| `visible` | `boolean` | `true` | Collapse the entire sidebar strip and drawer to zero width via CSS transition. State is preserved — no unmount. |
+| `visible` | `boolean` | `true` | Collapse the entire sidebar (strip + drawer) to zero width via CSS transition. State is preserved — no unmount. |
 | `onVisibilityChange` | `(visible: boolean) => void` | — | Called when `show/hide/toggle` is invoked on the imperative handle. Wire to your `useState` setter. |
+| `stripVisible` | `boolean` | `true` | Collapse only the activity bar strip, leaving the drawer unaffected. |
+| `onStripVisibilityChange` | `(visible: boolean) => void` | — | Called when `showStrip/hideStrip` is invoked on the imperative handle. |
 | `children` | `ReactNode` | — | Main content (rendered in the area beside the sidebar). |
+| ~~`drawerWidth`~~ | `string` | — | **Deprecated.** Use `defaultWidth` (number, pixels) instead. |
+
+**Active tab styling** — The visual treatment of the active tab button (shape, fill, indicator) is controlled entirely by CSS design tokens and varies per skin. `vscode` uses a transparent fill with a 2 px accent bar; `macos` renders a floating glass chip; `nord` draws a short horizontal line below the icon. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) to customise this in your own skin.
 
 ### `SidebarHandle` imperative ref
 
@@ -268,9 +276,13 @@ const activeTab = sidebarRef.current?.getActiveTab();  // → string | null
 | `openTab(tabId)` | `void` | Expand drawer and activate the specified tab. |
 | `closeDrawer()` | `void` | Collapse the drawer. |
 | `getActiveTab()` | `string \| null` | Currently active tab ID, or `null` if collapsed. |
-| `show()` | `void` | Show the sidebar strip (calls `onVisibilityChange(true)`). |
-| `hide()` | `void` | Hide the sidebar strip (calls `onVisibilityChange(false)`). |
+| `show()` | `void` | Show the entire sidebar (calls `onVisibilityChange(true)`). |
+| `hide()` | `void` | Hide the entire sidebar (calls `onVisibilityChange(false)`). |
 | `toggle()` | `void` | Toggle sidebar visibility. |
+| `showStrip()` | `void` | Show only the activity bar strip (calls `onStripVisibilityChange(true)`). |
+| `hideStrip()` | `void` | Hide only the activity bar strip (calls `onStripVisibilityChange(false)`). |
+| `setWidth(px)` | `void` | Programmatically set the drawer width in pixels (respects `minWidth`/`maxWidth`). |
+| `getWidth()` | `number` | Returns the current drawer width in pixels. |
 
 ### Sidebar hooks
 
@@ -379,6 +391,39 @@ Use `eagerMount` + `onOpen` when a background process needs to surface data in t
   ),
 }
 ```
+
+## `usePanelContextMenu()` hook
+
+Inject custom items into a panel's right-click context menu from **inside** the panel component. The hook reads the panel ID internally — no prop needed. Items are dynamic: the array is re-read every time the menu opens, so state-driven changes (enable/disable, add/remove) take effect automatically.
+
+```tsx
+import { usePanelContextMenu } from 'react-dockable-desktop';
+
+function EditorPanel() {
+  const [dirty, setDirty] = useState(false);
+
+  usePanelContextMenu([
+    { label: 'Save',   action: () => save(),   disabled: !dirty },
+    { label: 'Revert', action: () => revert(), disabled: !dirty },
+    { type: 'separator' },
+    { label: 'Copy Panel Link', action: () => copyLink() },
+  ]);
+
+  return <Editor onChange={() => setDirty(true)} />;
+}
+```
+
+The `items` array accepts `ContextMenuItem` entries from `replace-react-contexify`:
+
+| Shape | Description |
+|-------|-------------|
+| `{ label, action, disabled? }` | A clickable menu item. |
+| `{ type: 'separator' }` | A visual divider. |
+| `{ label, children: [...] }` | A submenu. |
+
+::: tip
+`usePanelContextMenu` is safe to call unconditionally — it is a no-op when the component renders outside a `DockableDesktopProvider` (e.g., in tests).
+:::
 
 ## `PanelActions` reference
 
