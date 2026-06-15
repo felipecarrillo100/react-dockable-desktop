@@ -34,6 +34,13 @@ const FILES = [
       { re: /(compare\/v)[\d.]+(\.\.\.HEAD)/g, sub: `$1${version}$2` },
     ],
   },
+  {
+    file: 'docs-site/.vitepress/config.ts',
+    patterns: [
+      // Nav version badge: text: 'vX.Y.Z'
+      { re: /(text:\s*['"])v[\d.]+(['"])/g, sub: `$1v${version}$2` },
+    ],
+  },
 ];
 
 let changed = false;
@@ -55,5 +62,5 @@ FILES.forEach(({ file, patterns }) => {
 });
 
 if (changed) {
-  console.log('\nReview with: git diff README.md CHANGELOG.md');
+  console.log('\nReview with: git diff README.md CHANGELOG.md docs-site/.vitepress/config.ts');
 }
