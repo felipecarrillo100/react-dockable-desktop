@@ -1,0 +1,76 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.2.0] — 2026-06-15
+
+### Added
+- **Per-skin active state design language** — Sidebar tabs and Toolbar buttons now render a distinct per-skin visual pattern driven entirely by CSS custom properties (`--tab-btn-active-width`, `--tab-btn-active-radius`, `--tab-btn-active-shadow`, `--tab-btn-active-glow`, `--tab-accent-bar-width`, `--toolbar-btn-active-shadow`, `--toolbar-btn-active-glow`, `--toolbar-accent-bar-width`). Seven skins, seven patterns: transparent bar (`vscode`), floating glass chip (`macos`), fluent pill (`slate`), bridge pill (`chrome`), horizontal line indicator (`nord`), inset glow (`obsidian`), neon pulse (`tokyo`). Fully overridable in custom skins. CSS-only, no API changes.
+
+### Changed
+- **Documentation overhaul** — All guides updated to reflect the full v3.1.0 API surface: Toolbar group items, Sidebar resize props, new hooks, `taskbarVisibility`, and complete skin token reference.
+
+## [3.1.0] — 2026-06-13
+
+### Added
+- **`<Toolbar>` component** — Vertical/horizontal strip hosting `action`, `radio`, `toggle`, `group`, and `separator` items. State lives in `DockableDesktopProvider`; `useToolbar()` reads/writes from any panel.
+- **`ToolbarGroupItem` (`type: 'group'`)** — Collapsed tool-family button with a sub-tool flyout. Supports uncontrolled (state in ToolbarContext) and controlled (`activeItemId` / `onActiveItemChange`) modes.
+- **Touch & tablet support** — All drag and resize surfaces migrated to the Pointer Events API. Long-press (300 ms) initiates tab drag on touch; instant capture on mouse/pen as before. Taskbar chips support hover preview and long-press context menu on touch devices.
+- **8-direction resize handles** — Floating windows now render N, NE, E, SE, S, SW, W, NW resize handles.
+- **`taskbarVisibility` prop** — `<WindowManager taskbarVisibility="always" />` with three modes: `'always'` (permanent bar, new default), `'compact'` (show only with minimised panels), `'autohide'` (overlay with 8 px peek strip).
+- **Resizable Sidebar drawer** — Users can drag the drawer edge to resize. New props: `defaultWidth` (px), `minWidth`, `maxWidth`, `onWidthChange`.
+- **Sidebar `visible` / `stripVisible` props** — `visible` collapses the entire sidebar; `stripVisible` collapses only the activity bar strip. Both accept paired `onVisibilityChange` / `onStripVisibilityChange` callbacks.
+- **`SidebarHandle` additions** — `showStrip()`, `hideStrip()`, `setWidth(px)`, `getWidth()` added to the imperative ref.
+- **`useSidebar()` hook** — Programmatic Sidebar control (openTab, closeDrawer, getActiveTab) from any component in the tree — no ref or prop drilling required.
+- **`useSidebarTab()` hook** — Self-control for content inside a Sidebar tab: `tabId`, `onOpen`, `onClose`, `openTab`.
+- **`usePanelContextMenu()` hook** — Inject dynamic right-click context menu items into a panel from inside the panel component. Items are re-read on every menu open; state-driven enable/disable updates automatically.
+- **Smart resizer hit areas** — The horizontal split resizer's grab zone now extends only upward, eliminating accidental activation when clicking tabs below.
+
+### Changed
+- **Skin scope** — `data-workspace-skin` is now applied to `document.documentElement` so Toolbar and Sidebar always inherit the correct per-skin CSS variables regardless of their DOM position.
+
+### Deprecated
+- `<Sidebar drawerWidth="280px">` — use `<Sidebar defaultWidth={280}>` (number, pixels). The old string prop still works but will be removed in a future major release.
+
+## [3.0.0] — 2026-06-12
+
+### Added
+- **`DockableDesktopProvider`** — Composite provider that wraps `WindowManagerProvider` + `PanelProvider` in the correct order. Drop-in replacement for manually nesting both providers.
+- **`usePanelId()` hook** — Any component rendered inside a panel can call `usePanelId()` to discover its own panel instance ID — no prop needed.
+- **State selectors** — `useWindowManagerState()` now accepts an optional selector function. Components only re-render when the selected slice changes.
+- **Lifecycle callbacks** — `WorkspaceClient` exposes `onPanelOpen`, `onPanelClose`, `onPanelMinimize`, `onPanelRestore` convenience methods.
+- **Typed event bus** — `WorkspaceClient<TUserEvents>` is now generic; `publish` and `subscribe` are fully typed when a user-supplied event map is provided.
+- **Pending-call queue** — Calls to `client.openPanel()` etc. before provider mounts are queued and replayed automatically.
+- **"Forgot `client` prop" warning** — Development warning when a `WorkspaceClient` has queued calls but no provider connects within 1 second.
+
+### Fixed
+- **StrictMode compatibility** — `focusPanel` is now idempotent; calling it twice no longer double-increments z-index. `WorkspaceClient` guards against StrictMode's double `_connect` cycle.
+- **CSS height warning** — `console.warn` fires in development when the workspace container height is near zero (missing `height: 100%` CSS).
+- **Missing-client error** — Upgraded from `console.warn` (dev-only) to `console.error` (always). Fires after 5 s in production, 1 s in development.
+
+## [2.0.0] — 2026-06-12
+
+### Added
+- **`focusPanel(id)`** — Unified activate method for floating and docked panels. Works correctly for both floating windows (z-index focus) and docked panels (tab selection).
+- **`isOpen(id): boolean`** — Query whether a panel is currently open.
+- **`getOpenPanelIds(): string[]`** — List all open panel IDs.
+- **Unregistered panel warning** — `console.warn` when `openPanel` references an unregistered component key.
+- **CSS peer-dep detection** — Development warning when the `replace-react-contexify` stylesheet is not detected.
+
+### Changed
+- **`bringToFront` renamed to `focusPanel`** — `bringToFront` was misleading for docked panels (it selects a tab, not a z-index). The new unified method is `focusPanel`.
+
+### Removed
+- **`setActivePanel`** — Removed from public `WindowActions`. Was an internal tab-focus primitive that leaked into the public interface. Use `focusPanel` instead.
+
+---
+
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.2.0
+[3.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.1.0
+[3.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.0.0
+[2.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v2.0.0
