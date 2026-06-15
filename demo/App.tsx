@@ -43,6 +43,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const sidebarRef = React.useRef<SidebarHandle>(null);
   const state = useWindowManagerState();
   const { openPanel, loadLayout, saveLayout } = useWindowManagerActions();
@@ -498,40 +499,75 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   // ---- Toolbar item definitions ----
   const toolbarItems: ToolbarItem[] = [
     {
-      type: 'radio', id: 'tool-cursor', group: 'tool', label: 'Select / Cursor',
-      icon: (
+      type: 'group',
+      id: 'draw-tool',
+      label: 'Drawing Tools',
+      activeItemId: activeTool,
+      onActiveItemChange: (id) => setActiveTool(id),
+      defaultIcon: (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 2l9 5.5-4 1L6.5 13 3 2z" />
         </svg>
       ),
+      items: [
+        {
+          id: 'tool-cursor',
+          label: 'Select / Cursor',
+          shortcut: 'V',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 2l9 5.5-4 1L6.5 13 3 2z" />
+            </svg>
+          ),
+        },
+        {
+          id: 'tool-pen',
+          label: 'Draw / Pen',
+          shortcut: 'P',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 2l3 3-8 8H3v-3L11 2z" />
+            </svg>
+          ),
+        },
+        {
+          id: 'tool-ruler',
+          label: 'Measure / Ruler',
+          shortcut: 'M',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="6" width="12" height="4" rx="0.5" />
+              <line x1="5" y1="6" x2="5" y2="8" />
+              <line x1="8" y1="6" x2="8" y2="9" />
+              <line x1="11" y1="6" x2="11" y2="8" />
+            </svg>
+          ),
+        },
+        { type: 'separator' },
+        {
+          id: 'tool-eraser',
+          label: 'Erase',
+          shortcut: 'E',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 3L13 6 6 13H3v-3L10 3z" />
+              <line x1="7" y1="5" x2="11" y2="9" />
+            </svg>
+          ),
+        },
+      ],
     },
     {
-      type: 'radio', id: 'tool-pen', group: 'tool', label: 'Draw / Pen',
+      type: 'action',
+      id: 'map-revert',
+      label: 'Simulate Map Revert (clears active tool)',
       icon: (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 2l3 3-8 8H3v-3L11 2z" />
+          <path d="M3 8a5 5 0 1 0 1.5-3.5" />
+          <polyline points="1 4 3 8 7 6" />
         </svg>
       ),
-    },
-    {
-      type: 'radio', id: 'tool-ruler', group: 'tool', label: 'Measure / Ruler',
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="6" width="12" height="4" rx="0.5" />
-          <line x1="5" y1="6" x2="5" y2="8" />
-          <line x1="8" y1="6" x2="8" y2="9" />
-          <line x1="11" y1="6" x2="11" y2="8" />
-        </svg>
-      ),
-    },
-    {
-      type: 'radio', id: 'tool-eraser', group: 'tool', label: 'Erase',
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10 3L13 6 6 13H3v-3L10 3z" />
-          <line x1="7" y1="5" x2="11" y2="9" />
-        </svg>
-      ),
+      onClick: () => setActiveTool(null),
     },
     { type: 'separator' },
     {
