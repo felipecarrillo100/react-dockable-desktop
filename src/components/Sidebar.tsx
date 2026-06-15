@@ -317,27 +317,21 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     const [internalActiveTabId, setInternalActiveTabId] = useState<string | null>(null);
     const activeTabId = isControlled ? controlledActiveTabId : internalActiveTabId;
 
-    // Track which tabs have been mounted at least once.
-    // Pre-populate with all eagerMount tabs.
-    const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(() => {
-      const initial = new Set<string>();
-      for (const tab of tabs) {
-        if (tab.eagerMount) initial.add(tab.id);
-      }
-      return initial;
-    });
+    // Tracks which non-eager tabs have been mounted at least once (for lazy-mount / preserveState).
+    // eagerMount tabs are folded in via effectiveMountedTabIds below, so no effect needed for them.
+    const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(() => new Set<string>());
 
-    // When the tabs array changes, eagerly mount any new eagerMount tabs.
-    // Uses a functional update so mountedTabIds is never a stale dependency.
-    useEffect(() => {
-      setMountedTabIds(prev => {
-        const newEager = tabs.filter(t => t.eagerMount && !prev.has(t.id));
-        if (newEager.length === 0) return prev;
-        const next = new Set(prev);
-        for (const tab of newEager) next.add(tab.id);
-        return next;
-      });
-    }, [tabs]);
+    // Derives the full mounted set during render — no effect needed.
+    // Includes: accumulated mountedTabIds + the currently active tab (handles controlled
+    // prop changes where setActiveTabId is never called) + all eagerMount tabs.
+    const effectiveMountedTabIds = useMemo(() => {
+      const result = new Set(mountedTabIds);
+      if (activeTabId) result.add(activeTabId);
+      for (const tab of tabs) {
+        if (tab.eagerMount) result.add(tab.id);
+      }
+      return result;
+    }, [mountedTabIds, activeTabId, tabs]);
 
     // Stable refs for imperative handle
     const activeTabIdRef = useRef<string | null>(activeTabId ?? null);
@@ -352,6 +346,29 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
     const setActiveTabId = useCallback(
       (id: string | null) => {
+        // Update mounted set in the same render batch as the tab switch — avoids setState-in-effect.
+        if (id !== null) {
+          setMountedTabIds(prev => {
+            if (prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.add(id);
+            return next;
+          });
+        } else {
+          // Drawer closing: evict transient tabs (non-eager, non-preserveState).
+          setMountedTabIds(prev => {
+            let changed = false;
+            const next = new Set(prev);
+            for (const tabId of prev) {
+              const tab = tabs.find(t => t.id === tabId);
+              if (tab && !tab.eagerMount && !tab.preserveState) {
+                next.delete(tabId);
+                changed = true;
+              }
+            }
+            return changed ? next : prev;
+          });
+        }
         if (isControlled) {
           onActiveTabChange?.(id);
         } else {
@@ -359,7 +376,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           onActiveTabChange?.(id);
         }
       },
-      [isControlled, onActiveTabChange]
+      [isControlled, onActiveTabChange, tabs]
     );
 
     useImperativeHandle(ref, () => ({
@@ -381,33 +398,6 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
     const handleClose = useCallback(() => setActiveTabId(null), [setActiveTabId]);
 
-    // On first open of a non-eager tab, add it to the mounted set
-    useEffect(() => {
-      if (activeTabId && !mountedTabIds.has(activeTabId)) {
-        setMountedTabIds(prev => {
-          const next = new Set(prev);
-          next.add(activeTabId);
-          return next;
-        });
-      }
-    }, [activeTabId, mountedTabIds]);
-
-    // On drawer close, unmount tabs that are neither eagerMount nor preserveState
-    useEffect(() => {
-      if (activeTabId !== null) return;
-      setMountedTabIds(prev => {
-        let changed = false;
-        const next = new Set(prev);
-        for (const id of prev) {
-          const tab = tabs.find(t => t.id === id);
-          if (tab && !tab.eagerMount && !tab.preserveState) {
-            next.delete(id);
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }, [activeTabId, tabs]);
 
     // Stable context value for useSidebar() consumers
     const sidebarContextValue = useMemo<SidebarContextValue>(() => ({
@@ -439,7 +429,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
         }}
       >
         {tabs.map(tab => {
-          const isMounted = mountedTabIds.has(tab.id);
+          const isMounted = effectiveMountedTabIds.has(tab.id);
           if (!isMounted) return null;
 
           const isCurrent = activeTabId === tab.id;
