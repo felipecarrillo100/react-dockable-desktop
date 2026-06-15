@@ -51,8 +51,21 @@ export type {
   StyleClasses
 } from './components/WindowManagerContext';
 
-// Context menu item types — re-exported so consumers don't import directly from replace-react-contexify
-export type { ContextMenuItem, ContextMenuSimpleItem, ContextMenuSeparator, ContextMenuSubMenu } from 'replace-react-contexify';
+// Context menu — built-in component, types, and adapter interface
+export { ContextMenu, DefaultContextMenuAdapter } from './components/ContextMenu';
+export type {
+  ContextMenuItem,
+  ContextMenuSimpleItem,
+  ContextMenuSeparator,
+  ContextMenuSubMenu,
+  ContextMenuCheckbox,
+  ContextMenuLabel,
+  MenuItemAction,
+  ContextMenuHandle,
+  ShowContextMenuOptions,
+  ContextMenuAdapter,
+  ContextMenuProps,
+} from './components/ContextMenu';
 
 // Form Container Context Contract
 export {

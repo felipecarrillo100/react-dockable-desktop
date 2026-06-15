@@ -18,20 +18,17 @@ The library follows the **WorkspaceClient pattern**, inspired by TanStack QueryC
 
 This means you can call `client.openPanel()`, `client.saveLayout()`, `client.focusPanel()` from **anywhere** — button handlers, keyboard shortcuts, server-sent events — without needing `useRef` hacks or context access.
 
-## Peer dependencies
+## Getting started
 
 ```bash
-npm install react-dockable-desktop replace-react-contexify
+npm install react-dockable-desktop
 ```
 
 Import the CSS in your entry file:
 
 ```ts
-import 'replace-react-contexify/styles.css';
 import 'react-dockable-desktop/styles.css';
 ```
-
-> **C5 warning:** In development mode, the provider will print a `console.error` if the `replace-react-contexify` stylesheet is not detected. Context menus will not render correctly without it.
 
 ## Next steps
 

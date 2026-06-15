@@ -3,31 +3,27 @@
 ## Requirements
 
 - React `≥ 16.8` (hooks required)
-- `replace-react-contexify` peer dependency for context menus
 
 ## npm
 
 ```bash
-npm install react-dockable-desktop replace-react-contexify
+npm install react-dockable-desktop
 ```
 
 ## pnpm / yarn
 
 ```bash
-pnpm add react-dockable-desktop replace-react-contexify
-yarn add react-dockable-desktop replace-react-contexify
+pnpm add react-dockable-desktop
+yarn add react-dockable-desktop
 ```
 
-## CSS imports
+## CSS import
 
-Add both stylesheets to your application entry point (`main.tsx`, `index.js`, etc.):
+Add the stylesheet to your application entry point (`main.tsx`, `index.js`, etc.):
 
 ```ts
-import 'replace-react-contexify/styles.css';
 import 'react-dockable-desktop/styles.css';
 ```
-
-The order matters — import the peer dependency stylesheet first.
 
 ## TypeScript
 
