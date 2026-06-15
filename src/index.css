@@ -2970,6 +2970,11 @@ html:not(.enable-animations) *::after {
 .toolbar-group-flyout.right  { transform-origin: top right; }
 .toolbar-group-flyout.top    { transform-origin: top left; }
 .toolbar-group-flyout.bottom { transform-origin: bottom left; }
+/* RTL: physical sides swap, so animation origin flips horizontally */
+[dir="rtl"] .toolbar-group-flyout.left   { transform-origin: top right; }
+[dir="rtl"] .toolbar-group-flyout.right  { transform-origin: top left; }
+[dir="rtl"] .toolbar-group-flyout.top    { transform-origin: top right; }
+[dir="rtl"] .toolbar-group-flyout.bottom { transform-origin: bottom right; }
 
 .toolbar-group-flyout-item {
   display: flex;

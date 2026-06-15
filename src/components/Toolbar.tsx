@@ -9,6 +9,7 @@
 import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useToolbar } from './ToolbarContext';
+import { isElementRtl } from '../utils/rtl';
 import type { ToolbarContextValue } from './ToolbarContext';
 
 // ==========================================
@@ -163,8 +164,16 @@ function flyoutPosition(
   gap = 8,
 ): React.CSSProperties {
   switch (position) {
-    case 'left':   return { left: rect.right + gap, top: rect.top };
-    case 'right':  return { right: window.innerWidth - rect.left + gap, top: rect.top };
+    case 'left':
+      // RTL: flex-row reverses, so 'left' toolbar sits on the right → open leftward
+      return isRtl
+        ? { right: window.innerWidth - rect.left + gap, top: rect.top }
+        : { left: rect.right + gap, top: rect.top };
+    case 'right':
+      // RTL: 'right' toolbar sits on the left → open rightward
+      return isRtl
+        ? { left: rect.right + gap, top: rect.top }
+        : { right: window.innerWidth - rect.left + gap, top: rect.top };
     case 'top':
       return isRtl
         ? { top: rect.bottom + gap, right: window.innerWidth - rect.right }
@@ -264,7 +273,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
         <div
           ref={flyoutRef}
           className={`toolbar-group-flyout ${position}`}
-          style={flyoutPosition(btnRect, position, document.documentElement.dir === 'rtl')}
+          style={flyoutPosition(btnRect, position, isElementRtl(btnRef.current))}
           role="menu"
         >
           {item.items.map((entry, i) => {
