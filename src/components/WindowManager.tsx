@@ -1541,6 +1541,17 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     return () => obs.disconnect();
   }, []);
 
+  // Mirror skin onto documentElement so components rendered outside the WindowManager div
+  // (Toolbar, Sidebar) also inherit per-skin CSS variable overrides — same pattern as data-color-scheme.
+  useEffect(() => {
+    if (skin) {
+      document.documentElement.setAttribute('data-workspace-skin', skin);
+    } else {
+      document.documentElement.removeAttribute('data-workspace-skin');
+    }
+    return () => { document.documentElement.removeAttribute('data-workspace-skin'); };
+  }, [skin]);
+
   return (
     <div
       data-workspace-skin={skin}

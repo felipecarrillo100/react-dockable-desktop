@@ -427,7 +427,7 @@ body.resizing-col-active * {
 
 .taskbar-footer-container {
   background-color: var(--taskbar-bg) !important;
-  border-top: 1px solid var(--taskbar-border) !important;
+  border-top: 1px solid var(--border-panel) !important;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   flex-shrink: 0;
