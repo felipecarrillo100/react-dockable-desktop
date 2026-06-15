@@ -413,13 +413,16 @@ function EditorPanel() {
 }
 ```
 
-The `items` array accepts `ContextMenuItem` entries from `replace-react-contexify`:
+The `items` array accepts `ContextMenuItem` entries exported from `react-dockable-desktop`:
 
 | Shape | Description |
 |-------|-------------|
-| `{ label, action, disabled? }` | A clickable menu item. |
-| `{ type: 'separator' }` | A visual divider. |
-| `{ label, children: [...] }` | A submenu. |
+| `{ label, icon?, action, title? }` | A clickable menu item. |
+| `{ separator: true }` | A visual divider. |
+| `{ label, items: [...] }` | A sub-menu (one level deep). |
+| `{ label, checkbox: { active?, enabled, value }, action }` | A checkbox item. |
+
+See the [Context Menus guide](./context-menus) for the full type reference.
 
 ::: tip
 `usePanelContextMenu` is safe to call unconditionally — it is a no-op when the component renders outside a `DockableDesktopProvider` (e.g., in tests).

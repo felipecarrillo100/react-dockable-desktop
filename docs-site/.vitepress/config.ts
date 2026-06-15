@@ -17,7 +17,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
       {
-        text: 'v3.2.1',
+        text: 'v4.0.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md' },
           { text: 'Migration Guide', link: '/guide/migration' },
@@ -48,6 +48,7 @@ export default defineConfig({
           items: [
             { text: 'Panel Lifecycle & Forms', link: '/guide/forms-and-panels' },
             { text: 'Modals & Side Panels', link: '/guide/modals-and-drawers' },
+            { text: 'Context Menus', link: '/guide/context-menus' },
             { text: 'Event Bus & Communication', link: '/guide/event-bus' },
           ],
         },

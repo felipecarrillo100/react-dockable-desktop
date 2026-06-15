@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] — 2026-06-16
+
+### Breaking Changes
+- **`replace-react-contexify` peer dependency removed.** The library no longer requires or uses it. Remove the package and delete its CSS import from your entry file. All existing user code continues to work unchanged. See the [v3→v4 migration guide](docs-site/guide/migration.md).
+
+### Added
+- **Built-in `<ContextMenu>` component** — zero-dependency, portal-rendered context menu styled with design tokens. Supports simple items, separators, sub-menus (one level), checkbox items, icons, and i18n labels. Viewport-clamped, RTL-aware, Esc-to-close.
+- **`ContextMenuAdapter` interface** — strategy pattern for swapping the context menu implementation. Pass `contextMenuAdapter` to `<WindowManager>` to use a custom or design-system menu.
+- **`DefaultContextMenuAdapter`** — default adapter wrapping the built-in `<ContextMenu>`.
+- **New exports:** `ContextMenu`, `DefaultContextMenuAdapter`, `ContextMenuHandle`, `ShowContextMenuOptions`, `ContextMenuAdapter`, `ContextMenuProps`, `ContextMenuCheckbox`, `ContextMenuLabel`, `MenuItemAction`.
+- **Context Menus guide page** — dedicated documentation covering `usePanelContextMenu`, all item shapes, standalone `<ContextMenu>` usage, and the adapter pattern.
+
+### Changed
+- Context menu item hover colour now follows `--toolbar-btn-hover-bg` (skin-aware) instead of hardcoded `#094771`, matching the toolbar flyout hover pattern.
+- `<WindowManager>` gains optional `contextMenuAdapter` prop (fully backward-compatible; defaults to `DefaultContextMenuAdapter`).
+
+### Removed
+- `replace-react-contexify` peer dependency.
+- `import 'replace-react-contexify/styles.css'` no longer needed.
+- `.react-contexify` CSS override block from `src/index.css`.
+- Development warning about missing `replace-react-contexify` stylesheet.
+
 ## [3.2.0] — 2026-06-15
 
 ### Added
@@ -70,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 [Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v3.2.1...HEAD
+[4.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v4.0.0
 [3.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.2.0
 [3.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.1.0
 [3.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.0.0

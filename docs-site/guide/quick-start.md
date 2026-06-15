@@ -189,20 +189,8 @@ createRoot(document.getElementById('root')!).render(<App />);
 
 :::
 
-::: info `replace-react-contexify` peer dependency
-The library uses [`replace-react-contexify`](https://www.npmjs.com/package/replace-react-contexify) to power right-click context menus on tabs and panels. Install it alongside `react-dockable-desktop` and import its stylesheet in your entry point:
-
-```bash
-npm install react-dockable-desktop replace-react-contexify
-```
-
-```ts
-// main.tsx
-import 'replace-react-contexify/styles.css';
-import 'react-dockable-desktop/styles.css';
-```
-
-Without the stylesheet, context menus will render without styles but the rest of the workspace works normally.
+::: tip Context menus are built-in
+Right-click context menus (on tabs, taskbar chips, and floating window headers) are powered by the library's built-in `<ContextMenu>` component — no extra package needed.
 :::
 
 ---

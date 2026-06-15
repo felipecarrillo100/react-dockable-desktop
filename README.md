@@ -1,6 +1,6 @@
-# React Dockable Desktop
+    # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v3.2.1-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v4.0.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -27,6 +27,7 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 - **Imperative API** — `WorkspaceClient` opens, closes, focuses, and serializes panels from anywhere — inside or outside React
 - **Layout Serialization** — save and restore the full workspace as a JSON string; survives page reloads
 - **7 Built-in Skins** — VSCode, macOS, Chrome, Slate, Nord, Obsidian, Tokyo — all fully themeable via CSS variables
+- **Zero extra dependencies** — no runtime dependencies beyond React itself; everything is bundled in
 - **TypeScript-first** — complete type definitions included; no separate `@types/` package needed
 
 ---
@@ -34,17 +35,16 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 ## Installation
 
 ```bash
-npm install react-dockable-desktop replace-react-contexify
+npm install react-dockable-desktop
 ```
 
-Import styles in your app entry file. **Order matters** — the contexify sheet must come first:
+Import styles in your app entry file:
 
 ```ts
-import 'replace-react-contexify/styles.css';
 import 'react-dockable-desktop/styles.css';
 ```
 
-**Requirements:** React ≥ 16.8 · Node ≥ 18
+**Requirements:** React ≥ 16.8 · Node ≥ 18 · No other runtime dependencies
 
 ---
 
@@ -301,6 +301,11 @@ All built-in skins include dark and light variants. Create your own skin by over
 
 ## What's New
 
+### v4.0.0
+- **Built-in `<ContextMenu>`** — zero-dependency context menu, portal-rendered and styled with design tokens. No extra package or CSS import needed.
+- **`ContextMenuAdapter` interface** — swap the default menu for your own design-system implementation via `<WindowManager contextMenuAdapter={...} />`.
+- **New exports** — `ContextMenu`, `DefaultContextMenuAdapter`, `ContextMenuHandle`, `ContextMenuAdapter`, `ShowContextMenuOptions`.
+
 ### v3.2.0
 - **Per-skin active state design language** — Sidebar tabs and Toolbar buttons now use a per-skin visual pattern (transparent bar, floating chip, pill, line, neon glow), driven by new CSS design tokens — fully overridable in custom skins. CSS-only, no API changes.
 - **Documentation overhaul** — All guides updated to cover the full v3.1.0 API surface.
@@ -354,7 +359,7 @@ Complete guides, API reference, and interactive demo at:
 | [Theming](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) | CSS variables, custom skins, dark/light modes |
 | [Advanced Topics](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced) | RTL, multiple workspaces, custom header actions |
 | [Best Practices](https://felipecarrillo100.github.io/react-dockable-desktop/guide/best-practices) | Patterns for production-ready implementations |
-| [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrade from v1 → v2 → v3 |
+| [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrade from v1 → v2 → v3 → v4 |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |
 
 ---

@@ -8,7 +8,7 @@ export type { PredefinedMessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 import type { DirtyStateOptions } from './dirtyOptions';
 export type { DirtyStateOptions };
-import type { ContextMenuItem } from 'replace-react-contexify';
+import type { ContextMenuItem } from './ContextMenu';
 
 /**
  * Structure representing localizable message descriptors used in context menus.
@@ -1459,26 +1459,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       }
     } catch { /* getComputedStyle unavailable (SSR) */ }
 
-    // Check 2: replace-react-contexify CSS — context menus need this stylesheet
-    let found = false;
-    try {
-      for (const sheet of Array.from(document.styleSheets)) {
-        try {
-          const rules = Array.from(sheet.cssRules || []);
-          if (rules.some((r: CSSRule) => r.cssText?.includes('react-contexify'))) {
-            found = true;
-            break;
-          }
-        } catch { /* CORS-restricted stylesheet — skip */ }
-      }
-    } catch { /* document.styleSheets unavailable (SSR) */ }
-    if (!found) {
-      console.warn(
-        '[react-dockable-desktop] replace-react-contexify CSS not detected. ' +
-        'Context menus may not render correctly.\n' +
-        'Add: import "replace-react-contexify/dist/ReactContexify.css"'
-      );
-    }
   }, []);
 
   useEffect(() => {

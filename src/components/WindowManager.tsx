@@ -11,8 +11,8 @@ import { useWindowManagerState, useWindowManagerActions, useWindowManagerActions
 import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
 import { isElementRtl } from '../utils/rtl';
-import { JsonContextMenu, type JsonContextMenuRef } from 'replace-react-contexify';
-import 'replace-react-contexify/styles.css';
+import { DefaultContextMenuAdapter } from './ContextMenu';
+import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { FormContainerProvider } from './FormContainerContext';
 import type { FormContainerContract } from './FormContainerContext';
 import { usePanelActions } from './PanelProviderContext';
@@ -737,9 +737,10 @@ export interface WindowManagerProps {
   skin?: string;
   defaultPanelIcon?: React.ReactNode;
   taskbarVisibility?: 'always' | 'compact' | 'autohide';
+  contextMenuAdapter?: ContextMenuAdapter;
 }
 
-export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always' }) => {
+export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always', contextMenuAdapter = DefaultContextMenuAdapter }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection, getPanelContextMenuItems } = useWindowManagerActionsInternal();
@@ -776,7 +777,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
   const { windowClass, windowBodyClass } = useStyleClasses();
   const taskbarRef = useRef<HTMLDivElement | null>(null);
-  const contextMenuRef = useRef<JsonContextMenuRef>(null);
+  const contextMenuRef = useRef<ContextMenuHandle>(null);
   const [taskbarExpanded, setTaskbarExpanded] = useState(false);
   const taskbarCollapseTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const prevMinimizedLengthRef = useRef(state.minimized.length);
@@ -1067,7 +1068,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
     contextMenuRef.current?.show({
       event: e,
-      contextMenu: { items: finalItems }
+      items: finalItems
     });
   };
 
@@ -1076,26 +1077,24 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     setHoveredMinimized(null);
     contextMenuRef.current?.show({
       event: e,
-      contextMenu: {
-        items: [
-          {
-            label: formatLabel(messages.restorePanel, formatMessage),
-            icon: ContextMenuIcons.restore,
-            action: () => restorePanel(id)
-          },
-          {
-            label: formatLabel(messages.maximizePanel, formatMessage),
-            icon: ContextMenuIcons.maximize,
-            action: () => maximizePanel(id)
-          },
-          { separator: true },
-          {
-            label: formatLabel(messages.closePanel, formatMessage),
-            icon: ContextMenuIcons.close,
-            action: () => handleRequestClose(id)
-          }
-        ]
-      }
+      items: [
+        {
+          label: formatLabel(messages.restorePanel, formatMessage),
+          icon: ContextMenuIcons.restore,
+          action: () => restorePanel(id)
+        },
+        {
+          label: formatLabel(messages.maximizePanel, formatMessage),
+          icon: ContextMenuIcons.maximize,
+          action: () => maximizePanel(id)
+        },
+        { separator: true },
+        {
+          label: formatLabel(messages.closePanel, formatMessage),
+          icon: ContextMenuIcons.close,
+          action: () => handleRequestClose(id)
+        }
+      ]
     });
   };
 
@@ -1690,7 +1689,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                           if (customItems.length === 0) return;
                           contextMenuRef.current?.show({
                             event: e,
-                            contextMenu: { items: customItems }
+                            items: customItems
                           });
                         }}
                       >
@@ -1710,46 +1709,44 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                           const isBottom = !!w.stickyBottom;
                           contextMenuRef.current?.show({
                             event: e,
-                            contextMenu: {
-                              items: [
-                                {
-                                  label: formatLabel(messages.anchorToRightEdge, formatMessage),
-                                  checkbox: {
-                                    active: true,
-                                    enabled: true,
-                                    value: isRight
-                                  },
-                                  action: () => {
-                                    const viewW = workspaceSize.width;
-                                    const winW = typeof w.width === 'string' ? parseFloat(w.width) : w.width;
-                                    const GAP = 10;
-                                    if (!isRight) {
-                                      updateFloatingPosition(w.id, { x: viewW - winW - GAP, stickyRight: true });
-                                    } else {
-                                      updateFloatingPosition(w.id, { stickyRight: false });
-                                    }
-                                  }
+                            items: [
+                              {
+                                label: formatLabel(messages.anchorToRightEdge, formatMessage),
+                                checkbox: {
+                                  active: true,
+                                  enabled: true,
+                                  value: isRight
                                 },
-                                {
-                                  label: formatLabel(messages.anchorToBottomEdge, formatMessage),
-                                  checkbox: {
-                                    active: true,
-                                    enabled: true,
-                                    value: isBottom
-                                  },
-                                  action: () => {
-                                    const viewH = workspaceSize.height;
-                                    const winH = typeof w.height === 'string' ? parseFloat(w.height) : w.height;
-                                    const GAP = 10;
-                                    if (!isBottom) {
-                                      updateFloatingPosition(w.id, { y: viewH - winH - GAP, stickyBottom: true });
-                                    } else {
-                                      updateFloatingPosition(w.id, { stickyBottom: false });
-                                    }
+                                action: () => {
+                                  const viewW = workspaceSize.width;
+                                  const winW = typeof w.width === 'string' ? parseFloat(w.width) : w.width;
+                                  const GAP = 10;
+                                  if (!isRight) {
+                                    updateFloatingPosition(w.id, { x: viewW - winW - GAP, stickyRight: true });
+                                  } else {
+                                    updateFloatingPosition(w.id, { stickyRight: false });
                                   }
                                 }
-                              ]
-                            }
+                              },
+                              {
+                                label: formatLabel(messages.anchorToBottomEdge, formatMessage),
+                                checkbox: {
+                                  active: true,
+                                  enabled: true,
+                                  value: isBottom
+                                },
+                                action: () => {
+                                  const viewH = workspaceSize.height;
+                                  const winH = typeof w.height === 'string' ? parseFloat(w.height) : w.height;
+                                  const GAP = 10;
+                                  if (!isBottom) {
+                                    updateFloatingPosition(w.id, { y: viewH - winH - GAP, stickyBottom: true });
+                                  } else {
+                                    updateFloatingPosition(w.id, { stickyBottom: false });
+                                  }
+                                }
+                              }
+                            ]
                           });
                         }}
                         className="custom-tab-btn btn-anchor-tab"
@@ -2068,11 +2065,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         );
       })}
 
-      {/* 4. Context Menu (replace-react-contexify JSON mode) */}
-      <JsonContextMenu
+      {/* 4. Context Menu */}
+      <contextMenuAdapter.Component
         ref={contextMenuRef}
-        id="workspace-context-menu"
         theme="dark"
+        formatMessageProvider={formatMessage}
         onShow={() => setIsContextMenuOpen(true)}
         onHide={() => setIsContextMenuOpen(false)}
       />

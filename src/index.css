@@ -705,47 +705,12 @@ body.resizing-col-active * {
   cursor: grabbing;
 }
 
-/* VS Code-style context menu */
-.react-contexify {
-  background-color: #1e1e1e !important;
-  border: 1px solid #454545 !important;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5) !important;
-  border-radius: 5px !important;
-  padding: 4px 0 !important;
-  min-width: 220px !important;
-  z-index: 99999 !important;
-}
+/* ==========================================================================
+   CONTEXT MENU (.dw-context-menu)
+   ========================================================================== */
 
-.react-contexify .react-contexify__item__content {
-  color: #cccccc !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
-  font-size: 13px !important;
-  padding: 5px 22px 5px 10px !important;
-  letter-spacing: 0.01em !important;
-}
-
-.react-contexify .react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
-  background-color: #094771 !important;
-  color: #ffffff !important;
-}
-
-.react-contexify .react-contexify__separator {
-  background-color: #454545 !important;
-  margin: 4px 0 !important;
-}
-
-.react-contexify .react-contexify__item-row {
-  gap: 10px !important;
-}
-
-/* Let the wrapper class own the column width — library container defers to it */
-.react-contexify .react-contexify__item-icon {
-  width: auto !important;
-  flex-shrink: 0 !important;
-}
-
-/* Icon slot: fixed width so all text aligns regardless of SVG size.
-   Override this class to change the icon column width globally. */
+/* Icon slot used by both context menu items and toolbar flyout items.
+   Fixed width keeps text columns aligned regardless of SVG size. */
 .wm-menu-icon {
   width: 14px;
   display: inline-flex;
@@ -754,8 +719,129 @@ body.resizing-col-active * {
   flex-shrink: 0;
 }
 
-.react-contexify .react-contexify__item-label {
-  text-align: left !important;
+.dw-context-menu {
+  position: fixed;
+  z-index: 9500;
+  background: var(--sidebar-bg, #1e2024);
+  border: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  animation: dw-context-menu-in 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+@keyframes dw-context-menu-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.dw-context-menu--submenu {
+  z-index: 9501;
+}
+
+.dw-context-menu__separator {
+  height: 1px;
+  background: var(--sidebar-border, rgba(255, 255, 255, 0.08));
+  margin: 4px 8px;
+  border: none;
+}
+
+.dw-context-menu__item {
+  display: flex;
+  align-items: center;
+  width: calc(100% - 8px);
+  margin: 0 4px;
+  padding: 5px 8px;
+  gap: 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--sidebar-text-title, #cccccc);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  box-sizing: border-box;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.dw-context-menu__item:hover:not(:disabled):not(.dw-context-menu__item--disabled) {
+  background-color: var(--toolbar-btn-hover-bg, rgba(255, 255, 255, 0.07));
+  color: var(--sidebar-text-title, #f8f9fa);
+}
+
+.dw-context-menu__item:disabled,
+.dw-context-menu__item--disabled {
+  opacity: 0.38;
+  cursor: default;
+  pointer-events: none;
+}
+
+.dw-context-menu__item--has-submenu.dw-context-menu__item--submenu-open {
+  background-color: var(--toolbar-btn-radio-active-bg, rgba(9, 71, 113, 0.35));
+}
+
+.dw-context-menu__icon {
+  width: 16px;
+  min-width: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.dw-context-menu__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dw-context-menu__chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+[dir="rtl"] .dw-context-menu__chevron {
+  margin-left: 0;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 12px;
+  transform: scaleX(-1);
+}
+
+.dw-context-menu__checkbox {
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tab-icon-active, #38bdf8);
+  box-sizing: content-box;
+}
+
+.dw-context-menu__checkbox--checked::after {
+  content: '';
+  display: block;
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg) translate(0px, -2px);
 }
 
 /* Drag split target drop zone overlays */

@@ -1,5 +1,36 @@
 # Migration Guide
 
+## v3.x → v4.0.0
+
+v4.0.0 removes the `replace-react-contexify` peer dependency. The library now ships a built-in `<ContextMenu>` component. All user-facing API is unchanged.
+
+### Breaking changes
+
+1. **`replace-react-contexify` is no longer a peer dependency.** Remove it from your project.
+2. **Remove the `replace-react-contexify` CSS import** from your entry file.
+
+### Not breaking
+
+- `ContextMenuItem`, `ContextMenuSimpleItem`, `ContextMenuSeparator`, `ContextMenuSubMenu` are still exported from `react-dockable-desktop` at the same paths. No type changes required.
+- `usePanelContextMenu` hook: same signature, same behaviour.
+- All `WindowManager` props are unchanged. The new optional `contextMenuAdapter` prop defaults to the built-in implementation.
+
+### Upgrade steps
+
+1. `npm uninstall replace-react-contexify`
+2. `npm install react-dockable-desktop@4`
+3. In your entry file, delete `import 'replace-react-contexify/styles.css'`
+4. Done — no other code changes required.
+
+### New in v4.0.0
+
+- **`<ContextMenu>` component** — exported for use on custom right-click surfaces.
+- **`ContextMenuAdapter` interface** — swap in your own context menu implementation via `<WindowManager contextMenuAdapter={...} />`.
+- **Skin-aware hover colour** — menu item hover now follows `--toolbar-btn-hover-bg` (the same hover token used by toolbar flyout items) instead of hardcoded VS Code blue.
+- See the [Context Menus guide](./context-menus) for full details.
+
+---
+
 ## v3.1.x → v3.2.0
 
 v3.2.0 is a **documentation and CSS-only** release. No API was added, removed, or changed. Upgrading requires no code changes.
