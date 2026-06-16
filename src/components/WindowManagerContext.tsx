@@ -464,19 +464,37 @@ function parseInitialState(json: string | null): Pick<WindowState, 'gridRoot' | 
   return { gridRoot: EMPTY_LEAF, floating: [], minimized: [], panels: {}, activePanelId: null };
 }
 
+/**
+ * Props for `<DockableDesktopProvider>` and `<WindowManagerProvider>`.
+ * Also exported as `DockableDesktopProviderProps` for consumers who use
+ * the composite provider.
+ * @see DockableDesktopProviderProps
+ */
 export interface WindowManagerProviderProps {
   children: React.ReactNode;
-  /** WorkspaceClient instance created outside the React tree. When provided, its registry
-   *  and config take precedence over the individual props below. */
+  /** `WorkspaceClient` instance created outside the React tree. When provided, its panel
+   *  registry and config take precedence over the individual props below. */
   client?: WorkspaceClient;
+  /** Custom i18n formatter. Receives a `{ id, defaultMessage }` descriptor and returns
+   *  the translated string. When omitted, `defaultMessage` is used as-is. */
   formatMessage?: MessageFormatter;
+  /** Override the built-in predefined UI strings (confirm button labels, close tooltips, etc.).
+   *  Merge with or replace `defaultPredefinedMessages` to localise system strings. */
   predefinedMessages?: Record<string, ContextMenuPredefinedMessage>;
+  /** Layout direction. `'rtl'` mirrors all controls, tab order, and drop zones.
+   *  Can also be changed at runtime via `WorkspaceClient.setDirection()`. @default 'ltr' */
   dir?: 'ltr' | 'rtl';
+  /** CSS class applied to the outer wrapper element of every modal overlay. */
   modalClass?: string;
+  /** CSS class applied to the inner content area of every modal overlay. */
   modalBodyClass?: string;
+  /** CSS class applied to the outer wrapper of left/right side-panel drawers. */
   sidePanelClass?: string;
+  /** CSS class applied to the inner content area of side-panel drawers. */
   sidePanelBodyClass?: string;
+  /** CSS class applied to the outer wrapper of floating panel windows. */
   windowClass?: string;
+  /** CSS class applied to the inner content area of floating panel windows. */
   windowBodyClass?: string;
 }
 
