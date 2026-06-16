@@ -67,6 +67,26 @@
   --panel-card-border: rgba(255, 255, 255, 0.1);
   --panel-text: var(--text-primary);
   --panel-title-color: var(--accent-color, #38bdf8);
+  /* ── Panel Overlay — Toolbar ── */
+  --panel-toolbar-padding: 8px;
+  --panel-toolbar-gap: 4px;
+  --panel-toolbar-btn-size: 28px;
+  --panel-toolbar-btn-radius: 6px;
+  --panel-toolbar-fg: rgba(255, 255, 255, 0.65);
+  --panel-toolbar-btn-hover-bg: var(--toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
+  --panel-toolbar-btn-active-bg: var(--toolbar-btn-radio-active-bg, rgba(56, 189, 248, 0.14));
+  --panel-toolbar-btn-active-color: var(--tab-icon-active, #38bdf8);
+  --panel-toolbar-separator-color: var(--toolbar-separator-color, rgba(255, 255, 255, 0.09));
+  /* ── Panel Overlay — Floating Window ── */
+  --panel-float-bg: rgba(22, 24, 34, 0.92);
+  --panel-float-border: rgba(255, 255, 255, 0.1);
+  --panel-float-radius: 8px;
+  --panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --panel-float-shadow-active: 0 8px 28px rgba(0, 0, 0, 0.55);
+  --panel-float-header-bg: rgba(255, 255, 255, 0.04);
+  --panel-float-header-bg-active: var(--toolbar-btn-toggle-active-bg, rgba(56, 189, 248, 0.08));
+  --panel-float-title-color: rgba(255, 255, 255, 0.6);
+  --panel-float-title-color-active: rgba(255, 255, 255, 0.9);
 }
 
 html,
@@ -1089,6 +1109,17 @@ body.resizing-col-active * {
   --panel-card-border: rgba(0, 0, 0, 0.08);
   --panel-text: #212529;
   --panel-title-color: #0066cc;
+  /* ── Panel Overlay — Toolbar (light) ── */
+  --panel-toolbar-fg: rgba(0, 0, 0, 0.55);
+  --panel-toolbar-separator-color: rgba(0, 0, 0, 0.1);
+  /* ── Panel Overlay — Floating Window (light) ── */
+  --panel-float-bg: rgba(255, 255, 255, 0.96);
+  --panel-float-border: rgba(0, 0, 0, 0.1);
+  --panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --panel-float-shadow-active: 0 8px 28px rgba(0, 0, 0, 0.2);
+  --panel-float-header-bg: rgba(0, 0, 0, 0.03);
+  --panel-float-title-color: rgba(0, 0, 0, 0.5);
+  --panel-float-title-color-active: rgba(0, 0, 0, 0.85);
 }
 
 /* ==========================================================================
@@ -3304,3 +3335,330 @@ html:not(.enable-animations) *::after {
 /* Note: touch-action and -webkit-overflow-scrolling intentionally omitted — they cause iOS Safari
    to fire pointercancel before the 300ms long-press timer can activate tab drag */
 .tab-headers-container::-webkit-scrollbar { display: none; }
+
+/* ==========================================================================
+   PANEL OVERLAY — PanelToolbar + PanelFloatingWindow
+   ========================================================================== */
+
+/* ── Root container ── */
+.dw-panel-overlay-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Toolbar container ── */
+.dw-panel-toolbar {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: var(--panel-toolbar-gap, 4px);
+  padding: var(--panel-toolbar-padding, 8px);
+  box-sizing: border-box;
+}
+
+.dw-panel-toolbar--top,
+.dw-panel-toolbar--bottom {
+  flex-direction: row;
+}
+
+.dw-panel-toolbar--left,
+.dw-panel-toolbar--right {
+  flex-direction: column;
+}
+
+/* Restore pointer-events on every direct child */
+.dw-panel-toolbar > * {
+  pointer-events: auto;
+}
+
+/* ── Toolbar button (shared by ToolbarButton + ToolbarToggle) ── */
+.dw-panel-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--panel-toolbar-btn-size, 28px);
+  height: var(--panel-toolbar-btn-size, 28px);
+  flex-shrink: 0;
+  border-radius: var(--panel-toolbar-btn-radius, 6px);
+  border: none;
+  background: transparent;
+  color: var(--panel-toolbar-fg, rgba(255, 255, 255, 0.65));
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.dw-panel-toolbar-btn:hover:not(:disabled) {
+  background: var(--panel-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
+}
+
+.dw-panel-toolbar-btn--active {
+  background: var(--panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.14));
+  color: var(--panel-toolbar-btn-active-color, #38bdf8);
+}
+
+.dw-panel-toolbar-btn--active:hover:not(:disabled) {
+  background: var(--panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.14));
+}
+
+.dw-panel-toolbar-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* ── Separator ── */
+.dw-panel-toolbar__sep {
+  flex-shrink: 0;
+  background: var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+  align-self: center;
+}
+
+.dw-panel-toolbar--top .dw-panel-toolbar__sep,
+.dw-panel-toolbar--bottom .dw-panel-toolbar__sep {
+  width: 1px;
+  height: 18px;
+}
+
+.dw-panel-toolbar--left .dw-panel-toolbar__sep,
+.dw-panel-toolbar--right .dw-panel-toolbar__sep {
+  height: 1px;
+  width: 18px;
+}
+
+/* ── Spacer — pushes subsequent items to the opposite end ── */
+.dw-panel-toolbar__spacer {
+  flex: 1;
+  pointer-events: none;
+}
+
+/* ── ToolbarItem wrapper (restores pointer-events for custom controls) ── */
+.dw-panel-toolbar__item {
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+/* ── ToolbarCenter — absolutely centered, independent of left/right widths ── */
+.dw-panel-toolbar__center {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--panel-toolbar-gap, 4px);
+  pointer-events: none;
+}
+.dw-panel-toolbar__center > * {
+  pointer-events: auto;
+}
+/* Horizontal toolbars: center horizontally */
+.dw-panel-toolbar--top .dw-panel-toolbar__center,
+.dw-panel-toolbar--bottom .dw-panel-toolbar__center {
+  flex-direction: row;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* Vertical toolbars: center vertically */
+.dw-panel-toolbar--left .dw-panel-toolbar__center,
+.dw-panel-toolbar--right .dw-panel-toolbar__center {
+  flex-direction: column;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ── RTL position swap ── */
+[dir="rtl"] .dw-panel-toolbar--left { left: auto; right: 0; }
+[dir="rtl"] .dw-panel-toolbar--right { right: auto; left: 0; }
+
+/* ── ToolbarSearchInput ── */
+.dw-panel-toolbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dw-panel-toolbar-search__input {
+  height: var(--panel-toolbar-btn-size, 28px);
+  width: 200px;
+  border: 1px solid var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.15));
+  border-radius: var(--panel-toolbar-btn-radius, 6px);
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  padding: 0 8px;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dw-panel-toolbar-search__input::placeholder {
+  opacity: 0.45;
+}
+
+.dw-panel-toolbar-search__input:focus {
+  border-color: var(--panel-toolbar-btn-active-color, #38bdf8);
+}
+
+.dw-panel-toolbar-search__dropdown {
+  background: var(--panel-float-bg, rgba(22, 24, 34, 0.95));
+  border: 1px solid var(--panel-float-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--panel-float-radius, 8px);
+  box-shadow: var(--panel-float-shadow-active, 0 8px 28px rgba(0, 0, 0, 0.55));
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dw-panel-toolbar-search__group {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.45;
+}
+
+.dw-panel-toolbar-search__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dw-panel-toolbar-search__item:hover {
+  background: var(--panel-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
+}
+
+.dw-panel-toolbar-search__item-icon { flex-shrink: 0; opacity: 0.7; }
+.dw-panel-toolbar-search__item-label { flex: 1; }
+.dw-panel-toolbar-search__item-desc { opacity: 0.45; font-size: 11px; }
+
+/* ── Floating window ── */
+.dw-panel-float {
+  position: absolute;
+  min-width: 120px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--panel-float-radius, 8px);
+  background: var(--panel-float-bg, rgba(22, 24, 34, 0.92));
+  border: 1px solid var(--panel-float-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--panel-float-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.dw-panel-float--active {
+  box-shadow: var(--panel-float-shadow-active, 0 8px 28px rgba(0, 0, 0, 0.55));
+}
+
+.dw-panel-float__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--panel-float-header-bg, rgba(255, 255, 255, 0.04));
+  cursor: grab;
+  user-select: none;
+}
+
+.dw-panel-float__header:active {
+  cursor: grabbing;
+}
+
+.dw-panel-float--active .dw-panel-float__header {
+  background: var(--panel-float-header-bg-active, rgba(56, 189, 248, 0.08));
+}
+
+.dw-panel-float__title {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--panel-float-title-color, rgba(255, 255, 255, 0.6));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dw-panel-float--active .dw-panel-float__title {
+  color: var(--panel-float-title-color-active, rgba(255, 255, 255, 0.9));
+}
+
+.dw-panel-float__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  background: var(--custom-btn-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--custom-btn-border, rgba(255, 255, 255, 0.05));
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dw-panel-float__close:hover {
+  background-color: var(--custom-btn-hover-bg, rgba(255, 255, 255, 0.12));
+  color: var(--custom-btn-hover-color, #ffffff);
+  border-color: var(--custom-btn-border, rgba(255, 255, 255, 0.05));
+  transform: scale(1.05);
+}
+
+.dw-panel-float__body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Resize grip — bottom-right corner */
+.dw-panel-float__resize {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+/* ── Docking drop zones (visible while dragging a floating window) ── */
+.dw-panel-float-dropzone {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border: 2px dashed var(--accent-color, #38bdf8);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.06);
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease, border-style 0.15s ease;
+}
+
+.dw-panel-float-dropzone--hovered {
+  opacity: 1;
+  background: rgba(56, 189, 248, 0.18);
+  border-style: solid;
+}
+
+.dw-panel-float-dropzone--top-left     { top:    8px; left:  8px; }
+.dw-panel-float-dropzone--top-right    { top:    8px; right: 8px; }
+.dw-panel-float-dropzone--bottom-left  { bottom: 8px; left:  8px; }
+.dw-panel-float-dropzone--bottom-right { bottom: 8px; right: 8px; }
