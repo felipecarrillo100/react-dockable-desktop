@@ -18,6 +18,16 @@ type FloatAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
+// ─── Public types ─────────────────────────────────────────────────────────────
+
+export interface ManagedWindowConfig {
+  title: string;
+  content: React.ReactNode;
+  anchor?: FloatAnchor;
+  width?: number;
+  height?: number;
+}
+
 // ─── Internal context ─────────────────────────────────────────────────────────
 
 interface PanelOverlayCtx {
@@ -37,6 +47,11 @@ interface PanelOverlayCtx {
   setDraggingId(id: string | null): void;
   hoveredZone: FloatAnchor | null;
   setHoveredZone(zone: FloatAnchor | null): void;
+  // Managed windows (imperative API)
+  managedWindowIds: string[];
+  openManaged(id: string, config: ManagedWindowConfig): void;
+  closeManaged(id: string): void;
+  closeAllManaged(): void;
 }
 
 const PanelOverlayContext = createContext<PanelOverlayCtx | null>(null);
@@ -73,6 +88,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
   const [dockedSizes, setDockedSizes] = useState<Record<string, number>>({});
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoveredZone, setHoveredZone] = useState<FloatAnchor | null>(null);
+  const [managedWindows, setManagedWindows] = useState<Map<string, ManagedWindowConfig>>(() => new Map());
   const zCounterRef = useRef(100);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +136,28 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     });
   }, []);
 
+  const openManaged = useCallback((id: string, config: ManagedWindowConfig): void => {
+    setManagedWindows(prev => {
+      const next = new Map(prev);
+      next.set(id, config);
+      return next;
+    });
+  }, []);
+
+  const closeManaged = useCallback((id: string): void => {
+    setManagedWindows(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const closeAllManaged = useCallback((): void => {
+    setManagedWindows(new Map());
+  }, []);
+
+  const managedWindowIds = useMemo(() => Array.from(managedWindows.keys()), [managedWindows]);
+
   const value = useMemo<PanelOverlayCtx>(() => ({
     registerToolbar,
     insetTop: toolbarSizes.top ?? 0,
@@ -136,8 +174,13 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     setDraggingId,
     hoveredZone,
     setHoveredZone,
+    managedWindowIds,
+    openManaged,
+    closeManaged,
+    closeAllManaged,
   }), [registerToolbar, toolbarSizes, zOrders, focusWindow, stacks, dockedSizes,
-      dockWindow, undockWindow, reportDockedSize, draggingId, hoveredZone]);
+      dockWindow, undockWindow, reportDockedSize, draggingId, hoveredZone,
+      managedWindowIds, openManaged, closeManaged, closeAllManaged]);
 
   return (
     <PanelOverlayContext.Provider value={value}>
@@ -148,6 +191,20 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
       >
         {children}
         {draggingId !== null && <DropZoneOverlay hoveredZone={hoveredZone} />}
+        {Array.from(managedWindows.entries()).map(([id, cfg]) => (
+          <PanelFloatingWindow
+            key={id}
+            id={id}
+            title={cfg.title}
+            open={true}
+            onClose={() => closeManaged(id)}
+            defaultAnchor={cfg.anchor ?? 'top-right'}
+            defaultWidth={cfg.width ?? 320}
+            defaultHeight={cfg.height ?? 240}
+          >
+            {cfg.content}
+          </PanelFloatingWindow>
+        ))}
       </div>
     </PanelOverlayContext.Provider>
   );
@@ -783,4 +840,29 @@ export function usePanelFloatingWindow(): { isOpen: boolean; open(): void; close
   const open = useCallback((): void => { setIsOpen(true); }, []);
   const close = useCallback((): void => { setIsOpen(false); }, []);
   return { isOpen, open, close };
+}
+
+// ─── usePanelFloatingWindowManager ───────────────────────────────────────────
+
+const EMPTY_IDS: string[] = [];
+
+export interface PanelFloatingWindowManagerHandle {
+  open(id: string, config: ManagedWindowConfig): void;
+  close(id: string): void;
+  closeAll(): void;
+  isOpen(id: string): boolean;
+  openIds: string[];
+}
+
+export function usePanelFloatingWindowManager(): PanelFloatingWindowManagerHandle {
+  const ctx = useContext(PanelOverlayContext);
+  const ids = ctx?.managedWindowIds ?? EMPTY_IDS;
+
+  return useMemo(() => ({
+    open: (id: string, config: ManagedWindowConfig) => ctx?.openManaged(id, config),
+    close: (id: string) => ctx?.closeManaged(id),
+    closeAll: () => ctx?.closeAllManaged(),
+    isOpen: (id: string) => ids.includes(id),
+    openIds: ids,
+  }), [ctx, ids]);
 }
