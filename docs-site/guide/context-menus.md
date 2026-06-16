@@ -55,6 +55,7 @@ interface ContextMenuSimpleItem {
   title?: string;            // tooltip on hover
   action?: () => void;       // called on click, then menu closes
   cyAction?: string;         // data-cy-action attribute for Cypress tests
+  disabled?: boolean;        // true = greyed out, non-interactive (default: false)
   checkbox?: ContextMenuCheckbox;
 }
 ```
@@ -84,7 +85,7 @@ Add a `checkbox` field to a simple item to show a checkmark column:
 ```typescript
 interface ContextMenuCheckbox {
   active?: boolean;  // false hides the checkbox column entirely (default: true)
-  enabled: boolean;  // false = item is greyed out and non-interactive
+  enabled?: boolean; // false = item is greyed out and non-interactive (default: true)
   value: boolean;    // true = checkmark shown
 }
 ```
