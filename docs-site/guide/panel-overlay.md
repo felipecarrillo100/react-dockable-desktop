@@ -68,7 +68,7 @@ A toolbar strip that attaches to any edge of the `PanelOverlayRoot` container. M
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `position` | `'top' \| 'bottom' \| 'left' \| 'right'` | — | **Required.** Which edge to attach to. |
+| `position` | `ToolbarPosition` | — | **Required.** Which edge to attach to. One of `'top'`, `'bottom'`, `'left'`, `'right'`. |
 | `variant` | `'transparent' \| 'frosted' \| 'solid'` | `'transparent'` | Background style. `frosted` adds a blur/tint; `solid` uses the panel background color. |
 | `buttonVariant` | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` | `'ghost'` | Default button appearance inherited by all child buttons. Overridable per-button. |
 | `buttonSize` | `number` | — | Overrides the `--panel-toolbar-btn-size` CSS variable (pixels). |
@@ -289,7 +289,7 @@ function MapPanel() {
 
 ### `usePanelFloatingWindow()`
 
-A convenience hook that manages the open/close boolean for a single `PanelFloatingWindow`.
+A convenience hook that manages the open/close boolean for a single `PanelFloatingWindow`. Returns a `UsePanelFloatingWindowReturn` object.
 
 ```typescript
 const { isOpen, open, close } = usePanelFloatingWindow();
@@ -301,6 +301,14 @@ const { isOpen, open, close } = usePanelFloatingWindow();
 | `open` | `() => void` | Opens the window. |
 | `close` | `() => void` | Closes the window. |
 
+To type a variable holding the hook result, import `UsePanelFloatingWindowReturn`:
+
+```ts
+import type { UsePanelFloatingWindowReturn } from 'react-dockable-desktop';
+
+const layerTree: UsePanelFloatingWindowReturn = usePanelFloatingWindow();
+```
+
 ### `PanelFloatingWindowProps`
 
 | Prop | Type | Description |
@@ -309,7 +317,7 @@ const { isOpen, open, close } = usePanelFloatingWindow();
 | `title` | `string` | Text shown in the window header bar. |
 | `open` | `boolean` | Mounts/unmounts the window. |
 | `onClose` | `() => void` | Called when the user clicks the × button; you must set `open` to `false` in response. |
-| `defaultAnchor` | `'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'` | Which corner to dock to on first render. |
+| `defaultAnchor` | `FloatAnchor` | Which corner to dock to on first render. One of `'top-left'`, `'top-right'`, `'bottom-left'`, `'bottom-right'`. |
 | `defaultWidth` | `number` | Initial width in pixels. |
 | `defaultHeight` | `number` | Initial height in pixels. |
 | `children?` | `ReactNode` | Window body content. |
@@ -510,10 +518,13 @@ All exported from `'react-dockable-desktop'`:
 | `SearchResult` | Interface | `{ id, label, description?, group?, icon? }` |
 | `PanelFloatingWindow` | Component | Declarative single floating window |
 | `PanelFloatingWindowProps` | Interface | — |
-| `usePanelFloatingWindow` | Hook | Returns `{ isOpen, open, close }` |
+| `usePanelFloatingWindow` | Hook | Returns `UsePanelFloatingWindowReturn` |
 | `usePanelFloatingWindowManager` | Hook | Imperative multi-window manager |
+| `ToolbarPosition` | Type | `'top' \| 'bottom' \| 'left' \| 'right'` |
+| `FloatAnchor` | Type | `'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'` |
 | `ManagedWindowConfig` | Interface | Config for `manager.open(id, config)` |
 | `PanelFloatingWindowManagerHandle` | Interface | Return type of `usePanelFloatingWindowManager` |
+| `UsePanelFloatingWindowReturn` | Interface | Return type of `usePanelFloatingWindow` |
 | `ToolbarVariant` | Type | `'transparent' \| 'frosted' \| 'solid'` |
 | `ButtonVariant` | Type | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` |
 
