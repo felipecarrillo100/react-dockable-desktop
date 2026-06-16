@@ -28,15 +28,27 @@ export interface ManagedWindowConfig {
   height?: number;
 }
 
-// ─── Internal context ─────────────────────────────────────────────────────────
+// ─── Internal contexts ────────────────────────────────────────────────────────
 
-interface PanelOverlayCtx {
+interface PanelToolbarCtx {
   registerToolbar(pos: ToolbarPosition, size: number): () => void;
   insetTop: number;
   insetBottom: number;
+}
+const PanelToolbarContext = createContext<PanelToolbarCtx | null>(null);
+
+interface PanelManagerCtx {
+  managedWindowIds: string[];
+  openManaged(id: string, config: ManagedWindowConfig): void;
+  closeManaged(id: string): void;
+  closeAllManaged(): void;
+}
+const PanelManagerContext = createContext<PanelManagerCtx | null>(null);
+
+interface PanelOverlayCtx {
+  topId: string | null;
   zOrders: Record<string, number>;
   focusWindow(id: string): void;
-  // Docking
   containerRef: React.RefObject<HTMLDivElement>;
   stacks: Record<FloatAnchor, string[]>;
   dockedSizes: Record<string, number>;
@@ -47,13 +59,9 @@ interface PanelOverlayCtx {
   setDraggingId(id: string | null): void;
   hoveredZone: FloatAnchor | null;
   setHoveredZone(zone: FloatAnchor | null): void;
-  // Managed windows (imperative API)
-  managedWindowIds: string[];
-  openManaged(id: string, config: ManagedWindowConfig): void;
-  closeManaged(id: string): void;
-  closeAllManaged(): void;
+  insetTop: number;
+  insetBottom: number;
 }
-
 const PanelOverlayContext = createContext<PanelOverlayCtx | null>(null);
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -88,6 +96,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
   const [dockedSizes, setDockedSizes] = useState<Record<string, number>>({});
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoveredZone, setHoveredZone] = useState<FloatAnchor | null>(null);
+  const [topId, setTopId] = useState<string | null>(null);
   const [managedWindows, setManagedWindows] = useState<Map<string, ManagedWindowConfig>>(() => new Map());
   const zCounterRef = useRef(100);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,6 +114,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     zCounterRef.current += 1;
     const z = zCounterRef.current;
     setZOrders(prev => ({ ...prev, [id]: z }));
+    setTopId(id);
   }, []);
 
   const dockWindow = useCallback((id: string, anchor: FloatAnchor): void => {
@@ -158,10 +168,21 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
 
   const managedWindowIds = useMemo(() => Array.from(managedWindows.keys()), [managedWindows]);
 
-  const value = useMemo<PanelOverlayCtx>(() => ({
+  const toolbarCtxValue = useMemo<PanelToolbarCtx>(() => ({
     registerToolbar,
     insetTop: toolbarSizes.top ?? 0,
     insetBottom: toolbarSizes.bottom ?? 0,
+  }), [registerToolbar, toolbarSizes]);
+
+  const managerCtxValue = useMemo<PanelManagerCtx>(() => ({
+    managedWindowIds,
+    openManaged,
+    closeManaged,
+    closeAllManaged,
+  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged]);
+
+  const coreCtxValue = useMemo<PanelOverlayCtx>(() => ({
+    topId,
     zOrders,
     focusWindow,
     containerRef: containerRef as React.RefObject<HTMLDivElement>,
@@ -174,39 +195,40 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     setDraggingId,
     hoveredZone,
     setHoveredZone,
-    managedWindowIds,
-    openManaged,
-    closeManaged,
-    closeAllManaged,
-  }), [registerToolbar, toolbarSizes, zOrders, focusWindow, stacks, dockedSizes,
-      dockWindow, undockWindow, reportDockedSize, draggingId, hoveredZone,
-      managedWindowIds, openManaged, closeManaged, closeAllManaged]);
+    insetTop: toolbarSizes.top ?? 0,
+    insetBottom: toolbarSizes.bottom ?? 0,
+  }), [topId, zOrders, focusWindow, stacks, dockedSizes, dockWindow, undockWindow,
+      reportDockedSize, draggingId, hoveredZone, toolbarSizes]);
 
   return (
-    <PanelOverlayContext.Provider value={value}>
-      <div
-        ref={containerRef}
-        className={`dw-panel-overlay-root${draggingId !== null ? ' dragging-active' : ''}${className ? ' ' + className : ''}`}
-        style={style}
-      >
-        {children}
-        {draggingId !== null && <DropZoneOverlay hoveredZone={hoveredZone} />}
-        {Array.from(managedWindows.entries()).map(([id, cfg]) => (
-          <PanelFloatingWindow
-            key={id}
-            id={id}
-            title={cfg.title}
-            open={true}
-            onClose={() => closeManaged(id)}
-            defaultAnchor={cfg.anchor ?? 'top-right'}
-            defaultWidth={cfg.width ?? 320}
-            defaultHeight={cfg.height ?? 240}
+    <PanelToolbarContext.Provider value={toolbarCtxValue}>
+      <PanelManagerContext.Provider value={managerCtxValue}>
+        <PanelOverlayContext.Provider value={coreCtxValue}>
+          <div
+            ref={containerRef}
+            className={`dw-panel-overlay-root${draggingId !== null ? ' dragging-active' : ''}${className ? ' ' + className : ''}`}
+            style={style}
           >
-            {cfg.content}
-          </PanelFloatingWindow>
-        ))}
-      </div>
-    </PanelOverlayContext.Provider>
+            {children}
+            {draggingId !== null && <DropZoneOverlay hoveredZone={hoveredZone} />}
+            {Array.from(managedWindows.entries()).map(([id, cfg]) => (
+              <PanelFloatingWindow
+                key={id}
+                id={id}
+                title={cfg.title}
+                open={true}
+                onClose={() => closeManaged(id)}
+                defaultAnchor={cfg.anchor ?? 'top-right'}
+                defaultWidth={cfg.width ?? 320}
+                defaultHeight={cfg.height ?? 240}
+              >
+                {cfg.content}
+              </PanelFloatingWindow>
+            ))}
+          </div>
+        </PanelOverlayContext.Provider>
+      </PanelManagerContext.Provider>
+    </PanelToolbarContext.Provider>
   );
 }
 
@@ -242,7 +264,7 @@ export interface PanelToolbarProps {
 }
 
 export function PanelToolbar({ position, variant = 'transparent', buttonVariant = 'ghost', buttonSize, style, className, children }: PanelToolbarProps): React.ReactElement {
-  const ctx = useContext(PanelOverlayContext);
+  const ctx = useContext(PanelToolbarContext);
   const ref = useRef<HTMLDivElement>(null);
   const [rtl, setRtl] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -610,12 +632,7 @@ function FloatingWindowBody({ id, title, defaultAnchor, defaultWidth, defaultHei
 
   const zOrder = ctx?.zOrders[id] ?? 101;
 
-  const isActive = useMemo((): boolean => {
-    if (!ctx) return true;
-    const vals = Object.values(ctx.zOrders);
-    if (vals.length === 0) return true;
-    return (ctx.zOrders[id] ?? 0) === Math.max(...vals);
-  }, [ctx, id]);
+  const isActive = !ctx || ctx.topId === id;
 
   const getContainerBounds = (): { cw: number; ch: number } => {
     const container = windowRef.current?.offsetParent as HTMLElement | null;
@@ -855,7 +872,7 @@ export interface PanelFloatingWindowManagerHandle {
 }
 
 export function usePanelFloatingWindowManager(): PanelFloatingWindowManagerHandle {
-  const ctx = useContext(PanelOverlayContext);
+  const ctx = useContext(PanelManagerContext);
   const ids = ctx?.managedWindowIds ?? EMPTY_IDS;
 
   return useMemo(() => ({
