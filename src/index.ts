@@ -132,6 +132,7 @@ export type {
 // ─── Toast — imperative notification API, zero dependencies ──────────────────
 export { toast, ToastContainer } from './components/Toast';
 export type {
+  ToastFunction,
   ToastOptions,
   ToastType,
   ToastPosition,

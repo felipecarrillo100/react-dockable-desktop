@@ -94,34 +94,48 @@ const emitter = new ToastEmitter();
 
 // ─── toast public API ─────────────────────────────────────────────────────────
 
-function toast(msg: React.ReactNode, opts?: ToastOptions): string {
-  return emitter.show(msg, opts);
+export interface ToastFunction {
+  (msg: React.ReactNode, opts?: ToastOptions): string;
+  info:    (msg: React.ReactNode, opts?: ToastOptions) => string;
+  success: (msg: React.ReactNode, opts?: ToastOptions) => string;
+  warning: (msg: React.ReactNode, opts?: ToastOptions) => string;
+  error:   (msg: React.ReactNode, opts?: ToastOptions) => string;
+  dismiss: (id?: string) => void;
+  promise: <T>(promise: Promise<T>, messages: ToastPromiseMessages<T>, opts?: ToastOptions) => Promise<T>;
 }
-toast.info    = (msg: React.ReactNode, opts?: ToastOptions): string => emitter.show(msg, { ...opts, type: 'info' });
-toast.success = (msg: React.ReactNode, opts?: ToastOptions): string => emitter.show(msg, { ...opts, type: 'success' });
-toast.warning = (msg: React.ReactNode, opts?: ToastOptions): string => emitter.show(msg, { ...opts, type: 'warning' });
-toast.error   = (msg: React.ReactNode, opts?: ToastOptions): string => emitter.show(msg, { ...opts, type: 'error' });
-toast.dismiss = (id?: string): void => emitter.dismiss(id);
-toast.promise = <T,>(
-  promise: Promise<T>,
-  messages: ToastPromiseMessages<T>,
-  opts?: ToastOptions
-): Promise<T> => {
-  const id = emitter.show(messages.pending, { ...opts, type: 'info', duration: 0 });
-  promise.then(
-    result => {
-      const msg = typeof messages.success === 'function' ? messages.success(result) : messages.success;
-      emitter.update(id, msg, { type: 'success', duration: opts?.duration ?? 5000 });
-    },
-    err => {
-      const msg = typeof messages.error === 'function' ? messages.error(err) : messages.error;
-      emitter.update(id, msg, { type: 'error', duration: opts?.duration ?? 5000 });
-    }
-  );
-  return promise;
-};
 
-export { toast };
+export const toast: ToastFunction = Object.assign(
+  (msg: React.ReactNode, opts?: ToastOptions): string => emitter.show(msg, opts),
+  {
+    info:    (msg: React.ReactNode, opts?: ToastOptions): string =>
+      emitter.show(msg, { ...opts, type: 'info' }),
+    success: (msg: React.ReactNode, opts?: ToastOptions): string =>
+      emitter.show(msg, { ...opts, type: 'success' }),
+    warning: (msg: React.ReactNode, opts?: ToastOptions): string =>
+      emitter.show(msg, { ...opts, type: 'warning' }),
+    error:   (msg: React.ReactNode, opts?: ToastOptions): string =>
+      emitter.show(msg, { ...opts, type: 'error' }),
+    dismiss: (id?: string): void => emitter.dismiss(id),
+    promise: <T,>(
+      promise: Promise<T>,
+      messages: ToastPromiseMessages<T>,
+      opts?: ToastOptions
+    ): Promise<T> => {
+      const id = emitter.show(messages.pending, { ...opts, type: 'info', duration: 0 });
+      promise.then(
+        result => {
+          const msg = typeof messages.success === 'function' ? messages.success(result) : messages.success;
+          emitter.update(id, msg, { type: 'success', duration: opts?.duration ?? 5000 });
+        },
+        err => {
+          const msg = typeof messages.error === 'function' ? messages.error(err) : messages.error;
+          emitter.update(id, msg, { type: 'error', duration: opts?.duration ?? 5000 });
+        }
+      );
+      return promise;
+    },
+  }
+);
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -329,7 +343,7 @@ export function ToastContainer({
   progressBar     = false,
   width           = 320,
   adapter,
-}: ToastContainerProps) {
+}: ToastContainerProps): React.ReactElement | null {
   const [toasts, setToasts] = useState<ActiveToast[]>([]);
   const queueRef  = useRef<Array<{ id: string; message: React.ReactNode; rawOpts: ToastOptions & { id: string } }>>([]);
   const toastsRef = useRef<ActiveToast[]>(toasts);
