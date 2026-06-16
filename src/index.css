@@ -832,16 +832,11 @@ body.resizing-col-active * {
   justify-content: center;
   color: var(--tab-icon-active, #38bdf8);
   box-sizing: content-box;
+  opacity: 0.6;
 }
 
-.dw-context-menu__checkbox--checked::after {
-  content: '';
-  display: block;
-  width: 9px;
-  height: 5px;
-  border-left: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg) translate(0px, -2px);
+.dw-context-menu__checkbox--checked {
+  opacity: 1;
 }
 
 /* Drag split target drop zone overlays */

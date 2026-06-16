@@ -18,8 +18,8 @@ export type { ContextMenuLabel, MessageFormatter, MenuItemAction };
 export interface ContextMenuCheckbox {
   /** Whether the checkbox column renders at all (default: true). */
   active?: boolean;
-  /** Whether the item is interactive. */
-  enabled: boolean;
+  /** Whether the item is interactive (default: true). Prefer top-level `disabled` on the item instead. */
+  enabled?: boolean;
   /** Current checked state. */
   value: boolean;
 }
@@ -31,6 +31,7 @@ export interface ContextMenuSimpleItem {
   checkbox?: ContextMenuCheckbox;
   action?: MenuItemAction;
   cyAction?: string;
+  disabled?: boolean;
 }
 
 export interface ContextMenuSeparator {
@@ -152,7 +153,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
           const simple = item as ContextMenuSimpleItem;
           const showChk = simple.checkbox && simple.checkbox.active !== false;
           const isChecked = showChk && simple.checkbox!.value;
-          const isDisabled = showChk ? !simple.checkbox!.enabled : false;
+          const isDisabled = simple.disabled === true || (showChk ? simple.checkbox!.enabled === false : false);
           return (
             <button
               key={i}
@@ -170,10 +171,18 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
                 : <span className="dw-context-menu__icon" aria-hidden="true" />}
               <span className="dw-context-menu__label">{resolveLabel(simple.label, fmt)}</span>
               {showChk && (
-                <span
-                  className={`dw-context-menu__checkbox${isChecked ? ' dw-context-menu__checkbox--checked' : ''}`}
-                  aria-hidden="true"
-                />
+                <span className={`dw-context-menu__checkbox${isChecked ? ' dw-context-menu__checkbox--checked' : ''}`} aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    {isChecked && (
+                      <path d="M2.5 6 L4.5 8.5 L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    )}
+                  </svg>
+                </span>
               )}
             </button>
           );
@@ -363,7 +372,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
             const simple = item as ContextMenuSimpleItem;
             const showChk = simple.checkbox && simple.checkbox.active !== false;
             const isChecked = showChk && simple.checkbox!.value;
-            const isDisabled = showChk ? !simple.checkbox!.enabled : false;
+            const isDisabled = simple.disabled === true || (showChk ? simple.checkbox!.enabled === false : false);
 
             return (
               <button
@@ -385,10 +394,18 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                   : <span className="dw-context-menu__icon" aria-hidden="true" />}
                 <span className="dw-context-menu__label">{resolveLabel(simple.label, fmt)}</span>
                 {showChk && (
-                  <span
-                    className={`dw-context-menu__checkbox${isChecked ? ' dw-context-menu__checkbox--checked' : ''}`}
-                    aria-hidden="true"
-                  />
+                  <span className={`dw-context-menu__checkbox${isChecked ? ' dw-context-menu__checkbox--checked' : ''}`} aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2"
+                        fill={isChecked ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      {isChecked && (
+                        <path d="M2.5 6 L4.5 8.5 L9.5 3.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      )}
+                    </svg>
+                  </span>
                 )}
               </button>
             );
