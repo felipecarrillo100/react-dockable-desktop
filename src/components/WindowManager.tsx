@@ -738,10 +738,24 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 // 5. WindowManager (Main Render Component)
 // ==========================================
 
+/** Controls when the minimized-panel taskbar is visible. */
+export type TaskbarVisibility = 'always' | 'compact' | 'autohide';
+
+/** Props for `<WindowManager>`. */
 export interface WindowManagerProps {
+  /** Built-in skin name or a custom skin key registered via CSS. @default 'vscode' */
   skin?: string;
+  /** Fallback icon shown in panel tabs when no panel-specific icon is provided. */
   defaultPanelIcon?: React.ReactNode;
-  taskbarVisibility?: 'always' | 'compact' | 'autohide';
+  /**
+   * Controls taskbar visibility.
+   * - `'always'` — permanent bar at the bottom (default)
+   * - `'compact'` — only visible when minimized panels exist
+   * - `'autohide'` — overlay bar with 8 px peek strip
+   * @default 'always'
+   */
+  taskbarVisibility?: TaskbarVisibility;
+  /** Custom context menu renderer. Defaults to the built-in `DefaultContextMenuAdapter`. */
   contextMenuAdapter?: ContextMenuAdapter;
 }
 
