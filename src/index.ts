@@ -129,6 +129,18 @@ export type {
   ToolbarContextValue,
 } from './components/Toolbar';
 
+// ─── Toast — imperative notification API, zero dependencies ──────────────────
+export { toast, ToastContainer } from './components/Toast';
+export type {
+  ToastOptions,
+  ToastType,
+  ToastPosition,
+  ToastContainerProps,
+  ToastAdapter,
+  ResolvedToastOptions,
+  ToastPromiseMessages,
+} from './components/Toast';
+
 // ─── Panel Overlay — optional; tree-shaken when unused ───────────────────────
 export {
   PanelOverlayRoot,

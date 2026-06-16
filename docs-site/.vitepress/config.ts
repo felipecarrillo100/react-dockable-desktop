@@ -50,6 +50,7 @@ export default defineConfig({
             { text: 'Modals & Side Panels', link: '/guide/modals-and-drawers' },
             { text: 'Context Menus', link: '/guide/context-menus' },
             { text: 'Panel Overlay', link: '/guide/panel-overlay' },
+            { text: 'Toast Notifications', link: '/guide/toast' },
             { text: 'Event Bus & Communication', link: '/guide/event-bus' },
           ],
         },
