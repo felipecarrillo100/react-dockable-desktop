@@ -49,6 +49,7 @@ export default defineConfig({
             { text: 'Panel Lifecycle & Forms', link: '/guide/forms-and-panels' },
             { text: 'Modals & Side Panels', link: '/guide/modals-and-drawers' },
             { text: 'Context Menus', link: '/guide/context-menus' },
+            { text: 'Panel Overlay', link: '/guide/panel-overlay' },
             { text: 'Event Bus & Communication', link: '/guide/event-bus' },
           ],
         },
