@@ -1150,6 +1150,14 @@ const MapInfoContent: React.FC = () => (
   </div>
 );
 
+const CameraIcon = (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="4" width="14" height="10" rx="1.5" />
+    <circle cx="8" cy="9" r="2.5" />
+    <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+  </svg>
+);
+
 // MainMap is a thin wrapper so that MainMapInner is a child of PanelOverlayRoot
 // and can correctly call usePanelFloatingWindowManager() inside the context.
 export const MainMap: React.FC<{ panelId: string }> = () => (
@@ -1207,7 +1215,8 @@ const MainMapInner: React.FC = () => {
           f.close(cam.id);
         } else {
           f.open(cam.id, {
-            title: `📷 ${cam.name}`,
+            title: cam.name,
+            icon: CameraIcon,
             content: <MockCameraFeed name={cam.name} color={cam.color} />,
             anchor: CORNERS[i % CORNERS.length],
             width: 280,
@@ -1343,7 +1352,7 @@ const MainMapInner: React.FC = () => {
           active={floats.isOpen('map-info')}
           onToggle={() => floats.isOpen('map-info')
             ? floats.close('map-info')
-            : floats.open('map-info', { title: 'Map Info', content: <MapInfoContent />, anchor: 'top-left', width: 220, height: 180 })
+            : floats.open('map-info', { title: 'Map Info', icon: InfoIcon, content: <MapInfoContent />, anchor: 'top-left', width: 220, height: 180 })
           }
           title="Map info"
         />
@@ -1352,7 +1361,7 @@ const MainMapInner: React.FC = () => {
           active={floats.isOpen('map-legend')}
           onToggle={() => floats.isOpen('map-legend')
             ? floats.close('map-legend')
-            : floats.open('map-legend', { title: 'Map Layers', content: <MapLegendContent />, anchor: 'top-right', width: 200, height: 240 })
+            : floats.open('map-legend', { title: 'Map Layers', icon: LayersIcon, content: <MapLegendContent />, anchor: 'top-right', width: 200, height: 240 })
           }
           title="Legend"
         />
