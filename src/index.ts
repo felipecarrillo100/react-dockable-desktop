@@ -129,3 +129,27 @@ export type {
   ToolbarContextValue,
 } from './components/Toolbar';
 
+// ─── Panel Overlay — optional; tree-shaken when unused ───────────────────────
+export {
+  PanelOverlayRoot,
+  PanelToolbar,
+  ToolbarButton,
+  ToolbarToggle,
+  ToolbarSearchInput,
+  ToolbarSeparator as PanelToolbarSeparator,
+  ToolbarSpacer,
+  ToolbarCenter,
+  ToolbarItem as PanelToolbarItem,
+  PanelFloatingWindow,
+  usePanelFloatingWindow,
+} from './components/PanelOverlay';
+export type {
+  PanelOverlayRootProps,
+  PanelToolbarProps,
+  ToolbarButtonProps,
+  ToolbarToggleProps,
+  ToolbarSearchInputProps,
+  SearchResult,
+  PanelFloatingWindowProps,
+} from './components/PanelOverlay';
+

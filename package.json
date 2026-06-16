@@ -13,6 +13,7 @@
     },
     "./styles.css": "./dist/styles.css"
   },
+  "sideEffects": ["dist/styles.css", "src/index.css"],
   "files": [
     "dist"
   ],

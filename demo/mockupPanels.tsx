@@ -11,6 +11,15 @@ import {
   usePanelId,
   usePanelContextMenu,
   ConfirmationForm,
+  PanelOverlayRoot,
+  PanelToolbar,
+  ToolbarButton,
+  ToolbarToggle,
+  ToolbarSpacer,
+  ToolbarCenter,
+  PanelToolbarSeparator,
+  PanelFloatingWindow,
+  usePanelFloatingWindow,
 } from '../src/index';
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
@@ -613,6 +622,7 @@ export const CodeEditor: React.FC = () => {
   const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'light'>('vs-dark');
   const [currentVal, setCurrentVal] = useState(defaultCode);
   const [isDirty, setIsDirty] = useState(false);
+  const [wordWrap, setWordWrap] = useState(false);
 
   useEffect(() => {
     const updateTheme = () => {
@@ -650,21 +660,50 @@ export const CodeEditor: React.FC = () => {
     alert('Code saved successfully!');
   };
 
+  const PlayIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <polygon points="3,1 13,8 3,15" />
+    </svg>
+  );
+  const FormatIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="2" y1="4" x2="14" y2="4" /><line x1="2" y1="8" x2="10" y2="8" /><line x1="2" y1="12" x2="12" y2="12" />
+    </svg>
+  );
+  const WrapIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="2" y1="4" x2="14" y2="4" /><line x1="2" y1="8" x2="11" y2="8" />
+      <path d="M11 8 Q14 8 14 11 L14 12" /><polyline points="11,10 14,12 11,14" />
+      <line x1="2" y1="12" x2="8" y2="12" />
+    </svg>
+  );
+  const SaveIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 2 h9 l3 3 v9 a1 1 0 0 1-1 1 H3 a1 1 0 0 1-1-1 Z" />
+      <rect x="5" y="2" width="5" height="4" rx="0.5" /><rect x="4" y="9" width="8" height="5" rx="0.5" />
+    </svg>
+  );
+
   return (
-    <div className="w-100 h-100 text-start d-flex flex-column" style={{ overflow: 'hidden' }}>
-      <div className="d-flex align-items-center justify-content-between p-2 border-bottom border-secondary border-opacity-30 bg-body-tertiary bg-opacity-20">
-        <span className="small text-muted font-monospace">// app.tsx</span>
-        <button
-          type="button"
-          className={`btn btn-xs py-0 px-2 btn-sm ${isDirty ? 'btn-warning text-dark' : 'btn-outline-success'}`}
+    <PanelOverlayRoot>
+      <PanelToolbar position="top">
+        <ToolbarButton icon={PlayIcon} onClick={() => {}} title="Run" />
+        <ToolbarButton icon={FormatIcon} onClick={() => {}} title="Format" />
+        <ToolbarSpacer />
+        <ToolbarToggle
+          icon={WrapIcon}
+          active={wordWrap}
+          onToggle={() => setWordWrap(v => !v)}
+          title="Word wrap"
+        />
+        <ToolbarButton
+          icon={SaveIcon}
           onClick={handleSave}
           disabled={!isDirty}
-          style={{ fontSize: '0.75rem' }}
-        >
-          {isDirty ? '💾 Save Changes' : '✅ Saved'}
-        </button>
-      </div>
-      <div className="flex-grow-1">
+          title={isDirty ? 'Save changes' : 'Saved'}
+        />
+      </PanelToolbar>
+      <div className="w-100 h-100">
         <Editor
           height="100%"
           defaultLanguage="typescript"
@@ -677,10 +716,11 @@ export const CodeEditor: React.FC = () => {
             lineNumbers: 'on',
             scrollBeyondLastLine: false,
             automaticLayout: true,
+            wordWrap: wordWrap ? 'on' : 'off',
           }}
         />
       </div>
-    </div>
+    </PanelOverlayRoot>
   );
 };
 
@@ -1018,8 +1058,6 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     });
     mapRef.current = map;
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-
     const isLight = document.documentElement.getAttribute('data-color-scheme') === 'light';
     const tileUrl = isLight
       ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
@@ -1131,10 +1169,118 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     return unsubscribe;
   }, [subscribe]);
 
+  const { isOpen: legendOpen, open: openLegend, close: closeLegend } = usePanelFloatingWindow();
+  const { isOpen: infoOpen, open: openInfo, close: closeInfo } = usePanelFloatingWindow();
+
+  const ZoomInIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6.5" cy="6.5" r="5" /><line x1="10.5" y1="10.5" x2="14" y2="14" />
+      <line x1="6.5" y1="4" x2="6.5" y2="9" /><line x1="4" y1="6.5" x2="9" y2="6.5" />
+    </svg>
+  );
+  const ZoomOutIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6.5" cy="6.5" r="5" /><line x1="10.5" y1="10.5" x2="14" y2="14" />
+      <line x1="4" y1="6.5" x2="9" y2="6.5" />
+    </svg>
+  );
+  const LayersIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="8 1 1 5 8 9 15 5 8 1" /><polyline points="1 11 8 15 15 11" /><polyline points="1 8 8 12 15 8" />
+    </svg>
+  );
+  const InfoIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="6.5" /><line x1="8" y1="7" x2="8" y2="11.5" /><circle cx="8" cy="4.5" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+  const HomeIcon = (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1 7 8 1 15 7" /><path d="M3 6.5V14a0.5 0.5 0 0 0 0.5 0.5h3.5V10h2v4.5h3.5a0.5 0.5 0 0 0 0.5-0.5V6.5" />
+    </svg>
+  );
+
+  const handleZoomIn = () => mapRef.current?.zoomIn();
+  const handleZoomOut = () => mapRef.current?.zoomOut();
+  const handleResetView = () => mapRef.current?.setView([51.505, -0.09], 13);
+
   return (
-    <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
+    <PanelOverlayRoot className="bg-dark">
+      <PanelToolbar position="top">
+        <ToolbarCenter>
+          <ToolbarButton icon={HomeIcon} onClick={handleResetView} title="Reset view" />
+        </ToolbarCenter>
+        <ToolbarSpacer />
+        <ToolbarToggle
+          icon={InfoIcon}
+          active={infoOpen}
+          onToggle={() => infoOpen ? closeInfo() : openInfo()}
+          title="Map info"
+        />
+        <ToolbarToggle
+          icon={LayersIcon}
+          active={legendOpen}
+          onToggle={() => legendOpen ? closeLegend() : openLegend()}
+          title="Legend"
+        />
+      </PanelToolbar>
+
+      <PanelToolbar position="right">
+        <ToolbarSpacer />
+        <ToolbarButton icon={ZoomInIcon} onClick={handleZoomIn} title="Zoom in" />
+        <ToolbarButton icon={ZoomOutIcon} onClick={handleZoomOut} title="Zoom out" />
+      </PanelToolbar>
+
+      <PanelFloatingWindow
+        id="map-legend"
+        title="Map Layers"
+        open={legendOpen}
+        onClose={closeLegend}
+        defaultAnchor="top-right"
+        defaultWidth={200}
+        defaultHeight={240}
+      >
+        <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
+          {[
+            { label: 'Landmarks', color: '#38bdf8' },
+            { label: 'Districts', color: '#a78bfa' },
+            { label: 'Thames Path', color: '#22d3ee' },
+          ].map(({ label, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ opacity: 0.8 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </PanelFloatingWindow>
+
+      <PanelFloatingWindow
+        id="map-info"
+        title="Map Info"
+        open={infoOpen}
+        onClose={closeInfo}
+        defaultAnchor="top-left"
+        defaultWidth={220}
+        defaultHeight={180}
+      >
+        <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
+          {[
+            { label: 'Center', value: '51.505°N, 0.090°W' },
+            { label: 'Zoom', value: '13' },
+            { label: 'Projection', value: 'EPSG:3857' },
+            { label: 'Scale', value: '1 : 72,224' },
+            { label: 'Tile Provider', value: 'CartoDB' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ opacity: 0.55 }}>{label}</span>
+              <span style={{ opacity: 0.85, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      </PanelFloatingWindow>
+
       <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px', zIndex: 1 }} />
-    </div>
+    </PanelOverlayRoot>
   );
 };
 
