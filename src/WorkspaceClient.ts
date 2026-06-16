@@ -35,6 +35,16 @@ export interface WorkspaceClientConfig {
   predefinedMessages?: Record<string, ContextMenuPredefinedMessage>;
   /** Initial layout direction. */
   dir?: 'ltr' | 'rtl';
+  /**
+   * Fraction of the target panel the new panel takes when dropped on a panel's
+   * top/bottom/left/right cross target. Range 0.1–0.9. Default: 0.5.
+   */
+  defaultSplitRatio?: number;
+  /**
+   * Fraction of the workspace the new panel takes when dropped on the workspace
+   * outer edge. Range 0.1–0.9. Default: 0.2.
+   */
+  defaultEdgeSplitRatio?: number;
 }
 
 /**
@@ -77,7 +87,7 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
   readonly initialState: string | null;
 
   /** Non-rendering configuration forwarded to the provider. */
-  readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir'>;
+  readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir' | 'defaultSplitRatio' | 'defaultEdgeSplitRatio'>;
 
   private _actions: WindowActions | null = null;
   private _initialized = false;
@@ -105,6 +115,8 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
       formatMessage: config.formatMessage,
       predefinedMessages: config.predefinedMessages,
       dir: config.dir,
+      defaultSplitRatio: config.defaultSplitRatio,
+      defaultEdgeSplitRatio: config.defaultEdgeSplitRatio,
     };
 
     if (config.panels) {
