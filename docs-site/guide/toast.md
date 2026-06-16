@@ -35,7 +35,7 @@ toast.info('Background sync started.');
 
 ## Imperative API
 
-The `toast` export is a callable function with named shorthand methods:
+The `toast` export is a callable function typed as `ToastFunction`. It has named shorthand methods:
 
 ```ts
 // Generic — type defaults to 'info'
@@ -49,6 +49,16 @@ const id = toast.error('Message');
 ```
 
 All methods return a `string` id that can be used to update or dismiss the toast later.
+
+To type a variable or prop that accepts the `toast` object, import `ToastFunction`:
+
+```ts
+import type { ToastFunction } from 'react-dockable-desktop';
+
+function MyComponent({ notify }: { notify: ToastFunction }) {
+  notify.success('Done!');
+}
+```
 
 ### `toast.dismiss(id?)`
 

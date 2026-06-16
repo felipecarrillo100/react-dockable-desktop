@@ -13,18 +13,30 @@ import { isElementRtl } from '../utils/rtl';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
-type FloatAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+/** Edge of a panel to which a `PanelToolbar` attaches. */
+export type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
+
+/** Corner of a `PanelOverlayRoot` to which a `PanelFloatingWindow` docks. */
+export type FloatAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
+/**
+ * Configuration for a window spawned imperatively via `usePanelFloatingWindowManager().open()`.
+ * @see usePanelFloatingWindowManager
+ */
 export interface ManagedWindowConfig {
+  /** Text shown in the window's header bar. */
   title: string;
+  /** Window body content. */
   content: React.ReactNode;
+  /** Corner of the panel to dock to on first render. @default 'top-right' */
   anchor?: FloatAnchor;
+  /** Initial width in pixels. */
   width?: number;
+  /** Initial height in pixels. */
   height?: number;
 }
 
@@ -81,12 +93,26 @@ function getHoveredZone(container: HTMLElement, clientX: number, clientY: number
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
 
+/** Props for `<PanelOverlayRoot>`. */
 export interface PanelOverlayRootProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
 }
 
+/**
+ * Context provider and layout root for the Panel Overlay system. Wrap your panel content
+ * with this to enable `PanelToolbar`, `PanelFloatingWindow`, and `usePanelFloatingWindowManager`.
+ * @example
+ * function MyPanel() {
+ *   return (
+ *     <PanelOverlayRoot style={{ position: 'relative', width: '100%', height: '100%' }}>
+ *       <PanelToolbar position="top">...</PanelToolbar>
+ *       <div className="panel-body">content</div>
+ *     </PanelOverlayRoot>
+ *   );
+ * }
+ */
 export function PanelOverlayRoot({ children, className, style }: PanelOverlayRootProps): React.ReactElement {
   const [toolbarSizes, setToolbarSizes] = useState<Partial<Record<ToolbarPosition, number>>>({});
   const [zOrders, setZOrders] = useState<Record<string, number>>({});
@@ -250,19 +276,37 @@ function DropZoneOverlay({ hoveredZone }: { hoveredZone: FloatAnchor | null }): 
 
 // ─── PanelToolbar ─────────────────────────────────────────────────────────────
 
+/** Background style of a `PanelToolbar`. */
 export type ToolbarVariant = 'transparent' | 'frosted' | 'solid';
+
+/** Visual style applied to `ToolbarButton` and `ToolbarToggle` components. */
 export type ButtonVariant = 'ghost' | 'soft' | 'outlined' | 'filled';
 
+/** Props for `<PanelToolbar>`. */
 export interface PanelToolbarProps {
+  /** Edge of the panel overlay to attach to. @see ToolbarPosition */
   position: ToolbarPosition;
+  /** Background style of the toolbar strip. @default 'transparent' */
   variant?: ToolbarVariant;
+  /** Default button style inherited by `ToolbarButton` and `ToolbarToggle` children. @default 'ghost' */
   buttonVariant?: ButtonVariant;
+  /** Icon size in pixels for all buttons in this toolbar. Falls back to CSS default when unset. */
   buttonSize?: number;
   style?: React.CSSProperties;
   className?: string;
   children?: React.ReactNode;
 }
 
+/**
+ * Toolbar strip that attaches to any edge of a `PanelOverlayRoot`.
+ * Left/right toolbars inset automatically to avoid overlapping top/bottom toolbars.
+ * RTL layouts are detected and handled automatically.
+ * @example
+ * <PanelToolbar position="top" variant="frosted">
+ *   <ToolbarButton icon={<SaveIcon />} title="Save" onClick={save} />
+ *   <ToolbarToggle icon={<GridIcon />} title="Grid" active={grid} onToggle={() => setGrid(v => !v)} />
+ * </PanelToolbar>
+ */
 export function PanelToolbar({ position, variant = 'transparent', buttonVariant = 'ghost', buttonSize, style, className, children }: PanelToolbarProps): React.ReactElement {
   const ctx = useContext(PanelToolbarContext);
   const ref = useRef<HTMLDivElement>(null);
@@ -331,14 +375,20 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
 
 // ─── ToolbarButton ────────────────────────────────────────────────────────────
 
+/** Props for `<ToolbarButton>`. */
 export interface ToolbarButtonProps {
+  /** Button icon — typically a small SVG component. */
   icon: React.ReactNode;
+  /** Click handler. */
   onClick(): void;
   disabled?: boolean;
+  /** Tooltip text and accessible `aria-label`. */
   title?: string;
+  /** Visual style override. Falls back to the parent `PanelToolbar`'s `buttonVariant`. */
   variant?: ButtonVariant;
 }
 
+/** Icon button for use inside a `PanelToolbar`. */
 export function ToolbarButton({ icon, onClick, disabled, title, variant }: ToolbarButtonProps): React.ReactElement {
   return (
     <button
@@ -357,15 +407,22 @@ export function ToolbarButton({ icon, onClick, disabled, title, variant }: Toolb
 
 // ─── ToolbarToggle ────────────────────────────────────────────────────────────
 
+/** Props for `<ToolbarToggle>`. */
 export interface ToolbarToggleProps {
+  /** Button icon — typically a small SVG component. */
   icon: React.ReactNode;
+  /** Whether the toggle is in the active/pressed state. Sets `aria-pressed` automatically. */
   active: boolean;
+  /** Called when the button is clicked. Toggle `active` in response. */
   onToggle(): void;
   disabled?: boolean;
+  /** Tooltip text and accessible `aria-label`. */
   title?: string;
+  /** Visual style override. Falls back to the parent `PanelToolbar`'s `buttonVariant`. */
   variant?: ButtonVariant;
 }
 
+/** Two-state icon toggle button for use inside a `PanelToolbar`. Sets `aria-pressed` automatically. */
 export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant }: ToolbarToggleProps): React.ReactElement {
   return (
     <button
@@ -385,44 +442,73 @@ export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant
 
 // ─── ToolbarSeparator ─────────────────────────────────────────────────────────
 
+/** Vertical (or horizontal) divider line between groups of toolbar items. */
 export function ToolbarSeparator(): React.ReactElement {
   return <span className="dw-panel-toolbar__sep" aria-hidden="true" />;
 }
 
 // ─── ToolbarSpacer ────────────────────────────────────────────────────────────
 
+/** Flex-grow spacer that pushes subsequent toolbar items to the far edge. */
 export function ToolbarSpacer(): React.ReactElement {
   return <span className="dw-panel-toolbar__spacer" aria-hidden="true" />;
 }
 
 // ─── ToolbarItem (custom control wrapper) ────────────────────────────────────
 
+/** Wrapper for a custom non-button control (e.g. a dropdown or input) inside a `PanelToolbar`. */
 export function ToolbarItem({ children }: { children: React.ReactNode }): React.ReactElement {
   return <span className="dw-panel-toolbar__item">{children}</span>;
 }
 
 // ─── ToolbarCenter ────────────────────────────────────────────────────────────
 
+/** Centers its children within the toolbar using absolute positioning. */
 export function ToolbarCenter({ children }: { children: React.ReactNode }): React.ReactElement {
   return <div className="dw-panel-toolbar__center">{children}</div>;
 }
 
 // ─── ToolbarSearchInput ───────────────────────────────────────────────────────
 
+/** A single result item returned by `ToolbarSearchInputProps.onSearch`. */
 export interface SearchResult {
+  /** Unique identifier for this result — passed to `onSelect`. */
   id: string;
+  /** Primary display text. */
   label: string;
+  /** Optional secondary text shown below the label in the dropdown. */
   description?: string;
+  /** Optional group header used to bucket results visually. */
   group?: string;
+  /** Optional icon shown to the left of the label. */
   icon?: React.ReactNode;
 }
 
+/** Props for `<ToolbarSearchInput>`. */
 export interface ToolbarSearchInputProps {
+  /** Placeholder text shown in the expanded input field. @default 'Search…' */
   placeholder?: string;
+  /**
+   * Called with the current query and an `AbortSignal` each time the input changes (debounced).
+   * Return `SearchResult[]` directly for synchronous sources, or `Promise<SearchResult[]>` for async.
+   * Abort in-flight requests when the signal fires to prevent stale result races.
+   */
   onSearch(query: string, signal: AbortSignal): Promise<SearchResult[]> | SearchResult[];
+  /** Called when the user selects a result from the dropdown. */
   onSelect(result: SearchResult): void;
 }
 
+/**
+ * Debounced async search field for use inside a `PanelToolbar`.
+ * Renders as a compact icon button that expands into a text input on activation.
+ * Results appear in a portal-rendered dropdown below the input.
+ * @example
+ * <ToolbarSearchInput
+ *   placeholder="Find layer…"
+ *   onSearch={(q, signal) => fetchLayers(q, { signal })}
+ *   onSelect={result => workspace.focusLayer(result.id)}
+ * />
+ */
 export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSelect }: ToolbarSearchInputProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
@@ -567,17 +653,39 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
 
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
+/** Props for `<PanelFloatingWindow>`. */
 export interface PanelFloatingWindowProps {
+  /** Unique identifier within the panel overlay. Used for z-order and stack tracking. */
   id: string;
+  /** Text shown in the window's header bar. */
   title: string;
+  /** Whether the window is mounted and visible. Set to `false` to close/unmount it. */
   open: boolean;
+  /** Called when the user clicks the × button. Set `open` to `false` in response. */
   onClose(): void;
+  /** Corner of the panel to dock to on first render. @see FloatAnchor */
   defaultAnchor: FloatAnchor;
+  /** Initial width in pixels. */
   defaultWidth: number;
+  /** Initial height in pixels. */
   defaultHeight: number;
   children?: React.ReactNode;
 }
 
+/**
+ * Declarative floating window anchored inside a `PanelOverlayRoot`.
+ * Supports 8-direction resize, drag-to-free, and drag-to-dock at any corner.
+ * Multiple windows docked to the same corner stack vertically with animated offsets.
+ * @example
+ * const info = usePanelFloatingWindow();
+ * <PanelFloatingWindow
+ *   id="layer-info" title="Layer Info"
+ *   open={info.isOpen} onClose={info.close}
+ *   defaultAnchor="top-right" defaultWidth={300} defaultHeight={200}
+ * >
+ *   <LayerInfoContent />
+ * </PanelFloatingWindow>
+ */
 export function PanelFloatingWindow(props: PanelFloatingWindowProps): React.ReactElement | null {
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
@@ -852,7 +960,25 @@ function FloatingWindowBody({ id, title, defaultAnchor, defaultWidth, defaultHei
 
 // ─── usePanelFloatingWindow ───────────────────────────────────────────────────
 
-export function usePanelFloatingWindow(): { isOpen: boolean; open(): void; close(): void } {
+/** Return type of `usePanelFloatingWindow`. @see usePanelFloatingWindow */
+export interface UsePanelFloatingWindowReturn {
+  /** Whether the floating window is currently open. */
+  isOpen: boolean;
+  /** Open the floating window. */
+  open(): void;
+  /** Close the floating window. */
+  close(): void;
+}
+
+/**
+ * Manages the open/close boolean state for a single `PanelFloatingWindow`.
+ * Pass `isOpen` to `open`, `close` to `onClose` on the component directly.
+ * @returns A stable `UsePanelFloatingWindowReturn` object.
+ * @example
+ * const info = usePanelFloatingWindow();
+ * <PanelFloatingWindow id="info" open={info.isOpen} onClose={info.close} ... />
+ */
+export function usePanelFloatingWindow(): UsePanelFloatingWindowReturn {
   const [isOpen, setIsOpen] = useState(false);
   const open = useCallback((): void => { setIsOpen(true); }, []);
   const close = useCallback((): void => { setIsOpen(false); }, []);
@@ -863,14 +989,33 @@ export function usePanelFloatingWindow(): { isOpen: boolean; open(): void; close
 
 const EMPTY_IDS: string[] = [];
 
+/**
+ * Imperative handle returned by `usePanelFloatingWindowManager`.
+ * @see usePanelFloatingWindowManager
+ */
 export interface PanelFloatingWindowManagerHandle {
+  /** Spawn or reconfigure a named window. Safe to call with an already-open ID to update config. */
   open(id: string, config: ManagedWindowConfig): void;
+  /** Close a named window by ID. No-op if the window is not open. */
   close(id: string): void;
+  /** Close all managed windows. */
   closeAll(): void;
+  /** Returns `true` if the named window is currently open. */
   isOpen(id: string): boolean;
+  /** IDs of all currently open managed windows. Changes to this array trigger re-renders. */
   openIds: string[];
 }
 
+/**
+ * Imperative hook for spawning N named floating windows at runtime from data or event handlers.
+ * All windows share z-ordering, drag, and corner-docking infrastructure of the `PanelOverlayRoot`.
+ *
+ * Must be called inside a **descendant** of `PanelOverlayRoot`, not in the component that renders the root.
+ * @returns A stable `PanelFloatingWindowManagerHandle`.
+ * @example
+ * const manager = usePanelFloatingWindowManager();
+ * manager.open('feature-42', { title: 'Feature 42', content: <FeatureDetail id={42} />, anchor: 'top-right' });
+ */
 export function usePanelFloatingWindowManager(): PanelFloatingWindowManagerHandle {
   const ctx = useContext(PanelManagerContext);
   const ids = ctx?.managedWindowIds ?? EMPTY_IDS;

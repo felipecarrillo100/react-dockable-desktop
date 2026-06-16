@@ -167,7 +167,10 @@ export type {
   PanelFloatingWindowProps,
   ToolbarVariant,
   ButtonVariant,
+  ToolbarPosition,
+  FloatAnchor,
   ManagedWindowConfig,
   PanelFloatingWindowManagerHandle,
+  UsePanelFloatingWindowReturn,
 } from './components/PanelOverlay';
 

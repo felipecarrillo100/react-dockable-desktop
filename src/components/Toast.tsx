@@ -3,19 +3,37 @@ import { createPortal } from 'react-dom';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
-export type ToastType     = 'info' | 'success' | 'warning' | 'error';
+/** Visual type of a toast notification. Determines the icon and accent color. */
+export type ToastType = 'info' | 'success' | 'warning' | 'error';
+
+/** Corner position of the `<ToastContainer>` relative to the viewport. */
 export type ToastPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
+/**
+ * Per-notification options passed to `toast()`, `toast.info()`, etc.
+ * All fields are optional and fall back to `<ToastContainer>` defaults when unset.
+ */
 export interface ToastOptions {
+  /** Visual type. Overridden by the `toast.info/success/warning/error` shorthands. @default 'info' */
   type?:     ToastType;
+  /** Auto-dismiss delay in ms. `0` = sticky (never auto-dismisses). @default from container */
   duration?: number;
+  /** Explicit ID for dedup — calling `toast.*` with the same `id` updates the existing card in-place. */
   id?:       string;
+  /** Show the × close button on this notification. @default from container */
   closable?: boolean;
+  /** Override the built-in type icon with arbitrary content. */
   icon?:     React.ReactNode;
+  /** Replace the string message with arbitrary JSX. */
   content?:  React.ReactNode;
+  /** Called when the notification is dismissed by timer, close button, or `toast.dismiss()`. */
   onClose?:  () => void;
 }
 
+/**
+ * Fully-resolved options passed to `ToastAdapter.show()` and `ToastAdapter.update()`.
+ * All optional `ToastOptions` fields are resolved against the container defaults.
+ */
 export interface ResolvedToastOptions {
   id:        string;
   type:      ToastType;
@@ -26,29 +44,65 @@ export interface ResolvedToastOptions {
   onClose?:  () => void;
 }
 
+/**
+ * Props for `<ToastContainer>`. Mount one instance at your app root alongside `ModalStackRenderer`.
+ * @example
+ * <ToastContainer position="top-right" progressBar />
+ */
 export interface ToastContainerProps {
+  /** Where notifications appear in the viewport. @default 'top-right' */
   position?:        ToastPosition;
+  /** Maximum number of notifications shown simultaneously. Extras are queued. @default 3 */
   maxVisible?:      number;
+  /** Default auto-dismiss delay in ms. `0` = all notifications sticky. @default 5000 */
   defaultDuration?: number;
+  /** Show the × close button on all notifications unless overridden per-toast. @default true */
   defaultClosable?: boolean;
+  /** Pause the auto-dismiss timer while the cursor is over a notification. @default true */
   pauseOnHover?:    boolean;
+  /** Entry/exit animation style. @default 'slide' */
   animation?:       'slide' | 'fade' | 'none';
+  /** When `true`, newest notification appears at the top of the stack. @default false */
   newestOnTop?:     boolean;
+  /** Show a countdown progress bar at the bottom of each notification. @default false */
   progressBar?:     boolean;
+  /** Width of each notification card in pixels. @default 320 */
   width?:           number;
+  /** Delegate all `toast.*` calls to a custom renderer (Ant Design, MUI, Sonner, etc.). */
   adapter?:         ToastAdapter;
 }
 
+/**
+ * Message set for `toast.promise()`. Each field may be static content or a function
+ * that receives the resolved/rejected value and returns renderable content.
+ * @template T The resolved value type of the tracked promise.
+ */
 export interface ToastPromiseMessages<T> {
+  /** Shown while the promise is pending. */
   pending: React.ReactNode;
+  /** Shown on fulfillment. Pass a function to include the resolved value. */
   success: React.ReactNode | ((result: T)    => React.ReactNode);
+  /** Shown on rejection. Pass a function to include the error reason. */
   error:   React.ReactNode | ((err: unknown) => React.ReactNode);
 }
 
+/**
+ * Strategy interface for replacing the built-in toast renderer with an external library.
+ * Pass an instance via `<ToastContainer adapter={...} />` to redirect all `toast.*` calls
+ * without changing any call sites in your application.
+ * @see ToastContainerProps.adapter
+ */
 export interface ToastAdapter {
+  /** Called when a new notification is requested. */
   show(id: string, message: React.ReactNode, options: ResolvedToastOptions): void;
+  /** Called when an existing notification is updated (e.g. after `toast.promise()` resolves). */
   update(id: string, message: React.ReactNode, options: Partial<ResolvedToastOptions>): void;
+  /** Called to dismiss one notification (`id` provided) or all active notifications (no `id`). */
   dismiss(id?: string): void;
+  /**
+   * `null` means the adapter manages its own DOM and `<ToastContainer>` renders nothing.
+   * A component causes `<ToastContainer>` to portal-render it with a `position` prop.
+   */
   Container: React.ComponentType<{ position: ToastPosition }> | null;
 }
 
@@ -94,16 +148,41 @@ const emitter = new ToastEmitter();
 
 // ─── toast public API ─────────────────────────────────────────────────────────
 
+/**
+ * Type of the `toast` singleton. Callable directly or via named shorthand methods.
+ * Import this type to annotate variables or props that accept the `toast` object.
+ * @example
+ * function notify(fn: ToastFunction) { fn.success('Done!'); }
+ */
 export interface ToastFunction {
+  /** Show a notification. `opts.type` defaults to `'info'`. Returns the notification ID. */
   (msg: React.ReactNode, opts?: ToastOptions): string;
+  /** Show an info notification. Returns the notification ID. */
   info:    (msg: React.ReactNode, opts?: ToastOptions) => string;
+  /** Show a success notification. Returns the notification ID. */
   success: (msg: React.ReactNode, opts?: ToastOptions) => string;
+  /** Show a warning notification. Returns the notification ID. */
   warning: (msg: React.ReactNode, opts?: ToastOptions) => string;
+  /** Show an error notification. Returns the notification ID. */
   error:   (msg: React.ReactNode, opts?: ToastOptions) => string;
+  /** Dismiss a notification by ID, or all active notifications when called with no argument. */
   dismiss: (id?: string) => void;
+  /**
+   * Track a promise through pending → success/error states.
+   * Shows a sticky pending notification immediately, then transitions it on settlement.
+   * @template T The resolved value type of the promise.
+   */
   promise: <T>(promise: Promise<T>, messages: ToastPromiseMessages<T>, opts?: ToastOptions) => Promise<T>;
 }
 
+/**
+ * Imperative notification singleton. Call from anywhere — inside or outside React.
+ * Mount `<ToastContainer>` once at your app root to activate the renderer.
+ * @example
+ * toast.success('File saved.');
+ * toast.error('Upload failed.', { duration: 0 }); // sticky
+ * toast.promise(saveFile(), { pending: 'Saving…', success: 'Saved!', error: 'Failed.' });
+ */
 export const toast: ToastFunction = Object.assign(
   (msg: React.ReactNode, opts?: ToastOptions): string => emitter.show(msg, opts),
   {
@@ -332,6 +411,12 @@ function resolveOpts(
   };
 }
 
+/**
+ * Portal-rendered notification host. Mount once at your app root, outside the workspace
+ * container. All `toast.*` calls are routed here automatically via the internal event emitter.
+ * @example
+ * <ToastContainer position="top-right" progressBar />
+ */
 export function ToastContainer({
   position        = 'top-right',
   maxVisible      = 3,
