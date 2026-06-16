@@ -262,6 +262,7 @@ function MapPanel() {
       <PanelFloatingWindow
         id="layer-tree"
         title="Layers"
+        icon={<LayersIcon />}
         open={layerTree.isOpen}
         onClose={layerTree.close}
         defaultAnchor="top-right"
@@ -315,6 +316,7 @@ const layerTree: UsePanelFloatingWindowReturn = usePanelFloatingWindow();
 |------|------|-------------|
 | `id` | `string` | Unique identifier. Used as the key in z-order and stack tracking. |
 | `title` | `string` | Text shown in the window header bar. |
+| `icon?` | `ReactNode` | Optional icon shown to the left of the title in the header. Recommended: 12–14 px SVG with `stroke="currentColor"`. |
 | `open` | `boolean` | Mounts/unmounts the window. |
 | `onClose` | `() => void` | Called when the user clicks the × button; you must set `open` to `false` in response. |
 | `defaultAnchor` | `FloatAnchor` | Which corner to dock to on first render. One of `'top-left'`, `'top-right'`, `'bottom-left'`, `'bottom-right'`. |
@@ -400,6 +402,7 @@ function SurveillanceMapInner() {
           } else {
             f.open(cam.id, {
               title: cam.name,
+              icon: <CameraIcon />,
               content: <CameraFeed cameraId={cam.id} />,
               anchor: 'top-right',
               width: 320,
@@ -442,11 +445,12 @@ function SurveillanceMapInner() {
 
 ```typescript
 interface ManagedWindowConfig {
-  title: string;           // header text
-  content: React.ReactNode;// window body
-  anchor?: FloatAnchor;    // default: 'top-right'
-  width?: number;          // default: 320
-  height?: number;         // default: 240
+  title: string;            // header text
+  icon?: React.ReactNode;   // optional icon left of the title
+  content: React.ReactNode; // window body
+  anchor?: FloatAnchor;     // default: 'top-right'
+  width?: number;           // default: 320
+  height?: number;          // default: 240
 }
 ```
 
@@ -475,7 +479,7 @@ marker.on('click', () => {
 const savedIds = JSON.parse(localStorage.getItem('open-feeds') ?? '[]');
 savedIds.forEach(id => {
   const cam = CAMERAS.find(c => c.id === id);
-  if (cam) floats.open(cam.id, { title: cam.name, content: <CameraFeed cameraId={cam.id} /> });
+  if (cam) floats.open(cam.id, { title: cam.name, icon: <CameraIcon />, content: <CameraFeed cameraId={cam.id} /> });
 });
 
 // On unload:
