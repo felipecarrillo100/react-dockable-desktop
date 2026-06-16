@@ -30,6 +30,8 @@ const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left',
 export interface ManagedWindowConfig {
   /** Text shown in the window's header bar. */
   title: string;
+  /** Optional icon shown to the left of the title in the header. */
+  icon?: React.ReactNode;
   /** Window body content. */
   content: React.ReactNode;
   /** Corner of the panel to dock to on first render. @default 'top-right' */
@@ -242,6 +244,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
                 key={id}
                 id={id}
                 title={cfg.title}
+                icon={cfg.icon}
                 open={true}
                 onClose={() => closeManaged(id)}
                 defaultAnchor={cfg.anchor ?? 'top-right'}
@@ -659,6 +662,8 @@ export interface PanelFloatingWindowProps {
   id: string;
   /** Text shown in the window's header bar. */
   title: string;
+  /** Optional icon shown to the left of the title in the header. */
+  icon?: React.ReactNode;
   /** Whether the window is mounted and visible. Set to `false` to close/unmount it. */
   open: boolean;
   /** Called when the user clicks the × button. Set `open` to `false` in response. */
@@ -706,7 +711,7 @@ const MIN_H = 60;
 const DOCK_INSET = 8;
 const DOCK_GAP = 8;
 
-function FloatingWindowBody({ id, title, defaultAnchor, defaultWidth, defaultHeight, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
+function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
   const [mode, setMode] = useState<WindowMode>('docked');
   const [currentAnchor, setCurrentAnchor] = useState<FloatAnchor>(defaultAnchor);
   const [freePos, setFreePos] = useState<{ x: number; y: number } | null>(null);
@@ -931,6 +936,7 @@ function FloatingWindowBody({ id, title, defaultAnchor, defaultWidth, defaultHei
       onPointerUp={handleWindowPointerUp}
     >
       <div className="dw-panel-float__header" onPointerDown={handleHeaderPointerDown}>
+        {icon && <span className="dw-panel-float__icon">{icon}</span>}
         <span className="dw-panel-float__title">{title}</span>
         <button
           type="button"
