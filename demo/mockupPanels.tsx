@@ -18,8 +18,6 @@ import {
   ToolbarSpacer,
   ToolbarCenter,
   PanelToolbarSeparator,
-  PanelFloatingWindow,
-  usePanelFloatingWindow,
   usePanelFloatingWindowManager,
 } from '../src/index';
 import type { ContextMenuItem } from '../src/index';
@@ -997,19 +995,6 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
       </div>
     </div>
   );
-};
-
-// GeoJSON vector data for London demo layers
-const LONDON_LANDMARKS: GeoJSON.FeatureCollection = {
-  type: 'FeatureCollection',
-  features: [
-    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1276, 51.5074] }, properties: { name: 'Big Ben' } },
-    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.0762, 51.5081] }, properties: { name: 'Tower of London' } },
-    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1194, 51.5034] }, properties: { name: 'London Eye' } },
-    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1416, 51.5014] }, properties: { name: 'Buckingham Palace' } },
-    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.0983, 51.5138] }, properties: { name: 'St Paul\'s Cathedral' } },
-    { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1534, 51.5194] }, properties: { name: 'Oxford Circus' } },
-  ]
 };
 
 const DISTRICT_BOUNDARIES: GeoJSON.FeatureCollection = {
