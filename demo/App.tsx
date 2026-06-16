@@ -242,7 +242,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                 type: 'leaf',
                 id: 'group-left-top',
                 panels: ['main-map', 'main-editor'],
-                activePanelId: 'main-editor',
+                activePanelId: 'main-map',
               },
               {
                 type: 'leaf',
