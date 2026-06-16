@@ -6,6 +6,7 @@
 
 // Core Components and Layouts
 export { default as WindowManager } from './components/WindowManager';
+export type { WindowManagerProps, TaskbarVisibility } from './components/WindowManager';
 export { PanelRegistry, PanelRegistryClass } from './components/PanelRegistry';
 export type { PanelRegistryEntry } from './components/PanelRegistry';
 
@@ -15,6 +16,7 @@ export type { WorkspaceClientConfig, PanelDefinition, BuiltInPanelEvents } from 
 
 // Composite provider — wraps WindowManagerProvider + PanelProvider in correct order
 export { DockableDesktopProvider } from './components/DockableDesktopProvider';
+export type { DockableDesktopProviderProps } from './components/DockableDesktopProvider';
 
 // State Actions and Context Providers
 export {
@@ -48,7 +50,8 @@ export type {
   ContextMenuPredefinedMessage,
   MessageFormatter,
   PredefinedMessageKey,
-  StyleClasses
+  StyleClasses,
+  WindowManagerProviderProps,
 } from './components/WindowManagerContext';
 
 // Context menu — built-in component, types, and adapter interface

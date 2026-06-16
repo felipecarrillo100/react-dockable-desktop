@@ -5,6 +5,12 @@ import { PanelProvider } from './PanelProviderContext';
 import { ToolbarProvider } from './ToolbarContext';
 
 /**
+ * Props for `<DockableDesktopProvider>`. Alias of `WindowManagerProviderProps`.
+ * @see WindowManagerProviderProps
+ */
+export type DockableDesktopProviderProps = WindowManagerProviderProps;
+
+/**
  * Composite provider that wraps both `WindowManagerProvider` and `PanelProvider`
  * in the correct order. Drop-in replacement for manually nesting both providers.
  *
