@@ -70,7 +70,7 @@
   /* ── Panel Overlay — Toolbar ── */
   --panel-toolbar-padding: 8px;
   --panel-toolbar-gap: 4px;
-  --panel-toolbar-btn-size: 28px;
+  --panel-toolbar-btn-size: 32px;
   --panel-toolbar-btn-radius: 6px;
   --panel-toolbar-fg: rgba(255, 255, 255, 0.65);
   --panel-toolbar-btn-hover-bg: var(--toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
@@ -3310,6 +3310,38 @@ html:not(.enable-animations) *::after {
 .tab-headers-container::-webkit-scrollbar { display: none; }
 
 /* ==========================================================================
+   PANEL OVERLAY — Per-skin token overrides
+   ========================================================================== */
+
+[data-workspace-skin="vscode"] {
+  --panel-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.12);
+}
+
+[data-workspace-skin="macos"] {
+  --panel-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.18);
+}
+
+[data-workspace-skin="slate"] {
+  --panel-toolbar-btn-active-color: #60a5fa;
+  --panel-toolbar-btn-active-bg: rgba(96, 165, 250, 0.15);
+}
+
+[data-workspace-skin="nord"] {
+  --panel-toolbar-btn-active-color: #88c0d0;
+  --panel-toolbar-btn-active-bg: rgba(136, 192, 208, 0.15);
+}
+
+[data-workspace-skin="obsidian"] {
+  --panel-toolbar-btn-active-color: #a78bfa;
+  --panel-toolbar-btn-active-bg: rgba(167, 139, 250, 0.15);
+}
+
+[data-workspace-skin="tokyo"] {
+  --panel-toolbar-btn-active-color: #7aa2f7;
+  --panel-toolbar-btn-active-bg: rgba(122, 162, 247, 0.15);
+}
+
+/* ==========================================================================
    PANEL OVERLAY — PanelToolbar + PanelFloatingWindow
    ========================================================================== */
 
@@ -3353,8 +3385,8 @@ html:not(.enable-animations) *::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--panel-toolbar-btn-size, 28px);
-  height: var(--panel-toolbar-btn-size, 28px);
+  width: var(--panel-toolbar-btn-size, 32px);
+  height: var(--panel-toolbar-btn-size, 32px);
   flex-shrink: 0;
   border-radius: var(--panel-toolbar-btn-radius, 6px);
   border: none;
@@ -3362,11 +3394,17 @@ html:not(.enable-animations) *::after {
   color: var(--panel-toolbar-fg, rgba(255, 255, 255, 0.65));
   cursor: pointer;
   padding: 0;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.1s ease, border-color 0.12s ease;
 }
 
 .dw-panel-toolbar-btn:hover:not(:disabled) {
-  background: var(--panel-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
+  background: var(--panel-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.15));
+  color: var(--panel-toolbar-fg-hover, rgba(255, 255, 255, 0.95));
+  transform: scale(1.07);
+}
+
+.dw-panel-toolbar-btn:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .dw-panel-toolbar-btn--active {
@@ -3375,12 +3413,75 @@ html:not(.enable-animations) *::after {
 }
 
 .dw-panel-toolbar-btn--active:hover:not(:disabled) {
-  background: var(--panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.14));
+  background: var(--panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.22));
 }
 
 .dw-panel-toolbar-btn:disabled {
   opacity: 0.38;
   cursor: not-allowed;
+}
+
+/* ── Toolbar strip variants ── */
+.dw-panel-toolbar[data-variant="frosted"] {
+  background: rgba(15, 20, 30, 0.55);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+.dw-panel-toolbar[data-variant="solid"] {
+  background: var(--panel-header-bg, rgba(15, 20, 30, 0.92));
+}
+.dw-panel-toolbar--top[data-variant="frosted"],
+.dw-panel-toolbar--top[data-variant="solid"] {
+  border-bottom: 1px solid var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+.dw-panel-toolbar--bottom[data-variant="frosted"],
+.dw-panel-toolbar--bottom[data-variant="solid"] {
+  border-top: 1px solid var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+.dw-panel-toolbar--left[data-variant="frosted"],
+.dw-panel-toolbar--left[data-variant="solid"] {
+  border-right: 1px solid var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+.dw-panel-toolbar--right[data-variant="frosted"],
+.dw-panel-toolbar--right[data-variant="solid"] {
+  border-left: 1px solid var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+
+/* ── Button variants — toolbar-level default ── */
+
+/* soft */
+.dw-panel-toolbar[data-btn-variant="soft"] .dw-panel-toolbar-btn,
+.dw-panel-toolbar-btn[data-variant="soft"] {
+  background: rgba(255, 255, 255, 0.06);
+}
+.dw-panel-toolbar[data-btn-variant="soft"] .dw-panel-toolbar-btn:hover:not(:disabled),
+.dw-panel-toolbar-btn[data-variant="soft"]:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* outlined */
+.dw-panel-toolbar[data-btn-variant="outlined"] .dw-panel-toolbar-btn,
+.dw-panel-toolbar-btn[data-variant="outlined"] {
+  border: 1px solid var(--panel-toolbar-separator-color, rgba(255, 255, 255, 0.18));
+}
+.dw-panel-toolbar[data-btn-variant="outlined"] .dw-panel-toolbar-btn:hover:not(:disabled),
+.dw-panel-toolbar-btn[data-variant="outlined"]:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+/* filled */
+.dw-panel-toolbar[data-btn-variant="filled"] .dw-panel-toolbar-btn,
+.dw-panel-toolbar-btn[data-variant="filled"] {
+  background: var(--panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.2));
+  color: var(--panel-toolbar-btn-active-color, #38bdf8);
+  border: 1px solid var(--panel-toolbar-btn-active-color, #38bdf8);
+}
+.dw-panel-toolbar[data-btn-variant="filled"] .dw-panel-toolbar-btn:hover:not(:disabled),
+.dw-panel-toolbar-btn[data-variant="filled"]:hover:not(:disabled) {
+  background: var(--panel-toolbar-btn-active-color, #38bdf8);
+  color: #000;
+  border-color: transparent;
 }
 
 /* ── Separator ── */

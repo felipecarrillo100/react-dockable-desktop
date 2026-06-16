@@ -151,5 +151,7 @@ export type {
   ToolbarSearchInputProps,
   SearchResult,
   PanelFloatingWindowProps,
+  ToolbarVariant,
+  ButtonVariant,
 } from './components/PanelOverlay';
 
