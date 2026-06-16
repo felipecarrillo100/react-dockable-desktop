@@ -153,13 +153,18 @@ The selector overload was added in v3. The no-argument overload works exactly as
 
 ## `WindowManager` props
 
-`WindowManager` is the rendering component that draws the grid, tabs, and floating windows. It accepts two optional props:
+`WindowManager` is the rendering component that draws the grid, tabs, and floating windows. Its full TypeScript type is `WindowManagerProps` — import it when building a wrapper component:
+
+```ts
+import type { WindowManagerProps, TaskbarVisibility } from 'react-dockable-desktop';
+```
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `skin` | `string` | `'vscode'` | Built-in visual theme or any custom skin name. Built-ins: `vscode`, `macos`, `chrome`, `slate`, `nord`, `obsidian`, `tokyo`. See [Custom Theming →](/guide/theming). |
 | `defaultPanelIcon` | `ReactNode` | — | Fallback icon used when a panel definition has no `icon`. |
-| `taskbarVisibility` | `'always' \| 'compact' \| 'autohide'` | `'always'` | Controls when the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows the bar only when at least one panel is minimized. `'autohide'` renders the bar as a full-screen overlay with an 8 px peek strip that expands on pointer-enter; briefly auto-expands for 2 s when a panel is minimized. |
+| `taskbarVisibility` | `TaskbarVisibility` | `'always'` | Controls when the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows the bar only when at least one panel is minimized. `'autohide'` renders the bar as a full-screen overlay with an 8 px peek strip that expands on pointer-enter; briefly auto-expands for 2 s when a panel is minimized. |
+| `contextMenuAdapter` | `ContextMenuAdapter` | `DefaultContextMenuAdapter` | Custom context menu renderer. Pass your own adapter to replace the built-in menu with a design-system component. See [Context Menus →](/guide/context-menus). |
 
 ```tsx
 <WindowManager skin="nord" taskbarVisibility="autohide" defaultPanelIcon={<FolderIcon />} />
@@ -167,7 +172,13 @@ The selector overload was added in v3. The no-argument overload works exactly as
 
 ## CSS class overrides
 
-`DockableDesktopProvider` (and `WindowManagerProvider`) accept six class props that let you apply custom CSS classes to the overlay containers. Pass them as regular string props:
+`DockableDesktopProvider` (and `WindowManagerProvider`) accept six class props that let you apply custom CSS classes to the overlay containers. The full TypeScript type is `DockableDesktopProviderProps` (alias of `WindowManagerProviderProps`):
+
+```ts
+import type { DockableDesktopProviderProps, WindowManagerProviderProps } from 'react-dockable-desktop';
+```
+
+Pass the class names as regular string props:
 
 ```tsx
 <DockableDesktopProvider
