@@ -231,12 +231,12 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       gridRoot: {
         type: 'branch',
         orientation: 'horizontal',
-        sizes: [0.72, 0.28],
+        sizes: [0.8, 0.2],
         children: [
           {
             type: 'branch',
             orientation: 'vertical',
-            sizes: [0.65, 0.35],
+            sizes: [0.8, 0.2],
             children: [
               {
                 type: 'leaf',

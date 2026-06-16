@@ -715,12 +715,17 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         {state.draggedPanelId !== null && activeDropZone !== null && activeDropZone.leafId === leaf.id && (
           <div
             className="dock-preview-highlight"
-            style={{
-              left: activeDropZone.position === 'right' ? '50%' : '0',
-              top: activeDropZone.position === 'bottom' ? '50%' : '0',
-              width: (activeDropZone.position === 'left' || activeDropZone.position === 'right') ? '50%' : '100%',
-              height: (activeDropZone.position === 'top' || activeDropZone.position === 'bottom') ? '50%' : '100%',
-            }}
+            style={(() => {
+              const pos = activeDropZone.position;
+              const pct = `${state.splitRatio * 100}%`;
+              const rem = `${(1 - state.splitRatio) * 100}%`;
+              return {
+                left:   pos === 'right'  ? rem   : '0',
+                top:    pos === 'bottom' ? rem   : '0',
+                width:  (pos === 'left' || pos === 'right')  ? pct : '100%',
+                height: (pos === 'top'  || pos === 'bottom') ? pct : '100%',
+              };
+            })()}
           />
         )}
       </div>
@@ -1597,7 +1602,18 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         {/* Edge drop visual preview overlay */}
         {state.draggedPanelId !== null && activeEdgeDrop !== null && (
-          <div className={`workspace-edge-preview edge-preview-${activeEdgeDrop}`} />
+          <div
+            className="workspace-edge-preview"
+            style={(() => {
+              const pct = `${state.edgeSplitRatio * 100}%`;
+              switch (activeEdgeDrop) {
+                case 'left':   return { left: 0, top: 0, bottom: 0, width: pct };
+                case 'right':  return { right: 0, top: 0, bottom: 0, width: pct };
+                case 'top':    return { top: 0, left: 0, right: 0, height: pct };
+                case 'bottom': return { bottom: 0, left: 0, right: 0, height: pct };
+              }
+            })()}
+          />
         )}
 
         {/* 1.1 Viewport Split Grid Layout */}

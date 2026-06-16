@@ -141,6 +141,10 @@ export interface WindowState {
   dir: 'ltr' | 'rtl';
   /** Convenient boolean flag indicating RTL direction */
   isRtl: boolean;
+  /** Split ratio for panel cross-target drops (0.1–0.9). Default 0.5. */
+  splitRatio: number;
+  /** Split ratio for workspace outer-edge drops (0.1–0.9). Default 0.2. */
+  edgeSplitRatio: number;
 }
 
 /**
@@ -504,6 +508,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       draggedPanelId: null,
       dir: effectiveDir || 'ltr',
       isRtl: effectiveDir === 'rtl',
+      splitRatio: Math.min(0.9, Math.max(0.1, client?.config.defaultSplitRatio ?? 0.5)),
+      edgeSplitRatio: Math.min(0.9, Math.max(0.1, client?.config.defaultEdgeSplitRatio ?? 0.2)),
     };
   });
 
@@ -1072,7 +1078,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     node: LayoutNode,
     leafId: string,
     panelId: string,
-    position: SplitDirection
+    position: SplitDirection,
+    splitRatio: number
   ): LayoutNode => {
     if (node.type === 'leaf') {
       if (node.id === leafId) {
@@ -1084,10 +1091,13 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         };
         const orientation: SplitOrientation = (position === 'left' || position === 'right') ? 'horizontal' : 'vertical';
         const children = (position === 'left' || position === 'top') ? [newLeaf, node] : [node, newLeaf];
+        const sizes = (position === 'left' || position === 'top')
+          ? [splitRatio, 1 - splitRatio]
+          : [1 - splitRatio, splitRatio];
         return {
           type: 'branch',
           orientation,
-          sizes: [0.5, 0.5],
+          sizes,
           children
         };
       }
@@ -1095,7 +1105,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     } else {
       return {
         ...node,
-        children: node.children.map(c => splitLeafInTree(c, leafId, panelId, position))
+        children: node.children.map(c => splitLeafInTree(c, leafId, panelId, position, splitRatio))
       };
     }
   };
@@ -1116,7 +1126,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       if (position === 'center') {
         newRoot = addPanelToLeaf(cleanRoot || prev.gridRoot, targetLeafId, id);
       } else {
-        newRoot = splitLeafInTree(cleanRoot || prev.gridRoot, targetLeafId, id, position);
+        newRoot = splitLeafInTree(cleanRoot || prev.gridRoot, targetLeafId, id, position, prev.splitRatio);
       }
 
       return {
@@ -1152,10 +1162,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         ? [newLeaf, cleanRoot || prev.gridRoot]
         : [cleanRoot || prev.gridRoot, newLeaf];
 
+      const r = prev.edgeSplitRatio;
       const newRoot: LayoutNode = {
         type: 'branch',
         orientation,
-        sizes: (position === 'left' || position === 'top') ? [0.3, 0.7] : [0.7, 0.3],
+        sizes: (position === 'left' || position === 'top') ? [r, 1 - r] : [1 - r, r],
         children
       };
 
