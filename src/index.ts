@@ -142,6 +142,7 @@ export {
   ToolbarItem as PanelToolbarItem,
   PanelFloatingWindow,
   usePanelFloatingWindow,
+  usePanelFloatingWindowManager,
 } from './components/PanelOverlay';
 export type {
   PanelOverlayRootProps,
@@ -153,5 +154,7 @@ export type {
   PanelFloatingWindowProps,
   ToolbarVariant,
   ButtonVariant,
+  ManagedWindowConfig,
+  PanelFloatingWindowManagerHandle,
 } from './components/PanelOverlay';
 

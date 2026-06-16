@@ -20,6 +20,7 @@ import {
   PanelToolbarSeparator,
   PanelFloatingWindow,
   usePanelFloatingWindow,
+  usePanelFloatingWindowManager,
 } from '../src/index';
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
@@ -1047,12 +1048,139 @@ const THAMES_PATH: number[][] = [
   [-0.06, 51.507], [-0.04, 51.505], [-0.02, 51.503], [0.00, 51.502]
 ];
 
-export const MainMap: React.FC<{ panelId: string }> = () => {
+// ─── Camera definitions ───────────────────────────────────────────────────────
+
+const CAMERAS = [
+  { id: 'cam-bigben',  name: 'Big Ben',           coords: [-0.1276, 51.5074] as [number, number], color: '#38bdf8' },
+  { id: 'cam-tower',   name: 'Tower of London',   coords: [-0.0762, 51.5081] as [number, number], color: '#a78bfa' },
+  { id: 'cam-eye',     name: 'London Eye',         coords: [-0.1194, 51.5034] as [number, number], color: '#34d399' },
+  { id: 'cam-palace',  name: 'Buckingham Palace', coords: [-0.1416, 51.5014] as [number, number], color: '#fb923c' },
+  { id: 'cam-stpauls', name: "St Paul's",          coords: [-0.0983, 51.5138] as [number, number], color: '#f472b6' },
+  { id: 'cam-oxford',  name: 'Oxford Circus',     coords: [-0.1534, 51.5194] as [number, number], color: '#facc15' },
+];
+
+const CORNERS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'] as const;
+
+// ─── MockCameraFeed ───────────────────────────────────────────────────────────
+
+const MockCameraFeed: React.FC<{ name: string; color: string }> = ({ name, color }) => {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  const bitrate = (2.1 + (tick % 5) * 0.3).toFixed(1);
+
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Simulated video area */}
+      <div style={{
+        flex: 1,
+        background: `linear-gradient(135deg, #0a0e17 0%, ${color}18 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Scan-line overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px)',
+        }} />
+        {/* Corner crosshair */}
+        <div style={{ position: 'absolute', top: 10, left: 10, width: 16, height: 16,
+          borderTop: `2px solid ${color}`, borderLeft: `2px solid ${color}`, opacity: 0.6 }} />
+        <div style={{ position: 'absolute', top: 10, right: 10, width: 16, height: 16,
+          borderTop: `2px solid ${color}`, borderRight: `2px solid ${color}`, opacity: 0.6 }} />
+        <div style={{ position: 'absolute', bottom: 10, left: 10, width: 16, height: 16,
+          borderBottom: `2px solid ${color}`, borderLeft: `2px solid ${color}`, opacity: 0.6 }} />
+        <div style={{ position: 'absolute', bottom: 10, right: 10, width: 16, height: 16,
+          borderBottom: `2px solid ${color}`, borderRight: `2px solid ${color}`, opacity: 0.6 }} />
+        {/* LIVE badge */}
+        <div style={{
+          position: 'absolute', top: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4,
+          fontSize: 10, fontFamily: 'monospace', color: '#ef4444', fontWeight: 700, letterSpacing: 1,
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%', background: '#ef4444',
+            boxShadow: '0 0 6px #ef4444',
+            animation: 'none',
+            opacity: tick % 2 === 0 ? 1 : 0.4,
+            transition: 'opacity 0.4s',
+          }} />
+          LIVE
+        </div>
+        {/* Camera name */}
+        <div style={{
+          position: 'absolute', bottom: 8, left: 8, right: 8,
+          fontSize: 11, fontFamily: 'monospace', color: 'rgba(255,255,255,0.7)',
+        }}>
+          {name}
+        </div>
+      </div>
+      {/* Metadata strip */}
+      <div style={{
+        padding: '4px 8px', fontSize: 10, fontFamily: 'monospace',
+        color: 'rgba(255,255,255,0.45)', background: 'rgba(0,0,0,0.4)',
+        display: 'flex', justifyContent: 'space-between', flexShrink: 0,
+      }}>
+        <span>1920×1080 · H.264</span>
+        <span style={{ color: color, opacity: 0.8 }}>{bitrate} Mbps</span>
+      </div>
+    </div>
+  );
+};
+
+// ─── Static content components for managed floating windows ──────────────────
+
+const MapLegendContent: React.FC = () => (
+  <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
+    {[
+      { label: 'Cameras', color: '#38bdf8' },
+      { label: 'Districts', color: '#a78bfa' },
+      { label: 'Thames Path', color: '#22d3ee' },
+    ].map(({ label, color }) => (
+      <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+        <span style={{ opacity: 0.8 }}>{label}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const MapInfoContent: React.FC = () => (
+  <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
+    {[
+      { label: 'Center', value: '51.505°N, 0.090°W' },
+      { label: 'Zoom', value: '13' },
+      { label: 'Projection', value: 'EPSG:3857' },
+      { label: 'Scale', value: '1 : 72,224' },
+      { label: 'Tile Provider', value: 'CartoDB' },
+    ].map(({ label, value }) => (
+      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <span style={{ opacity: 0.55 }}>{label}</span>
+        <span style={{ opacity: 0.85, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      </div>
+    ))}
+  </div>
+);
+
+// MainMap is a thin wrapper so that MainMapInner is a child of PanelOverlayRoot
+// and can correctly call usePanelFloatingWindowManager() inside the context.
+export const MainMap: React.FC<{ panelId: string }> = () => (
+  <PanelOverlayRoot className="bg-dark">
+    <MainMapInner />
+  </PanelOverlayRoot>
+);
+
+const MainMapInner: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
   const { subscribe } = usePanelContext();
+  const floats = usePanelFloatingWindowManager();
+  const floatsRef = useRef(floats);
+  useEffect(() => { floatsRef.current = floats; });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1075,29 +1203,35 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     tileLayerRef.current = tileLayer;
 
     // Create vector layer groups
-    // Markers layer
+    // Camera markers layer — each marker click opens/closes its feed window
     const markersGroup = L.layerGroup();
-    L.geoJSON(LONDON_LANDMARKS, {
-      pointToLayer: (_feature, latlng) => {
-        return L.circleMarker(latlng, {
-          radius: 7,
-          fillColor: '#38bdf8',
-          color: '#0ea5e9',
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.8
-        });
-      },
-      onEachFeature: (feature, layer) => {
-        if (feature.properties?.name) {
-          layer.bindTooltip(feature.properties.name, { permanent: false, direction: 'top', className: 'leaflet-tooltip-custom' });
+    CAMERAS.forEach((cam, i) => {
+      const marker = L.circleMarker([cam.coords[1], cam.coords[0]], {
+        radius: 8,
+        fillColor: cam.color,
+        color: cam.color,
+        weight: 2,
+        opacity: 0.9,
+        fillOpacity: 0.7,
+      });
+      marker.bindTooltip(`📷 ${cam.name}`, { permanent: false, direction: 'top', className: 'leaflet-tooltip-custom' });
+      marker.on('click', () => {
+        const f = floatsRef.current;
+        if (f.isOpen(cam.id)) {
+          f.close(cam.id);
+        } else {
+          f.open(cam.id, {
+            title: `📷 ${cam.name}`,
+            content: <MockCameraFeed name={cam.name} color={cam.color} />,
+            anchor: CORNERS[i % CORNERS.length],
+            width: 280,
+            height: 200,
+          });
         }
-      }
-    }).addTo(markersGroup);
-    markersGroup.addTo(map);
-    layerGroupsRef.current['markers'] = markersGroup;
-
-    // Polygons layer
+      });
+      marker.addTo(markersGroup);
+    });
+    // Polygons layer — added before markers so markers render on top and remain clickable
     const polygonsGroup = L.layerGroup();
     L.geoJSON(DISTRICT_BOUNDARIES, {
       style: {
@@ -1115,6 +1249,9 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     }).addTo(polygonsGroup);
     polygonsGroup.addTo(map);
     layerGroupsRef.current['polygons'] = polygonsGroup;
+
+    markersGroup.addTo(map);
+    layerGroupsRef.current['markers'] = markersGroup;
 
     // Polylines layer (Thames river path)
     const polylinesGroup = L.layerGroup();
@@ -1176,9 +1313,6 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     return unsubscribe;
   }, [subscribe]);
 
-  const { isOpen: legendOpen, open: openLegend, close: closeLegend } = usePanelFloatingWindow();
-  const { isOpen: infoOpen, open: openInfo, close: closeInfo } = usePanelFloatingWindow();
-
   const ZoomInIcon = (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="6.5" cy="6.5" r="5" /><line x1="10.5" y1="10.5" x2="14" y2="14" />
@@ -1212,7 +1346,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
   const handleResetView = () => mapRef.current?.setView([51.505, -0.09], 13);
 
   return (
-    <PanelOverlayRoot className="bg-dark">
+    <>
       <PanelToolbar position="top">
         <ToolbarCenter>
           <ToolbarButton icon={HomeIcon} onClick={handleResetView} title="Reset view" />
@@ -1220,14 +1354,20 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
         <ToolbarSpacer />
         <ToolbarToggle
           icon={InfoIcon}
-          active={infoOpen}
-          onToggle={() => infoOpen ? closeInfo() : openInfo()}
+          active={floats.isOpen('map-info')}
+          onToggle={() => floats.isOpen('map-info')
+            ? floats.close('map-info')
+            : floats.open('map-info', { title: 'Map Info', content: <MapInfoContent />, anchor: 'top-left', width: 220, height: 180 })
+          }
           title="Map info"
         />
         <ToolbarToggle
           icon={LayersIcon}
-          active={legendOpen}
-          onToggle={() => legendOpen ? closeLegend() : openLegend()}
+          active={floats.isOpen('map-legend')}
+          onToggle={() => floats.isOpen('map-legend')
+            ? floats.close('map-legend')
+            : floats.open('map-legend', { title: 'Map Layers', content: <MapLegendContent />, anchor: 'top-right', width: 200, height: 240 })
+          }
           title="Legend"
         />
       </PanelToolbar>
@@ -1238,56 +1378,8 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
         <ToolbarButton icon={ZoomOutIcon} onClick={handleZoomOut} title="Zoom out" />
       </PanelToolbar>
 
-      <PanelFloatingWindow
-        id="map-legend"
-        title="Map Layers"
-        open={legendOpen}
-        onClose={closeLegend}
-        defaultAnchor="top-right"
-        defaultWidth={200}
-        defaultHeight={240}
-      >
-        <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
-          {[
-            { label: 'Landmarks', color: '#38bdf8' },
-            { label: 'Districts', color: '#a78bfa' },
-            { label: 'Thames Path', color: '#22d3ee' },
-          ].map(({ label, color }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{ opacity: 0.8 }}>{label}</span>
-            </div>
-          ))}
-        </div>
-      </PanelFloatingWindow>
-
-      <PanelFloatingWindow
-        id="map-info"
-        title="Map Info"
-        open={infoOpen}
-        onClose={closeInfo}
-        defaultAnchor="top-left"
-        defaultWidth={220}
-        defaultHeight={180}
-      >
-        <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
-          {[
-            { label: 'Center', value: '51.505°N, 0.090°W' },
-            { label: 'Zoom', value: '13' },
-            { label: 'Projection', value: 'EPSG:3857' },
-            { label: 'Scale', value: '1 : 72,224' },
-            { label: 'Tile Provider', value: 'CartoDB' },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <span style={{ opacity: 0.55 }}>{label}</span>
-              <span style={{ opacity: 0.85, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-            </div>
-          ))}
-        </div>
-      </PanelFloatingWindow>
-
       <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px', zIndex: 1 }} />
-    </PanelOverlayRoot>
+    </>
   );
 };
 
