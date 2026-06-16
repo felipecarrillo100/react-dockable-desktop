@@ -19,6 +19,8 @@ import {
     type ContextMenuPredefinedMessage,
     useFormatMessage,
     formatLabel,
+    toast,
+    ToastContainer,
 } from '../src/index';
 import type { SidebarTab, SidebarHandle, ToolbarItem } from '../src/index';
 import { PanelRegistry } from '../src/index';
@@ -176,6 +178,10 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   useEffect(() => {
     document.documentElement.style.setProperty('--window-opacity', String(windowOpacity / 100));
   }, [windowOpacity]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--dw-toast-offset-top', '68px');
+  }, []);
 
   useEffect(() => {
     if (showGrid) {
@@ -841,6 +847,25 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
               <option value="ar">العربية (AR)</option>
             </select>
           </div>
+
+          <div className="sb-separator" />
+          <div className="sb-section-title">Toast Notifications</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <button type="button" className="sb-btn-outline" onClick={() => toast.info('Information message')}>Info</button>
+            <button type="button" className="sb-btn-outline" onClick={() => toast.success('Operation completed')}>Success</button>
+            <button type="button" className="sb-btn-outline" onClick={() => toast.warning('Check your settings')}>Warning</button>
+            <button type="button" className="sb-btn-outline" onClick={() => toast.error('Something went wrong')}>Error</button>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+            <button type="button" className="sb-btn-outline" onClick={() => toast.error('Network error', { duration: 0, closable: true })}>Sticky</button>
+            <button type="button" className="sb-btn-outline" onClick={() => toast.dismiss()}>Dismiss all</button>
+            <button type="button" className="sb-btn-outline" onClick={() => {
+              toast.promise(
+                new Promise<string>(resolve => setTimeout(() => resolve('done'), 2000)),
+                { pending: 'Saving…', success: r => `Saved: ${r}`, error: 'Save failed' }
+              );
+            }}>Promise</button>
+          </div>
         </div>
       ),
     },
@@ -947,6 +972,14 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
               <NavDropdownMenu title="Session Layout" id="layout-dropdown">
                 <NavDropdown.Item onClick={handleSaveToLocalStorage}>💾 Save Layout</NavDropdown.Item>
                 <NavDropdown.Item onClick={handleLoadFromLocalStorage}>📂 Load Layout</NavDropdown.Item>
+              </NavDropdownMenu>
+
+              {/* Toast demos */}
+              <NavDropdownMenu title="Notifications" id="notifications-dropdown">
+                <NavDropdown.Item onClick={() => toast.info('This is an info notification.')}>ℹ️ Info</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => toast.success('Operation completed successfully.')}>✅ Success</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => toast.warning('Proceed with caution.')}>⚠️ Warning</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => toast.error('Something went wrong.')}>❌ Error</NavDropdown.Item>
               </NavDropdownMenu>
             </Nav>
 
@@ -1085,6 +1118,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         <SidePanelRenderer />
       </div>
       <ModalStackRenderer />
+      <ToastContainer progressBar />
     </div>
   );
 }

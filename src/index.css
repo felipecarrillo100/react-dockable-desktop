@@ -3736,3 +3736,102 @@ html:not(.enable-animations) *::after {
 .dw-panel-float-dropzone--top-right    { top:    8px; right: 8px; }
 .dw-panel-float-dropzone--bottom-left  { bottom: 8px; left:  8px; }
 .dw-panel-float-dropzone--bottom-right { bottom: 8px; right: 8px; }
+
+/* ── Toast ── */
+
+/* Color tokens — match confirmation-alert-* palette exactly */
+:root {
+  --toast-info-color:    #67e8f9;
+  --toast-success-color: #4ade80;
+  --toast-warning-color: #fbbf24;
+  --toast-error-color:   #f87171;
+  --toast-bg:            #2a2d32;
+  --toast-border:        rgba(255, 255, 255, 0.14);
+}
+[data-color-scheme="light"] {
+  --toast-info-color:    #0369a1;
+  --toast-success-color: #15803d;
+  --toast-warning-color: #b45309;
+  --toast-error-color:   #b91c1c;
+  --toast-bg:            #ffffff;
+  --toast-border:        rgba(0, 0, 0, 0.14);
+}
+
+/* Position containers */
+.dw-toast-container {
+  position: fixed; z-index: 10100;
+  display: flex; gap: 8px; padding: 16px;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+.dw-toast-container--top-right    { top: var(--dw-toast-offset-top, 0px); right: 0; flex-direction: column; }
+.dw-toast-container--top-left     { top: var(--dw-toast-offset-top, 0px); left:  0; flex-direction: column; }
+.dw-toast-container--bottom-right { bottom: var(--dw-toast-offset-bottom, 0px); right: 0; flex-direction: column-reverse; }
+.dw-toast-container--bottom-left  { bottom: var(--dw-toast-offset-bottom, 0px); left:  0; flex-direction: column-reverse; }
+/* newestOnTop override inverts the column direction */
+.dw-toast-container--newest-top.dw-toast-container--bottom-right,
+.dw-toast-container--newest-top.dw-toast-container--bottom-left  { flex-direction: column; }
+.dw-toast-container--newest-bottom.dw-toast-container--top-right,
+.dw-toast-container--newest-bottom.dw-toast-container--top-left  { flex-direction: column-reverse; }
+
+/* Individual toast — base card */
+.dw-toast {
+  pointer-events: all; position: relative; overflow: hidden;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 20px 14px; border-radius: 6px;
+  background: var(--toast-bg, #2a2d32);
+  border: 1px solid var(--toast-border, rgba(255,255,255,0.14)); border-left-width: 3px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.2);
+  color: var(--sidebar-text-title, #cccccc);
+  font-size: 13.5px; line-height: 1.4; width: 100%;
+  transition: opacity 200ms ease, transform 200ms ease,
+              max-height 300ms ease, padding 300ms ease, margin 300ms ease;
+}
+/* Reserve space for the absolute-positioned close button */
+.dw-toast:has(.dw-toast__close) { padding-right: 32px; }
+
+/* Type-specific: solid background, accent left border only */
+.dw-toast--info    { border-left-color: var(--toast-info-color); }
+.dw-toast--success { border-left-color: var(--toast-success-color); }
+.dw-toast--warning { border-left-color: var(--toast-warning-color); }
+.dw-toast--error   { border-left-color: var(--toast-error-color); }
+
+/* Entry animation classes toggled by JS on next frame */
+.dw-toast--entering        { opacity: 0; transform: translateX(110%); }
+.dw-toast--entering-left   { opacity: 0; transform: translateX(-110%); }
+.dw-toast--fade-entering   { opacity: 0; transform: translateX(0); }
+.dw-toast--visible         { opacity: 1; transform: translateX(0); }
+/* Exit: fade out + height collapse for gravity slide effect */
+.dw-toast--exiting {
+  opacity: 0; max-height: 0 !important;
+  padding-top: 0; padding-bottom: 0; margin: 0;
+}
+
+/* Icon */
+.dw-toast__icon { flex-shrink: 0; width: 16px; height: 16px; margin-top: 1px; }
+.dw-toast--info    .dw-toast__icon { color: var(--toast-info-color); }
+.dw-toast--success .dw-toast__icon { color: var(--toast-success-color); }
+.dw-toast--warning .dw-toast__icon { color: var(--toast-warning-color); }
+.dw-toast--error   .dw-toast__icon { color: var(--toast-error-color); }
+
+/* Body & close button */
+.dw-toast__body { flex: 1; min-width: 0; word-break: break-word; }
+.dw-toast__close {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; cursor: pointer;
+  opacity: .5; padding: 2px; color: inherit; line-height: 1;
+}
+.dw-toast__close:hover { opacity: 1; }
+
+/* Progress bar */
+.dw-toast__progress {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  transform-origin: left; animation: dw-toast-shrink linear forwards;
+}
+.dw-toast--paused .dw-toast__progress { animation-play-state: paused; }
+.dw-toast--info    .dw-toast__progress { background: var(--toast-info-color); }
+.dw-toast--success .dw-toast__progress { background: var(--toast-success-color); }
+.dw-toast--warning .dw-toast__progress { background: var(--toast-warning-color); }
+.dw-toast--error   .dw-toast__progress { background: var(--toast-error-color); }
+
+@keyframes dw-toast-shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`toast` singleton** — imperative notification API with `toast()`, `toast.info()`, `toast.success()`, `toast.warning()`, `toast.error()`, `toast.dismiss()`, and `toast.promise()`. Works from anywhere — inside or outside React.
+- **`<ToastContainer>`** — portal-rendered notification host. Props: `position` (`top-right` default), `width` (320px default), `maxVisible` (3), `defaultDuration` (5000ms), `defaultClosable`, `pauseOnHover`, `animation` (`slide`/`fade`/`none`), `newestOnTop`, `progressBar`, `adapter`.
+- **`ToastAdapter` interface** — delegate all `toast.*` calls to an external notification library (Ant Design, MUI Snackbar, Sonner, etc.) without changing call sites.
+- **Toast theming tokens** — `--toast-bg`, `--toast-border`, `--toast-info-color`, `--toast-success-color`, `--toast-warning-color`, `--toast-error-color`, `--dw-toast-offset-top`, `--dw-toast-offset-bottom`. All switch automatically with `[data-color-scheme="light"]`.
+- **Toast Notifications guide** — new documentation page covering the full Toast API, positioning, theming, queue behaviour, `toast.promise()`, dedup by id, and the custom adapter pattern.
 - **`PanelOverlayRoot`** — context provider and container div for the Panel Overlay system. Coordinates toolbar insets, z-ordering, drag state, drop-zone detection, and managed-window registry for all descendant overlay components.
 - **`PanelToolbar`** — panel-scoped toolbar that attaches to any edge of a `PanelOverlayRoot`. Props: `position` (top/bottom/left/right), `variant` (transparent/frosted/solid), `buttonVariant` (ghost/soft/outlined/filled), `buttonSize`. Left/right toolbars auto-inset by the heights of any registered top/bottom toolbars.
 - **Toolbar primitives** — `ToolbarButton`, `ToolbarToggle`, `ToolbarSeparator` (exported as `PanelToolbarSeparator`), `ToolbarSpacer`, `ToolbarCenter`, `ToolbarItem` (exported as `PanelToolbarItem`), `ToolbarSearchInput` for composing panel toolbar contents.

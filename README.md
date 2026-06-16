@@ -28,6 +28,7 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 - **Imperative API** — `WorkspaceClient` opens, closes, focuses, and serializes panels from anywhere — inside or outside React
 - **Layout Serialization** — save and restore the full workspace as a JSON string; survives page reloads
 - **7 Built-in Skins** — VSCode, macOS, Chrome, Slate, Nord, Obsidian, Tokyo — all fully themeable via CSS variables
+- **Toast Notifications** — imperative singleton `toast.info/success/warning/error/promise()` with queue, pause-on-hover, progress bar, and a `ToastAdapter` interface for delegating to a third-party notification library
 - **Zero extra dependencies** — no runtime dependencies beyond React itself; everything is bundled in
 - **TypeScript-first** — complete type definitions included; no separate `@types/` package needed
 
@@ -303,6 +304,9 @@ All built-in skins include dark and light variants. Create your own skin by over
 
 ## What's New
 
+### v4.2.0
+- **Toast Notifications** — zero-dependency `toast.info/success/warning/error/promise()` singleton. `<ToastContainer>` renders via `createPortal`; supports configurable position, width, max-visible queue, pause-on-hover, opt-in progress bar, and auto-dismiss. `ToastAdapter` lets you delegate to Ant Design, MUI, Sonner, or any other notification library without changing call sites. All colors inherit the active skin automatically.
+
 ### v4.1.0
 - **Panel Overlay system** — `PanelOverlayRoot`, `PanelToolbar`, `PanelFloatingWindow`, and `usePanelFloatingWindowManager` bring per-panel toolbars and dynamically-spawned corner-anchored floating info windows to any panel.
 - **`usePanelFloatingWindowManager()`** — imperative hook for opening N named floating windows from data or event handlers; all windows share z-ordering, drag, and corner-docking infrastructure.
@@ -367,6 +371,7 @@ Complete guides, API reference, and interactive demo at:
 | [Advanced Topics](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced) | RTL, multiple workspaces, custom header actions |
 | [Best Practices](https://felipecarrillo100.github.io/react-dockable-desktop/guide/best-practices) | Patterns for production-ready implementations |
 | [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `PanelOverlayRoot`, panel toolbars, `PanelFloatingWindow`, `usePanelFloatingWindowManager` |
+| [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<ToastContainer>`, queue behaviour, theming, `ToastAdapter` |
 | [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrade from v1 → v2 → v3 → v4 |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |
 

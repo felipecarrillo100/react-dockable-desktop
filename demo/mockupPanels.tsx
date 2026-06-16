@@ -19,6 +19,7 @@ import {
   ToolbarCenter,
   PanelToolbarSeparator,
   usePanelFloatingWindowManager,
+  toast,
 } from '../src/index';
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
@@ -656,7 +657,7 @@ export const CodeEditor: React.FC = () => {
   const handleSave = () => {
     setIsDirty(false);
     container.setDirty(false);
-    alert('Code saved successfully!');
+    toast.success('Code saved successfully!');
   };
 
   const PlayIcon = (
@@ -1488,7 +1489,7 @@ export const DirtyEditorDemoPanel: React.FC = () => {
   const handleSave = () => {
     setIsDirty(false);
     container.setDirty(false);
-    alert('Changes saved successfully!');
+    toast.success('Changes saved successfully!');
   };
 
   const handleReset = () => {
