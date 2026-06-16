@@ -171,14 +171,20 @@ function DropZoneOverlay({ hoveredZone }: { hoveredZone: FloatAnchor | null }): 
 
 // ─── PanelToolbar ─────────────────────────────────────────────────────────────
 
+export type ToolbarVariant = 'transparent' | 'frosted' | 'solid';
+export type ButtonVariant = 'ghost' | 'soft' | 'outlined' | 'filled';
+
 export interface PanelToolbarProps {
   position: ToolbarPosition;
+  variant?: ToolbarVariant;
+  buttonVariant?: ButtonVariant;
+  buttonSize?: number;
   style?: React.CSSProperties;
   className?: string;
   children?: React.ReactNode;
 }
 
-export function PanelToolbar({ position, style, className, children }: PanelToolbarProps): React.ReactElement {
+export function PanelToolbar({ position, variant = 'transparent', buttonVariant = 'ghost', buttonSize, style, className, children }: PanelToolbarProps): React.ReactElement {
   const ctx = useContext(PanelOverlayContext);
   const ref = useRef<HTMLDivElement>(null);
   const [rtl, setRtl] = useState(false);
@@ -221,11 +227,23 @@ export function PanelToolbar({ position, style, className, children }: PanelTool
     posStyle.bottom = ctx?.insetBottom ?? 0;
   }
 
+  const isSide = position === 'left' || position === 'right';
+  const sideStyle: React.CSSProperties = isSide ? {
+    ...(ctx?.insetTop ?? 0) > 0 ? { paddingTop: 0 } : {},
+    ...(ctx?.insetBottom ?? 0) > 0 ? { paddingBottom: 0 } : {},
+  } : {};
+
+  const sizeStyle: React.CSSProperties = buttonSize != null
+    ? { ['--panel-toolbar-btn-size' as string]: `${buttonSize}px` }
+    : {};
+
   return (
     <div
       ref={ref}
       className={`dw-panel-toolbar dw-panel-toolbar--${position}${className ? ' ' + className : ''}`}
-      style={{ ...posStyle, ...style }}
+      data-variant={variant}
+      data-btn-variant={buttonVariant}
+      style={{ ...posStyle, ...sideStyle, ...sizeStyle, ...style }}
     >
       {children}
     </div>
@@ -239,9 +257,10 @@ export interface ToolbarButtonProps {
   onClick(): void;
   disabled?: boolean;
   title?: string;
+  variant?: ButtonVariant;
 }
 
-export function ToolbarButton({ icon, onClick, disabled, title }: ToolbarButtonProps): React.ReactElement {
+export function ToolbarButton({ icon, onClick, disabled, title, variant }: ToolbarButtonProps): React.ReactElement {
   return (
     <button
       type="button"
@@ -250,6 +269,7 @@ export function ToolbarButton({ icon, onClick, disabled, title }: ToolbarButtonP
       disabled={disabled}
       title={title}
       aria-label={title}
+      {...(variant ? { 'data-variant': variant } : {})}
     >
       {icon}
     </button>
@@ -264,9 +284,10 @@ export interface ToolbarToggleProps {
   onToggle(): void;
   disabled?: boolean;
   title?: string;
+  variant?: ButtonVariant;
 }
 
-export function ToolbarToggle({ icon, active, onToggle, disabled, title }: ToolbarToggleProps): React.ReactElement {
+export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant }: ToolbarToggleProps): React.ReactElement {
   return (
     <button
       type="button"
@@ -276,6 +297,7 @@ export function ToolbarToggle({ icon, active, onToggle, disabled, title }: Toolb
       title={title}
       aria-label={title}
       aria-pressed={active}
+      {...(variant ? { 'data-variant': variant } : {})}
     >
       {icon}
     </button>
@@ -696,9 +718,9 @@ function FloatingWindowBody({ id, title, defaultAnchor, defaultWidth, defaultHei
     }
 
     if (currentAnchor.startsWith('top-')) {
-      windowStyle.top = ctx.insetTop + DOCK_INSET + stackOffset;
+      windowStyle.top = ctx.insetTop + stackOffset;
     } else {
-      windowStyle.bottom = ctx.insetBottom + DOCK_INSET + stackOffset;
+      windowStyle.bottom = ctx.insetBottom + stackOffset;
     }
   } else {
     windowStyle = {

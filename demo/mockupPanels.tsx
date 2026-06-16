@@ -686,16 +686,23 @@ export const CodeEditor: React.FC = () => {
 
   return (
     <PanelOverlayRoot>
-      <PanelToolbar position="top">
-        <ToolbarButton icon={PlayIcon} onClick={() => {}} title="Run" />
-        <ToolbarButton icon={FormatIcon} onClick={() => {}} title="Format" />
+      <PanelToolbar
+        position="top"
+        variant="solid"
+        buttonVariant="outlined"
+        style={{ padding: '2px 0' }}
+      >
         <ToolbarSpacer />
+        <ToolbarButton icon={PlayIcon} onClick={() => {}} title="Run" />
+        <PanelToolbarSeparator />
+        <ToolbarButton icon={FormatIcon} onClick={() => {}} title="Format" />
         <ToolbarToggle
           icon={WrapIcon}
           active={wordWrap}
           onToggle={() => setWordWrap(v => !v)}
           title="Word wrap"
         />
+        <PanelToolbarSeparator />
         <ToolbarButton
           icon={SaveIcon}
           onClick={handleSave}
@@ -703,7 +710,7 @@ export const CodeEditor: React.FC = () => {
           title={isDirty ? 'Save changes' : 'Saved'}
         />
       </PanelToolbar>
-      <div className="w-100 h-100">
+      <div className="w-100 h-100" style={{ paddingTop: 36, boxSizing: 'border-box' }}>
         <Editor
           height="100%"
           defaultLanguage="typescript"
