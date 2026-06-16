@@ -169,7 +169,7 @@ export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     const SnippetModal: React.FC = () => {
       const { requestClose } = useFormContainer();
       const [copied, setCopied] = useState(false);
@@ -1134,9 +1134,6 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
       <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px', zIndex: 1 }} />
-      <div className="position-absolute top-0 start-0 m-2 p-1 px-2 rounded bg-black bg-opacity-75 text-success font-monospace small" style={{ zIndex: 1000, pointerEvents: 'none' }}>
-        🗺️ Main Global Map View (Leaflet) [Locked Layout]
-      </div>
     </div>
   );
 };
@@ -1497,20 +1494,20 @@ export function registerDemoPanels() {
         disableLivePreview: true,
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('editor', CodeEditor, { 
-        title: 'Code Editor', 
+    PanelRegistry.register('editor', CodeEditor, {
+        title: 'Code Editor',
         icon: '⚛️',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
-    PanelRegistry.register('terminal', TerminalConsole, { 
-        title: 'Console Output', 
+    PanelRegistry.register('terminal', TerminalConsole, {
+        title: 'Console Output',
         icon: '💻',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
-    PanelRegistry.register('preview', PreviewOutput, { 
-        title: 'Sandbox Widget', 
+    PanelRegistry.register('preview', PreviewOutput, {
+        title: 'Sandbox Widget',
         icon: '📦',
         initialTarget: 'floating',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
@@ -1527,18 +1524,18 @@ export function registerDemoPanels() {
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
     });
-    PanelRegistry.register('luciadMap', LeafletMapPanel, { 
-        title: 'Leaflet Map', 
+    PanelRegistry.register('luciadMap', LeafletMapPanel, {
+        title: 'Leaflet Map',
         icon: '🌍',
         initialTarget: 'docked',
         disableLivePreview: true,
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="luciadMap" />
     });
-    PanelRegistry.register('layertree', LayerTree, { 
-        title: 'Layer tree', 
+    PanelRegistry.register('layertree', LayerTree, {
+        title: 'Layer tree',
         icon: '🌿',
-        initialTarget: 'floating', 
-        favoritePosition: { x: 10, y: 50, width: 300, height: 400 }, 
+        initialTarget: 'floating',
+        favoritePosition: { x: 10, y: 50, width: 300, height: 400 },
         defaultStickyRight: true,
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
@@ -1554,36 +1551,36 @@ export function registerDemoPanels() {
         },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
-    PanelRegistry.register('overviewmap', OverviewMap, { 
-        title: 'Overview locator', 
+    PanelRegistry.register('overviewmap', OverviewMap, {
+        title: 'Overview locator',
         icon: '👁️',
-        initialTarget: 'floating', 
+        initialTarget: 'floating',
         favoritePosition: { x: 80, y: 500, width: 220, height: 180 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('table', TablePanel, { 
-        title: 'Attribute Table', 
+    PanelRegistry.register('table', TablePanel, {
+        title: 'Attribute Table',
         icon: '📋',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('toolpanels', ToolPanel, { 
-        title: 'Toolbox Panel', 
+    PanelRegistry.register('toolpanels', ToolPanel, {
+        title: 'Toolbox Panel',
         icon: '🔧',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
-    PanelRegistry.register('panelmanager', PanelManagerForm, { 
-        title: 'Panel Registry Form', 
+    PanelRegistry.register('panelmanager', PanelManagerForm, {
+        title: 'Panel Registry Form',
         icon: '⚙️',
-        initialTarget: 'floating', 
+        initialTarget: 'floating',
         favoritePosition: { x: 400, y: 150, width: 500, height: 420 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
     });
-    PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { 
-        title: 'Intercept Form', 
+    PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, {
+        title: 'Intercept Form',
         icon: '⚠️',
-        initialTarget: 'floating', 
+        initialTarget: 'floating',
         favoritePosition: { x: 350, y: 150, width: 450, height: 420 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
@@ -1593,8 +1590,8 @@ export function registerDemoPanels() {
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="contextMenu" />
     });
-    PanelRegistry.register('rtlShowcase', RTLShowcasePanel, { 
-        title: 'RTL Showcase', 
+    PanelRegistry.register('rtlShowcase', RTLShowcasePanel, {
+        title: 'RTL Showcase',
         icon: '🔄',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="rtlShowcase" />
