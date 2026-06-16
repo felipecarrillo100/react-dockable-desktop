@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`PanelOverlayRoot`** — context provider and container div for the Panel Overlay system. Coordinates toolbar insets, z-ordering, drag state, drop-zone detection, and managed-window registry for all descendant overlay components.
+- **`PanelToolbar`** — panel-scoped toolbar that attaches to any edge of a `PanelOverlayRoot`. Props: `position` (top/bottom/left/right), `variant` (transparent/frosted/solid), `buttonVariant` (ghost/soft/outlined/filled), `buttonSize`. Left/right toolbars auto-inset by the heights of any registered top/bottom toolbars.
+- **Toolbar primitives** — `ToolbarButton`, `ToolbarToggle`, `ToolbarSeparator` (exported as `PanelToolbarSeparator`), `ToolbarSpacer`, `ToolbarCenter`, `ToolbarItem` (exported as `PanelToolbarItem`), `ToolbarSearchInput` for composing panel toolbar contents.
+- **`PanelFloatingWindow`** — declarative single floating window inside a panel overlay. Props: `id`, `title`, `open`, `onClose`, `defaultAnchor`, `defaultWidth`, `defaultHeight`. Supports 8-direction resize, drag-to-free, drag-to-dock at four corners with smooth stacking transitions.
+- **`usePanelFloatingWindow()`** — convenience hook returning `{ isOpen, open, close }` for a single boolean-toggled `PanelFloatingWindow`.
+- **`usePanelFloatingWindowManager()`** — imperative hook returning `{ open(id, config), close(id), closeAll(), isOpen(id), openIds }`. Enables dynamically spawning N named floating windows from data or event handlers at runtime.
+- **`ManagedWindowConfig`** interface — `{ title: string, content: ReactNode, anchor?: FloatAnchor, width?: number, height?: number }`.
+- **`PanelFloatingWindowManagerHandle`** interface — TypeScript type for `usePanelFloatingWindowManager()` return value.
+- **Panel Overlay guide** — new documentation page covering the full Panel Overlay system.
+
+### Changed
+- Internal: split the monolithic `PanelOverlayCtx` into three focused contexts (`PanelToolbarContext`, `PanelManagerContext`, `PanelOverlayContext`) — each consumer only re-renders on changes to its own slice. `PanelToolbar` no longer re-renders during window drag events; `usePanelFloatingWindowManager` consumers no longer re-render on z-order or drag-state changes.
+- Internal: replaced O(n) `isActive` calculation in `FloatingWindowBody` with an O(1) `topId` field set by `focusWindow`.
+
 ## [4.0.0] — 2026-06-16
 
 ### Breaking Changes
@@ -91,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v3.2.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.0.0...HEAD
 [4.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v4.0.0
 [3.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.2.0
 [3.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.1.0

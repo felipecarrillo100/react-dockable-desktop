@@ -20,6 +20,7 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 - **Split-Docking Grid** — drag panels to split any zone into rows/columns or group into tabbed containers
 - **Workspace Edge Docking** — drag to the outer edges to dock a panel as a full-width or full-height strip
 - **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize
+- **Panel Overlay** — per-panel overlay layer with anchored toolbars (`PanelToolbar`, `ToolbarButton`, `ToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; `usePanelFloatingWindowManager()` opens N named windows dynamically from data or event handlers
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
 - **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed; WebGL, maps, terminals, and forms retain full state
 - **i18n & RTL** — full Right-to-Left layout support; `dir="rtl"` flips every control, tab order, and drop zone automatically
@@ -150,6 +151,7 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `useSidebar()` | `SidebarContextValue` | Open/close Sidebar tabs from any component in the Sidebar tree |
 | `useSidebarTab()` | `SidebarTabContext` | Self-control for content inside a Sidebar tab |
 | `usePanelContextMenu(items)` | `void` | Inject dynamic context menu items into this panel's right-click menu |
+| `usePanelFloatingWindowManager()` | `PanelFloatingWindowManagerHandle` | Open/close N named floating windows inside a panel overlay at runtime; each independently anchored, dockable, and resizable |
 | `useRegistry()` | `PanelRegistryClass` | The scoped panel registry for the current provider |
 | `useFormatMessage()` | `MessageFormatter` | i18n formatter matching the current provider's locale |
 
@@ -301,6 +303,11 @@ All built-in skins include dark and light variants. Create your own skin by over
 
 ## What's New
 
+### v4.1.0
+- **Panel Overlay system** — `PanelOverlayRoot`, `PanelToolbar`, `PanelFloatingWindow`, and `usePanelFloatingWindowManager` bring per-panel toolbars and dynamically-spawned corner-anchored floating info windows to any panel.
+- **`usePanelFloatingWindowManager()`** — imperative hook for opening N named floating windows from data or event handlers; all windows share z-ordering, drag, and corner-docking infrastructure.
+- **Toolbar primitives** — `ToolbarButton`, `ToolbarToggle`, `PanelToolbarSeparator`, `ToolbarSpacer`, `ToolbarCenter`, `ToolbarSearchInput` compose panel toolbar content.
+
 ### v4.0.0
 - **Built-in `<ContextMenu>`** — zero-dependency context menu, portal-rendered and styled with design tokens. No extra package or CSS import needed.
 - **`ContextMenuAdapter` interface** — swap the default menu for your own design-system implementation via `<WindowManager contextMenuAdapter={...} />`.
@@ -359,6 +366,7 @@ Complete guides, API reference, and interactive demo at:
 | [Theming](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) | CSS variables, custom skins, dark/light modes |
 | [Advanced Topics](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced) | RTL, multiple workspaces, custom header actions |
 | [Best Practices](https://felipecarrillo100.github.io/react-dockable-desktop/guide/best-practices) | Patterns for production-ready implementations |
+| [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `PanelOverlayRoot`, panel toolbars, `PanelFloatingWindow`, `usePanelFloatingWindowManager` |
 | [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrade from v1 → v2 → v3 → v4 |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |
 
