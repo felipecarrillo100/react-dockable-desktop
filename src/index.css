@@ -73,6 +73,7 @@
   --panel-toolbar-btn-size: 32px;
   --panel-toolbar-btn-radius: 6px;
   --panel-toolbar-fg: rgba(255, 255, 255, 0.65);
+  --panel-toolbar-fg-hover: rgba(255, 255, 255, 0.95);
   --panel-toolbar-btn-hover-bg: var(--toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
   --panel-toolbar-btn-active-bg: var(--toolbar-btn-radio-active-bg, rgba(56, 189, 248, 0.14));
   --panel-toolbar-btn-active-color: var(--tab-icon-active, #38bdf8);
@@ -83,10 +84,10 @@
   --panel-float-radius: 8px;
   --panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   --panel-float-shadow-active: 0 8px 28px rgba(0, 0, 0, 0.55);
-  --panel-float-header-bg: rgba(255, 255, 255, 0.04);
-  --panel-float-header-bg-active: var(--toolbar-btn-toggle-active-bg, rgba(56, 189, 248, 0.08));
-  --panel-float-title-color: rgba(255, 255, 255, 0.6);
-  --panel-float-title-color-active: rgba(255, 255, 255, 0.9);
+  --panel-float-header-bg: var(--window-header-bg, rgba(0, 0, 0, 0.25));
+  --panel-float-header-bg-active: var(--window-header-bg, rgba(0, 0, 0, 0.25));
+  --panel-float-title-color: var(--window-text, #f8f9fa);
+  --panel-float-title-color-active: var(--window-text, #f8f9fa);
 }
 
 html,
@@ -1111,15 +1112,14 @@ body.resizing-col-active * {
   --panel-title-color: #0066cc;
   /* ── Panel Overlay — Toolbar (light) ── */
   --panel-toolbar-fg: rgba(0, 0, 0, 0.55);
+  --panel-toolbar-fg-hover: rgba(0, 0, 0, 0.85);
+  --panel-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.08);
   --panel-toolbar-separator-color: rgba(0, 0, 0, 0.1);
   /* ── Panel Overlay — Floating Window (light) ── */
   --panel-float-bg: rgba(255, 255, 255, 0.96);
   --panel-float-border: rgba(0, 0, 0, 0.1);
   --panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   --panel-float-shadow-active: 0 8px 28px rgba(0, 0, 0, 0.2);
-  --panel-float-header-bg: rgba(0, 0, 0, 0.03);
-  --panel-float-title-color: rgba(0, 0, 0, 0.5);
-  --panel-float-title-color-active: rgba(0, 0, 0, 0.85);
 }
 
 /* ==========================================================================
@@ -3428,7 +3428,10 @@ html:not(.enable-animations) *::after {
   -webkit-backdrop-filter: blur(10px) saturate(150%);
 }
 .dw-panel-toolbar[data-variant="solid"] {
-  background: var(--panel-header-bg, rgba(15, 20, 30, 0.92));
+  background: var(--bg-tab-bar, #0d0f16);
+}
+[data-color-scheme="light"] .dw-panel-toolbar[data-variant="frosted"] {
+  background: rgba(233, 236, 239, 0.72);
 }
 .dw-panel-toolbar--top[data-variant="frosted"],
 .dw-panel-toolbar--top[data-variant="solid"] {
@@ -3458,6 +3461,14 @@ html:not(.enable-animations) *::after {
 .dw-panel-toolbar-btn[data-variant="soft"]:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.15);
 }
+[data-color-scheme="light"] .dw-panel-toolbar[data-btn-variant="soft"] .dw-panel-toolbar-btn,
+[data-color-scheme="light"] .dw-panel-toolbar-btn[data-variant="soft"] {
+  background: rgba(0, 0, 0, 0.04);
+}
+[data-color-scheme="light"] .dw-panel-toolbar[data-btn-variant="soft"] .dw-panel-toolbar-btn:hover:not(:disabled),
+[data-color-scheme="light"] .dw-panel-toolbar-btn[data-variant="soft"]:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
 
 /* outlined */
 .dw-panel-toolbar[data-btn-variant="outlined"] .dw-panel-toolbar-btn,
@@ -3468,6 +3479,11 @@ html:not(.enable-animations) *::after {
 .dw-panel-toolbar-btn[data-variant="outlined"]:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.38);
+}
+[data-color-scheme="light"] .dw-panel-toolbar[data-btn-variant="outlined"] .dw-panel-toolbar-btn:hover:not(:disabled),
+[data-color-scheme="light"] .dw-panel-toolbar-btn[data-variant="outlined"]:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.25);
 }
 
 /* filled */
