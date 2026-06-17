@@ -8,7 +8,7 @@
 - **Floating windows** — pop any panel out as a resizable, draggable window. Supports maximize, sticky right/bottom, and z-index stacking.
 - **Zero-unmount DOM preservation** — the layout engine moves DOM nodes (WebGL contexts, Leaflet maps, CodeMirror editors) without destroying them.
 - **Layout serialization** — `saveLayout()` / `loadLayout()` round-trip your entire workspace to/from JSON. Persist to `localStorage`, IndexedDB, or a server.
-- **i18n and RTL** — all built-in strings are translatable. RTL layout (Arabic, Hebrew, Persian) is auto-detected and fully supported.
+- **i18n and RTL** — all built-in strings are translatable. RTL layout (Arabic, Hebrew, Persian) is fully supported; direction is set by the app via the `dir` prop on the provider.
 - **Pub/sub event bus** — panels publish and subscribe to events without prop drilling.
 - **Dirty-state close guards** — panels can intercept close requests and show a confirmation dialog when unsaved changes are present.
 

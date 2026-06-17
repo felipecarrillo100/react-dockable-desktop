@@ -761,7 +761,7 @@ export interface WindowManagerProps {
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always', contextMenuAdapter = DefaultContextMenuAdapter }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
-  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, setDirection, getPanelContextMenuItems } = useWindowManagerActionsInternal();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems } = useWindowManagerActionsInternal();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();

@@ -263,19 +263,28 @@ Touch support is built in for v3.1.0+. No extra setup required:
 
 ## i18n & RTL
 
+The library does **not** auto-detect direction — the consuming app owns it. Two things must be wired together:
+
 ```tsx
+// 1. Keep html[dir] in sync for portals (ContextMenu, flyout, Toast)
+//    that render into document.body and need CSS direction inheritance.
+useEffect(() => {
+  document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+}, [isRtl]);
+
+// 2. Pass dir prop to the provider — controls workspace layout engine.
 <DockableDesktopProvider
-  dir="rtl"
+  dir={isRtl ? 'rtl' : 'ltr'}
   formatMessage={(msg) => intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage })}
   predefinedMessages={customMessages}
 >
 ```
 
-`dir` can be `'ltr'` (default) or `'rtl'`. All layout, split directions, tab ordering, drop zones, and context menus flip automatically. You can also switch at runtime:
+`dir` can be `'ltr'` (default) or `'rtl'`. All layout, split directions, tab ordering, floating window controls, drop zones, sidebars, and context menus flip automatically.
 
-```ts
-workspace.setDirection('rtl');
-```
+Direction is **independent of locale** — you can have Arabic translations with LTR layout, or RTL without locale changes.
+
+See the [RTL Support guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/rtl) for the complete wiring pattern and macOS skin notes.
 
 ---
 

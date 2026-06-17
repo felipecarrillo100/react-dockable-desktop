@@ -33,7 +33,7 @@ features:
     details: Pop panels out into resizable floating windows with maximize, minimize, z-index management, and sticky positioning.
   - icon: 🌍
     title: i18n & RTL Support
-    details: Full Right-to-Left layout support (Arabic, Hebrew, Persian). Auto-detects RTL from surrounding elements.
+    details: Full Right-to-Left layout support (Arabic, Hebrew, Persian). Set dir="rtl" on the provider — every control, tab, and drop zone flips automatically.
   - icon: 🔌
     title: Pub/Sub Event Bus
     details: Lightweight inter-panel messaging with subscribe/publish. Panels communicate without prop drilling.
