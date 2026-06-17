@@ -918,13 +918,20 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     setActiveEdgeDrop(null);
   };
 
+  const flipRtl = (pos: DropPosition): DropPosition => {
+    if (!state.isRtl) return pos;
+    if (pos === 'left') return 'right';
+    if (pos === 'right') return 'left';
+    return pos;
+  };
+
   const executeDrop = (id: string, me: PointerEvent) => {
     const dropZone = activeDropZoneRef.current;
     const targetTab = hoveredTabRef.current;
     const edgeDrop = activeEdgeDropRef.current;
 
     if (edgeDrop) {
-      dockPanelToWorkspaceEdge(id, edgeDrop);
+      dockPanelToWorkspaceEdge(id, flipRtl(edgeDrop) as SplitDirection);
     } else if (targetTab) {
       let targetIndex = targetTab.index;
       if (targetTab.side === 'right') targetIndex += 1;
@@ -938,7 +945,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       }
       movePanelOrder(id, targetTab.leafId, targetIndex);
     } else if (dropZone) {
-      dockPanelToGroup(id, dropZone.leafId, dropZone.position);
+      dockPanelToGroup(id, dropZone.leafId, flipRtl(dropZone.position));
     } else {
       floatPanel(id, { x: me.clientX - 150, y: me.clientY - 15, width: 450, height: 350 });
     }
