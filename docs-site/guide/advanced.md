@@ -92,16 +92,9 @@ const client = new WorkspaceClient({
 
 ## RTL support
 
-RTL layout is auto-detected from the nearest ancestor element with `dir="rtl"`. You can also set it explicitly:
+See the dedicated [RTL Support →](./rtl) guide for the full wiring pattern, what flips automatically, macOS skin behaviour, and the `isElementRtl` utility.
 
-```ts
-const client = new WorkspaceClient({ dir: 'rtl' });
-
-// Or dynamically:
-client.setDirection('rtl');
-```
-
-Both `data-color-scheme` and `data-bs-theme` attributes are updated automatically for theme compatibility.
+In short: pass `dir="rtl"` to `DockableDesktopProvider` **and** set `document.documentElement.dir = 'rtl'` so portals (ContextMenu, toolbar flyout, Toast) that render into `document.body` also pick up the RTL direction via CSS inheritance.
 
 ## Multiple providers on one page
 

@@ -58,6 +58,7 @@ export default defineConfig({
           text: 'Advanced',
           items: [
             { text: 'Advanced Topics', link: '/guide/advanced' },
+            { text: 'RTL Support', link: '/guide/rtl' },
             { text: 'Custom Theming', link: '/guide/theming' },
             { text: 'Best Practices', link: '/guide/best-practices' },
             { text: 'Migration Guide', link: '/guide/migration' },
