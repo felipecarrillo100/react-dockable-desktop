@@ -19,7 +19,7 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 
 - **Split-Docking Grid** — drag panels to split any zone into rows/columns or group into tabbed containers
 - **Workspace Edge Docking** — drag to the outer edges to dock a panel as a full-width or full-height strip
-- **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize
+- **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
 - **Panel Overlay** — per-panel overlay layer with anchored toolbars (`PanelToolbar`, `ToolbarButton`, `ToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; `usePanelFloatingWindowManager()` opens N named windows dynamically from data or event handlers
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
 - **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed; WebGL, maps, terminals, and forms retain full state
@@ -172,10 +172,10 @@ const panelCount = useWindowManagerState(s => Object.keys(s.panels).length);
 const workspace = new WorkspaceClient({ panels, initialState?, formatMessage?, dir? });
 
 // Panel lifecycle
-workspace.openPanel(id, component, options?)   // options: title, initialTarget, stickyRight, stickyBottom
+workspace.openPanel(id, component, options?)   // options: title, initialTarget, anchor
 workspace.closePanel(id)
 workspace.focusPanel(id)                       // raises floating / selects tab for docked
-workspace.floatPanel(id, rect?)                // detach to a floating window
+workspace.floatPanel(id, rect?, anchor?)       // detach to a floating window; optional corner anchor
 workspace.dockPanel(id)                        // return floating to the grid
 workspace.minimizePanel(id)
 workspace.restorePanel(id)
@@ -312,6 +312,13 @@ All built-in skins include dark and light variants. Create your own skin by over
 ---
 
 ## What's New
+
+### v4.3.0
+- **Workspace corner anchor zones** — drag any panel (floating or docked tab) to a workspace corner to pin it there. Four 80×80 px snap zones appear during drag; same visual style as the inner panel drop zones. Anchored windows stack with 8 px gaps, uncapped, and reposition automatically on viewport resize.
+- **`anchor` option on `openPanel` and `floatPanel`** — spawn a new floating window pre-anchored: `openPanel('id', 'comp', { initialTarget: 'floating', anchor: 'top-right' })` or `floatPanel('id', undefined, 'bottom-left')`.
+- **`defaultAnchor` in panel registry** — set `defaultAnchor: 'top-left'` in `PanelRegistryEntry.defaultOptions` so every instance of that component opens anchored.
+- **Full RTL support** — floating window drop zones, edge triggers, and corner snap zones all mirror correctly when `dir="rtl"`.
+- **Removed:** `openPanel` options `stickyRight` / `stickyBottom` (replaced by `anchor`). Saved layouts are automatically migrated.
 
 ### v4.2.0
 - **Toast Notifications** — zero-dependency `toast.info/success/warning/error/promise()` singleton. `<ToastContainer>` renders via `createPortal`; supports configurable position, width, max-visible queue, pause-on-hover, opt-in progress bar, and auto-dismiss. `ToastAdapter` lets you delegate to Ant Design, MUI, Sonner, or any other notification library without changing call sites. All colors inherit the active skin automatically.
