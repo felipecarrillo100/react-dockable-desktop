@@ -9,6 +9,7 @@ import React, {
   useEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useWindowManagerState } from './WindowManagerContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,13 @@ function getHoveredZone(container: HTMLElement, clientX: number, clientY: number
   if (x < DROP_ZONE_SIZE && y > rect.height - DROP_ZONE_SIZE) return 'bottom-left';
   if (x > rect.width - DROP_ZONE_SIZE && y > rect.height - DROP_ZONE_SIZE) return 'bottom-right';
   return null;
+}
+
+function flipZoneHorizontal(zone: FloatAnchor): FloatAnchor {
+  if (zone === 'top-left')    return 'top-right';
+  if (zone === 'top-right')   return 'top-left';
+  if (zone === 'bottom-left') return 'bottom-right';
+  return 'bottom-left';
 }
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
@@ -705,6 +713,7 @@ const DOCK_INSET = 8;
 const DOCK_GAP = 8;
 
 function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
+  const isRtl = useWindowManagerState(s => s.isRtl);
   const [mode, setMode] = useState<WindowMode>('docked');
   const [currentAnchor, setCurrentAnchor] = useState<FloatAnchor>(defaultAnchor);
   const [freePos, setFreePos] = useState<{ x: number; y: number } | null>(null);
@@ -820,7 +829,8 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
 
       const container = ctx?.containerRef?.current;
       if (container) {
-        ctx?.setHoveredZone(getHoveredZone(container, e.clientX, e.clientY));
+        const rawZone = getHoveredZone(container, e.clientX, e.clientY);
+        ctx?.setHoveredZone(rawZone && isRtl ? flipZoneHorizontal(rawZone) : rawZone);
       }
     } else if (resizeState.current) {
       const rs = resizeState.current;
@@ -892,9 +902,9 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     };
 
     if (currentAnchor.endsWith('-right')) {
-      windowStyle.right = DOCK_INSET;
+      windowStyle[isRtl ? 'left' : 'right'] = DOCK_INSET;
     } else {
-      windowStyle.left = DOCK_INSET;
+      windowStyle[isRtl ? 'right' : 'left'] = DOCK_INSET;
     }
 
     if (currentAnchor.startsWith('top-')) {
