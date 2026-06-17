@@ -369,7 +369,7 @@ export interface InternalWindowActions extends WindowActions {
   getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
 }
 
-export const WindowStateContext = createContext<WindowState | null>(null);
+export const WindowStateContext: React.Context<WindowState | null> = createContext<WindowState | null>(null);
 const WindowActionsContext = createContext<InternalWindowActions | null>(null);
 const WindowI18nContext = createContext<MessageFormatter | null>(null);
 
