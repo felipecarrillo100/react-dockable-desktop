@@ -9,7 +9,7 @@ import React, {
   useEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { useWindowManagerState } from './WindowManagerContext';
+import { WindowStateContext } from './WindowManagerContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -713,7 +713,7 @@ const DOCK_INSET = 8;
 const DOCK_GAP = 8;
 
 function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
-  const isRtl = useWindowManagerState(s => s.isRtl);
+  const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
   const [mode, setMode] = useState<WindowMode>('docked');
   const [currentAnchor, setCurrentAnchor] = useState<FloatAnchor>(defaultAnchor);
   const [freePos, setFreePos] = useState<{ x: number; y: number } | null>(null);
