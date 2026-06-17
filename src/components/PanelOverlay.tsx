@@ -10,14 +10,13 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { WindowStateContext } from './WindowManagerContext';
+import type { FloatAnchor } from './WindowManagerContext';
+export type { FloatAnchor };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Edge of a panel to which a `PanelToolbar` attaches. */
 export type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
-
-/** Corner of a `PanelOverlayRoot` to which a `PanelFloatingWindow` docks. */
-export type FloatAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 

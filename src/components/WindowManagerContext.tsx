@@ -73,6 +73,9 @@ export interface LayoutLeafNode {
 /** Union type representing either a branch or a leaf node in the layout grid. */
 export type LayoutNode = LayoutGridNode | LayoutLeafNode;
 
+/** Corner of the workspace a floating window is pinned to. */
+export type FloatAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 /**
  * Bounds and depth metadata for floated panel windows.
  */
@@ -91,10 +94,8 @@ export interface FloatingWindow {
   z: number;
   /** True if the window is currently maximized to full workspace bounds. */
   maximized?: boolean;
-  /** Sticky right flag. */
-  stickyRight?: boolean;
-  /** Sticky bottom flag. */
-  stickyBottom?: boolean;
+  /** Corner of the workspace this window is pinned to, or null when free-floating. */
+  anchor?: FloatAnchor | null;
 }
 
 /**
@@ -112,7 +113,7 @@ export interface PanelInfo {
   /** Last state held before panel was minimized. */
   previousState?: 'docked' | 'floating';
   /** Saved position boundaries used when returning the panel to a floating state. */
-  lastFloatingRect?: { x: number; y: number; width: number; height: number; stickyRight?: boolean; stickyBottom?: boolean };
+  lastFloatingRect?: { x: number; y: number; width: number; height: number; anchor?: FloatAnchor | null };
   /** The leaf group ID this panel was docked in prior to being floated. */
   lastLeafId?: string;
   /** True if the panel contains unsaved user edits. */
@@ -175,7 +176,7 @@ export interface WindowActions {
    * actions.openPanel('map-1', 'map', { title: 'Satellite View', initialTarget: 'floating' });
    * ```
    */
-  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => void;
+  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null }) => void;
   /**
    * Closes a panel immediately, bypassing dirty-state close guards.
    * For guarded close, use {@link requestClosePanel}.
@@ -197,7 +198,7 @@ export interface WindowActions {
    * @param id - Panel instance ID.
    * @param rect - Optional initial position and size for the floating window.
    */
-  floatPanel: (id: string, rect?: { x: number; y: number; width: number; height: number }) => void;
+  floatPanel: (id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => void;
   /**
    * Returns a floating window to a docked grid tab group.
    * @param id - Panel instance ID.
@@ -218,9 +219,9 @@ export interface WindowActions {
   /**
    * Updates the position or size of a floating window.
    * @param id - Panel instance ID.
-   * @param updates - Partial update to `x`, `y`, `width`, `height`, `stickyRight`, or `stickyBottom`.
+   * @param updates - Partial update to `x`, `y`, `width`, `height`, or `anchor`.
    */
-  updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'stickyRight' | 'stickyBottom'>>) => void;
+  updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>) => void;
   /**
    * Activates the given panel regardless of its current state.
    * - Floating panel: raises z-index so the window appears on top of others.
@@ -708,7 +709,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return null;
   };
 
-  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; stickyRight?: boolean; stickyBottom?: boolean }) => {
+  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null }) => {
     const isNew = !(id in stateRef.current.panels);
     setState(prev => {
       const exists = prev.panels[id];
@@ -771,28 +772,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         maxZRef.current += 1;
         const cascaded = getCascadedPosition(favPos, prev.floating);
 
-        const stickyRight = options?.stickyRight ?? entry?.defaultOptions?.defaultStickyRight ?? false;
-        const stickyBottom = options?.stickyBottom ?? entry?.defaultOptions?.defaultStickyBottom ?? false;
-
-        const viewW = Math.max(100, window.innerWidth || 1024);
-        const viewH = Math.max(100, window.innerHeight || 768);
-        const winW = typeof cascaded.width === 'string' ? parseFloat(cascaded.width) : cascaded.width;
-        const winH = typeof cascaded.height === 'string' ? parseFloat(cascaded.height) : cascaded.height;
-
-        let initialX = cascaded.x;
-        let initialY = cascaded.y;
-
-        const GAP = 10;
-        if (stickyRight) {
-          initialX = viewW - winW - GAP;
-        }
-        if (stickyBottom) {
-          initialY = viewH - winH - GAP;
-        }
+        const anchor = options?.anchor ?? entry?.defaultOptions?.defaultAnchor ?? null;
 
         return {
           ...prev,
-          floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, x: initialX, y: initialY, stickyRight, stickyBottom }],
+          floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, anchor }],
           panels: nextPanels
         };
       } else {
@@ -920,8 +904,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             y: Number(win.y),
             width: Number(win.width),
             height: Number(win.height),
-            stickyRight: win.stickyRight,
-            stickyBottom: win.stickyBottom
+            anchor: win.anchor ?? null
           };
         }
       } else if (panel.state === 'docked') {
@@ -979,12 +962,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           minimized: nextMinimized,
           floating: [
             ...prev.floating, 
-            { 
-              ...cascaded, 
-              id, 
+            {
+              ...cascaded,
+              id,
               z: maxZRef.current,
-              stickyRight: !!panel.lastFloatingRect?.stickyRight,
-              stickyBottom: !!panel.lastFloatingRect?.stickyBottom
+              anchor: panel.lastFloatingRect?.anchor ?? null
             }
           ],
           panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } }
@@ -1016,12 +998,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             minimized: nextMinimized,
             floating: [
               ...prev.floating, 
-              { 
-                ...cascaded, 
-                id, 
+              {
+                ...cascaded,
+                id,
                 z: maxZRef.current,
-                stickyRight: !!panel.lastFloatingRect?.stickyRight,
-                stickyBottom: !!panel.lastFloatingRect?.stickyBottom
+                anchor: panel.lastFloatingRect?.anchor ?? null
               }
             ],
             panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } }
@@ -1041,7 +1022,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     if (wasMinimized) eventBusRef.current.publish('panel:restored', { id });
   }, [getCascadedPosition]);
 
-  const floatPanel = useCallback((id: string, rect?: { x: number; y: number; width: number; height: number }) => {
+  const floatPanel = useCallback((id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1061,7 +1042,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       return {
         ...prev,
         gridRoot: cleanRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null },
-        floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current }],
+        floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, anchor: anchor ?? null }],
         panels: {
           ...prev.panels,
           [id]: { ...panel, state: 'floating' }
@@ -1307,7 +1288,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }));
   }, []);
 
-  const updateFloatingPosition = useCallback((id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'stickyRight' | 'stickyBottom'>>) => {
+  const updateFloatingPosition = useCallback((id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>) => {
     setState(prev => ({
       ...prev,
       floating: prev.floating.map(w => w.id === id ? { ...w, ...updates } : w)
@@ -1327,11 +1308,23 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     try {
       const parsed = JSON.parse(layoutJson);
       if (parsed.gridRoot && parsed.floating && parsed.minimized && parsed.panels) {
+        // Migrate old stickyRight/stickyBottom flags to anchor
+        const migratedFloating = (parsed.floating as any[]).map((fw: any) => {
+          if ('stickyRight' in fw || 'stickyBottom' in fw) {
+            const anchor: FloatAnchor | null = fw.stickyRight && fw.stickyBottom ? 'bottom-right'
+              : fw.stickyRight ? 'top-right'
+              : fw.stickyBottom ? 'bottom-left'
+              : null;
+            const { stickyRight: _sr, stickyBottom: _sb, ...rest } = fw;
+            return { ...rest, anchor };
+          }
+          return fw;
+        });
         const firstActive = Object.keys(parsed.panels)[0] || null;
         setState(prev => ({
           ...prev,
           gridRoot: parsed.gridRoot,
-          floating: parsed.floating,
+          floating: migratedFloating,
           minimized: parsed.minimized,
           panels: parsed.panels,
           draggedPanelId: null,
