@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { FloatAnchor } from './WindowManagerContext';
 
 /**
  * Represents a registered component configuration template inside the panel catalog registry.
@@ -22,10 +23,8 @@ export interface PanelRegistryEntry {
     canMinimize?: boolean;
     /** Enables/disables closing actions for the tab/window. */
     canClose?: boolean;
-    /** Affixes the panel to the right edge. */
-    defaultStickyRight?: boolean;
-    /** Affixes the panel to the bottom edge. */
-    defaultStickyBottom?: boolean;
+    /** Corner of the workspace to anchor newly-opened floating windows to. */
+    defaultAnchor?: FloatAnchor;
     /** Disables live WebGL rendering canvas thumbnails inside the taskbar hover popup previews. */
     disableLivePreview?: boolean;
     /** Custom header actions renderer, placing custom components in the window/tab titlebar. */

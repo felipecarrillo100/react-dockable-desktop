@@ -102,30 +102,21 @@ describe('Floating Windows', () => {
     expect(win.y).toBe(400);
   });
 
-  it('should set stickyRight on a floating window', () => {
+  it('should set anchor on a floating window', () => {
     mount();
-    act(() => {
-      lastActions.openPanel('sticky-right', 'map', { initialTarget: 'floating' });
-    });
-    act(() => {
-      lastActions.updateFloatingPosition('sticky-right', { stickyRight: true });
-    });
+    act(() => { lastActions.openPanel('anchor-win', 'map', { initialTarget: 'floating' }); });
+    act(() => { lastActions.updateFloatingPosition('anchor-win', { anchor: 'top-right' }); });
 
-    const win = lastState.floating.find((w: any) => w.id === 'sticky-right');
-    expect(win.stickyRight).toBe(true);
+    const win = lastState.floating.find((w: any) => w.id === 'anchor-win');
+    expect(win.anchor).toBe('top-right');
   });
 
-  it('should set stickyBottom on a floating window', () => {
+  it('should open a floating window pre-anchored to a corner', () => {
     mount();
-    act(() => {
-      lastActions.openPanel('sticky-bottom', 'map', { initialTarget: 'floating' });
-    });
-    act(() => {
-      lastActions.updateFloatingPosition('sticky-bottom', { stickyBottom: true });
-    });
+    act(() => { lastActions.openPanel('pre-anchored', 'map', { initialTarget: 'floating', anchor: 'bottom-right' }); });
 
-    const win = lastState.floating.find((w: any) => w.id === 'sticky-bottom');
-    expect(win.stickyBottom).toBe(true);
+    const win = lastState.floating.find((w: any) => w.id === 'pre-anchored');
+    expect(win.anchor).toBe('bottom-right');
   });
 
   it('should maximize a floating window', () => {

@@ -5,10 +5,10 @@
  * resize handles, context menus, and taskbar docks. Exposes lifecycle event listeners.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
-import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition } from './WindowManagerContext';
+import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
+import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
 import { DefaultContextMenuAdapter } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
@@ -845,6 +845,22 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     activeEdgeDropRef.current = val;
   };
 
+  const [activeCornerAnchor, setActiveCornerAnchorState] = useState<FloatAnchor | null>(null);
+  const activeCornerAnchorRef = useRef<FloatAnchor | null>(null);
+  const setActiveCornerAnchor = (val: FloatAnchor | null) => {
+    setActiveCornerAnchorState(val);
+    activeCornerAnchorRef.current = val;
+  };
+
+  const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
+
+  const flipZoneHorizontal = (zone: FloatAnchor): FloatAnchor => {
+    if (zone === 'top-left')    return 'top-right';
+    if (zone === 'top-right')   return 'top-left';
+    if (zone === 'bottom-left') return 'bottom-right';
+    return 'bottom-left';
+  };
+
   const [hoveredTab, setHoveredTab] = useState<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
   const hoveredTabRef = useRef<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
 
@@ -929,6 +945,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const dropZone = activeDropZoneRef.current;
     const targetTab = hoveredTabRef.current;
     const edgeDrop = activeEdgeDropRef.current;
+    const cornerAnchor = activeCornerAnchorRef.current;
 
     if (edgeDrop) {
       dockPanelToWorkspaceEdge(id, flipRtl(edgeDrop) as SplitDirection);
@@ -946,9 +963,12 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       movePanelOrder(id, targetTab.leafId, targetIndex);
     } else if (dropZone) {
       dockPanelToGroup(id, dropZone.leafId, flipRtl(dropZone.position));
+    } else if (cornerAnchor) {
+      floatPanel(id, undefined, isRtl ? flipZoneHorizontal(cornerAnchor) : cornerAnchor);
     } else {
       floatPanel(id, { x: me.clientX - 150, y: me.clientY - 15, width: 450, height: 350 });
     }
+    setActiveCornerAnchor(null);
     clearDragState();
   };
 
@@ -1243,8 +1263,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
       const GAP = 10;
 
-      // Align sticky borders
-      if (w.stickyRight) {
+      // Align anchored borders
+      if (w.anchor === 'top-right' || w.anchor === 'bottom-right') {
         newX = viewW - newWidth - GAP;
         changed = true;
       } else {
@@ -1256,7 +1276,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         }
       }
 
-      if (w.stickyBottom) {
+      if (w.anchor === 'bottom-left' || w.anchor === 'bottom-right') {
         newY = viewH - newHeight - GAP;
         changed = true;
       } else {
@@ -1331,15 +1351,19 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       const dropZone = activeDropZoneRef.current;
       const targetTab = hoveredTabRef.current;
       const edgeDrop = activeEdgeDropRef.current;
-      if (edgeDrop) {
-        dockPanelToWorkspaceEdge(id, edgeDrop);
+      const cornerAnchor = activeCornerAnchorRef.current;
+      if (cornerAnchor) {
+        updateFloatingPosition(id, { anchor: isRtl ? flipZoneHorizontal(cornerAnchor) : cornerAnchor });
+      } else if (edgeDrop) {
+        dockPanelToWorkspaceEdge(id, flipRtl(edgeDrop) as SplitDirection);
       } else if (targetTab) {
         let targetIndex = targetTab.index;
         if (targetTab.side === 'right') targetIndex += 1;
         movePanelOrder(id, targetTab.leafId, targetIndex);
       } else if (dropZone) {
-        dockPanelToGroup(id, dropZone.leafId, dropZone.position);
+        dockPanelToGroup(id, dropZone.leafId, flipRtl(dropZone.position));
       }
+      setActiveCornerAnchor(null);
       clearDragState();
     };
 
@@ -1372,7 +1396,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         const onMove = (me: PointerEvent) => {
           const dx = me.clientX - startX;
           const dy = me.clientY - startY;
-          updateFloatingPosition(id, { x: startPosX + dx, y: startPosY + dy, stickyRight: false, stickyBottom: false });
+          updateFloatingPosition(id, { x: startPosX + dx, y: startPosY + dy, anchor: null });
           updateHoverFromPoint(me.clientX, me.clientY);
         };
 
@@ -1413,7 +1437,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           setDraggedPanelId(id);
         }
         if (dragStarted) {
-          updateFloatingPosition(id, { x: startPosX + dx, y: startPosY + dy, stickyRight: false, stickyBottom: false });
+          updateFloatingPosition(id, { x: startPosX + dx, y: startPosY + dy, anchor: null });
         }
       };
 
@@ -1484,8 +1508,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       updateFloatingPosition(id, {
         x: newX, y: newY,
         width: newW, height: newH,
-        stickyRight: isRightSnapped,
-        stickyBottom: isBottomSnapped
       });
     };
 
@@ -1594,6 +1616,17 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           </>
         )}
 
+        {/* Corner anchor drop zones — appear during floating window drag */}
+        {state.draggedPanelId !== null && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as FloatAnchor[]).map(corner => (
+          <div
+            key={corner}
+            className={`fw-corner-zone fw-corner-zone--${corner}${activeCornerAnchor === corner ? ' fw-corner-zone--hovered' : ''}`}
+            onPointerEnter={() => { setActiveCornerAnchor(corner); setActiveEdgeDrop(null); }}
+            onPointerLeave={() => setActiveCornerAnchor(null)}
+            aria-hidden="true"
+          />
+        ))}
+
         {/* Edge drop visual preview overlay */}
         {state.draggedPanelId !== null && activeEdgeDrop !== null && (
           <div
@@ -1654,15 +1687,46 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   focusPanel(w.id);
                 }}
                 className={`floating-window ${isMaximized ? 'maximized' : ''} ${isFocused ? 'v2-window-focused' : ''} ${windowClass ?? ''}`}
-                style={{
-                  position: 'absolute',
-                  left: isMaximized ? 0 : (typeof w.x === 'number' ? `${w.x}px` : w.x),
-                  top: isMaximized ? 0 : (typeof w.y === 'number' ? `${w.y}px` : w.y),
-                  width: isMaximized ? '100%' : (typeof w.width === 'number' ? `${w.width}px` : w.width),
-                  height: isMaximized ? '100%' : (typeof w.height === 'number' ? `${w.height}px` : w.height),
-                  zIndex: w.z,
-                  pointerEvents: isDragged ? 'none' : 'auto',
-                }}
+                style={(() => {
+                  const CORNER_INSET = 8;
+                  const CORNER_GAP = 8;
+                  const w_ = typeof w.width === 'number' ? `${w.width}px` : w.width;
+                  const h_ = typeof w.height === 'number' ? `${w.height}px` : w.height;
+                  if (isMaximized) {
+                    return { position: 'absolute' as const, left: 0, top: 0, width: '100%', height: '100%', zIndex: w.z, pointerEvents: isDragged ? 'none' as const : 'auto' as const };
+                  }
+                  if (w.anchor) {
+                    const stack = state.floating.filter(fw => fw.anchor === w.anchor && !fw.maximized);
+                    const idx = stack.findIndex(fw => fw.id === w.id);
+                    let stackOffset = CORNER_INSET;
+                    for (let i = 0; i < idx; i++) {
+                      const sh = typeof stack[i].height === 'number' ? stack[i].height as number : parseFloat(stack[i].height as string);
+                      stackOffset += sh + CORNER_GAP;
+                    }
+                    const isTop = w.anchor.startsWith('top');
+                    const isRight = w.anchor.endsWith('-right');
+                    const physicalRight = isRtl ? !isRight : isRight;
+                    return {
+                      position: 'absolute' as const,
+                      [physicalRight ? 'right' : 'left']: CORNER_INSET,
+                      [isTop ? 'top' : 'bottom']: stackOffset,
+                      width: w_,
+                      height: h_,
+                      zIndex: w.z,
+                      transition: isDragged ? 'none' : 'top 0.2s ease, bottom 0.2s ease',
+                      pointerEvents: isDragged ? 'none' as const : 'auto' as const,
+                    };
+                  }
+                  return {
+                    position: 'absolute' as const,
+                    left: typeof w.x === 'number' ? `${w.x}px` : w.x,
+                    top: typeof w.y === 'number' ? `${w.y}px` : w.y,
+                    width: w_,
+                    height: h_,
+                    zIndex: w.z,
+                    pointerEvents: isDragged ? 'none' as const : 'auto' as const,
+                  };
+                })()}
               >
                 {/* Title Bar */}
                 <div
@@ -1707,63 +1771,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                           <circle cx="12" cy="5" r="2"/>
                           <circle cx="12" cy="12" r="2"/>
                           <circle cx="12" cy="19" r="2"/>
-                        </svg>
-                      </button>
-                    )}
-                    {options?.canDrag !== false && (
-                      <button
-                        type="button"
-                        title={formatLabel(messages.windowAnchoringOptions, formatMessage)}
-                        onClick={(e) => {
-                          const isRight = !!w.stickyRight;
-                          const isBottom = !!w.stickyBottom;
-                          contextMenuRef.current?.show({
-                            event: e,
-                            items: [
-                              {
-                                label: formatLabel(messages.anchorToRightEdge, formatMessage),
-                                checkbox: {
-                                  active: true,
-                                  enabled: true,
-                                  value: isRight
-                                },
-                                action: () => {
-                                  const viewW = workspaceSize.width;
-                                  const winW = typeof w.width === 'string' ? parseFloat(w.width) : w.width;
-                                  const GAP = 10;
-                                  if (!isRight) {
-                                    updateFloatingPosition(w.id, { x: viewW - winW - GAP, stickyRight: true });
-                                  } else {
-                                    updateFloatingPosition(w.id, { stickyRight: false });
-                                  }
-                                }
-                              },
-                              {
-                                label: formatLabel(messages.anchorToBottomEdge, formatMessage),
-                                checkbox: {
-                                  active: true,
-                                  enabled: true,
-                                  value: isBottom
-                                },
-                                action: () => {
-                                  const viewH = workspaceSize.height;
-                                  const winH = typeof w.height === 'string' ? parseFloat(w.height) : w.height;
-                                  const GAP = 10;
-                                  if (!isBottom) {
-                                    updateFloatingPosition(w.id, { y: viewH - winH - GAP, stickyBottom: true });
-                                  } else {
-                                    updateFloatingPosition(w.id, { stickyBottom: false });
-                                  }
-                                }
-                              }
-                            ]
-                          });
-                        }}
-                        className="custom-tab-btn btn-anchor-tab"
-                      >
-                        <svg className={`anchor-icon ${(w.stickyRight && w.stickyBottom) ? 'anchor-sticky-both' : w.stickyRight ? 'anchor-sticky-right' : w.stickyBottom ? 'anchor-sticky-bottom' : ''}`} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <circle cx="12" cy="5" r="2" />
-                          <path d="M12 7v7m0 0a4 4 0 0 1-4-4M12 14a4 4 0 0 0 4-4M5 18h14" />
                         </svg>
                       </button>
                     )}

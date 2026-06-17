@@ -673,26 +673,6 @@ body.resizing-col-active * {
   box-shadow: none;
 }
 
-/* Anchor Button Icon Rotations - Base line sits at the bottom in default 0deg state */
-.anchor-icon {
-  transition: transform 0.2s ease, color 0.2s ease;
-}
-.anchor-sticky-right {
-  /* Rotates -90deg so the bottom flat line sits on the right-hand side */
-  transform: rotate(-90deg);
-  color: var(--accent-color, #38bdf8);
-}
-.anchor-sticky-bottom {
-  /* No rotation: the bottom flat line stays on the bottom */
-  transform: rotate(0deg);
-  color: var(--accent-color, #38bdf8);
-}
-.anchor-sticky-both {
-  /* Rotates -45deg so the bottom flat line sits on the bottom-right corner */
-  transform: rotate(-45deg);
-  color: var(--accent-color, #38bdf8);
-  filter: drop-shadow(0 0 4px var(--accent-glow));
-}
 
 .floating-window-titlebar {
   padding: 8px 14px;
@@ -1246,7 +1226,7 @@ body.resizing-col-active * {
 [data-workspace-skin="macos"] .floating-window-titlebar .fw-titlebar-actions {
   flex-direction: row-reverse !important;
 }
-[data-workspace-skin="macos"] .custom-tab-btn:not(.btn-anchor-tab) svg {
+[data-workspace-skin="macos"] .custom-tab-btn svg {
   display: none !important;
 }
 [data-workspace-skin="macos"] .btn-close-tab {
@@ -1257,39 +1237,6 @@ body.resizing-col-active * {
 }
 [data-workspace-skin="macos"] .btn-maximize-tab {
   background-color: #27c93f !important; /* Green (Maximize) */
-}
-[data-workspace-skin="macos"] .btn-anchor-tab {
-  /* Default: Neutral Graphite/Slate dot when inactive */
-  background-color: #8e8e93 !important;
-}
-/* When inactive (no sticky values) - show as a neutral grey macOS dot */
-[data-workspace-skin="macos"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
-  background-color: #8e8e93 !important;
-}
-[data-workspace-skin="macos"][data-color-scheme="light"] .btn-anchor-tab:not(:has(.anchor-sticky-right)):not(:has(.anchor-sticky-bottom)):not(:has(.anchor-sticky-both)) {
-  background-color: #a4a4a8 !important;
-}
-
-/* macOS Active Snapped Dot State: Solid active blue with high-contrast yellow icon */
-[data-workspace-skin="macos"] .btn-anchor-tab:has(.anchor-sticky-right),
-[data-workspace-skin="macos"] .btn-anchor-tab:has(.anchor-sticky-bottom),
-[data-workspace-skin="macos"] .btn-anchor-tab:has(.anchor-sticky-both) {
-  background-color: #007aff !important;
-  border: 1px solid rgba(0,0,0,0.15) !important;
-}
-
-/* Ensure the anchor icon displays cleanly and is centered inside the macOS dot */
-[data-workspace-skin="macos"] .btn-anchor-tab {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-[data-workspace-skin="macos"] .btn-anchor-tab svg {
-  display: block !important;
-  color: #ffbd2e !important; /* Premium macOS system yellow */
-  width: 9px !important;
-  height: 9px !important;
-  flex-shrink: 0;
 }
 
 /* Panel Icon Styling and Alignment */
@@ -2299,6 +2246,34 @@ html:not(.enable-animations) *::after {
   pointer-events: none;
   animation: fadeIn 0.15s ease-out;
 }
+
+/* Workspace corner anchor drop zones */
+.fw-corner-zone {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border: 2px dashed var(--accent-color, #38bdf8);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.06);
+  pointer-events: auto;
+  z-index: 10000;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease, border-style 0.15s ease;
+}
+.fw-corner-zone--top-left     { top: 0;    left: 0;  }
+.fw-corner-zone--top-right    { top: 0;    right: 0; }
+.fw-corner-zone--bottom-left  { bottom: 0; left: 0;  }
+.fw-corner-zone--bottom-right { bottom: 0; right: 0; }
+.fw-corner-zone--hovered {
+  opacity: 1;
+  background: rgba(56, 189, 248, 0.18);
+  border-style: solid;
+}
+
+[dir="rtl"] .fw-corner-zone--top-right    { right: auto; left: 0;  }
+[dir="rtl"] .fw-corner-zone--top-left     { left: auto;  right: 0; }
+[dir="rtl"] .fw-corner-zone--bottom-right { right: auto; left: 0;  }
+[dir="rtl"] .fw-corner-zone--bottom-left  { left: auto;  right: 0; }
 
 
 /* 
