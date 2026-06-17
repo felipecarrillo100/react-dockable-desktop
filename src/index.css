@@ -3819,6 +3819,11 @@ html:not(.enable-animations) *::after {
 .dw-panel-float-dropzone--bottom-left  { bottom: 8px; left:  8px; }
 .dw-panel-float-dropzone--bottom-right { bottom: 8px; right: 8px; }
 
+[dir="rtl"] .dw-panel-float-dropzone--top-right    { right: auto; left:  8px; }
+[dir="rtl"] .dw-panel-float-dropzone--top-left     { left:  auto; right: 8px; }
+[dir="rtl"] .dw-panel-float-dropzone--bottom-right { right: auto; left:  8px; }
+[dir="rtl"] .dw-panel-float-dropzone--bottom-left  { left:  auto; right: 8px; }
+
 [dir="rtl"] .dw-panel-float__title  { text-align: right; }
 
 /* ── Toast ── */
