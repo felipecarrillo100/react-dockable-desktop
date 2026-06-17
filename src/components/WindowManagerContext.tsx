@@ -73,7 +73,16 @@ export interface LayoutLeafNode {
 /** Union type representing either a branch or a leaf node in the layout grid. */
 export type LayoutNode = LayoutGridNode | LayoutLeafNode;
 
-/** Corner of the workspace a floating window is pinned to. */
+/**
+ * Corner of the workspace a floating window can be pinned to.
+ *
+ * When `anchor` is set on a `FloatingWindow`, the window is positioned
+ * relative to that corner using CSS `right`/`left` + `top`/`bottom` and
+ * stacks with other windows sharing the same anchor (8 px gap, uncapped).
+ * Dragging a window away from its corner clears the anchor and returns it
+ * to free-float mode. The value is RTL-aware — `'top-left'` always means the
+ * logical start corner regardless of document direction.
+ */
 export type FloatAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 /**
@@ -170,10 +179,13 @@ export interface WindowActions {
    * If the panel ID is already open, the panel is focused instead of duplicated.
    * @param id - Unique instance identifier for this panel.
    * @param component - Component key registered in the panel catalog.
-   * @param options - Optional display and placement overrides.
+   * @param options.title - Override the panel tab/window title. Accepts a plain string or an i18n message descriptor.
+   * @param options.initialTarget - Initial placement: `'floating'`, `'docked'` (default when a grid exists), or `'tabbed'`.
+   * @param options.anchor - Pin the new floating window to a workspace corner on creation. Has no effect when `initialTarget` is `'docked'` or `'tabbed'`.
    * @example
    * ```ts
-   * actions.openPanel('map-1', 'map', { title: 'Satellite View', initialTarget: 'floating' });
+   * // Open floating and pin to the top-right corner:
+   * actions.openPanel('layers', 'layertree', { initialTarget: 'floating', anchor: 'top-right' });
    * ```
    */
   openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null }) => void;
@@ -196,7 +208,8 @@ export interface WindowActions {
   /**
    * Detaches a docked panel, converting it to a resizable floating window.
    * @param id - Panel instance ID.
-   * @param rect - Optional initial position and size for the floating window.
+   * @param rect - Optional initial position and size. Omit to use the last known position or a cascaded default.
+   * @param anchor - Optional corner to pin the new floating window to. Omit (or pass `null`) for free-float.
    */
   floatPanel: (id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => void;
   /**

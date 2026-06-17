@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Workspace corner anchor zones** — four 80×80 px proximity snap zones appear at each workspace corner during any panel drag (docked tab or floating window). Dropping into a zone anchors the window to that corner; uses the same visual style (dashed accent-color border, `var(--accent-color)`) as the inner panel drop zones.
+- **Anchor stacking** — multiple windows anchored to the same corner stack with 8 px gaps, uncapped. Dragging a window away from its corner returns it to free-float.
+- **`anchor` option on `openPanel`** — new floating windows can be spawned pre-anchored: `openPanel('id', 'comp', { initialTarget: 'floating', anchor: 'top-right' })`.
+- **`anchor` param on `floatPanel`** — `floatPanel(id, rect?, anchor?)` floats and anchors in one atomic call.
+- **`defaultAnchor` on `PanelRegistryEntry.defaultOptions`** — sets the default corner for all instances of a registered component; replaces `defaultStickyRight`/`defaultStickyBottom`.
+- **RTL corner anchoring** — all corner snap zones and anchor render positions mirror correctly when `dir="rtl"`.
+- **RTL inner floating-window drop detection** — `PanelOverlay` inner floating window drop zones now correctly detect the logical corner in RTL mode; dragging no longer drops on the opposite corner.
+- **`FloatAnchor` type** — exported from the package root: `import type { FloatAnchor } from 'react-dockable-desktop'`.
 - **`toast` singleton** — imperative notification API with `toast()`, `toast.info()`, `toast.success()`, `toast.warning()`, `toast.error()`, `toast.dismiss()`, and `toast.promise()`. Works from anywhere — inside or outside React.
 - **`<ToastContainer>`** — portal-rendered notification host. Props: `position` (`top-right` default), `width` (320px default), `maxVisible` (3), `defaultDuration` (5000ms), `defaultClosable`, `pauseOnHover`, `animation` (`slide`/`fade`/`none`), `newestOnTop`, `progressBar`, `adapter`.
 - **`ToastAdapter` interface** — delegate all `toast.*` calls to an external notification library (Ant Design, MUI Snackbar, Sonner, etc.) without changing call sites.
@@ -25,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Internal: split the monolithic `PanelOverlayCtx` into three focused contexts (`PanelToolbarContext`, `PanelManagerContext`, `PanelOverlayContext`) — each consumer only re-renders on changes to its own slice. `PanelToolbar` no longer re-renders during window drag events; `usePanelFloatingWindowManager` consumers no longer re-render on z-order or drag-state changes.
 - Internal: replaced O(n) `isActive` calculation in `FloatingWindowBody` with an O(1) `topId` field set by `focusWindow`.
+
+### Removed
+- **`openPanel` options `stickyRight` / `stickyBottom`** — replaced by `anchor?: FloatAnchor | null`. Saved layouts containing the old JSON fields are automatically migrated by `loadLayout`.
+- **`PanelRegistryEntry.defaultOptions.defaultStickyRight` / `defaultStickyBottom`** — replaced by `defaultAnchor?: FloatAnchor`.
 
 ## [4.0.0] — 2026-06-16
 

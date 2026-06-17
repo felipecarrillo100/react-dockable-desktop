@@ -1776,7 +1776,7 @@ export function registerDemoPanels() {
         icon: '🌿',
         initialTarget: 'floating',
         favoritePosition: { x: 10, y: 50, width: 300, height: 400 },
-        defaultStickyRight: true,
+        defaultAnchor: 'top-left',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
     PanelRegistry.register('timecontrol', TimeControl, {
