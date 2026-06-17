@@ -9,7 +9,6 @@ import React, {
   useEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { isElementRtl } from '../utils/rtl';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -313,13 +312,11 @@ export interface PanelToolbarProps {
 export function PanelToolbar({ position, variant = 'transparent', buttonVariant = 'ghost', buttonSize, style, className, children }: PanelToolbarProps): React.ReactElement {
   const ctx = useContext(PanelToolbarContext);
   const ref = useRef<HTMLDivElement>(null);
-  const [rtl, setRtl] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    setRtl(isElementRtl(el));
     if (!ctx) return;
     const size = (position === 'top' || position === 'bottom') ? el.offsetHeight : el.offsetWidth;
     cleanupRef.current?.();
@@ -333,22 +330,18 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position, ctx?.registerToolbar]);
 
-  const effectivePos: ToolbarPosition = rtl
-    ? position === 'left' ? 'right' : position === 'right' ? 'left' : position
-    : position;
-
   const posStyle: React.CSSProperties = { position: 'absolute', zIndex: 5, pointerEvents: 'none', boxSizing: 'border-box' };
 
-  if (effectivePos === 'top') {
+  if (position === 'top') {
     posStyle.top = 0; posStyle.left = 0; posStyle.right = 0;
-  } else if (effectivePos === 'bottom') {
+  } else if (position === 'bottom') {
     posStyle.bottom = 0; posStyle.left = 0; posStyle.right = 0;
-  } else if (effectivePos === 'left') {
-    posStyle.left = 0;
+  } else if (position === 'left') {
+    posStyle.insetInlineStart = 0;
     posStyle.top = ctx?.insetTop ?? 0;
     posStyle.bottom = ctx?.insetBottom ?? 0;
   } else {
-    posStyle.right = 0;
+    posStyle.insetInlineEnd = 0;
     posStyle.top = ctx?.insetTop ?? 0;
     posStyle.bottom = ctx?.insetBottom ?? 0;
   }

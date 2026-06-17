@@ -7,7 +7,6 @@ import React, {
   useLayoutEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { isElementRtl } from '../utils/rtl';
 import type { ContextMenuLabel, MessageFormatter, MenuItemAction } from './contextMenuTypes';
 
 // ─── Re-export shared primitives so callers don't need contextMenuTypes.ts ───
@@ -287,7 +286,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       const itemEl = itemRefs.current.get(submenuIndex);
       if (itemEl) {
         const ir = itemEl.getBoundingClientRect();
-        const rtl = isElementRtl(menuRef.current);
+        const rtl = document.documentElement.dir === 'rtl';
         submenuX = rtl ? window.innerWidth - ir.left + 2 : ir.right + 2;
         submenuY = ir.top;
       }

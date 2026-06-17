@@ -10,7 +10,6 @@ import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
-import { isElementRtl } from '../utils/rtl';
 import { DefaultContextMenuAdapter } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { FormContainerProvider } from './FormContainerContext';
@@ -1208,32 +1207,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     };
   }, []);
 
-  // Dynamically observe document/container direction changes
-  useEffect(() => {
-    const el = workspaceRef.current;
-    if (!el) return;
-
-    const updateDir = () => {
-      const isRtl = isElementRtl(el);
-      setDirection(isRtl ? 'rtl' : 'ltr');
-    };
-
-    updateDir();
-
-    const observer = new MutationObserver(updateDir);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['dir'] });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['dir'] });
-
-    const closestDir = el.closest('[dir]');
-    if (closestDir && closestDir !== document.documentElement && closestDir !== document.body) {
-      observer.observe(closestDir, { attributes: true, attributeFilter: ['dir'] });
-    }
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [setDirection]);
-
   // Sync / Realignment Effect when actual workspace size changes
   useEffect(() => {
     const viewW = workspaceSize.width;
@@ -2086,7 +2059,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         const targetEl = getOrCreateDomCacheElement(id);
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
-            <div style={{ width: '100%', height: '100%' }}>
+            <div style={{ width: '100%', height: '100%' }} dir={state.dir}>
               {renderPanelContent(id, panel.component, registry)}
             </div>
           </FormContainerProviderWrapper>,

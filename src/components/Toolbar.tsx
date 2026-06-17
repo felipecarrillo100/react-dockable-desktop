@@ -9,7 +9,6 @@
 import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useToolbar } from './ToolbarContext';
-import { isElementRtl } from '../utils/rtl';
 import type { ToolbarContextValue } from './ToolbarContext';
 
 // ==========================================
@@ -273,7 +272,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
         <div
           ref={flyoutRef}
           className={`toolbar-group-flyout ${position}`}
-          style={flyoutPosition(btnRect, position, isElementRtl(btnRef.current))}
+          style={flyoutPosition(btnRect, position, document.documentElement.dir === 'rtl')}
           role="menu"
         >
           {item.items.map((entry, i) => {
