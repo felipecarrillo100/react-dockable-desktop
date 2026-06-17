@@ -190,7 +190,7 @@ export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({
       };
 
       return (
-        <div className="p-3 text-white text-start d-flex flex-column h-100 font-monospace" style={{ minHeight: '320px' }}>
+        <div className="p-3 text-white d-flex flex-column h-100 font-monospace" style={{ minHeight: '320px' }}>
           <div className="flex-grow-1 overflow-auto bg-dark bg-opacity-40 p-3 rounded border border-secondary border-opacity-35 position-relative">
             <pre className="m-0 text-info" style={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap', fontFamily: 'var(--bs-font-monospace)' }}>
               {snippet}
@@ -338,7 +338,7 @@ export const ShowcaseControlCenter: React.FC = () => {
   }, [state.floating, state.minimized]);
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex flex-column" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
+    <div className="w-100 h-100 p-3 bg-transparent d-flex flex-column" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
       <div className="border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between" style={{ borderColor: 'var(--panel-card-border)' }}>
         <h5 className="m-0 text-primary fw-bold d-flex align-items-center gap-2" style={{ fontSize: '1.05rem' }}>
           🚀 Control Center
@@ -465,21 +465,21 @@ export const ShowcaseControlCenter: React.FC = () => {
           <div className="d-flex flex-column gap-3">
             <h6 className="text-uppercase font-monospace text-secondary mb-1" style={{ fontSize: '0.75rem' }}>Layout Templates</h6>
             <div className="d-flex flex-column gap-2">
-              <button className="btn btn-sm btn-outline-light text-start p-2 d-flex flex-column gap-1" onClick={applyDev}>
+              <button className="btn btn-sm btn-outline-light p-2 d-flex flex-column gap-1" onClick={applyDev}>
                 <span className="fw-bold">🗺️ Developer Layout</span>
-                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Map and Code Editor on top, System Console on bottom.</span>
+                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Map and Code Editor on top, System Console on bottom.</span>
               </button>
-              <button className="btn btn-sm btn-outline-light text-start p-2 d-flex flex-column gap-1" onClick={applyEditor}>
+              <button className="btn btn-sm btn-outline-light p-2 d-flex flex-column gap-1" onClick={applyEditor}>
                 <span className="fw-bold">✏️ Code Editor Focus</span>
-                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Maximize editor window with a floating terminal preview.</span>
+                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Maximize editor window with a floating terminal preview.</span>
               </button>
-              <button className="btn btn-sm btn-outline-light text-start p-2 d-flex flex-column gap-1" onClick={applyData}>
+              <button className="btn btn-sm btn-outline-light p-2 d-flex flex-column gap-1" onClick={applyData}>
                 <span className="fw-bold">📊 Data Analysis</span>
-                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Full screen map and docked Attribute Database table.</span>
+                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Full screen map and docked Attribute Database table.</span>
               </button>
-              <button className="btn btn-sm btn-outline-danger text-start p-2 d-flex flex-column gap-1" onClick={resetLayout}>
+              <button className="btn btn-sm btn-outline-danger p-2 d-flex flex-column gap-1" onClick={resetLayout}>
                 <span className="fw-bold text-danger">🔄 Reset Default Layout</span>
-                <span className="text-secondary small text-start" style={{ fontSize: '0.7rem' }}>Restore original workspace split grid configuration.</span>
+                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Restore original workspace split grid configuration.</span>
               </button>
             </div>
           </div>
@@ -732,7 +732,7 @@ export const CodeEditor: React.FC = () => {
 };
 
 export const TerminalConsole: React.FC = () => (
-  <div className="w-100 h-100 p-3 font-monospace text-start" style={{ backgroundColor: 'var(--panel-card-bg)', color: 'var(--panel-text)', overflow: 'auto' }}>
+  <div className="w-100 h-100 p-3 font-monospace" style={{ backgroundColor: 'var(--panel-card-bg)', color: 'var(--panel-text)', overflow: 'auto' }}>
     <div style={{ color: 'var(--panel-title-color)' }}>[system] Custom Window Manager registered.</div>
     <div style={{ color: 'var(--panel-title-color)' }}>[system] Drag split lines or float tabs by right clicking.</div>
     <div>[info] Floating windows cascade algorithms ready.</div>
@@ -744,7 +744,7 @@ export const TerminalConsole: React.FC = () => (
 export const PreviewOutput: React.FC = () => {
   const [count, setCount] = useState(0);
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex flex-column justify-content-between" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent d-flex flex-column justify-content-between" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
       <div>
         <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3" style={{ borderColor: 'var(--panel-card-border)' }}>
           <h6 className="mb-0 font-monospace" style={{ fontSize: '0.8rem', color: 'var(--panel-title-color)' }}>live-preview-window</h6>
@@ -770,7 +770,7 @@ export const PreviewOutput: React.FC = () => {
 export const HelpCenter: React.FC = () => {
   const panelId = usePanelId();
   return (
-    <div className="w-100 h-100 p-4 bg-transparent text-start" style={{ color: 'var(--panel-text)', opacity: 0.85, overflow: 'auto' }}>
+    <div className="w-100 h-100 p-4 bg-transparent" style={{ color: 'var(--panel-text)', opacity: 0.85, overflow: 'auto' }}>
       <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }}>Workspace Guide</h5>
       <ul className="small d-flex flex-column gap-2 ps-3">
         <li><strong>Float Tabs:</strong> Click the "▢" in a tab header or right-click to float a docked tab.</li>
@@ -822,7 +822,7 @@ export const LayerTree: React.FC = () => {
   };
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
       <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Layer Catalog Explorer</h6>
       <div className="p-2 rounded mb-2 font-monospace small" style={{ background: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)', color: 'var(--panel-title-color)' }}>
         Active tool: <strong>{activeTool ?? 'none'}</strong>
@@ -873,7 +873,7 @@ export const TimeControl: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [time, setTime] = useState(50);
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex align-items-center gap-3" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
+    <div className="w-100 h-100 p-3 bg-transparent d-flex align-items-center gap-3" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
       <button
         type="button"
         onClick={() => setIsPlaying(!isPlaying)}
@@ -906,7 +906,7 @@ export const OverviewMap: React.FC = () => (
 );
 
 export const TablePanel: React.FC = () => (
-  <div className="w-100 h-100 p-2 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
+  <div className="w-100 h-100 p-2 bg-transparent" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
     <table className="table table-sm table-striped font-monospace" style={{ fontSize: '0.75rem', color: 'var(--panel-text)' }}>
       <thead>
         <tr>
@@ -926,7 +926,7 @@ export const TablePanel: React.FC = () => (
 );
 
 export const ToolPanel: React.FC = () => (
-  <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
+  <div className="w-100 h-100 p-3 bg-transparent" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
     <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Operations Toolbox</h6>
     <div className="d-flex flex-wrap gap-2 mt-3">
       <button type="button" className="btn btn-sm btn-outline-primary font-monospace">Measure Line</button>
@@ -1410,7 +1410,7 @@ export const DirtyFormDemoPanel: React.FC = () => {
   };
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-body d-flex flex-column text-start" style={{ overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-body d-flex flex-column" style={{ overflow: 'auto' }}>
       <h6 className="border-bottom border-secondary pb-2 text-info">Dirty State & Close Interception Form</h6>
       <div className="d-flex flex-column gap-3 mt-3">
         <div className="p-3 bg-body-tertiary bg-opacity-30 rounded border border-secondary">
@@ -1538,7 +1538,7 @@ export const DirtyEditorDemoPanel: React.FC = () => {
   usePanelContextMenu(menuItems);
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-body text-start d-flex flex-column gap-2" style={{ overflow: 'hidden' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-body d-flex flex-column gap-2" style={{ overflow: 'hidden' }}>
       <div className="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2">
         <h6 className="mb-0 text-info">Dirty Code Editor</h6>
         <button
@@ -1636,7 +1636,7 @@ export const RTLShowcasePanel: React.FC = () => {
 
   return (
     <div
-      className="w-100 h-100 p-3 d-flex flex-column gap-3 text-start overflow-auto"
+      className="w-100 h-100 p-3 d-flex flex-column gap-3 overflow-auto"
       style={{ color: 'var(--panel-text)', fontFamily: isRtl ? '"Noto Sans Arabic", "Segoe UI", sans-serif' : 'inherit' }}
     >
       {/* Direction badge */}

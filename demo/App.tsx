@@ -34,9 +34,11 @@ import {
 interface AppProps {
   locale?: string;
   onLocaleChange?: (locale: string) => void;
+  rtlLayout?: boolean;
+  setRtlLayout?: (val: boolean) => void;
 }
 
-function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
+function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLayout }: AppProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [skin, setSkin] = useState<string>('vscode');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>('right');
@@ -45,7 +47,6 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
   const [toolbarPosition, setToolbarPosition] = useState<'left' | 'right' | 'top' | 'bottom'>('left');
-  const [rtlLayout, setRtlLayout] = useState<boolean>(false);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const sidebarRef = React.useRef<SidebarHandle>(null);
@@ -74,7 +75,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const spawnNestedModal = (level: number = 1) => {
     const NestComponent: React.FC = () => {
       return (
-        <div className="p-3 text-white text-start">
+        <div className="p-3 text-white">
           <p className="mb-2">This is Nested Modal Level {level}!</p>
           <p className="small text-muted mb-3">Press ESC to close only this topmost modal.</p>
           <div className="d-flex gap-2">
@@ -113,7 +114,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       const [showLongContent, setShowLongContent] = useState(false);
 
       return (
-        <div className="p-3 text-white text-start d-flex flex-column justify-content-between h-100" style={{ minHeight: '180px' }}>
+        <div className="p-3 text-white d-flex flex-column justify-content-between h-100" style={{ minHeight: '180px' }}>
           <div>
             <h5 className="mb-2">{size.toUpperCase()} Modal</h5>
             <p className="mb-3">This modal has been opened with size preset <code>'{size}'</code>.</p>
@@ -198,11 +199,6 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       document.documentElement.classList.remove('enable-animations');
     }
   }, [enableAnimations]);
-
-  useEffect(() => {
-    document.documentElement.dir = rtlLayout ? 'rtl' : 'ltr';
-    return () => { document.documentElement.dir = 'ltr'; };
-  }, [rtlLayout]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', theme);
@@ -644,7 +640,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
               </span>
             </div>
           </div>
-          <div className="sb-empty-state" style={{ textAlign: 'left', marginBottom: '8px' }}>3 matches found:</div>
+          <div className="sb-empty-state" style={{ textAlign: 'start', marginBottom: '8px' }}>3 matches found:</div>
           <div className="sb-card">
             <div className="sb-card-title">Workspace.tsx</div>
             <div className="sb-card-meta">Line 18: const DockableWorkspace...</div>
@@ -812,7 +808,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             <label className="sb-toggle-label" htmlFor="sidebarVisSwitch">Show Sidebar</label>
           </div>
           <div className="sb-toggle-row">
-            <input type="checkbox" id="rtlSwitch" checked={rtlLayout} onChange={e => setRtlLayout(e.target.checked)} />
+            <input type="checkbox" id="rtlSwitch" checked={rtlLayout} onChange={e => setRtlLayout?.(e.target.checked)} />
             <label className="sb-toggle-label" htmlFor="rtlSwitch">RTL Layout</label>
           </div>
 
@@ -1138,7 +1134,13 @@ interface AppWithIntlProps extends AppProps {
 }
 
 function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
+  const [rtlLayout, setRtlLayout] = useState<boolean>(false);
   const intl = useIntl();
+
+  useEffect(() => {
+    document.documentElement.dir = rtlLayout ? 'rtl' : 'ltr';
+    return () => { document.documentElement.dir = 'ltr'; };
+  }, [rtlLayout]);
 
   const handleFormatMessage = (msg: ContextMenuPredefinedMessage) => {
     return intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values);
@@ -1148,9 +1150,9 @@ function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
     <DockableDesktopProvider
       formatMessage={handleFormatMessage}
       predefinedMessages={defaultPredefinedMessages}
-      dir={locale === 'ar' ? 'rtl' : 'ltr'}
+      dir={rtlLayout ? 'rtl' : 'ltr'}
     >
-      <AppContent locale={locale} onLocaleChange={onLocaleChange} />
+      <AppContent locale={locale} onLocaleChange={onLocaleChange} rtlLayout={rtlLayout} setRtlLayout={setRtlLayout} />
     </DockableDesktopProvider>
   );
 }
