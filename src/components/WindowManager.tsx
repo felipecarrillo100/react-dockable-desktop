@@ -13,7 +13,7 @@ import type { PanelRegistryClass } from './PanelRegistry';
 import { DefaultContextMenuAdapter } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { FormContainerProvider } from './FormContainerContext';
-import type { FormContainerContract } from './FormContainerContext';
+import type { FormContainerContract, ContainerType } from './FormContainerContext';
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 
@@ -126,6 +126,9 @@ interface PanelLifecycleRegistry {
   onMinimize: Set<() => void>;
   onRestore: Set<() => void>;
   onResize: Set<(w: number, h: number) => void>;
+  onActivate: Set<() => void>;
+  onDeactivate: Set<() => void>;
+  onContainerTypeChange: Set<(type: ContainerType) => void>;
 }
 
 const panelLifecycleRegistry = new Map<string, PanelLifecycleRegistry>();
@@ -138,6 +141,9 @@ const getOrCreateLifecycleRegistry = (panelId: string) => {
       onMinimize: new Set(),
       onRestore: new Set(),
       onResize: new Set(),
+      onActivate: new Set(),
+      onDeactivate: new Set(),
+      onContainerTypeChange: new Set(),
     };
     panelLifecycleRegistry.set(panelId, entry);
   }
@@ -286,8 +292,9 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
 const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
   const state = useWindowManagerState();
-  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle } = useWindowManagerActions();
+  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle, minimizePanel } = useWindowManagerActions();
 
+  // ── minimize / restore ──────────────────────────────────────────────────
   const isMin = state.minimized.some(m => m.id === panelId);
   const prevMinRef = useRef(isMin);
 
@@ -303,15 +310,56 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
     prevMinRef.current = isMin;
   }, [isMin, panelId]);
 
+  // ── activate / deactivate ───────────────────────────────────────────────
+  const isActive = state.activePanelId === panelId;
+  const prevActiveRef = useRef(isActive);
+
+  useEffect(() => {
+    const wasActive = prevActiveRef.current;
+    prevActiveRef.current = isActive; // always sync the ref, even if no handler is registered yet
+    const entry = panelLifecycleRegistry.get(panelId);
+    if (!entry) return;
+
+    if (isActive && !wasActive) {
+      entry.onActivate.forEach(h => h());
+    } else if (!isActive && wasActive) {
+      entry.onDeactivate.forEach(h => h());
+    }
+  }, [isActive, panelId]);
+
+  // ── container-type change ───────────────────────────────────────────────
+  const rawPanelState = state.panels[panelId]?.state;
+  const derivedContainerType: ContainerType =
+    rawPanelState === 'floating' ? 'floating-window' : 'dockable-panel';
+  const prevContainerTypeRef = useRef(derivedContainerType);
+
+  useEffect(() => {
+    if (rawPanelState === 'minimized') return; // minimize/restore is onMinimize's domain; intentionally skip ref update
+    const prevType = prevContainerTypeRef.current;
+    prevContainerTypeRef.current = derivedContainerType; // always sync, even if no handler registered yet
+    const entry = panelLifecycleRegistry.get(panelId);
+    if (!entry) return;
+
+    if (derivedContainerType !== prevType) {
+      entry.onContainerTypeChange.forEach(h => h(derivedContainerType));
+    }
+  }, [derivedContainerType, rawPanelState, panelId]);
+
+  // ── cleanup: fire onDeactivate (if active) then onClose ─────────────────
   useEffect(() => {
     return () => {
       const entry = panelLifecycleRegistry.get(panelId);
       if (entry) {
+        if (prevActiveRef.current) entry.onDeactivate.forEach(h => h());
         entry.onClose.forEach(h => h());
         panelLifecycleRegistry.delete(panelId);
       }
     };
   }, [panelId]);
+
+  // Capture the container type at mount so the static `containerType` field is
+  // correct ('dockable-panel' or 'floating-window') rather than the default 'standalone'.
+  const initialContainerTypeRef = useRef<ContainerType>(derivedContainerType);
 
   const contract = React.useMemo<FormContainerContract>(() => ({
     requestClose: (options) => requestClosePanel(panelId, options),
@@ -322,6 +370,7 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
     },
     setTitle: (title) => updatePanelTitle(panelId, title),
     instanceId: panelId,
+    containerType: initialContainerTypeRef.current,
     onClose: (handler) => {
       const reg = getOrCreateLifecycleRegistry(panelId);
       reg.onClose.add(handler);
@@ -341,8 +390,25 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
       const reg = getOrCreateLifecycleRegistry(panelId);
       reg.onResize.add(handler);
       return () => reg.onResize.delete(handler);
-    }
-  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle]);
+    },
+    requestMinimize: () => minimizePanel(panelId),
+    getDimensions: () => activePanelDimensions.get(panelId) ?? null,
+    onActivate: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onActivate.add(handler);
+      return () => reg.onActivate.delete(handler);
+    },
+    onDeactivate: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onDeactivate.add(handler);
+      return () => reg.onDeactivate.delete(handler);
+    },
+    onContainerTypeChange: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onContainerTypeChange.add(handler);
+      return () => reg.onContainerTypeChange.delete(handler);
+    },
+  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle, minimizePanel]);
 
   return (
     <FormContainerProvider value={contract}>

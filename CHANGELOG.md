@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`onActivate` / `onDeactivate` on `FormContainerContract`** — push-based callbacks that fire when a panel becomes or stops being the globally active panel (`state.activePanelId`). Eliminates the need to subscribe to `useWindowManagerState` and compare `activePanelId` from inside each panel. `onDeactivate` also fires when the panel is destroyed while active (before `onClose`). Returns an unsubscribe function.
+- **`onContainerTypeChange` on `FormContainerContract`** — fires with the new `ContainerType` whenever the panel transitions between `'dockable-panel'` (docked in the grid) and `'floating-window'` (detached floating window). Does not fire during minimize/restore cycles — use `onMinimize` / `onRestore` for those. Returns an unsubscribe function.
+- **`getDimensions()` on `FormContainerContract`** — synchronous getter that returns the current `{ width: number; height: number }` of the panel, or `null` before the first layout. Reads from the same module-level map populated by the existing `ResizeObserver`-backed `onResize` callback.
+- **`requestMinimize()` on `FormContainerContract`** — imperative method that minimizes the panel to the taskbar. No-op if the container type does not support minimize. Symmetric counterpart to the existing `requestClose()`.
+- **`'floating-window'` value in `ContainerType`** — `containerType` on the contract now correctly reports `'dockable-panel'` for panels docked in the workspace grid and `'floating-window'` for panels in a detached `PanelFloatingWindow`. Previously the field was stuck at `'standalone'` for all dockable panels.
+
 - **Workspace corner anchor zones** — four 80×80 px proximity snap zones appear at each workspace corner during any panel drag (docked tab or floating window). Dropping into a zone anchors the window to that corner; uses the same visual style (dashed accent-color border, `var(--accent-color)`) as the inner panel drop zones.
 - **Anchor stacking** — multiple windows anchored to the same corner stack with 8 px gaps, uncapped. Dragging a window away from its corner returns it to free-float.
 - **`anchor` option on `openPanel`** — new floating windows can be spawned pre-anchored: `openPanel('id', 'comp', { initialTarget: 'floating', anchor: 'top-right' })`.
