@@ -128,7 +128,9 @@ Use `usePanelId()` when you only need the ID. Use `useFormContainer()` when you 
 
 ## Responding to lifecycle events
 
-The container exposes four lifecycle hooks. Each returns an unsubscribe function — clean them up in a `useEffect` return.
+The container exposes lifecycle callbacks for every meaningful panel state change. Each returns an unsubscribe function — clean them up in a `useEffect` return.
+
+### Close, minimize, restore, resize
 
 ```tsx
 function MyPanel() {
@@ -159,8 +161,88 @@ function MyPanel() {
 ```
 
 ::: tip Zero-unmount DOM preservation
-Panel components are **never unmounted** when hidden, minimized, or covered by another tab. React lifecycle events (`useEffect` cleanup) do not reliably signal visibility changes. Use the `onMinimize` / `onRestore` hooks above instead.
+Panel components are **never unmounted** when hidden, minimized, or covered by another tab. React lifecycle events (`useEffect` cleanup) do not reliably signal visibility changes. Use the `onMinimize` / `onRestore` callbacks above instead.
 :::
+
+### Active panel (focus)
+
+`onActivate` fires when this panel becomes the globally active panel (the one highlighted in the taskbar and tab strip). `onDeactivate` fires when focus moves to another panel, **and also** when the panel is destroyed while active — so it always fires before `onClose` in that case.
+
+```tsx
+useEffect(() => {
+  const unsubs = [
+    container.onActivate?.(() => {
+      // e.g. reload live data, resume polling
+      startDataStream();
+    }),
+    container.onDeactivate?.(() => {
+      // e.g. pause background work when not visible
+      stopDataStream();
+    }),
+  ];
+  return () => unsubs.filter(Boolean).forEach(u => u!());
+}, [container]);
+```
+
+::: info What "active" means
+The active panel is determined by `focusPanel()` / user tab clicks, not by visibility. A minimized panel cannot be active. Calling `openPanel()` alone does **not** make the panel globally active — call `focusPanel(id)` if you need that.
+:::
+
+### Container type changes (docked ↔ floating)
+
+`onContainerTypeChange` fires whenever the panel moves between the docked grid and a detached floating window. It does **not** fire during minimize/restore — use `onMinimize` / `onRestore` for those.
+
+The handler receives the new `ContainerType` value: `'dockable-panel'` or `'floating-window'`.
+
+```tsx
+useEffect(() => {
+  const unsub = container.onContainerTypeChange?.((type) => {
+    if (type === 'floating-window') {
+      // Panel is now free-floating — map may need a resize
+      mapInstance.resize();
+    } else {
+      // Panel docked back into the grid
+      mapInstance.resize();
+    }
+  });
+  return unsub;
+}, [container]);
+```
+
+::: tip Reading the type at mount
+`container.containerType` reflects the state **at mount time** and does not update. Combine it with `onContainerTypeChange` to track the current type throughout the panel's lifetime:
+
+```ts
+const [currentType, setCurrentType] = useState(container.containerType);
+
+useEffect(() => {
+  return container.onContainerTypeChange?.(setCurrentType);
+}, [container]);
+```
+:::
+
+### Querying current dimensions
+
+`getDimensions()` is a synchronous getter that returns the panel's current rendered size, or `null` if the panel has not yet been laid out. It reads from the same source as `onResize` — no extra observer setup needed.
+
+```ts
+const dims = container.getDimensions?.();
+if (dims) {
+  console.log(`${dims.width} × ${dims.height}`);
+}
+```
+
+Typical use: read the initial size inside `onActivate` instead of waiting for a resize event.
+
+### Minimizing imperatively
+
+`requestMinimize()` sends the panel to the taskbar without requiring access to `useWindowManagerActions`. It is a no-op if the container type does not support minimize (e.g. modals and side drawers).
+
+```ts
+<button onClick={() => container.requestMinimize?.()}>
+  Minimize
+</button>
+```
 
 ## `ConfirmationForm` component
 
@@ -209,16 +291,38 @@ When a panel is marked dirty, `react-dockable-desktop` opens a `ConfirmationForm
 ## `FormContainerContract` reference
 
 ```ts
+type ContainerType =
+  | 'dockable-panel'   // panel is docked in the workspace grid
+  | 'floating-window'  // panel is in a detached floating window
+  | 'left-panel'       // rendered inside the left side drawer
+  | 'right-panel'      // rendered inside the right side drawer
+  | 'modal'            // rendered inside a modal overlay
+  | 'standalone';      // rendered outside the Window Manager (default / no context)
+
 interface FormContainerContract {
-  instanceId:       string;
-  requestClose:     (options?: { force?: boolean }) => void;
-  setDirty:         (dirty: boolean, options?: DirtyStateOptions) => void;
-  setTitle:         (title: string | MessageDescriptor) => void;
-  onCloseRequested: (handler: () => boolean | Promise<boolean>) => () => void;
-  onClose?:         (handler: () => void) => () => void;
-  onMinimize?:      (handler: () => void) => () => void;
-  onRestore?:       (handler: () => void) => () => void;
-  onResize?:        (handler: (w: number, h: number) => void) => () => void;
+  // ── Identity ──────────────────────────────────────────────────────────────
+  instanceId:    string;
+  containerType?: ContainerType;         // type at mount — use onContainerTypeChange for live updates
+
+  // ── Imperative actions ────────────────────────────────────────────────────
+  requestClose:    (options?: { force?: boolean }) => void;
+  requestMinimize?: () => void;          // minimize to taskbar; no-op for modals/drawers
+  setDirty:        (dirty: boolean, options?: DirtyStateOptions) => void;
+  setTitle:        (title: string | MessageDescriptor) => void;
+  setIcon?:        (icon: React.ReactNode) => void;
+
+  // ── Synchronous queries ───────────────────────────────────────────────────
+  getDimensions?: () => { width: number; height: number } | null;  // null before first layout
+
+  // ── Subscriptions (each returns an unsubscribe function) ─────────────────
+  onCloseRequested:      (handler: () => boolean | Promise<boolean>) => () => void;
+  onClose?:              (handler: () => void) => () => void;
+  onMinimize?:           (handler: () => void) => () => void;
+  onRestore?:            (handler: () => void) => () => void;
+  onResize?:             (handler: (w: number, h: number) => void) => () => void;
+  onActivate?:           (handler: () => void) => () => void;
+  onDeactivate?:         (handler: () => void) => () => void;
+  onContainerTypeChange?: (handler: (type: ContainerType) => void) => () => void;
 }
 ```
 

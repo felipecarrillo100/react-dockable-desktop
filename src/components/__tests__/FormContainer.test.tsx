@@ -10,6 +10,31 @@ import WindowManager from '../WindowManager';
 import ModalStackRenderer from '../ModalStackRenderer';
 import ConfirmationForm from '../../forms/ConfirmationForm';
 
+// Shared log for lifecycle event assertions — cleared in beforeEach of each describe
+const lifeCycleLog: string[] = [];
+
+// Panel that exposes new lifecycle contract members via buttons and data attributes
+const TestLifecycleChild: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const contract = useFormContainer();
+  return (
+    <div id={`lc-${panelId}`} data-container-type={contract.containerType}>
+      <button id={`minimize-btn-${panelId}`} onClick={() => contract.requestMinimize?.()}>Minimize</button>
+      <button id={`get-dims-btn-${panelId}`} onClick={() => {
+        const d = contract.getDimensions?.();
+        lifeCycleLog.push(d ? `${d.width}x${d.height}` : 'null');
+      }}>Get Dims</button>
+      <button id={`sub-lifecycle-${panelId}`} onClick={() => {
+        contract.onActivate?.(() => lifeCycleLog.push(`activate:${panelId}`));
+        contract.onDeactivate?.(() => lifeCycleLog.push(`deactivate:${panelId}`));
+        contract.onContainerTypeChange?.((t) => lifeCycleLog.push(`containerType:${t}`));
+        contract.onClose?.(() => lifeCycleLog.push(`close:${panelId}`));
+      }}>Subscribe</button>
+    </div>
+  );
+};
+
+PanelRegistry.register('testLifecycle', TestLifecycleChild);
+
 // Panel that exposes FormContainerContract via buttons so tests can drive it
 const TestFormChild: React.FC<{ panelId: string }> = ({ panelId }) => {
   const container = useFormContainer();
@@ -300,5 +325,225 @@ describe('FormContainer Integration', () => {
 
     expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
     expect(testState.panels['test-panel']).toBeDefined();
+  });
+});
+
+// @ts-ignore
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+describe('FormContainer Lifecycle Extensions', () => {
+  let container: HTMLDivElement | null = null;
+  let root: Root | null = null;
+  let lcTestActions: any = null;
+  let lcTestState: any = null;
+
+  const LcTestHelper: React.FC = () => {
+    lcTestActions = useWindowManagerActions();
+    lcTestState = useWindowManagerState();
+    return null;
+  };
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    lcTestActions = null;
+    lcTestState = null;
+    lifeCycleLog.length = 0;
+  });
+
+  afterEach(() => {
+    if (root) {
+      act(() => { root!.unmount(); });
+    }
+    if (container) {
+      document.body.removeChild(container);
+    }
+    const preserved = document.getElementById('preserved-dom-container');
+    if (preserved?.parentNode) {
+      preserved.parentNode.removeChild(preserved);
+    }
+    root = null;
+  });
+
+  const mount = () => {
+    act(() => {
+      root = createRoot(container!);
+      root.render(
+        <WindowManagerProvider>
+          <PanelProvider>
+            <LcTestHelper />
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+  };
+
+  const click = (id: string) => {
+    act(() => {
+      (container!.querySelector(`#${id}`) as HTMLButtonElement).click();
+    });
+  };
+
+  it('requestMinimize moves panel to minimized taskbar', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    click('minimize-btn-lc-panel');
+
+    expect(lcTestState.panels['lc-panel'].state).toBe('minimized');
+    expect(lcTestState.minimized.some((m: any) => m.id === 'lc-panel')).toBe(true);
+  });
+
+  it('getDimensions returns null before ResizeObserver fires', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    click('get-dims-btn-lc-panel');
+
+    expect(lifeCycleLog).toContain('null');
+  });
+
+  it('onActivate fires when panel gains focus', () => {
+    mount();
+    act(() => {
+      lcTestActions.openPanel('lc-panel-1', 'testLifecycle', { title: 'Panel 1' });
+      lcTestActions.openPanel('lc-panel-2', 'testLifecycle', { title: 'Panel 2' });
+    });
+
+    // Focus panel-1 so its PreservedDOMWrapper mounts and puts its DOM in container
+    act(() => { lcTestActions.focusPanel('lc-panel-1'); });
+    // prevActiveRef is now true for panel-1; subscribe so the next focus change fires activate
+    click('sub-lifecycle-lc-panel-1');
+
+    // Focus panel-2 then back to panel-1 — panel-1 should fire activate on the return
+    act(() => { lcTestActions.focusPanel('lc-panel-2'); });
+    act(() => { lcTestActions.focusPanel('lc-panel-1'); });
+
+    expect(lifeCycleLog).toContain('activate:lc-panel-1');
+  });
+
+  it('onDeactivate fires when panel loses focus', () => {
+    mount();
+    act(() => {
+      lcTestActions.openPanel('lc-panel-1', 'testLifecycle', { title: 'Panel 1' });
+      lcTestActions.openPanel('lc-panel-2', 'testLifecycle', { title: 'Panel 2' });
+    });
+
+    // Focus panel-1 first so state.activePanelId = 'lc-panel-1'
+    act(() => { lcTestActions.focusPanel('lc-panel-1'); });
+
+    // Subscribe on both panels (panel-1 may be inactive tab — use document)
+    act(() => { document.getElementById('sub-lifecycle-lc-panel-1')?.click(); });
+    act(() => { document.getElementById('sub-lifecycle-lc-panel-2')?.click(); });
+
+    // Switch focus to panel-2 — panel-1 deactivates, panel-2 activates
+    act(() => { lcTestActions.focusPanel('lc-panel-2'); });
+
+    expect(lifeCycleLog).toContain('deactivate:lc-panel-1');
+    expect(lifeCycleLog).toContain('activate:lc-panel-2');
+    // deactivate must come before activate
+    expect(lifeCycleLog.indexOf('deactivate:lc-panel-1')).toBeLessThan(
+      lifeCycleLog.indexOf('activate:lc-panel-2')
+    );
+  });
+
+  it('onDeactivate fires when active panel is closed', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    // focusPanel sets state.activePanelId; without it prevActiveRef.current stays false
+    act(() => { lcTestActions.focusPanel('lc-panel'); });
+    click('sub-lifecycle-lc-panel');
+
+    act(() => { lcTestActions.closePanel('lc-panel'); });
+
+    expect(lifeCycleLog.some(e => e.startsWith('deactivate:'))).toBe(true);
+  });
+
+  it('onDeactivate fires before onClose when active panel is destroyed', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    act(() => { lcTestActions.focusPanel('lc-panel'); });
+    click('sub-lifecycle-lc-panel');
+
+    act(() => { lcTestActions.closePanel('lc-panel'); });
+
+    const deactivateIdx = lifeCycleLog.findIndex(e => e === 'deactivate:lc-panel');
+    const closeIdx = lifeCycleLog.findIndex(e => e === 'close:lc-panel');
+    expect(deactivateIdx).toBeGreaterThanOrEqual(0);
+    expect(closeIdx).toBeGreaterThanOrEqual(0);
+    expect(deactivateIdx).toBeLessThan(closeIdx);
+  });
+
+  it('onContainerTypeChange fires with floating-window when panel is floated', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    click('sub-lifecycle-lc-panel');
+
+    act(() => { lcTestActions.floatPanel('lc-panel'); });
+
+    expect(lifeCycleLog).toContain('containerType:floating-window');
+  });
+
+  it('onContainerTypeChange fires with dockable-panel when floating panel is docked back', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    // Subscribe while docked (panel is visible in container) then float then dock back
+    click('sub-lifecycle-lc-panel');
+    act(() => { lcTestActions.floatPanel('lc-panel'); });
+    act(() => { lcTestActions.dockPanel('lc-panel'); });
+
+    expect(lifeCycleLog).toContain('containerType:dockable-panel');
+  });
+
+  it('onContainerTypeChange does NOT fire during minimize and restore', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    click('sub-lifecycle-lc-panel');
+
+    act(() => { lcTestActions.minimizePanel('lc-panel'); });
+    act(() => { lcTestActions.restorePanel('lc-panel'); });
+
+    expect(lifeCycleLog.some(e => e.startsWith('containerType:'))).toBe(false);
+  });
+
+  it('containerType field is dockable-panel at mount for a docked panel', () => {
+    mount();
+    act(() => { lcTestActions.openPanel('lc-panel', 'testLifecycle', { title: 'LC Panel' }); });
+
+    const el = container!.querySelector('#lc-lc-panel');
+    expect(el?.getAttribute('data-container-type')).toBe('dockable-panel');
+  });
+
+  it('onActivate and onDeactivate are not fired when an unrelated panel gains focus', () => {
+    mount();
+    act(() => {
+      lcTestActions.openPanel('lc-panel-1', 'testLifecycle', { title: 'Panel 1' });
+      lcTestActions.openPanel('lc-panel-2', 'testLifecycle', { title: 'Panel 2' });
+      lcTestActions.openPanel('lc-panel-3', 'testLifecycle', { title: 'Panel 3' });
+    });
+
+    // Focus panel-1 so it is active, then subscribe (panel-1 may not be in container — use document)
+    act(() => { lcTestActions.focusPanel('lc-panel-1'); });
+    act(() => { document.getElementById('sub-lifecycle-lc-panel-1')?.click(); });
+
+    // Switch focus to panel-2 — panel-1 deactivates, panel-2 activates (panel-3 untouched)
+    act(() => { lcTestActions.focusPanel('lc-panel-2'); });
+
+    // Switch focus to panel-3 — panel-2 transitions, panel-1 gets no new events
+    const logAfterFirstSwitch = [...lifeCycleLog];
+    act(() => { lcTestActions.focusPanel('lc-panel-3'); });
+
+    // panel-1's deactivate should appear exactly once (from the first switch)
+    const deactivateCount = lifeCycleLog.filter(e => e === 'deactivate:lc-panel-1').length;
+    expect(deactivateCount).toBe(1);
+    // panel-1's activate should not have fired at all
+    expect(lifeCycleLog).not.toContain('activate:lc-panel-1');
+    expect(logAfterFirstSwitch).toEqual(lifeCycleLog.slice(0, logAfterFirstSwitch.length));
   });
 });
