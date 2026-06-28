@@ -242,13 +242,13 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     // Click-outside dismiss
     useEffect(() => {
       if (!menuState.visible) return;
-      const onDown = (e: MouseEvent) => {
+      const onDown = (e: PointerEvent) => {
         if (menuRef.current?.contains(e.target as Node)) return;
         if (submenuPanelRef.current?.contains(e.target as Node)) return;
         close();
       };
-      document.addEventListener('mousedown', onDown);
-      return () => document.removeEventListener('mousedown', onDown);
+      document.addEventListener('pointerdown', onDown, { capture: true });
+      return () => document.removeEventListener('pointerdown', onDown, { capture: true });
     }, [menuState.visible, close]);
 
     // Escape dismiss

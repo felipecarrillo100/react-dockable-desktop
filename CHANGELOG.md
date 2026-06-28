@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`openPanel` options `stickyRight` / `stickyBottom`** — replaced by `anchor?: FloatAnchor | null`. Saved layouts containing the old JSON fields are automatically migrated by `loadLayout`.
 - **`PanelRegistryEntry.defaultOptions.defaultStickyRight` / `defaultStickyBottom`** — replaced by `defaultAnchor?: FloatAnchor`.
 
+## [4.1.1] — 2026-06-28
+
+### Fixed
+- **`ContextMenu` stays open on WebGL canvas click/tap** — The click-outside dismiss listener was registered on `mousedown` in the bubble phase. WebGL gesture controllers (LuciadRIA, MapLibre, Three.js, etc.) call `stopPropagation()` on pointer events to claim the interaction, preventing the bubble-phase handler from ever reaching `document`. On touch devices `mousedown` may not fire at all when the gesture is claimed on `pointerdown`. Fixed by switching to `pointerdown` with `{ capture: true }`, which fires top-down before any canvas handler runs and covers mouse, touch, and stylus input uniformly.
+
 ## [4.0.0] — 2026-06-16
 
 ### Breaking Changes
