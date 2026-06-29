@@ -461,7 +461,7 @@ interface ContextMenuContextValue {
   isOpen: boolean;
 }
 
-const ContextMenuContext = React.createContext<ContextMenuContextValue | null>(null);
+const ContextMenuContext: React.Context<ContextMenuContextValue | null> = React.createContext<ContextMenuContextValue | null>(null);
 
 export const ContextMenuProvider: React.FC<{
   adapter?: ContextMenuAdapter;
