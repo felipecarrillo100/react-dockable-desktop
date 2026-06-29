@@ -9,5 +9,8 @@ export default defineConfig({
   build: {
     outDir: '../docs',
     emptyOutDir: true,
-  }
+  },
+  server: {
+    host: '0.0.0.0',
+  },
 })

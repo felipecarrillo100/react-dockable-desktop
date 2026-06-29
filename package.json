@@ -28,8 +28,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite demo",
-    "dev:ria": "vite demo-luciadria",
-    "dev:oldria": "vite demo-oldria",
+    "dev:ria": "vite demo-luciadria --host",
+    "dev:oldria": "vite demo-oldria --host",
     "build": "tsup && node -e \"require('fs').copyFileSync('src/index.css', 'dist/styles.css')\"",
     "demo:build": "vite build --base /react-dockable-desktop/demo/",
     "docs:dev": "vitepress dev docs-site",

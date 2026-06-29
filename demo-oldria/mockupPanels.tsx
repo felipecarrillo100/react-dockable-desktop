@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { PanelRegistry, useFormContainer, useWindowManagerActions } from '../src/index';
+import { type ContextMenuItem, PanelRegistry, useFormContainer, useWindowManagerActions } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import { DirtyFormDemoPanel, DirtyEditorDemoPanel, ShowcaseControlCenter, CodeSnippetButton } from '../demo/mockupPanels';
 import { getReference } from '@luciad/ria/reference/ReferenceProvider.js';
@@ -21,6 +21,7 @@ import type { LabelCanvas } from "@luciad/ria/view/style/LabelCanvas.js";
 import { Map } from "@luciad/ria/view/Map.js";
 import type { ShapeStyle } from "@luciad/ria/view/style/ShapeStyle.js";
 import { DrapeTarget } from "@luciad/ria/view/style/DrapeTarget.js";
+import type { ContextMenu } from "@luciad/ria/view/ContextMenu.js";
 
 // ==========================================
 // 1. LuciadRIA Layers & Styles Painter
@@ -68,7 +69,7 @@ export class StatesPainter extends FeaturePainter {
   }
 }
 
-function addMapLayers(map: WebGLMap) {
+function addMapLayers(map: WebGLMap, onWfsLayer?: (layer: FeatureLayer) => void) {
   // 1. Add WMS Layer (Imagery)
   const wmsUrl = "https://sampleservices.luciad.com/wms";
   const layerImageryName = [{ layer: "4ceea49c-3e7c-4e2d-973d-c608fb2fb07e" }];
@@ -94,6 +95,7 @@ function addMapLayers(map: WebGLMap) {
     if (layer.bounds) {
       map.mapNavigator.fit({ bounds: layer.bounds });
     }
+    onWfsLayer?.(layer);
   }).catch((e) => {
     console.error("Failed to load WFS layer:", e);
   });
@@ -251,7 +253,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<WebGLMap | null>(null);
   const contract = useFormContainer();
-  const { focusPanel } = useWindowManagerActions();
+  const { focusPanel, showContextMenu } = useWindowManagerActions();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -269,9 +271,39 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
           focusPanel(panelId);
           return false;
         };
+
+        map.onShowContextMenu = (position: number[], contextMenu: ContextMenu) => {
+          if (contextMenu.items.length === 0) return;
+          const items: ContextMenuItem[] = contextMenu.items.map((item) =>
+            item.separator
+              ? { separator: true as const }
+              : { label: item.label, action: item.action }
+          );
+          showContextMenu({ x: position[0], y: position[1], items });
+        };
       }
 
-      addMapLayers(map);
+      addMapLayers(map, (layer) => {
+        layer.onCreateContextMenu = (contextMenu: ContextMenu, _map, info: unknown) => {
+          const objects: unknown[] = (info as any)?.objects ?? [];
+          if (objects.length === 0) return;
+          const feature = objects[0] as Feature;
+          contextMenu.addItem({
+            id: 'fit',
+            label: `Fit to ${feature.properties?.STATE_NAME ?? 'feature'}`,
+            action: () => {
+              const bounds = feature.shape?.bounds;
+              if (bounds && mapRef.current) mapRef.current.mapNavigator.fit({ bounds, animate: true });
+            }
+          });
+          contextMenu.addSeparator();
+          contextMenu.addItem({
+            id: 'properties',
+            label: 'Properties',
+            action: () => { console.log('Feature properties:', feature.properties); }
+          });
+        };
+      });
 
       // Subscribe to the window resize emitter
       const unsubscribeResize = contract.onResize?.(throttle((_width, _height) => {
@@ -298,7 +330,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
     } catch (e) {
       console.error("Failed to initialize LuciadRIA Map in EPSG:4978:", e);
     }
-  }, [panelId]);
+  }, [panelId, showContextMenu]);
 
   return (
     <div className="position-relative" style={{ overflow: 'hidden', width: '100%', height: "100%", backgroundColor: "orange" }}>
@@ -313,6 +345,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
 export const MainMap: React.FC<{ panelId: string }> = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<WebGLMap | null>(null);
+  const { showContextMenu } = useWindowManagerActions();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -324,7 +357,37 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
       });
       mapRef.current = map;
 
-      addMapLayers(map);
+      map.onShowContextMenu = (position: number[], contextMenu: ContextMenu) => {
+        if (contextMenu.items.length === 0) return;
+        const items: ContextMenuItem[] = contextMenu.items.map((item) =>
+          item.separator
+            ? { separator: true as const }
+            : { label: item.label, action: item.action }
+        );
+        showContextMenu({ x: position[0], y: position[1], items });
+      };
+
+      addMapLayers(map, (layer) => {
+        layer.onCreateContextMenu = (contextMenu: ContextMenu, _map, info: unknown) => {
+          const objects: unknown[] = (info as any)?.objects ?? [];
+          if (objects.length === 0) return;
+          const feature = objects[0] as Feature;
+          contextMenu.addItem({
+            id: 'fit',
+            label: `Fit to ${feature.properties?.STATE_NAME ?? 'feature'}`,
+            action: () => {
+              const bounds = feature.shape?.bounds;
+              if (bounds && mapRef.current) mapRef.current.mapNavigator.fit({ bounds, animate: true });
+            }
+          });
+          contextMenu.addSeparator();
+          contextMenu.addItem({
+            id: 'properties',
+            label: 'Properties',
+            action: () => { console.log('Feature properties:', feature.properties); }
+          });
+        };
+      });
 
       const resizeObserver = new ResizeObserver(() => {
         if (mapRef.current) {
@@ -343,7 +406,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     } catch (e) {
       console.error("Failed to initialize MainMap in EPSG:4978:", e);
     }
-  }, []);
+  }, [showContextMenu]);
 
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
