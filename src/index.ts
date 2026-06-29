@@ -55,7 +55,12 @@ export type {
 } from './components/WindowManagerContext';
 
 // Context menu — built-in component, types, and adapter interface
-export { ContextMenu, DefaultContextMenuAdapter } from './components/ContextMenu';
+export {
+  ContextMenu,
+  DefaultContextMenuAdapter,
+  ContextMenuProvider,
+  useShowContextMenu,
+} from './components/ContextMenu';
 export type {
   ContextMenuItem,
   ContextMenuSimpleItem,

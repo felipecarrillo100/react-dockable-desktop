@@ -240,15 +240,23 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     }), [onShow, onOpenChange]);
 
     // Click-outside dismiss
+    // Two listeners for full coverage:
+    //   pointerdown (capture) — fires before any canvas gesture handler; catches touch/stylus
+    //   click (bubble, window) — synthetic click survives stopPropagation on mousedown/pointerdown;
+    //     this is the reliable fallback for WebGL canvases (LuciadRIA, MapLibre, Three.js, etc.)
     useEffect(() => {
       if (!menuState.visible) return;
-      const onDown = (e: PointerEvent) => {
+      const dismiss = (e: Event) => {
         if (menuRef.current?.contains(e.target as Node)) return;
         if (submenuPanelRef.current?.contains(e.target as Node)) return;
         close();
       };
-      document.addEventListener('pointerdown', onDown, { capture: true });
-      return () => document.removeEventListener('pointerdown', onDown, { capture: true });
+      document.addEventListener('pointerdown', dismiss, { capture: true });
+      window.addEventListener('click', dismiss);
+      return () => {
+        document.removeEventListener('pointerdown', dismiss, { capture: true });
+        window.removeEventListener('click', dismiss);
+      };
     }, [menuState.visible, close]);
 
     // Escape dismiss
@@ -442,3 +450,46 @@ ContextMenu.displayName = 'ContextMenu';
 export const DefaultContextMenuAdapter: ContextMenuAdapter = {
   Component: ContextMenu,
 };
+
+// ─── ContextMenuContext ────────────────────────────────────────────────────────
+// Decouples menu placement from WindowManager. Any component that renders
+// <ContextMenuProvider> makes showContextMenu available to all descendants,
+// regardless of where it sits relative to WindowManager in the tree.
+
+interface ContextMenuContextValue {
+  show: (options: ShowContextMenuOptions) => void;
+  isOpen: boolean;
+}
+
+const ContextMenuContext = React.createContext<ContextMenuContextValue | null>(null);
+
+export const ContextMenuProvider: React.FC<{
+  adapter?: ContextMenuAdapter;
+  children: React.ReactNode;
+} & ContextMenuProps> = ({ adapter = DefaultContextMenuAdapter, children, ...componentProps }) => {
+  const menuRef = useRef<ContextMenuHandle>(null);
+  const [isOpen, setIsOpen] = React.useState(false);
+  const show = React.useCallback((opts: ShowContextMenuOptions) => {
+    menuRef.current?.show(opts);
+  }, []);
+  return (
+    <ContextMenuContext.Provider value={{ show, isOpen }}>
+      {children}
+      <adapter.Component
+        ref={menuRef}
+        {...componentProps}
+        onShow={() => { setIsOpen(true); componentProps.onShow?.(); }}
+        onHide={() => { setIsOpen(false); componentProps.onHide?.(); }}
+      />
+    </ContextMenuContext.Provider>
+  );
+};
+
+export function useShowContextMenu(): (options: ShowContextMenuOptions) => void {
+  const ctx = React.useContext(ContextMenuContext);
+  if (!ctx) throw new Error('useShowContextMenu must be used within a ContextMenuProvider');
+  return ctx.show;
+}
+
+// Exported for the WindowManager.tsx bridge only — not re-exported from src/index.ts
+export { ContextMenuContext };
