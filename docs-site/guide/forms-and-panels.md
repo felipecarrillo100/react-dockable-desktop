@@ -246,43 +246,7 @@ Typical use: read the initial size inside `onActivate` instead of waiting for a 
 
 ## `ConfirmationForm` component
 
-`ConfirmationForm` is a standalone yes/no dialog component you can open in your own modals — for example, to ask the user to confirm a destructive action:
-
-```tsx
-import {
-  ConfirmationForm,
-  usePanelActions,
-} from 'react-dockable-desktop';
-
-function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
-  const { openModal, close } = usePanelActions();
-
-  const handleClick = () => {
-    const id = openModal(ConfirmationForm, {
-      message: 'Delete this item permanently?',
-      alert:   'This cannot be undone.',
-      alertType: 'danger',
-      useYesNoTitles: true,
-      onOK:    () => { close(id); onConfirm(); },
-      onCancel: () => close(id),
-    });
-  };
-
-  return <button onClick={handleClick}>Delete</button>;
-}
-```
-
-### ConfirmationForm props
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `message` | `string` | — | **Required.** Main dialog text. |
-| `title` | `string` | `'Confirm'` | Dialog header. |
-| `alert` | `string` | — | Optional alert banner above the message. |
-| `alertType` | `'info' \| 'warning' \| 'success' \| 'danger'` | `'info'` | Alert banner colour. |
-| `useYesNoTitles` | `boolean` | `false` | Show "Yes / No" buttons instead of "OK / Cancel". |
-| `onOK` | `() => void` | — | Called when the user clicks OK / Yes. |
-| `onCancel` | `() => void` | — | Called when the user clicks Cancel / No. |
+`ConfirmationForm` is a reusable yes/no dialog you can open from any panel. For the full API reference and usage examples, see [Modals & Side Panels — ConfirmationForm](./modals-and-drawers#confirmationform).
 
 ::: info Dirty-state dialog
 When a panel is marked dirty, `react-dockable-desktop` opens a `ConfirmationForm` modal automatically. You do not need to wire this up manually — just call `container.setDirty(true)`.
