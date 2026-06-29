@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.1] — 2026-06-29
+
+### Fixed
+- **`showContextMenu` missing from published bundle** — `showContextMenu` on `useWindowManagerActions()` was implemented in source but the 4.2.0 package was published without rebuilding `dist/`. Added `prepublishOnly` script to ensure the bundle is always rebuilt before publishing.
+
 ### Added
 - **`onActivate` / `onDeactivate` on `FormContainerContract`** — push-based callbacks that fire when a panel becomes or stops being the globally active panel (`state.activePanelId`). Eliminates the need to subscribe to `useWindowManagerState` and compare `activePanelId` from inside each panel. `onDeactivate` also fires when the panel is destroyed while active (before `onClose`). Returns an unsubscribe function.
 - **`onContainerTypeChange` on `FormContainerContract`** — fires with the new `ContainerType` whenever the panel transitions between `'dockable-panel'` (docked in the grid) and `'floating-window'` (detached floating window). Does not fire during minimize/restore cycles — use `onMinimize` / `onRestore` for those. Returns an unsubscribe function.
