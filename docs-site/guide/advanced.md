@@ -58,10 +58,10 @@ This is automatic — you do not need to configure anything. The implication is 
 If you need to react to visibility, use the lifecycle hooks:
 
 ```ts
-import { usePanelContext } from 'react-dockable-desktop';
+import { useFormContainer } from 'react-dockable-desktop';
 
-function MyPanel({ panelId }: { panelId: string }) {
-  const { onRestore, onMinimize } = usePanelContext(panelId);
+function MyPanel() {
+  const { onRestore, onMinimize } = useFormContainer();
 
   useEffect(() => {
     const unsubRestore  = onRestore(() => { /* panel became visible */ });
