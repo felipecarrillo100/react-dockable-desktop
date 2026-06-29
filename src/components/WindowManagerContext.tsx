@@ -8,7 +8,7 @@ export type { PredefinedMessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 import type { DirtyStateOptions } from './dirtyOptions';
 export type { DirtyStateOptions };
-import type { ContextMenuItem } from './ContextMenu';
+import type { ContextMenuItem, ShowContextMenuOptions } from './ContextMenu';
 
 /**
  * Structure representing localizable message descriptors used in context menus.
@@ -366,6 +366,12 @@ export interface WindowActions {
    * @param dir - `'ltr'` or `'rtl'`.
    */
   setDirection: (dir: 'ltr' | 'rtl') => void;
+  /**
+   * Imperatively shows the workspace context menu at the given position.
+   * Delegates to the active {@link ContextMenuProvider}, so custom adapters
+   * and externally-placed providers are respected automatically.
+   */
+  showContextMenu: (options: ShowContextMenuOptions) => void;
 }
 
 /**
@@ -381,6 +387,8 @@ export interface InternalWindowActions extends WindowActions {
   registerPanelContextMenu: (panelId: string, getItems: () => ContextMenuItem[]) => () => void;
   /** @internal */
   getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
+  /** @internal */
+  registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
 }
 
 export const WindowStateContext: React.Context<WindowState | null> = createContext<WindowState | null>(null);
@@ -1381,6 +1389,17 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   const customMenuGettersRef = useRef<Map<string, () => ContextMenuItem[]>>(new Map());
 
+  const showContextMenuFnRef = useRef<((options: ShowContextMenuOptions) => void) | null>(null);
+  const registerContextMenuFn = useCallback(
+    (fn: (options: ShowContextMenuOptions) => void) => {
+      showContextMenuFnRef.current = fn;
+      return () => { showContextMenuFnRef.current = null; };
+    }, []
+  );
+  const showContextMenu = useCallback((options: ShowContextMenuOptions) => {
+    showContextMenuFnRef.current?.(options);
+  }, []);
+
   const registerPanelContextMenu = useCallback(
     (panelId: string, getItems: () => ContextMenuItem[]) => {
       customMenuGettersRef.current.set(panelId, getItems);
@@ -1424,7 +1443,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     setActivePanel,
     setDirection,
     registerPanelContextMenu,
-    getPanelContextMenuItems
+    getPanelContextMenuItems,
+    showContextMenu,
+    registerContextMenuFn,
   }), [
     openPanel,
     closePanel,
@@ -1455,7 +1476,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     setActivePanel,
     setDirection,
     registerPanelContextMenu,
-    getPanelContextMenuItems
+    getPanelContextMenuItems,
+    showContextMenu,
+    registerContextMenuFn,
   ]);
 
   const defaultFormatMessage: MessageFormatter = (msg) => {

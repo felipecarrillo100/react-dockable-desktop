@@ -44,10 +44,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`openPanel` options `stickyRight` / `stickyBottom`** — replaced by `anchor?: FloatAnchor | null`. Saved layouts containing the old JSON fields are automatically migrated by `loadLayout`.
 - **`PanelRegistryEntry.defaultOptions.defaultStickyRight` / `defaultStickyBottom`** — replaced by `defaultAnchor?: FloatAnchor`.
 
-## [4.1.1] — 2026-06-28
+## [4.2.0] — 2026-06-29
+
+### Added
+- **`showContextMenu(options)` on `useWindowManagerActions`** — imperative method to trigger the shared workspace context menu from any panel, including panels in WebGL canvases, side drawers, and modals. Routes through the active `ContextMenuProvider` (managed automatically by `DockableDesktopProvider`).
+- **`contextMenuAdapter` prop on `<DockableDesktopProvider>`** — sets the context menu adapter for the workspace-level `ContextMenuProvider`. Defaults to `DefaultContextMenuAdapter`. All siblings of `<WindowManager>` in the provider tree — `<Sidebar>`, `<SidePanelRenderer>`, `<ModalStackRenderer>` — share the same context menu instance and have access to `ContextMenuContext`.
+- **`<ContextMenuProvider adapter? ...>`** — standalone provider that mounts the context menu and exposes it to all descendants via `ContextMenuContext`. Managed automatically by `DockableDesktopProvider` in typical usage; can also be placed manually above `DockableDesktopProvider` for full control. Accepts all `ContextMenuProps` (`formatMessageProvider`, `onShow`, `onHide`, etc.) to configure the mounted adapter.
+- **`useShowContextMenu()`** — hook returning the `show` function from the nearest `<ContextMenuProvider>`. Works from any component inside `DockableDesktopProvider` or a standalone `<ContextMenuProvider>`.
 
 ### Fixed
-- **`ContextMenu` stays open on WebGL canvas click/tap** — The click-outside dismiss listener was registered on `mousedown` in the bubble phase. WebGL gesture controllers (LuciadRIA, MapLibre, Three.js, etc.) call `stopPropagation()` on pointer events to claim the interaction, preventing the bubble-phase handler from ever reaching `document`. On touch devices `mousedown` may not fire at all when the gesture is claimed on `pointerdown`. Fixed by switching to `pointerdown` with `{ capture: true }`, which fires top-down before any canvas handler runs and covers mouse, touch, and stylus input uniformly.
+- **`ContextMenu` stays open on WebGL canvas click/tap** — The click-outside dismiss listener was registered on `mousedown` in the bubble phase. WebGL gesture controllers (LuciadRIA, MapLibre, Three.js, etc.) call `stopPropagation()` on pointer events to claim the interaction, preventing the bubble-phase handler from ever reaching `document`. Fixed with two complementary listeners: `pointerdown` in capture phase (fires before any canvas handler; covers touch and stylus) and `click` on `window` (synthetic click fires after the full press cycle and survives `stopPropagation` on `mousedown`/`pointerdown`, making it the reliable fallback for WebGL canvases).
+- **`ContextMenuProvider` and `useShowContextMenu` exported as type-only** — corrected to value exports so they can be rendered and called at runtime. They were accidentally placed in an `export type {}` block which erases them at build time.
 
 ## [4.0.0] — 2026-06-16
 
@@ -134,7 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.0.0...v4.2.0
 [4.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v4.0.0
 [3.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.2.0
 [3.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.1.0

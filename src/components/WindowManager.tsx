@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
-import { DefaultContextMenuAdapter } from './ContextMenu';
+import { DefaultContextMenuAdapter, ContextMenuContext } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { FormContainerProvider } from './FormContainerContext';
 import type { FormContainerContract, ContainerType } from './FormContainerContext';
@@ -827,7 +827,7 @@ export interface WindowManagerProps {
 export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always', contextMenuAdapter = DefaultContextMenuAdapter }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
-  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems } = useWindowManagerActionsInternal();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn } = useWindowManagerActionsInternal();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
@@ -860,8 +860,18 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   }, [requestClosePanel, state.panels, formatMessage, openModal, messages]);
 
   const { windowClass, windowBodyClass } = useStyleClasses();
-  const taskbarRef = useRef<HTMLDivElement | null>(null);
+  const ctxMenu = useContext(ContextMenuContext);
   const contextMenuRef = useRef<ContextMenuHandle>(null);
+
+  useEffect(() => {
+    if (ctxMenu !== null) {
+      return registerContextMenuFn((opts) => ctxMenu.show(opts));
+    } else {
+      return registerContextMenuFn((opts) => contextMenuRef.current?.show(opts));
+    }
+  }, [ctxMenu, registerContextMenuFn]);
+
+  const taskbarRef = useRef<HTMLDivElement | null>(null);
   const [taskbarExpanded, setTaskbarExpanded] = useState(false);
   const taskbarCollapseTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const prevMinimizedLengthRef = useRef(state.minimized.length);
@@ -869,7 +879,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string; fromTouch?: boolean } | null>(null);
   const minimizedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const lastTaskbarPointerTypeRef = useRef<string>('mouse');
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+  const [internalContextMenuOpen, setInternalContextMenuOpen] = useState(false);
+  const isContextMenuOpen = ctxMenu !== null ? ctxMenu.isOpen : internalContextMenuOpen;
 
   useEffect(() => {
     return () => {
@@ -1177,7 +1188,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const custom = getPanelContextMenuItems(id);
     const finalItems = custom.length > 0 ? [...items, { separator: true as const }, ...custom] : items;
 
-    contextMenuRef.current?.show({
+    showContextMenu({
       event: e,
       items: finalItems
     });
@@ -1186,7 +1197,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const handleMinimizedRightClick = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     setHoveredMinimized(null);
-    contextMenuRef.current?.show({
+    showContextMenu({
       event: e,
       items: [
         {
@@ -1827,7 +1838,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                           e.stopPropagation();
                           const customItems = getPanelContextMenuItems(w.id);
                           if (customItems.length === 0) return;
-                          contextMenuRef.current?.show({
+                          showContextMenu({
                             event: e,
                             items: customItems
                           });
@@ -2148,14 +2159,16 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         );
       })}
 
-      {/* 4. Context Menu */}
-      <contextMenuAdapter.Component
-        ref={contextMenuRef}
-        theme="dark"
-        formatMessageProvider={formatMessage}
-        onShow={() => setIsContextMenuOpen(true)}
-        onHide={() => setIsContextMenuOpen(false)}
-      />
+      {/* 4. Context Menu — only rendered when no parent ContextMenuProvider is in the tree */}
+      {ctxMenu === null && (
+        <contextMenuAdapter.Component
+          ref={contextMenuRef}
+          theme="dark"
+          formatMessageProvider={formatMessage}
+          onShow={() => setInternalContextMenuOpen(true)}
+          onHide={() => setInternalContextMenuOpen(false)}
+        />
+      )}
 
       {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (
