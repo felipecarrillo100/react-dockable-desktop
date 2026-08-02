@@ -182,3 +182,14 @@ export type {
   UsePanelFloatingWindowReturn,
 } from './components/PanelOverlay';
 
+// ─── Panel Contributions — optional; active-panel-driven Toolbar/Sidebar content ───
+export {
+  PanelContributionProvider,
+  usePanelContribution,
+  useActivePanelContribution,
+  sidebarSectionToTab,
+  useMergedToolbarItems,
+  useMergedSidebarTabs,
+} from './components/PanelContributionContext';
+export type { PanelContribution, PanelSidebarSection } from './components/PanelContributionContext';
+

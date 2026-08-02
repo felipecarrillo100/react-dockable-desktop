@@ -29,6 +29,9 @@
  * - TB27: Clicking group button again closes flyout (toggle)
  * - TB28: Sub-item separator renders with role="separator" inside flyout
  * - TB29: Disabled group button does not open flyout
+ * - TB34: Controlled toggle (active=true) shows .active without context
+ * - TB35: Clicking a controlled toggle calls onToggle and does NOT write to context
+ * - TB36: Controlled toggle (active=false) ignores context even if context has it active
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { useRef, createRef } from 'react';
@@ -658,6 +661,73 @@ describe('TB30–TB33: Controlled mode', () => {
     const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
     // controlled prop is null → default label, no .active class despite context having a value
     expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
+    expect(btn.classList.contains('active')).toBe(false);
+  });
+});
+
+// ─── TB34-TB36: Controlled toggle mode ────────────────────────────────────────
+
+describe('TB34-TB36: Controlled toggle mode', () => {
+  it('TB34: active=true shows .active class and aria-pressed=true without context', () => {
+    const items: ToolbarItem[] = [
+      { type: 'toggle', id: 'snap', label: 'Snap', icon: <Icon />, active: true },
+    ];
+    act(() => {
+      root = createRoot(container);
+      root.render(wrapInProvider(<Toolbar items={items} />));
+    });
+    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    expect(btn.classList.contains('active')).toBe(true);
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('TB35: clicking a controlled toggle calls onToggle and does NOT write to context', () => {
+    const onToggle = vi.fn();
+    let capturedToolbar: ReturnType<typeof useToolbar> | null = null;
+    const Probe: React.FC = () => { capturedToolbar = useToolbar(); return null; };
+
+    const items: ToolbarItem[] = [
+      { type: 'toggle', id: 'snap', label: 'Snap', icon: <Icon />, active: false, onToggle },
+    ];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <ToolbarProvider>
+          <Probe />
+          <Toolbar items={items} />
+        </ToolbarProvider>
+      );
+    });
+    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(onToggle).toHaveBeenCalledWith(true);
+    // context must remain untouched — the prop, not context, is the source of truth
+    expect(capturedToolbar!.isModifierActive('snap')).toBe(false);
+  });
+
+  it('TB36: active=false ignores context even if context has this id active', () => {
+    let capturedToolbar: ReturnType<typeof useToolbar> | null = null;
+    const Probe: React.FC = () => { capturedToolbar = useToolbar(); return null; };
+
+    const items: ToolbarItem[] = [
+      { type: 'toggle', id: 'snap', label: 'Snap', icon: <Icon />, active: false },
+    ];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <ToolbarProvider>
+          <Probe />
+          <Toolbar items={items} />
+        </ToolbarProvider>
+      );
+    });
+
+    // Manually write to context (simulates unrelated uncontrolled code writing a value)
+    act(() => { capturedToolbar!.setModifierActive('snap', true); });
+
+    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    // controlled prop is false → inactive despite context having it active
     expect(btn.classList.contains('active')).toBe(false);
   });
 });

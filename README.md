@@ -1,6 +1,6 @@
     # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v4.2.2-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v4.3.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -199,6 +199,10 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `usePanelFloatingWindowManager()` | `PanelFloatingWindowManagerHandle` | Open/close N named floating windows inside a panel overlay at runtime; each independently anchored, dockable, and resizable |
 | `useRegistry()` | `PanelRegistryClass` | The scoped panel registry for the current provider |
 | `useFormatMessage()` | `MessageFormatter` | i18n formatter matching the current provider's locale |
+| `usePanelContribution(contribution)` | `void` | Publish toolbar items/sidebar sections shown only while this panel is active |
+| `useActivePanelContribution()` | `PanelContribution \| null` | Read the active panel's published contribution, to merge manually |
+| `useMergedToolbarItems(staticItems)` | `ToolbarItem[]` | `staticItems` + the active panel's contributed toolbar items, ready for `<Toolbar items={...}>` |
+| `useMergedSidebarTabs(staticTabs)` | `SidebarTab[]` | `staticTabs` + the active panel's contributed sections as dynamic tabs, ready for `<Sidebar tabs={...}>` |
 
 **State selectors** prevent unnecessary re-renders:
 

@@ -23,6 +23,7 @@ import {
 } from '../src/index';
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
+import MarkdownEditorPanel from './MarkdownEditorPanel';
 import Editor from '@monaco-editor/react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -127,6 +128,37 @@ interface AppEvents { 'layer:toggle': { layerId: string; visible: boolean } }
 const ws = new WorkspaceClient<AppEvents>({ panels });
 ws.publish('layer:toggle', { layerId: 'markers', visible: true }); // typed
 ws.subscribe('panel:opened', d => console.log(d.id));             // built-in`,
+
+  markdownEditor: `// Markdown Editor — Panel Contributions showcase
+PanelRegistry.register('markdownEditor', MarkdownEditorPanel, {
+  title: 'Markdown Editor',
+  icon: '📄',
+  initialTarget: 'docked'
+});
+
+// Publish toolbar items + sidebar sections while this panel is active.
+// Call on every render — republishes automatically, cleared on unmount.
+// Two open instances stay fully independent: nothing here is shared or
+// keyed globally, unlike ToolbarContext's own radio/modifier state.
+usePanelContribution({
+  toolbarItems: [
+    { type: 'action', id: 'md-bold', label: 'Bold', icon: BoldIcon,
+      onClick: () => wrapSelection(editorRef.current, '**') },
+    // ...Italic, Code, H1, H2, Bullet list
+  ],
+  sidebarSections: [
+    { id: 'toc', label: 'Table of Contents', icon: TocIcon,
+      content: <TocList headings={headings} onSelect={scrollToHeading} /> },
+  ],
+});
+
+// The app shell (App.tsx) merges this into its own <Toolbar>/<Sidebar> via:
+//   useMergedToolbarItems(staticItems)   — appends contributed items + separator
+//   useMergedSidebarTabs(staticTabs)     — appends contributed sections as tabs
+// This panel never touches either component directly.
+//
+// openPanel(id, 'markdownEditor') focuses the panel automatically (its
+// contributions show up immediately) — no separate focusPanel() call needed.`,
 
   contextMenu: `// Custom context menu entries via usePanelContextMenu hook
 // Items live inside the panel — no central config needed.
@@ -1835,5 +1867,11 @@ export function registerDemoPanels() {
         icon: '🔄',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="rtlShowcase" />
+    });
+    PanelRegistry.register('markdownEditor', MarkdownEditorPanel, {
+        title: 'Markdown Editor',
+        icon: '📄',
+        initialTarget: 'docked',
+        renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="markdownEditor" />
     });
 }

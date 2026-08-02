@@ -58,9 +58,11 @@ export default function App() {
 |--------|-------------|-------------|
 | `'action'` | `onClick` | One-shot action button. Click fires `onClick` and does not change radio/toggle state. |
 | `'radio'` | `group`, `onActivate?` | Mutually-exclusive within a named `group`. Only one item per group can be active at a time. |
-| `'toggle'` | `onToggle?` | Independent on/off modifier. Multiple toggles can be active simultaneously. |
+| `'toggle'` | `onToggle?`, `active?` | Independent on/off modifier. Multiple toggles can be active simultaneously. Omit `active` for uncontrolled (state lives in ToolbarContext, keyed by `id`); pass it (even `false`) for **controlled mode** — the component reads `active` instead and skips writing to context on click. |
 | `'group'` | `defaultIcon`, `items`, `activeItemId?`, `onActiveItemChange?` | Collapsed tool-family that opens a flyout listing sub-tools with radio semantics. See [Group items](#group-items) below. |
 | `'separator'` | — | A thin visual divider between button groups. |
+
+Controlled toggles are what let independent panel instances report independent active state — see [Panel Contributions →](./panel-contributions) for the full pattern (e.g. two maps each with their own selected tool).
 
 Every item except `'separator'` also accepts:
 
@@ -265,6 +267,7 @@ The accent variables are automatically overridden per skin — Nord, Tokyo Night
 ## See also
 
 - [Sidebar →](./modals-and-drawers#sidebar-component) — collapsible tab strip, hooks
+- [Panel Contributions →](./panel-contributions) — let panels publish toolbar items only while active
 - [Per-skin active state design language →](./theming#per-skin-active-state-design-language) — all 7 patterns, token reference, custom skin examples
 - [Event Bus & Communication →](./event-bus) — panels communicating via pub/sub
 - [Quick Start →](./quick-start) — provider setup

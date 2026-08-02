@@ -149,6 +149,53 @@ describe('WindowManager State Transitions', () => {
     });
   });
 
+  describe('openPanel() activation (focus) behavior', () => {
+    it('sets activePanelId when opening a brand-new docked panel', () => {
+      mount();
+      expect(lastState.activePanelId).toBeNull();
+      act(() => { lastActions.openPanel('new-docked', 'map'); });
+      expect(lastState.activePanelId).toBe('new-docked');
+    });
+
+    it('sets activePanelId when opening a brand-new floating panel', () => {
+      mount();
+      act(() => { lastActions.openPanel('new-floating', 'map', { initialTarget: 'floating' }); });
+      expect(lastState.activePanelId).toBe('new-floating');
+    });
+
+    it('sets activePanelId when opening (restoring) an already-minimized panel', () => {
+      mount();
+      act(() => { lastActions.openPanel('to-minimize', 'map'); });
+      act(() => { lastActions.minimizePanel('to-minimize'); });
+      act(() => { lastActions.openPanel('other', 'map'); }); // steal focus away first
+      expect(lastState.activePanelId).toBe('other');
+
+      act(() => { lastActions.openPanel('to-minimize', 'map'); }); // re-open the minimized one
+      expect(lastState.panels['to-minimize'].state).not.toBe('minimized');
+      expect(lastState.activePanelId).toBe('to-minimize');
+    });
+
+    it('sets activePanelId when re-opening an already-open docked panel', () => {
+      mount();
+      act(() => { lastActions.openPanel('docked-a', 'map'); });
+      act(() => { lastActions.openPanel('docked-b', 'map'); });
+      expect(lastState.activePanelId).toBe('docked-b');
+
+      act(() => { lastActions.openPanel('docked-a', 'map'); }); // re-open the first one
+      expect(lastState.activePanelId).toBe('docked-a');
+    });
+
+    it('{ focus: false } opens the panel without changing activePanelId', () => {
+      mount();
+      act(() => { lastActions.openPanel('already-active', 'map'); });
+      expect(lastState.activePanelId).toBe('already-active');
+
+      act(() => { lastActions.openPanel('background-panel', 'map', { focus: false }); });
+      expect(lastState.panels['background-panel']).toBeDefined();
+      expect(lastState.activePanelId).toBe('already-active'); // unchanged
+    });
+  });
+
   describe('Workspace outer edge drop zones', () => {
     it('should split the root branch horizontally when a panel is docked to the left edge', () => {
       mount();

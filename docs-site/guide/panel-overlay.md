@@ -537,5 +537,6 @@ All exported from `'react-dockable-desktop'`:
 ## See also
 
 - [Toolbar →](./toolbar) — workspace-level tool strip with radio, toggle, and group items
+- [Panel Contributions →](./panel-contributions) — the other direction: publish content *out* to the workspace Toolbar/Sidebar
 - [Context Menus →](./context-menus) — `usePanelContextMenu`, right-click menus
 - [Event Bus & Communication →](./event-bus) — inter-panel pub/sub

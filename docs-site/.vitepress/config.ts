@@ -17,7 +17,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
       {
-        text: 'v4.2.2',
+        text: 'v4.3.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md' },
           { text: 'Migration Guide', link: '/guide/migration' },
@@ -50,6 +50,7 @@ export default defineConfig({
             { text: 'Modals & Side Panels', link: '/guide/modals-and-drawers' },
             { text: 'Context Menus', link: '/guide/context-menus' },
             { text: 'Panel Overlay', link: '/guide/panel-overlay' },
+            { text: 'Panel Contributions', link: '/guide/panel-contributions' },
             { text: 'Toast Notifications', link: '/guide/toast' },
             { text: 'Event Bus & Communication', link: '/guide/event-bus' },
           ],

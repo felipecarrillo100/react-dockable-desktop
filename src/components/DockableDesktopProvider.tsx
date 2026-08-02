@@ -3,6 +3,7 @@ import { WindowManagerProvider } from './WindowManagerContext';
 import type { WindowManagerProviderProps } from './WindowManagerContext';
 import { PanelProvider } from './PanelProviderContext';
 import { ToolbarProvider } from './ToolbarContext';
+import { PanelContributionProvider } from './PanelContributionContext';
 import { ContextMenuContext, ContextMenuProvider, DefaultContextMenuAdapter } from './ContextMenu';
 import type { ContextMenuAdapter } from './ContextMenu';
 
@@ -20,8 +21,9 @@ export interface DockableDesktopProviderProps extends WindowManagerProviderProps
 }
 
 /**
- * Composite provider that wraps `WindowManagerProvider`, `PanelProvider`, and `ToolbarProvider`
- * in the correct order, and mounts the workspace-level `ContextMenuProvider` so that
+ * Composite provider that wraps `WindowManagerProvider`, `PanelProvider`, `ToolbarProvider`,
+ * and `PanelContributionProvider` in the correct order, and mounts the workspace-level
+ * `ContextMenuProvider` so that
  * `showContextMenu()` and `useShowContextMenu()` work from any component in the tree —
  * including siblings of `<WindowManager>` such as `<Sidebar>`, `<SidePanelRenderer>`,
  * and `<ModalStackRenderer>`.
@@ -50,9 +52,11 @@ export const DockableDesktopProvider: React.FC<DockableDesktopProviderProps> = (
   const inner = (
     <ToolbarProvider>
       <WindowManagerProvider {...props}>
-        <PanelProvider>
-          {props.children}
-        </PanelProvider>
+        <PanelContributionProvider>
+          <PanelProvider>
+            {props.children}
+          </PanelProvider>
+        </PanelContributionProvider>
       </WindowManagerProvider>
     </ToolbarProvider>
   );
