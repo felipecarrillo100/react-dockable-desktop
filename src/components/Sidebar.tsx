@@ -504,7 +504,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           {position === 'left' && resizeHandle}
 
           {/* Workspace content — fills all remaining space */}
-          <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ flex: '1 1 0%', minWidth: 0, overflow: 'hidden' }}>
             {children}
           </div>
 

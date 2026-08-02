@@ -25,6 +25,7 @@
  * - SB23: stripVisible=false collapses only the strip, drawer unaffected
  * - SB24: showStrip/hideStrip imperative methods call onStripVisibilityChange
  * - SB25: resize handle renders only when drawer is open
+ * - SB26: children wrapper uses flex-basis:0 (content can't inflate it and shift the drawer)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
@@ -657,5 +658,33 @@ describe('SB25: resize handle renders only when drawer is open', () => {
       root.render(<Sidebar tabs={tabs} activeTabId="a" />);
     });
     expect(container.querySelector('.resizer-bar')).not.toBeNull();
+  });
+});
+
+// ─── SB26: children wrapper flex-basis:0 ──────────────────────────────────────
+
+describe('SB26: children wrapper uses flex-basis:0 (content can\'t inflate it and shift the drawer)', () => {
+  it('wrapper around {children} has flex-basis 0 and minWidth 0', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar tabs={tabs} activeTabId="a">
+          <div>workspace content</div>
+        </Sidebar>
+      );
+    });
+    // flex-basis:auto (the default for a plain "flex-grow" pattern) lets a flex item's
+    // hypothetical size be computed from its content's max-content width — minWidth:0 alone
+    // only affects the shrink floor, not that starting size. Using flex-basis:0 makes the
+    // wrapper's size purely a function of flex-grow's share of space, so it can never inflate
+    // and steal width from a sibling (e.g. the drawer) based on what's rendered inside it.
+    const rootFlexDiv = container.children[0];
+    const wrapper = Array.from(rootFlexDiv.children).find(
+      (el) => el.textContent === 'workspace content'
+    ) as HTMLElement | undefined;
+    expect(wrapper).toBeDefined();
+    expect(wrapper!.style.flexBasis).toBe('0%');
+    expect(wrapper!.style.minWidth).toBe('0px');
   });
 });

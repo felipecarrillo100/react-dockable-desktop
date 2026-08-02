@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`openPanel()` didn't consistently focus the panel it opened** — despite its own doc comment claiming otherwise, `state.activePanelId` was only set when re-opening an already-*floating* panel; brand-new panels, restored-from-minimized panels, and re-opened *docked* panels never set it. `openPanel()` now sets `activePanelId` in every branch by default, matching its documented behavior — confirmed safe: no call site in this repo relied on the previous gap, and two already worked around it manually.
+- **Docked panels could resize based on unrelated internal content** — switching an unrelated panel's internal tab (e.g. Control Center, Markdown Editor) could shift the width of neighboring panels or the `Sidebar` drawer by a few pixels. The actual source: `Sidebar`'s wrapper around `{children}` used `flex: '1 1 auto'`, whose `auto` basis is computed from its content's max-content size — `minWidth: 0` alone only bounds how far something can *shrink*, not that content-driven starting size. Changed to `flex: '1 1 0%'`, so the wrapper's size comes purely from `flex-grow`'s share of space regardless of content. Also hardened `WorkspaceGrid`'s recursive per-child wrapper (`WindowManager.tsx`) with `minWidth`/`minHeight: 0`, closing the equivalent gap between sibling leaves within the same grid.
 
 ## [4.2.2] — 2026-08-02
 
