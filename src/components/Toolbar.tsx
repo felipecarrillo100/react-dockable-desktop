@@ -39,7 +39,16 @@ export interface ToolbarRadioItem {
   disabled?: boolean;
 }
 
-/** An independent on/off toggle modifier (e.g. snap-to-grid). */
+/**
+ * An independent on/off toggle modifier (e.g. snap-to-grid).
+ *
+ * Supports both uncontrolled mode (omit `active` — state lives in
+ * ToolbarContext, keyed by `id`) and controlled mode (provide `active` —
+ * the caller is the single source of truth and must update the prop in
+ * response to `onToggle`). Controlled mode is what lets independent
+ * instances of the same panel type report independent active state
+ * instead of colliding on a shared id.
+ */
 export interface ToolbarToggleItem {
   type: 'toggle';
   id: string;
@@ -47,6 +56,12 @@ export interface ToolbarToggleItem {
   icon: React.ReactNode;
   /** Keyboard shortcut hint — reserved for future custom tooltip. */
   shortcut?: string;
+  /**
+   * Controlled active state. When provided (even as false), the component
+   * reads this prop instead of ToolbarContext and does not update context
+   * on click. Omit (undefined) for uncontrolled behaviour.
+   */
+  active?: boolean;
   /** Called after the toggle flips; receives the new active state. */
   onToggle?: (active: boolean) => void;
   disabled?: boolean;
@@ -364,7 +379,8 @@ function renderItem(
     }
 
     case 'toggle': {
-      const isActive = toolbar.isModifierActive(item.id);
+      const controlled = item.active !== undefined;
+      const isActive = controlled ? item.active! : toolbar.isModifierActive(item.id);
       return (
         <button
           key={item.id}
@@ -375,7 +391,7 @@ function renderItem(
           aria-pressed={isActive}
           disabled={item.disabled}
           onClick={() => {
-            toolbar.toggleModifier(item.id);
+            if (!controlled) toolbar.toggleModifier(item.id);
             item.onToggle?.(!isActive);
           }}
         >

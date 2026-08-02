@@ -177,18 +177,24 @@ export interface WindowActions {
   /**
    * Opens a registered panel into the workspace.
    * If the panel ID is already open, the panel is focused instead of duplicated.
+   * Becomes `state.activePanelId` by default — pass `options.focus: false` to open
+   * without stealing focus from whatever is currently active.
    * @param id - Unique instance identifier for this panel.
    * @param component - Component key registered in the panel catalog.
    * @param options.title - Override the panel tab/window title. Accepts a plain string or an i18n message descriptor.
    * @param options.initialTarget - Initial placement: `'floating'`, `'docked'` (default when a grid exists), or `'tabbed'`.
    * @param options.anchor - Pin the new floating window to a workspace corner on creation. Has no effect when `initialTarget` is `'docked'` or `'tabbed'`.
+   * @param options.focus - Set `state.activePanelId` to this panel. @default true
    * @example
    * ```ts
    * // Open floating and pin to the top-right corner:
    * actions.openPanel('layers', 'layertree', { initialTarget: 'floating', anchor: 'top-right' });
+   *
+   * // Open in the background without stealing focus:
+   * actions.openPanel('prefetch', 'report', { focus: false });
    * ```
    */
-  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null }) => void;
+  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null; focus?: boolean }) => void;
   /**
    * Closes a panel immediately, bypassing dirty-state close guards.
    * For guarded close, use {@link requestClosePanel}.
@@ -730,14 +736,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return null;
   };
 
-  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null }) => {
+  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null; focus?: boolean }) => {
     const isNew = !(id in stateRef.current.panels);
+    const shouldFocus = options?.focus !== false;
     setState(prev => {
       const exists = prev.panels[id];
       const entry = registry.get(component);
       const title = options?.title || options?.title || entry?.defaultOptions?.title || id;
       const target = options?.initialTarget || entry?.defaultOptions?.initialTarget || 'docked';
       const favPos = entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
+      const activePanelId = shouldFocus ? id : prev.activePanelId;
 
       // Case 1: Already exists
       if (exists) {
@@ -751,7 +759,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
               ...prev,
               minimized: nextMinimized,
               floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current }],
-              panels: { ...prev.panels, [id]: { ...exists, state: 'floating' } }
+              panels: { ...prev.panels, [id]: { ...exists, state: 'floating' } },
+              activePanelId
             };
           } else {
             const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-default';
@@ -759,11 +768,12 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
               ...prev,
               minimized: nextMinimized,
               gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, id),
-              panels: { ...prev.panels, [id]: { ...exists, state: 'docked' } }
+              panels: { ...prev.panels, [id]: { ...exists, state: 'docked' } },
+              activePanelId
             };
           }
         } else if (exists.state === 'floating') {
-          focusPanel(id);
+          if (shouldFocus) focusPanel(id);
           return prev;
         } else {
           // Focus in tab group
@@ -779,7 +789,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           };
           return {
             ...prev,
-            gridRoot: selectActiveInTree(prev.gridRoot)
+            gridRoot: selectActiveInTree(prev.gridRoot),
+            activePanelId
           };
         }
       }
@@ -798,14 +809,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         return {
           ...prev,
           floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, anchor }],
-          panels: nextPanels
+          panels: nextPanels,
+          activePanelId
         };
       } else {
         const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-default';
         return {
           ...prev,
           gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, id),
-          panels: nextPanels
+          panels: nextPanels,
+          activePanelId
         };
       }
     });

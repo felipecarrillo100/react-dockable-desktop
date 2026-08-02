@@ -15,6 +15,8 @@ import {
     ConfirmationForm,
     Sidebar,
     Toolbar,
+    useMergedToolbarItems,
+    useMergedSidebarTabs,
     useFormContainer,
     type ContextMenuPredefinedMessage,
     useFormatMessage,
@@ -621,6 +623,10 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
     },
   ];
 
+  // Merge in whatever the currently active panel has contributed (e.g. the Markdown
+  // Editor's formatting buttons) — only appended when there's actually something to show.
+  const mergedToolbarItems = useMergedToolbarItems(toolbarItems);
+
   // ---- Sidebar Tab definitions (all state captured by closure) ----
   const sidebarTabs: SidebarTab[] = [
     {
@@ -867,6 +873,12 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
     },
   ];
 
+  // Same idea as mergedToolbarItems, for the app's Sidebar — contributed sections
+  // appear as dynamic tabs (present only while their panel is active), not merged
+  // into an existing tab's content, and never steal focus from whatever tab the
+  // user already has open.
+  const mergedSidebarTabs = useMergedSidebarTabs(sidebarTabs);
+
   return (
     <div className="full-viewport-layout">
       {/* Top Navbar */}
@@ -937,6 +949,8 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={spawnFloatingWindow}>🪟 Spawn Help Window</NavDropdown.Item>
                 <NavDropdown.Item onClick={() => openPanel('rtlshowcase-main', 'rtlShowcase')}>🔄 RTL Content Showcase</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => openPanel('markdown-main', 'markdownEditor')}>📄 Markdown Editor</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => openPanel(`markdown-${Date.now()}`, 'markdownEditor')}>📄+ New Markdown Editor Instance</NavDropdown.Item>
               </NavDropdownMenu>
              {/* Elements dropdown showing active windows, with limit N + Show All */}
               <NavDropdownMenu title={`Active Elements (${openPanelsList.length})`} id="elements-dropdown">
@@ -1079,7 +1093,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         {(toolbarPosition === 'left' || toolbarPosition === 'top') && (
           <Toolbar
             position={toolbarPosition}
-            items={toolbarItems}
+            items={mergedToolbarItems}
             visible={showToolbar}
             onVisibilityChange={setShowToolbar}
           />
@@ -1087,7 +1101,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         <Sidebar
           ref={sidebarRef}
           position={sidebarPosition}
-          tabs={sidebarTabs}
+          tabs={mergedSidebarTabs}
           drawerWidth="220px"
           visible={showSidebar}
           onVisibilityChange={setShowSidebar}
@@ -1106,7 +1120,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         {(toolbarPosition === 'right' || toolbarPosition === 'bottom') && (
           <Toolbar
             position={toolbarPosition}
-            items={toolbarItems}
+            items={mergedToolbarItems}
             visible={showToolbar}
             onVisibilityChange={setShowToolbar}
           />

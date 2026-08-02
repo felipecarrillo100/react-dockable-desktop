@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.3.0] — 2026-08-02
+
+### Added
+- **`usePanelContribution(contribution)`** — lets any panel publish `toolbarItems` and/or `sidebarSections` that are only surfaced while that panel is `state.activePanelId`. Call on every render; republishes automatically when the contribution changes, and is cleared on unmount. Independent panel instances (e.g. two maps) keep fully independent contributed state — nothing is shared or keyed globally. No-op with a `console.warn` outside a `PanelContributionProvider`.
+- **`useActivePanelContribution()`** — returns whatever the currently active panel has published, or `null` if none. Same no-op-with-warning behavior outside a `PanelContributionProvider`, matching the existing `useToolbar()`/`useSidebar()` convention.
+- **`useMergedToolbarItems(staticItems)`** / **`useMergedSidebarTabs(staticTabs, fallbackIcon?)`** — convenience wrappers around `useActivePanelContribution()` for the common case: append the active panel's contributed toolbar items (behind a separator) / sidebar sections (as dynamic tabs, via `sidebarSectionToTab`) to a static list, unchanged when there's nothing to add. `useActivePanelContribution()` stays exported for manual control.
+- **`sidebarSectionToTab(section, fallbackIcon?)`** — converts a `PanelSidebarSection` into a `SidebarTab` for `<Sidebar tabs={...}>` (`renderContent: () => section.content`, with a fallback for `SidebarTab`'s required `icon`).
+- **`PanelContributionProvider`** — the context provider backing the hooks above. Mounted automatically by `DockableDesktopProvider`; only needed manually when composing `WindowManagerProvider` directly.
+- **`PanelContribution` / `PanelSidebarSection` types** — `PanelContribution` is `{ toolbarItems?: ToolbarItem[]; sidebarSections?: PanelSidebarSection[] }`; `PanelSidebarSection` is `{ id, label, icon?, content }`.
+- **`active?: boolean` on `ToolbarToggleItem`** — controlled-mode escape hatch mirroring `ToolbarGroupItem`'s existing `activeItemId`/`onActiveItemChange` pattern. When provided, the toggle reads `active` instead of `ToolbarContext`'s shared modifier state, and skips writing to it on click — this is what lets contributed toggle buttons (e.g. a per-map controller selector: Pan/Draw/Measure) report independent active state per panel instance instead of colliding on a shared id. Omitting `active` preserves prior uncontrolled behavior exactly.
+- **`options.focus?: boolean` on `openPanel()`** — escape hatch to open a panel without changing `activePanelId` (`default: true`). Lets an app open several panels and choose exactly which one ends up focused (e.g. "focus the first one opened") without fighting the default.
+- **Panel Contributions guide** (`docs-site/guide/panel-contributions.md`) and README hooks-table rows.
+
+### Fixed
+- **`openPanel()` didn't consistently focus the panel it opened** — despite its own doc comment claiming otherwise, `state.activePanelId` was only set when re-opening an already-*floating* panel; brand-new panels, restored-from-minimized panels, and re-opened *docked* panels never set it. `openPanel()` now sets `activePanelId` in every branch by default, matching its documented behavior — confirmed safe: no call site in this repo relied on the previous gap, and two already worked around it manually.
+
 ## [4.2.2] — 2026-08-02
 
 ### Fixed
@@ -155,7 +171,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.3.0...HEAD
+[4.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.2...v4.3.0
 [4.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.1...v4.2.2
 [4.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.0.0...v4.2.0
 [4.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v4.0.0

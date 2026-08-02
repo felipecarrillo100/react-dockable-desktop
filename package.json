@@ -1,6 +1,6 @@
 {
   "name": "react-dockable-desktop",
-  "version": "4.2.2",
+  "version": "4.3.0",
   "description": "A premium, state-of-the-art window manager and dockable layout engine for React. Supports fluid grid splits, tabbed groups, floating resizable windows, zero-unmount state preservation, context menus, and internationalization.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -13,7 +13,10 @@
     },
     "./styles.css": "./dist/styles.css"
   },
-  "sideEffects": ["dist/styles.css", "src/index.css"],
+  "sideEffects": [
+    "dist/styles.css",
+    "src/index.css"
+  ],
   "files": [
     "dist"
   ],
@@ -68,6 +71,9 @@
     "react-bootstrap-submenu": "^4.0.0",
     "react-dom": "^19.2.6",
     "react-intl": "^10.1.12",
+    "react-markdown": "^10.1.0",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
     "tsup": "^8.5.1",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.12.0",
