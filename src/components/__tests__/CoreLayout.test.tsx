@@ -3,7 +3,9 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
+import { PanelProvider } from '../PanelProviderContext';
 import { WorkspaceClient } from '../../WorkspaceClient';
+import WindowManager from '../WindowManager';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
 
@@ -144,5 +146,30 @@ describe('WindowManager Core Layout Operations', () => {
       lastActions.openPanel('main-editor', 'editor');
     });
     expect(lastState.gridRoot.children[0].activePanelId).toBe('main-editor');
+  });
+
+  it('grid branch child wrappers set minWidth/minHeight:0 (prevents content from resizing siblings)', () => {
+    act(() => {
+      root = createRoot(container!);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <StateExtractor />
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+    // STANDARD_LAYOUT is a vertical branch with two leaf children — every rendered
+    // grid-branch child wrapper must zero its automatic min-size on both axes, so a
+    // leaf's content can never inflate its own or a sibling's rendered size (the bug
+    // this guards: a docked panel resizing based on which internal tab/content it shows).
+    const wrappers = container!.querySelectorAll('.workspace-panel');
+    expect(wrappers.length).toBeGreaterThan(0);
+    wrappers.forEach(leaf => {
+      const wrapper = leaf.parentElement as HTMLElement;
+      expect(wrapper.style.minWidth).toBe('0px');
+      expect(wrapper.style.minHeight).toBe('0px');
+    });
   });
 });
