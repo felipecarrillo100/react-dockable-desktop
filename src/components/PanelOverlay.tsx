@@ -11,6 +11,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import { WindowStateContext } from './WindowManagerContext';
 import type { FloatAnchor } from './WindowManagerContext';
+import { flipZoneHorizontal } from './anchorGeometry';
 export type { FloatAnchor };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,13 +91,6 @@ function getHoveredZone(container: HTMLElement, clientX: number, clientY: number
   if (x < DROP_ZONE_SIZE && y > rect.height - DROP_ZONE_SIZE) return 'bottom-left';
   if (x > rect.width - DROP_ZONE_SIZE && y > rect.height - DROP_ZONE_SIZE) return 'bottom-right';
   return null;
-}
-
-function flipZoneHorizontal(zone: FloatAnchor): FloatAnchor {
-  if (zone === 'top-left')    return 'top-right';
-  if (zone === 'top-right')   return 'top-left';
-  if (zone === 'bottom-left') return 'bottom-right';
-  return 'bottom-left';
 }
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
@@ -900,11 +894,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       pointerEvents: idx === -1 ? 'none' : undefined,
     };
 
-    if (currentAnchor.endsWith('-right')) {
-      windowStyle[isRtl ? 'left' : 'right'] = DOCK_INSET;
-    } else {
-      windowStyle[isRtl ? 'right' : 'left'] = DOCK_INSET;
-    }
+    windowStyle[currentAnchor.endsWith('-right') ? 'insetInlineEnd' : 'insetInlineStart'] = DOCK_INSET;
 
     if (currentAnchor.startsWith('top-')) {
       windowStyle.top = ctx.insetTop + stackOffset;
@@ -931,6 +921,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   return (
     <div
       ref={windowRef}
+      dir={isRtl ? 'rtl' : 'ltr'}
       className={`dw-panel-float${isActive ? ' dw-panel-float--active' : ''}`}
       style={windowStyle}
       onPointerDown={handleWindowPointerDown}

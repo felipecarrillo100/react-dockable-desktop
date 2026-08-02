@@ -16,6 +16,7 @@ import { FormContainerProvider } from './FormContainerContext';
 import type { FormContainerContract, ContainerType } from './FormContainerContext';
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
+import { flipZoneHorizontal } from './anchorGeometry';
 
 const findLeaf = (node: LayoutNode | null, leafId: string): LayoutLeafNode | null => {
   if (!node) return null;
@@ -931,13 +932,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
   const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
 
-  const flipZoneHorizontal = (zone: FloatAnchor): FloatAnchor => {
-    if (zone === 'top-left')    return 'top-right';
-    if (zone === 'top-right')   return 'top-left';
-    if (zone === 'bottom-left') return 'bottom-right';
-    return 'bottom-left';
-  };
-
   const [hoveredTab, setHoveredTab] = useState<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
   const hoveredTabRef = useRef<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
 
@@ -1328,7 +1322,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       let newY = winY;
       let changed = false;
 
-      // Clamp window size if it exceeds the new workspace size
+      // Clamp window size if it exceeds the new workspace size (applies whether anchored or free-floating)
       if (newWidth > viewW) {
         newWidth = Math.max(200, viewW - 20);
         changed = true;
@@ -1338,25 +1332,15 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         changed = true;
       }
 
-      const GAP = 10;
-
-      // Align anchored borders
-      if (w.anchor === 'top-right' || w.anchor === 'bottom-right') {
-        newX = viewW - newWidth - GAP;
-        changed = true;
-      } else {
-        // Bounding clamp for non-sticky windows to prevent falling off-screen
+      // Anchored windows are positioned entirely by `anchor` + `dir` at render time (see the
+      // floating-window style callback below), so x/y don't affect their visual position —
+      // only free-floating windows need off-screen bounds clamping here.
+      if (!w.anchor) {
         const maxX = viewW - 100; // Keep at least 100px of titlebar visible
         if (newX > maxX) {
           newX = Math.max(0, maxX);
           changed = true;
         }
-      }
-
-      if (w.anchor === 'bottom-left' || w.anchor === 'bottom-right') {
-        newY = viewH - newHeight - GAP;
-        changed = true;
-      } else {
         const maxY = viewH - 40; // Keep titlebar clickable
         if (newY > maxY) {
           newY = Math.max(0, maxY);
@@ -1782,10 +1766,9 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     }
                     const isTop = w.anchor.startsWith('top');
                     const isRight = w.anchor.endsWith('-right');
-                    const physicalRight = isRtl ? !isRight : isRight;
                     return {
                       position: 'absolute' as const,
-                      [physicalRight ? 'right' : 'left']: CORNER_INSET,
+                      [isRight ? 'insetInlineEnd' : 'insetInlineStart']: CORNER_INSET,
                       [isTop ? 'top' : 'bottom']: stackOffset,
                       width: w_,
                       height: h_,

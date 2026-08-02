@@ -25,6 +25,7 @@ import {
   usePanelFloatingWindow,
   usePanelFloatingWindowManager,
 } from '../PanelOverlay';
+import { WindowManagerProvider } from '../WindowManagerContext';
 
 let container: HTMLDivElement;
 let root: Root | null = null;
@@ -67,6 +68,50 @@ describe('PO2: PanelFloatingWindow open=true', () => {
       );
     });
     expect(container.querySelector('.dw-panel-float')).not.toBeNull();
+  });
+});
+
+// ─── PO2b ─────────────────────────────────────────────────────────────────────
+
+describe('PO2b: PanelFloatingWindow anchor positioning under RTL', () => {
+  it('sets dir="rtl" and positions a top-right anchor with insetInlineEnd (not a manually-flipped left/right)', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider dir="rtl">
+          <PanelOverlayRoot>
+            <PanelFloatingWindow id="po-rtl" title="RTL" open defaultAnchor="top-right" onClose={() => {}}>
+              <span>content</span>
+            </PanelFloatingWindow>
+          </PanelOverlayRoot>
+        </WindowManagerProvider>
+      );
+    });
+
+    const el = container.querySelector('.dw-panel-float') as HTMLElement;
+    expect(el.getAttribute('dir')).toBe('rtl');
+    expect(el.style.insetInlineEnd).not.toBe('');
+    expect(el.style.insetInlineStart).toBe('');
+  });
+
+  it('uses the same insetInlineEnd property under LTR — the logical key does not depend on direction', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider dir="ltr">
+          <PanelOverlayRoot>
+            <PanelFloatingWindow id="po-ltr" title="LTR" open defaultAnchor="top-right" onClose={() => {}}>
+              <span>content</span>
+            </PanelFloatingWindow>
+          </PanelOverlayRoot>
+        </WindowManagerProvider>
+      );
+    });
+
+    const el = container.querySelector('.dw-panel-float') as HTMLElement;
+    expect(el.getAttribute('dir')).toBe('ltr');
+    expect(el.style.insetInlineEnd).not.toBe('');
+    expect(el.style.insetInlineStart).toBe('');
   });
 });
 
