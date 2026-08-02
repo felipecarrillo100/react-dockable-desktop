@@ -1700,15 +1700,15 @@ export const RTLShowcasePanel: React.FC = () => {
         <div className="d-flex flex-column gap-2">
           <div>
             <label className="form-label small text-secondary mb-1">{c.form.name}</label>
-            <input type="text" className="form-control form-control-sm bg-dark text-white border-secondary" placeholder={c.form.namePlaceholder} style={{ textAlign: 'start' }} />
+            <input type="text" className="form-control form-control-sm bg-body text-body border-secondary" placeholder={c.form.namePlaceholder} style={{ textAlign: 'start' }} />
           </div>
           <div>
             <label className="form-label small text-secondary mb-1">{c.form.email}</label>
-            <input type="email" className="form-control form-control-sm bg-dark text-white border-secondary" placeholder={c.form.emailPlaceholder} dir="ltr" />
+            <input type="email" className="form-control form-control-sm bg-body text-body border-secondary" placeholder={c.form.emailPlaceholder} dir="ltr" />
           </div>
           <div>
             <label className="form-label small text-secondary mb-1">{c.form.notes}</label>
-            <textarea className="form-control form-control-sm bg-dark text-white border-secondary" rows={2} placeholder={c.form.notesPlaceholder} style={{ textAlign: 'start' }} />
+            <textarea className="form-control form-control-sm bg-body text-body border-secondary" rows={2} placeholder={c.form.notesPlaceholder} style={{ textAlign: 'start' }} />
           </div>
           <button className="btn btn-sm btn-outline-success" style={{ alignSelf: isRtl ? 'flex-end' : 'flex-start' }}>{c.form.submit}</button>
         </div>
