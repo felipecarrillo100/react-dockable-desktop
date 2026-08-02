@@ -465,21 +465,21 @@ export const ShowcaseControlCenter: React.FC = () => {
           <div className="d-flex flex-column gap-3">
             <h6 className="text-uppercase font-monospace text-secondary mb-1" style={{ fontSize: '0.75rem' }}>Layout Templates</h6>
             <div className="d-flex flex-column gap-2">
-              <button className="btn btn-sm btn-outline-light p-2 d-flex flex-column gap-1" onClick={applyDev}>
+              <button className="btn btn-sm btn-outline-secondary p-2 d-flex flex-column gap-1" onClick={applyDev}>
                 <span className="fw-bold">🗺️ Developer Layout</span>
-                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Map and Code Editor on top, System Console on bottom.</span>
+                <span className="small" style={{ fontSize: '0.7rem' }}>Map and Code Editor on top, System Console on bottom.</span>
               </button>
-              <button className="btn btn-sm btn-outline-light p-2 d-flex flex-column gap-1" onClick={applyEditor}>
+              <button className="btn btn-sm btn-outline-secondary p-2 d-flex flex-column gap-1" onClick={applyEditor}>
                 <span className="fw-bold">✏️ Code Editor Focus</span>
-                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Maximize editor window with a floating terminal preview.</span>
+                <span className="small" style={{ fontSize: '0.7rem' }}>Maximize editor window with a floating terminal preview.</span>
               </button>
-              <button className="btn btn-sm btn-outline-light p-2 d-flex flex-column gap-1" onClick={applyData}>
+              <button className="btn btn-sm btn-outline-secondary p-2 d-flex flex-column gap-1" onClick={applyData}>
                 <span className="fw-bold">📊 Data Analysis</span>
-                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Full screen map and docked Attribute Database table.</span>
+                <span className="small" style={{ fontSize: '0.7rem' }}>Full screen map and docked Attribute Database table.</span>
               </button>
               <button className="btn btn-sm btn-outline-danger p-2 d-flex flex-column gap-1" onClick={resetLayout}>
-                <span className="fw-bold text-danger">🔄 Reset Default Layout</span>
-                <span className="text-secondary small" style={{ fontSize: '0.7rem' }}>Restore original workspace split grid configuration.</span>
+                <span className="fw-bold">🔄 Reset Default Layout</span>
+                <span className="small" style={{ fontSize: '0.7rem' }}>Restore original workspace split grid configuration.</span>
               </button>
             </div>
           </div>

@@ -38,11 +38,11 @@ describe('Floating Windows', () => {
     if (preserved?.parentNode) preserved.parentNode.removeChild(preserved);
   });
 
-  const mount = (withRenderer = false) => {
+  const mount = (withRenderer = false, dir?: 'ltr' | 'rtl') => {
     act(() => {
       root = createRoot(container!);
       root.render(
-        <WindowManagerProvider>
+        <WindowManagerProvider dir={dir}>
           <PanelProvider>
             <StateExtractor />
             {withRenderer && <WindowManager />}
@@ -197,5 +197,95 @@ describe('Floating Windows', () => {
 
     const floatingEl = container!.querySelector('.floating-window');
     expect(floatingEl).not.toBeNull();
+  });
+
+  it('positions a top-right anchored window with insetInlineEnd under LTR (no manual physical flip)', () => {
+    mount(true, 'ltr');
+    act(() => { lastActions.openPanel('anchor-ltr', 'map', { initialTarget: 'floating', anchor: 'top-right' }); });
+
+    const el = container!.querySelector('[data-window-id="anchor-ltr"]') as HTMLElement;
+    expect(el.style.insetInlineEnd).not.toBe('');
+    expect(el.style.insetInlineStart).toBe('');
+  });
+
+  it('positions a top-right anchored window with insetInlineEnd under RTL too (dir handles the mirroring, not JS)', () => {
+    mount(true, 'rtl');
+    act(() => { lastActions.openPanel('anchor-rtl', 'map', { initialTarget: 'floating', anchor: 'top-right' }); });
+
+    const el = container!.querySelector('[data-window-id="anchor-rtl"]') as HTMLElement;
+    expect(el.style.insetInlineEnd).not.toBe('');
+    expect(el.style.insetInlineStart).toBe('');
+    expect(el.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('re-mirrors an already-anchored window when direction is switched live, with no other action taken', () => {
+    mount(true, 'ltr');
+    act(() => { lastActions.openPanel('anchor-live', 'map', { initialTarget: 'floating', anchor: 'top-right' }); });
+
+    let el = container!.querySelector('[data-window-id="anchor-live"]') as HTMLElement;
+    expect(el.style.insetInlineEnd).not.toBe('');
+    expect(el.getAttribute('dir')).toBe('ltr');
+
+    act(() => { lastActions.setDirection('rtl'); });
+
+    el = container!.querySelector('[data-window-id="anchor-live"]') as HTMLElement;
+    // Same logical property — the anchor itself was never touched. Only `dir` changed.
+    expect(el.style.insetInlineEnd).not.toBe('');
+    expect(el.style.insetInlineStart).toBe('');
+    expect(el.getAttribute('dir')).toBe('rtl');
+    expect(lastState.floating.find((w: any) => w.id === 'anchor-live').anchor).toBe('top-right');
+  });
+
+  it('stacks two windows anchored to the same corner with an offset, in both LTR and RTL', () => {
+    for (const dir of ['ltr', 'rtl'] as const) {
+      if (root) { act(() => { root!.unmount(); }); root = null; }
+      lastState = null;
+      lastActions = null;
+
+      mount(true, dir);
+      act(() => { lastActions.openPanel('stack-1', 'map', { initialTarget: 'floating', anchor: 'top-right' }); });
+      act(() => { lastActions.updateFloatingPosition('stack-1', { height: 200 }); });
+      act(() => { lastActions.openPanel('stack-2', 'editor', { initialTarget: 'floating', anchor: 'top-right' }); });
+
+      const el1 = container!.querySelector('[data-window-id="stack-1"]') as HTMLElement;
+      const el2 = container!.querySelector('[data-window-id="stack-2"]') as HTMLElement;
+      const top1 = parseFloat(el1.style.top);
+      const top2 = parseFloat(el2.style.top);
+
+      // Second window stacks below the first: its height (200) + the fixed 8px gap.
+      expect(top2 - top1).toBe(200 + 8);
+    }
+  });
+
+  it('clamps width/height (but not position) of an anchored window when the workspace shrinks', () => {
+    let roCallbacks: ResizeObserverCallback[] = [];
+    const OriginalRO = globalThis.ResizeObserver;
+    // @ts-ignore
+    globalThis.ResizeObserver = class {
+      constructor(cb: ResizeObserverCallback) { roCallbacks.push(cb); }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+
+    try {
+      mount(true, 'ltr');
+      act(() => { lastActions.openPanel('anchor-clamp', 'map', { initialTarget: 'floating', anchor: 'top-right' }); });
+      act(() => { lastActions.updateFloatingPosition('anchor-clamp', { width: 800, height: 600 }); });
+
+      act(() => {
+        roCallbacks.forEach(cb => cb(
+          [{ contentRect: { width: 500, height: 400 } } as ResizeObserverEntry],
+          {} as ResizeObserver
+        ));
+      });
+
+      const win = lastState.floating.find((w: any) => w.id === 'anchor-clamp');
+      expect(win.width).toBeLessThanOrEqual(500 - 20);
+      expect(win.height).toBeLessThanOrEqual(400 - 40);
+      expect(win.anchor).toBe('top-right');
+    } finally {
+      globalThis.ResizeObserver = OriginalRO;
+    }
   });
 });

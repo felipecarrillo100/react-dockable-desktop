@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.2] — 2026-08-02
+
+### Fixed
+- **RTL corner-anchor positioning inconsistency** — the resize-triggered realignment effect in `WindowManager` recomputed anchored floating windows' position using the raw, un-flipped anchor string, disagreeing with the (already RTL-aware) render-time stacking logic. Anchored windows now derive their visual position entirely from `anchor` + the element's `dir` attribute via CSS logical properties (`insetInlineStart`/`insetInlineEnd`) — both code paths now agree by construction, and switching direction at runtime (e.g. via `setDirection()`) re-mirrors already-anchored windows with no other action needed.
+
+### Changed
+- Internal: de-duplicated `flipZoneHorizontal` (previously defined separately in `WindowManager.tsx` and `PanelOverlay.tsx`) into a single shared `src/components/anchorGeometry.ts` module.
+- Internal: `PanelFloatingWindow` (Panel Overlay) now sets an explicit `dir` attribute and positions its corner anchor via CSS logical properties, replacing a manual `isRtl`-based left/right flip — consistent with how `PanelToolbar` already positions itself in the same file.
+
 ## [4.2.1] — 2026-06-29
 
 ### Fixed
@@ -146,7 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.2...HEAD
+[4.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.1...v4.2.2
 [4.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.0.0...v4.2.0
 [4.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v4.0.0
 [3.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/releases/tag/v3.2.0
