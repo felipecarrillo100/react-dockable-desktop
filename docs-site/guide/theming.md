@@ -197,6 +197,26 @@ The library automatically sets `data-color-scheme="dark"` or `"light"` on the wo
 
 You are not required to provide a light variant. If omitted, the dark definition applies in both modes.
 
+### Reading the current color scheme in your own code
+
+If your panel content needs to react in JavaScript (not just CSS) to the same scheme the workspace is using — swapping a map's tile layer or an embedded editor's theme, for example — use `useColorScheme()`:
+
+```tsx
+import { useColorScheme } from 'react-dockable-desktop';
+
+function MyMapPanel() {
+  const colorScheme = useColorScheme(); // 'dark' | 'light', updates live
+
+  useEffect(() => {
+    tileLayer.setUrl(colorScheme === 'light' ? LIGHT_TILES : DARK_TILES);
+  }, [colorScheme]);
+
+  return <div ref={containerRef} />;
+}
+```
+
+It reads and reactively tracks the same `data-color-scheme` attribute described above — the value always matches what `[data-color-scheme="..."]` CSS selectors are currently matching.
+
 ## Runtime skin switching
 
 Because `skin` is a regular React prop, switching skins at runtime is just state:

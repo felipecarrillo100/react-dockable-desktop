@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerActions, useWindowManagerState } from '../WindowManagerContext';
 import { PanelProvider, usePanelState, usePanelActions } from '../PanelProviderContext';
-import { useFormContainer } from '../FormContainerContext';
+import { useFormContainer, usePanelSize } from '../FormContainerContext';
 import { PanelRegistry } from '../PanelRegistry';
 import WindowManager from '../WindowManager';
 import ModalStackRenderer from '../ModalStackRenderer';
@@ -16,8 +16,13 @@ const lifeCycleLog: string[] = [];
 // Panel that exposes new lifecycle contract members via buttons and data attributes
 const TestLifecycleChild: React.FC<{ panelId: string }> = ({ panelId }) => {
   const contract = useFormContainer();
+  const panelSize = usePanelSize();
   return (
-    <div id={`lc-${panelId}`} data-container-type={contract.containerType}>
+    <div
+      id={`lc-${panelId}`}
+      data-container-type={contract.containerType}
+      data-panel-size={panelSize ? `${panelSize.width}x${panelSize.height}` : 'null'}
+    >
       <button id={`minimize-btn-${panelId}`} onClick={() => contract.requestMinimize?.()}>Minimize</button>
       <button id={`get-dims-btn-${panelId}`} onClick={() => {
         const d = contract.getDimensions?.();
@@ -402,6 +407,37 @@ describe('FormContainer Lifecycle Extensions', () => {
     click('get-dims-btn-lc-panel');
 
     expect(lifeCycleLog).toContain('null');
+  });
+
+  it('usePanelSize() returns null before layout and updates reactively when the panel resizes', () => {
+    let roCallbacks: ResizeObserverCallback[] = [];
+    const OriginalRO = globalThis.ResizeObserver;
+    // @ts-ignore
+    globalThis.ResizeObserver = class {
+      constructor(cb: ResizeObserverCallback) { roCallbacks.push(cb); }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+
+    try {
+      mount();
+      act(() => { lcTestActions.openPanel('sz-panel', 'testLifecycle', { title: 'Size Panel' }); });
+
+      const el = container!.querySelector('#lc-sz-panel') as HTMLElement;
+      expect(el.getAttribute('data-panel-size')).toBe('null');
+
+      act(() => {
+        roCallbacks.forEach(cb => cb(
+          [{ contentRect: { width: 320, height: 240 } } as ResizeObserverEntry],
+          {} as ResizeObserver
+        ));
+      });
+
+      expect(el.getAttribute('data-panel-size')).toBe('320x240');
+    } finally {
+      globalThis.ResizeObserver = OriginalRO;
+    }
   });
 
   it('onActivate fires when panel gains focus', () => {

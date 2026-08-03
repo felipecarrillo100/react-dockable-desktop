@@ -20,6 +20,8 @@ import {
   PanelToolbarSeparator,
   usePanelFloatingWindowManager,
   toast,
+  useColorScheme,
+  usePanelSize,
 } from '../src/index';
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
@@ -651,23 +653,11 @@ export default AppLayout;
 
 export const CodeEditor: React.FC = () => {
   const container = useFormContainer();
-  const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'light'>('vs-dark');
+  const colorScheme = useColorScheme();
+  const editorTheme: 'vs-dark' | 'light' = colorScheme === 'light' ? 'light' : 'vs-dark';
   const [currentVal, setCurrentVal] = useState(defaultCode);
   const [isDirty, setIsDirty] = useState(false);
   const [wordWrap, setWordWrap] = useState(false);
-
-  useEffect(() => {
-    const updateTheme = () => {
-      const currentTheme = document.documentElement.getAttribute('data-color-scheme');
-      setEditorTheme(currentTheme === 'light' ? 'light' : 'vs-dark');
-    };
-
-    updateTheme();
-
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
-    return () => observer.disconnect();
-  }, []);
 
   const handleEditorChange = (value: string | undefined) => {
     const nextVal = value ?? '';
@@ -968,10 +958,17 @@ export const ToolPanel: React.FC = () => (
   </div>
 );
 
+const leafletTileUrl = (scheme: 'dark' | 'light') =>
+  scheme === 'light'
+    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
 export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const colorScheme = useColorScheme();
+  const panelSize = usePanelSize();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -986,39 +983,23 @@ export const LeafletMapPanel: React.FC<{ panelId: string }> = () => {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const isLight = document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const tileUrl = isLight
-      ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
-    const tileLayer = L.tileLayer(tileUrl, { attribution }).addTo(map);
+    const tileLayer = L.tileLayer(leafletTileUrl(colorScheme), { attribution }).addTo(map);
     tileLayerRef.current = tileLayer;
 
-    const updateMapTheme = () => {
-      const light = document.documentElement.getAttribute('data-color-scheme') === 'light';
-      const newUrl = light
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      if (tileLayerRef.current) {
-        tileLayerRef.current.setUrl(newUrl);
-      }
-    };
-    const observer = new MutationObserver(updateMapTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
-
-    const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
-    resizeObserver.observe(container);
-
     return () => {
-      observer.disconnect();
-      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(leafletTileUrl(colorScheme));
+  }, [colorScheme]);
+
+  useEffect(() => {
+    if (panelSize) mapRef.current?.invalidateSize();
+  }, [panelSize]);
 
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
@@ -1207,6 +1188,8 @@ const MainMapInner: React.FC = () => {
   const floats = usePanelFloatingWindowManager();
   const floatsRef = useRef(floats);
   useEffect(() => { floatsRef.current = floats; });
+  const colorScheme = useColorScheme();
+  const panelSize = usePanelSize();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1219,13 +1202,8 @@ const MainMapInner: React.FC = () => {
     });
     mapRef.current = map;
 
-    const isLight = document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const tileUrl = isLight
-      ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
-    const tileLayer = L.tileLayer(tileUrl, { attribution }).addTo(map);
+    const tileLayer = L.tileLayer(leafletTileUrl(colorScheme), { attribution }).addTo(map);
     tileLayerRef.current = tileLayer;
 
     // Create vector layer groups
@@ -1294,31 +1272,20 @@ const MainMapInner: React.FC = () => {
     // Thames polyline is default hidden, don't add to map
     layerGroupsRef.current['polylines'] = polylinesGroup;
 
-    const updateMapTheme = () => {
-      const light = document.documentElement.getAttribute('data-color-scheme') === 'light';
-      const newUrl = light
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      if (tileLayerRef.current) {
-        tileLayerRef.current.setUrl(newUrl);
-      }
-    };
-    const observer = new MutationObserver(updateMapTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
-
-    const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
-    resizeObserver.observe(container);
-
     return () => {
-      observer.disconnect();
-      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
       layerGroupsRef.current = {};
     };
   }, []);
+
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(leafletTileUrl(colorScheme));
+  }, [colorScheme]);
+
+  useEffect(() => {
+    if (panelSize) mapRef.current?.invalidateSize();
+  }, [panelSize]);
 
   // Subscribe to layer visibility events
   useEffect(() => {

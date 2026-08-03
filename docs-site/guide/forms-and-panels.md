@@ -234,6 +234,26 @@ if (dims) {
 
 Typical use: read the initial size inside `onActivate` instead of waiting for a resize event.
 
+### Reactive dimensions with `usePanelSize()`
+
+`usePanelSize()` is the reactive alternative to calling `getDimensions()` yourself — instead of manually subscribing to `onResize` and mirroring it into state, it returns the panel's current `{ width, height }` (or `null` before layout) and re-renders your component whenever it changes:
+
+```tsx
+import { usePanelSize } from 'react-dockable-desktop';
+
+function MyMapPanel() {
+  const size = usePanelSize();
+
+  useEffect(() => {
+    if (size) map.invalidateSize();
+  }, [size]);
+
+  return <div ref={containerRef} />;
+}
+```
+
+It's backed by the same `ResizeObserver`-driven mechanism as `onResize`/`getDimensions()` — this correctly follows the panel's actual rendered box across docking, floating, and tab-activation changes, so there's no need for panel content to set up its own second `ResizeObserver` on its own container element to detect the same thing.
+
 ### Minimizing imperatively
 
 `requestMinimize()` sends the panel to the taskbar without requiring access to `useWindowManagerActions`. It is a no-op if the container type does not support minimize (e.g. modals and side drawers).

@@ -19,6 +19,7 @@ import ConfirmationForm from '../forms/ConfirmationForm';
 import { flipZoneHorizontal } from './anchorGeometry';
 import { startPointerDrag, computeResizedRect } from './dragResize';
 import type { ResizeDir } from './dragResize';
+import { useColorScheme } from '../hooks/useColorScheme';
 
 const findLeaf = (node: LayoutNode | null, leafId: string): LayoutLeafNode | null => {
   if (!node) return null;
@@ -1584,17 +1585,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   }, [state.minimized.length, taskbarVisibility]);
 
   // Fetch the active color-scheme from documentElement to make sure nested variables resolve correctly
-  const [currentColorScheme, setCurrentColorScheme] = useState<'dark' | 'light'>('dark');
-  useEffect(() => {
-    const updateThemeState = () => {
-      const activeTheme = document.documentElement.getAttribute('data-color-scheme') === 'light' ? 'light' : 'dark';
-      setCurrentColorScheme(activeTheme);
-    };
-    updateThemeState();
-    const obs = new MutationObserver(updateThemeState);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
-    return () => obs.disconnect();
-  }, []);
+  const currentColorScheme = useColorScheme();
 
   // Mirror skin onto documentElement so components rendered outside the WindowManager div
   // (Toolbar, Sidebar) also inherit per-skin CSS variable overrides — same pattern as data-color-scheme.

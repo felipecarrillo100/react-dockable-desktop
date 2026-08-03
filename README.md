@@ -29,6 +29,7 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 - **Layout Serialization** — save and restore the full workspace as a JSON string; survives page reloads
 - **7 Built-in Skins** — VSCode, macOS, Chrome, Slate, Nord, Obsidian, Tokyo — all fully themeable via CSS variables
 - **Toast Notifications** — imperative singleton `toast.info/success/warning/error/promise()` with queue, pause-on-hover, progress bar, and a `ToastAdapter` interface for delegating to a third-party notification library
+- **Drag-Resize Primitives** — `startPointerDrag()` and `computeResizedRect()`, the same pointer-capture mechanics and 8-directional resize math the built-in resizers use, exported for building custom resizable UI inside your own panel content ([guide →](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced#building-custom-drag-resize-interactions))
 - **Zero extra dependencies** — no runtime dependencies beyond React itself; everything is bundled in
 - **TypeScript-first** — complete type definitions included; no separate `@types/` package needed
 
@@ -191,6 +192,7 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `usePanelActions()` | `PanelActions` | Open modal overlays and left/right side drawers |
 | `usePanelContext()` | `{ publish, subscribe }` | Inter-panel typed event bus |
 | `useFormContainer()` | `FormContainerContract` | Dirty state, close guards, dynamic title/icon, lifecycle callbacks (activate, deactivate, container-type change), imperative minimize, sync dimensions |
+| `usePanelSize()` | `{ width, height } \| null` | Reactive alternative to `getDimensions()` — live panel dimensions across docking, floating, and tab changes, no manual subscription |
 | `usePanelId()` | `string` | The panel's own instance ID — no prop drilling needed |
 | `useToolbar()` | `ToolbarContextValue` | Read/write Toolbar state (active tool, modifiers) from any panel |
 | `useSidebar()` | `SidebarContextValue` | Open/close Sidebar tabs from any component in the Sidebar tree |
@@ -203,6 +205,7 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `useActivePanelContribution()` | `PanelContribution \| null` | Read the active panel's published contribution, to merge manually |
 | `useMergedToolbarItems(staticItems)` | `ToolbarItem[]` | `staticItems` + the active panel's contributed toolbar items, ready for `<Toolbar items={...}>` |
 | `useMergedSidebarTabs(staticTabs)` | `SidebarTab[]` | `staticTabs` + the active panel's contributed sections as dynamic tabs, ready for `<Sidebar tabs={...}>` |
+| `useColorScheme()` | `'dark' \| 'light'` | Reactively read the workspace's current color scheme from your own panel content |
 
 **State selectors** prevent unnecessary re-renders:
 
@@ -474,7 +477,7 @@ Complete guides, API reference, and interactive demo at:
 | [Modals & Side Panels](https://felipecarrillo100.github.io/react-dockable-desktop/guide/modals-and-drawers) | Modal stack, drawers, `Sidebar` component |
 | [Event Bus](https://felipecarrillo100.github.io/react-dockable-desktop/guide/event-bus) | Typed pub/sub, built-in lifecycle events |
 | [Theming](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) | CSS variables, custom skins, dark/light modes |
-| [Advanced Topics](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced) | RTL, multiple workspaces, custom header actions |
+| [Advanced Topics](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced) | RTL, multiple workspaces, custom header actions, custom drag-resize interactions |
 | [Best Practices](https://felipecarrillo100.github.io/react-dockable-desktop/guide/best-practices) | Patterns for production-ready implementations |
 | [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `PanelOverlayRoot`, panel toolbars, `PanelFloatingWindow`, `usePanelFloatingWindowManager` |
 | [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<ToastContainer>`, queue behaviour, theming, `ToastAdapter` |

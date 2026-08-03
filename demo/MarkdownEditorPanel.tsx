@@ -9,7 +9,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css'; // rehype-katex does not import this for you
-import { usePanelContribution } from '../src/index';
+import { usePanelContribution, startPointerDrag, useColorScheme } from '../src/index';
 import type { ToolbarItem, PanelSidebarSection } from '../src/index';
 
 const DEFAULT_MARKDOWN = `# Getting Started
@@ -356,7 +356,8 @@ const TocList: React.FC<{ headings: HeadingInfo[]; onSelect: (id: string) => voi
 
 export const MarkdownEditorPanel: React.FC = () => {
   const [value, setValue] = useState(DEFAULT_MARKDOWN);
-  const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'light'>('vs-dark');
+  const colorScheme = useColorScheme();
+  const editorTheme: 'vs-dark' | 'light' = colorScheme === 'light' ? 'light' : 'vs-dark';
   const [ratio, setRatio] = useState(0.5);
   const [headings, setHeadings] = useState<HeadingInfo[]>([]);
 
@@ -391,17 +392,6 @@ export const MarkdownEditorPanel: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const updateTheme = () => {
-      const currentTheme = document.documentElement.getAttribute('data-color-scheme');
-      setEditorTheme(currentTheme === 'light' ? 'light' : 'vs-dark');
-    };
-    updateTheme();
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
-    return () => observer.disconnect();
-  }, []);
-
   // Re-scan the rendered preview for headings whenever the source changes — reading the
   // real DOM ids that rehype-slug already assigned, rather than re-deriving our own slugs,
   // so Table of Contents links always resolve to the right element in THIS instance.
@@ -430,32 +420,34 @@ export const MarkdownEditorPanel: React.FC = () => {
 
   // Draggable divider — mirrors the workspace grid resizer's interaction shape and look
   // (src/components/WindowManager.tsx's handleResizerPointerDown, src/index.css's .resizer-bar),
-  // hand-rolled here rather than imported since it's internal, unexported library code.
+  // built on the library's own exported startPointerDrag() primitive.
   const handleDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     const bar = e.currentTarget;
-    bar.setPointerCapture(e.pointerId);
-    bar.classList.add('active');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
-    const onMove = (me: PointerEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const next = (me.clientX - rect.left) / rect.width;
-      setRatio(Math.min(0.85, Math.max(0.15, next)));
-    };
-    const onUp = () => {
-      bar.classList.remove('active');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      bar.removeEventListener('pointermove', onMove);
-      bar.removeEventListener('pointerup', onUp);
-      bar.removeEventListener('pointercancel', onUp);
-    };
-    bar.addEventListener('pointermove', onMove);
-    bar.addEventListener('pointerup', onUp);
-    bar.addEventListener('pointercancel', onUp);
+    const startClientX = e.clientX;
+    startPointerDrag({
+      element: bar,
+      pointerId: e.pointerId,
+      startClientX,
+      startClientY: e.clientY,
+      captureStart: () => {},
+      activeClasses: [{ el: bar, classes: ['active'] }],
+      onMove: (dx) => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        // This divider tracks an absolute ratio of the container, not a delta from
+        // start — recover the live clientX from the reported delta (startClientX + dx).
+        const next = (startClientX + dx - rect.left) / rect.width;
+        setRatio(Math.min(0.85, Math.max(0.15, next)));
+      },
+      onEnd: () => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      },
+    });
   };
 
   // Toolbar contribution is stable — every action just reads editorRef.current at click
