@@ -195,7 +195,7 @@ describe('Floating Windows', () => {
       lastActions.openPanel('render-float', 'map', { initialTarget: 'floating', title: 'Render Float' });
     });
 
-    const floatingEl = container!.querySelector('.floating-window');
+    const floatingEl = container!.querySelector('.rdd-floating-window');
     expect(floatingEl).not.toBeNull();
   });
 

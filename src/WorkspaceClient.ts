@@ -54,6 +54,13 @@ export interface WorkspaceClientConfig {
    * outer edge. Range 0.1–0.9. Default: 0.2.
    */
   defaultEdgeSplitRatio?: number;
+  /**
+   * Starting z-index for floating windows and the library's own chrome overlays
+   * (context menu, toolbar flyout, modal stack, toast, workspace edge zones),
+   * all of which shift together via `--rdd-z-base`. Set this above/below a host
+   * app's own modal z-index range to control stacking against it. Default: 1000.
+   */
+  zIndexBase?: number;
 }
 
 /**
@@ -96,7 +103,7 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
   readonly initialState: string | null;
 
   /** Non-rendering configuration forwarded to the provider. */
-  readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir' | 'defaultSplitRatio' | 'defaultEdgeSplitRatio'>;
+  readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir' | 'defaultSplitRatio' | 'defaultEdgeSplitRatio' | 'zIndexBase'>;
 
   private _actions: WindowActions | null = null;
   private _initialized = false;
@@ -126,6 +133,7 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
       dir: config.dir,
       defaultSplitRatio: config.defaultSplitRatio,
       defaultEdgeSplitRatio: config.defaultEdgeSplitRatio,
+      zIndexBase: config.zIndexBase,
     };
 
     if (config.panels) {

@@ -128,7 +128,7 @@ describe('FormContainer Integration', () => {
 
     expect(testState.panels['test-panel']).toBeDefined();
 
-    let tab = container!.querySelector('.workspace-tab.active');
+    let tab = container!.querySelector('.rdd-workspace-tab.rdd-active');
     expect(tab?.textContent).toContain('Test Form');
     expect(tab?.textContent).not.toContain('*');
 
@@ -138,7 +138,7 @@ describe('FormContainer Integration', () => {
 
     expect(testState.panels['test-panel'].dirty).toBe(true);
 
-    tab = container!.querySelector('.workspace-tab.active');
+    tab = container!.querySelector('.rdd-workspace-tab.rdd-active');
     expect(tab?.textContent).toContain('Test Form *');
   });
 
@@ -159,7 +159,7 @@ describe('FormContainer Integration', () => {
     });
     expect(testState.panels['test-panel'].dirty).toBe(false);
 
-    const tab = container!.querySelector('.workspace-tab.active');
+    const tab = container!.querySelector('.rdd-workspace-tab.rdd-active');
     expect(tab?.textContent).not.toContain('*');
   });
 
@@ -174,7 +174,7 @@ describe('FormContainer Integration', () => {
     });
 
     expect(testState.panels['test-panel'].title).toBe('Dynamic Title');
-    const tab = container!.querySelector('.workspace-tab.active');
+    const tab = container!.querySelector('.rdd-workspace-tab.rdd-active');
     expect(tab?.textContent).toContain('Dynamic Title');
   });
 
@@ -230,7 +230,7 @@ describe('FormContainer Integration', () => {
     expect(testState.panels['test-panel'].dirty).toBe(true);
 
     // The tab X button must be present (UI structural assertion)
-    expect(container!.querySelector('.close-tab-x')).not.toBeNull();
+    expect(container!.querySelector('.rdd-close-tab-x')).not.toBeNull();
 
     // Open the ConfirmationForm modal directly (simulates what handleRequestClose does)
     act(() => {
@@ -242,7 +242,7 @@ describe('FormContainer Integration', () => {
     });
 
     expect(panelState.modals.length).toBeGreaterThan(0);
-    const modal = container!.querySelector('.v2-modal-overlay');
+    const modal = container!.querySelector('.rdd-modal-overlay');
     expect(modal).not.toBeNull();
     expect(modal!.textContent).toContain('Unsaved Changes');
   });
@@ -266,7 +266,7 @@ describe('FormContainer Integration', () => {
       );
     });
 
-    const modal = container!.querySelector('.v2-modal-overlay');
+    const modal = container!.querySelector('.rdd-modal-overlay');
     expect(modal).not.toBeNull();
 
     // The first type="button" is the modal close X; the second is the ConfirmationForm cancel/No
@@ -276,7 +276,7 @@ describe('FormContainer Integration', () => {
     act(() => { noBtn.click(); });
 
     // Modal dismissed, panel still open
-    expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
+    expect(container!.querySelector('.rdd-modal-overlay')).toBeNull();
     expect(testState.panels['test-panel']).toBeDefined();
   });
 
@@ -299,7 +299,7 @@ describe('FormContainer Integration', () => {
       );
     });
 
-    const modal = container!.querySelector('.v2-modal-overlay');
+    const modal = container!.querySelector('.rdd-modal-overlay');
     expect(modal).not.toBeNull();
 
     // Click "Yes" (confirm/submit) button — type="submit"
@@ -308,7 +308,7 @@ describe('FormContainer Integration', () => {
     act(() => { yesBtn.click(); });
 
     // Modal dismissed, panel closed
-    expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
+    expect(container!.querySelector('.rdd-modal-overlay')).toBeNull();
     expect(testState.panels['test-panel']).toBeUndefined();
   });
 
@@ -328,7 +328,7 @@ describe('FormContainer Integration', () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    expect(container!.querySelector('.v2-modal-overlay')).toBeNull();
+    expect(container!.querySelector('.rdd-modal-overlay')).toBeNull();
     expect(testState.panels['test-panel']).toBeDefined();
   });
 });

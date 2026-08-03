@@ -2,7 +2,7 @@
  * Tests for the Toast notification system: toast singleton API and ToastContainer.
  *
  * T1:  toast.* methods fire without a mounted ToastContainer (no throws)
- * T2:  ToastContainer renders; toast.info() adds .dw-toast--info to document.body
+ * T2:  ToastContainer renders; toast.info() adds .rdd-toast--info to document.body
  * T3:  Each toast type gets its correct modifier class
  * T4:  Toast renders the supplied message text
  * T5:  closable=true renders a close button; clicking it removes the toast
@@ -38,7 +38,7 @@ afterEach(() => {
   act(() => { toast.dismiss(); });
   if (root) act(() => { root!.unmount(); root = null; });
   // Clean up any portal content left in document.body
-  document.body.querySelectorAll('.dw-toast-container').forEach(el => el.remove());
+  document.body.querySelectorAll('.rdd-toast-container').forEach(el => el.remove());
   if (document.body.contains(container)) document.body.removeChild(container);
   vi.clearAllTimers();
   vi.useRealTimers();
@@ -63,10 +63,10 @@ describe('T1: toast.* without mounted container', () => {
 // ─── T2 ───────────────────────────────────────────────────────────────────────
 
 describe('T2: ToastContainer renders; toast.info adds a toast', () => {
-  it('adds .dw-toast--info to document.body', () => {
+  it('adds .rdd-toast--info to document.body', () => {
     act(() => { mountContainer(); });
     act(() => { toast.info('hello info'); });
-    expect(document.body.querySelector('.dw-toast--info')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast--info')).not.toBeNull();
   });
 });
 
@@ -75,29 +75,29 @@ describe('T2: ToastContainer renders; toast.info adds a toast', () => {
 describe('T3: Toast type modifier classes', () => {
   beforeEach(() => { act(() => { mountContainer(); }); });
 
-  it('toast.success adds .dw-toast--success', () => {
+  it('toast.success adds .rdd-toast--success', () => {
     act(() => { toast.success('ok'); });
-    expect(document.body.querySelector('.dw-toast--success')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast--success')).not.toBeNull();
   });
 
-  it('toast.warning adds .dw-toast--warning', () => {
+  it('toast.warning adds .rdd-toast--warning', () => {
     act(() => { toast.warning('warn'); });
-    expect(document.body.querySelector('.dw-toast--warning')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast--warning')).not.toBeNull();
   });
 
-  it('toast.error adds .dw-toast--error', () => {
+  it('toast.error adds .rdd-toast--error', () => {
     act(() => { toast.error('err'); });
-    expect(document.body.querySelector('.dw-toast--error')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast--error')).not.toBeNull();
   });
 });
 
 // ─── T4 ───────────────────────────────────────────────────────────────────────
 
 describe('T4: Toast message text', () => {
-  it('renders the supplied message string inside .dw-toast__body', () => {
+  it('renders the supplied message string inside .rdd-toast__body', () => {
     act(() => { mountContainer(); });
     act(() => { toast.info('Hello world'); });
-    const body = document.body.querySelector('.dw-toast__body');
+    const body = document.body.querySelector('.rdd-toast__body');
     expect(body?.textContent).toContain('Hello world');
   });
 });
@@ -105,20 +105,20 @@ describe('T4: Toast message text', () => {
 // ─── T5 ───────────────────────────────────────────────────────────────────────
 
 describe('T5: Close button dismisses toast', () => {
-  it('clicking .dw-toast__close removes the toast (starts exit)', () => {
+  it('clicking .rdd-toast__close removes the toast (starts exit)', () => {
     vi.useFakeTimers();
     act(() => { mountContainer({ defaultClosable: true }); });
     act(() => { toast.info('closeable'); });
-    expect(document.body.querySelector('.dw-toast')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast')).not.toBeNull();
 
-    const btn = document.body.querySelector<HTMLButtonElement>('.dw-toast__close');
+    const btn = document.body.querySelector<HTMLButtonElement>('.rdd-toast__close');
     expect(btn).not.toBeNull();
     act(() => { btn!.click(); });
 
     // After click, toast is in exiting state; run fallback timer to fully remove
     act(() => { vi.runAllTimers(); });
     act(() => { vi.runAllTimers(); });
-    expect(document.body.querySelector('.dw-toast')).toBeNull();
+    expect(document.body.querySelector('.rdd-toast')).toBeNull();
   });
 });
 
@@ -133,13 +133,13 @@ describe('T6: toast.dismiss(id) — targeted removal', () => {
       idA = toast.info('toast-A');
       toast.info('toast-B');
     });
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(2);
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(2);
 
     act(() => { toast.dismiss(idA); });
     act(() => { vi.runAllTimers(); }); // fire fallback exit timer
     act(() => { vi.runAllTimers(); });
 
-    const remaining = document.body.querySelectorAll('.dw-toast');
+    const remaining = document.body.querySelectorAll('.rdd-toast');
     expect(remaining).toHaveLength(1);
     expect(remaining[0].textContent).toContain('toast-B');
   });
@@ -156,12 +156,12 @@ describe('T7: toast.dismiss() — dismiss all', () => {
       toast.success('two');
       toast.error('three');
     });
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(3);
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(3);
 
     act(() => { toast.dismiss(); });
     act(() => { vi.runAllTimers(); });
     act(() => { vi.runAllTimers(); });
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(0);
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(0);
   });
 });
 
@@ -174,7 +174,7 @@ describe('T8: Sticky toast (duration=0)', () => {
     act(() => { toast.error('Sticky error', { duration: 0 }); });
 
     act(() => { vi.advanceTimersByTime(10_000); });
-    expect(document.body.querySelector('.dw-toast')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast')).not.toBeNull();
   });
 });
 
@@ -185,14 +185,14 @@ describe('T9: Auto-dismiss after defaultDuration', () => {
     vi.useFakeTimers();
     act(() => { mountContainer({ defaultDuration: 50 }); });
     act(() => { toast.info('auto'); });
-    expect(document.body.querySelector('.dw-toast')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast')).not.toBeNull();
 
     // Step 1: fire the auto-dismiss timer (50ms)
     act(() => { vi.advanceTimersByTime(51); });
     // Step 2: fire the fallback exit timer (520ms) registered by the exit effect
     act(() => { vi.advanceTimersByTime(521); });
 
-    expect(document.body.querySelector('.dw-toast')).toBeNull();
+    expect(document.body.querySelector('.rdd-toast')).toBeNull();
   });
 });
 
@@ -208,16 +208,16 @@ describe('T10: maxVisible queue', () => {
       toast.info('second');
       toast.info('third'); // queued — exceeds maxVisible=2
     });
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(2);
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(2);
 
     // Dismiss the first toast via close button; with animation='none' the exit is
     // synchronous inside this act() — onExited fires immediately, removing 'first'
     // and promoting 'third' from the queue in the same flush.
-    const firstClose = document.body.querySelector<HTMLButtonElement>('.dw-toast__close');
+    const firstClose = document.body.querySelector<HTMLButtonElement>('.rdd-toast__close');
     act(() => { firstClose!.click(); });
 
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(2);
-    expect(document.body.querySelector('.dw-toast-container')!.textContent).toContain('third');
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(2);
+    expect(document.body.querySelector('.rdd-toast-container')!.textContent).toContain('third');
   });
 });
 
@@ -234,16 +234,16 @@ describe('T11: toast.promise()', () => {
       toast.promise(p, { pending: 'Saving…', success: r => `Saved: ${r}`, error: 'Failed' });
     });
 
-    expect(document.body.querySelector('.dw-toast')?.textContent).toContain('Saving…');
-    expect(document.body.querySelector('.dw-toast--info')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast')?.textContent).toContain('Saving…');
+    expect(document.body.querySelector('.rdd-toast--info')).not.toBeNull();
 
     await act(async () => {
       resolve('file.txt');
       await p;
     });
 
-    expect(document.body.querySelector('.dw-toast--success')).not.toBeNull();
-    expect(document.body.querySelector('.dw-toast')?.textContent).toContain('Saved: file.txt');
+    expect(document.body.querySelector('.rdd-toast--success')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast')?.textContent).toContain('Saved: file.txt');
   });
 
   it('shows error message when the promise rejects', async () => {
@@ -260,8 +260,8 @@ describe('T11: toast.promise()', () => {
       try { await p; } catch { /* expected */ }
     });
 
-    expect(document.body.querySelector('.dw-toast--error')).not.toBeNull();
-    expect(document.body.querySelector('.dw-toast')?.textContent).toContain('Error: network error');
+    expect(document.body.querySelector('.rdd-toast--error')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toast')?.textContent).toContain('Error: network error');
   });
 });
 
@@ -271,12 +271,12 @@ describe('T12: Dedup by id', () => {
   it('re-calling toast.info with the same id updates in place, not duplicating', () => {
     act(() => { mountContainer(); });
     act(() => { toast.info('Original message', { id: 'dedup-1', duration: 0 }); });
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(1);
-    expect(document.body.querySelector('.dw-toast__body')?.textContent).toContain('Original message');
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(1);
+    expect(document.body.querySelector('.rdd-toast__body')?.textContent).toContain('Original message');
 
     act(() => { toast.success('Updated message', { id: 'dedup-1', duration: 0 }); });
-    expect(document.body.querySelectorAll('.dw-toast')).toHaveLength(1);
-    expect(document.body.querySelector('.dw-toast__body')?.textContent).toContain('Updated message');
-    expect(document.body.querySelector('.dw-toast--success')).not.toBeNull();
+    expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(1);
+    expect(document.body.querySelector('.rdd-toast__body')?.textContent).toContain('Updated message');
+    expect(document.body.querySelector('.rdd-toast--success')).not.toBeNull();
   });
 });

@@ -164,7 +164,7 @@ describe('WindowManager Core Layout Operations', () => {
     // grid-branch child wrapper must zero its automatic min-size on both axes, so a
     // leaf's content can never inflate its own or a sibling's rendered size (the bug
     // this guards: a docked panel resizing based on which internal tab/content it shows).
-    const wrappers = container!.querySelectorAll('.workspace-panel');
+    const wrappers = container!.querySelectorAll('.rdd-workspace-panel');
     expect(wrappers.length).toBeGreaterThan(0);
     wrappers.forEach(leaf => {
       const wrapper = leaf.parentElement as HTMLElement;

@@ -236,7 +236,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
         <PanelOverlayContext.Provider value={coreCtxValue}>
           <div
             ref={containerRef}
-            className={`dw-panel-overlay-root${draggingId !== null ? ' dragging-active' : ''}${className ? ' ' + className : ''}`}
+            className={`rdd-panel-overlay-root${draggingId !== null ? ' rdd-dragging-active' : ''}${className ? ' ' + className : ''}`}
             style={style}
           >
             {children}
@@ -271,7 +271,7 @@ function DropZoneOverlay({ hoveredZone }: { hoveredZone: FloatAnchor | null }): 
       {ANCHORS.map(zone => (
         <div
           key={zone}
-          className={`dw-panel-float-dropzone dw-panel-float-dropzone--${zone}${hoveredZone === zone ? ' dw-panel-float-dropzone--hovered' : ''}`}
+          className={`rdd-panel-float-dropzone rdd-panel-float-dropzone--${zone}${hoveredZone === zone ? ' rdd-panel-float-dropzone--hovered' : ''}`}
           aria-hidden="true"
         />
       ))}
@@ -362,7 +362,7 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
   return (
     <div
       ref={ref}
-      className={`dw-panel-toolbar dw-panel-toolbar--${position}${className ? ' ' + className : ''}`}
+      className={`rdd-panel-toolbar rdd-panel-toolbar--${position}${className ? ' ' + className : ''}`}
       data-variant={variant}
       data-btn-variant={buttonVariant}
       style={{ ...posStyle, ...sideStyle, ...sizeStyle, ...style }}
@@ -392,7 +392,7 @@ export function ToolbarButton({ icon, onClick, disabled, title, variant }: Toolb
   return (
     <button
       type="button"
-      className="dw-panel-toolbar-btn"
+      className="rdd-panel-toolbar-btn"
       onClick={onClick}
       disabled={disabled}
       title={title}
@@ -426,7 +426,7 @@ export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant
   return (
     <button
       type="button"
-      className={`dw-panel-toolbar-btn${active ? ' dw-panel-toolbar-btn--active' : ''}`}
+      className={`rdd-panel-toolbar-btn${active ? ' rdd-panel-toolbar-btn--active' : ''}`}
       onClick={onToggle}
       disabled={disabled}
       title={title}
@@ -443,28 +443,28 @@ export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant
 
 /** Vertical (or horizontal) divider line between groups of toolbar items. */
 export function ToolbarSeparator(): React.ReactElement {
-  return <span className="dw-panel-toolbar__sep" aria-hidden="true" />;
+  return <span className="rdd-panel-toolbar__sep" aria-hidden="true" />;
 }
 
 // ─── ToolbarSpacer ────────────────────────────────────────────────────────────
 
 /** Flex-grow spacer that pushes subsequent toolbar items to the far edge. */
 export function ToolbarSpacer(): React.ReactElement {
-  return <span className="dw-panel-toolbar__spacer" aria-hidden="true" />;
+  return <span className="rdd-panel-toolbar__spacer" aria-hidden="true" />;
 }
 
 // ─── ToolbarItem (custom control wrapper) ────────────────────────────────────
 
 /** Wrapper for a custom non-button control (e.g. a dropdown or input) inside a `PanelToolbar`. */
 export function ToolbarItem({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <span className="dw-panel-toolbar__item">{children}</span>;
+  return <span className="rdd-panel-toolbar__item">{children}</span>;
 }
 
 // ─── ToolbarCenter ────────────────────────────────────────────────────────────
 
 /** Centers its children within the toolbar using absolute positioning. */
 export function ToolbarCenter({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div className="dw-panel-toolbar__center">{children}</div>;
+  return <div className="rdd-panel-toolbar__center">{children}</div>;
 }
 
 // ─── ToolbarSearchInput ───────────────────────────────────────────────────────
@@ -597,8 +597,8 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
 
   if (!expanded) {
     return (
-      <div ref={containerRef} className="dw-panel-toolbar-search">
-        <button type="button" className="dw-panel-toolbar-btn" onClick={openSearch} title="Search" aria-label="Search">
+      <div ref={containerRef} className="rdd-panel-toolbar-search">
+        <button type="button" className="rdd-panel-toolbar-btn" onClick={openSearch} title="Search" aria-label="Search">
           {SearchIcon}
         </button>
       </div>
@@ -606,13 +606,13 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
   }
 
   return (
-    <div ref={containerRef} className="dw-panel-toolbar-search dw-panel-toolbar-search--open" onBlur={handleBlur}>
-      <button type="button" className="dw-panel-toolbar-btn" onClick={closeSearch} aria-label="Close search" title="Close search">
+    <div ref={containerRef} className="rdd-panel-toolbar-search rdd-panel-toolbar-search--open" onBlur={handleBlur}>
+      <button type="button" className="rdd-panel-toolbar-btn" onClick={closeSearch} aria-label="Close search" title="Close search">
         {SearchIcon}
       </button>
       <input
         ref={inputRef}
-        className="dw-panel-toolbar-search__input"
+        className="rdd-panel-toolbar-search__input"
         type="text"
         value={query}
         onChange={handleQueryChange}
@@ -622,23 +622,23 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
       />
       {dropdownPos && results.length > 0 && createPortal(
         <div
-          className="dw-panel-toolbar-search__dropdown"
+          className="rdd-panel-toolbar-search__dropdown"
           style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9502 }}
           onMouseDown={e => e.preventDefault()}
         >
           {Object.entries(grouped).map(([group, items]) => (
             <React.Fragment key={group || '__default__'}>
-              {group && <div className="dw-panel-toolbar-search__group">{group}</div>}
+              {group && <div className="rdd-panel-toolbar-search__group">{group}</div>}
               {items.map(item => (
                 <button
                   key={item.id}
                   type="button"
-                  className="dw-panel-toolbar-search__item"
+                  className="rdd-panel-toolbar-search__item"
                   onClick={() => handleSelect(item)}
                 >
-                  {item.icon && <span className="dw-panel-toolbar-search__item-icon">{item.icon}</span>}
-                  <span className="dw-panel-toolbar-search__item-label">{item.label}</span>
-                  {item.description && <span className="dw-panel-toolbar-search__item-desc">{item.description}</span>}
+                  {item.icon && <span className="rdd-panel-toolbar-search__item-icon">{item.icon}</span>}
+                  <span className="rdd-panel-toolbar-search__item-label">{item.label}</span>
+                  {item.description && <span className="rdd-panel-toolbar-search__item-desc">{item.description}</span>}
                 </button>
               ))}
             </React.Fragment>
@@ -913,18 +913,18 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     <div
       ref={windowRef}
       dir={isRtl ? 'rtl' : 'ltr'}
-      className={`dw-panel-float${isActive ? ' dw-panel-float--active' : ''}`}
+      className={`rdd-panel-float${isActive ? ' rdd-panel-float--active' : ''}`}
       style={windowStyle}
       onPointerDown={handleWindowPointerDown}
       onPointerMove={handleWindowPointerMove}
       onPointerUp={handleWindowPointerUp}
     >
-      <div className="dw-panel-float__header" onPointerDown={handleHeaderPointerDown}>
-        {icon && <span className="dw-panel-float__icon">{icon}</span>}
-        <span className="dw-panel-float__title">{title}</span>
+      <div className="rdd-panel-float__header" onPointerDown={handleHeaderPointerDown}>
+        {icon && <span className="rdd-panel-float__icon">{icon}</span>}
+        <span className="rdd-panel-float__title">{title}</span>
         <button
           type="button"
-          className="dw-panel-float__close"
+          className="rdd-panel-float__close"
           onClick={onClose}
           onPointerDown={e => e.stopPropagation()}
           title="Close"
@@ -933,17 +933,17 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
           {CloseIcon}
         </button>
       </div>
-      <div className="dw-panel-float__body">{children}</div>
+      <div className="rdd-panel-float__body">{children}</div>
       {mode === 'free' && <>
-        <div className="resize-handle resize-n"  onPointerDown={handleResizePointerDown('n')}  />
-        <div className="resize-handle resize-ne" onPointerDown={handleResizePointerDown('ne')} />
-        <div className="resize-handle resize-nw" onPointerDown={handleResizePointerDown('nw')} />
+        <div className="rdd-resize-handle rdd-resize-n"  onPointerDown={handleResizePointerDown('n')}  />
+        <div className="rdd-resize-handle rdd-resize-ne" onPointerDown={handleResizePointerDown('ne')} />
+        <div className="rdd-resize-handle rdd-resize-nw" onPointerDown={handleResizePointerDown('nw')} />
       </>}
-      <div className="resize-handle resize-e"  onPointerDown={handleResizePointerDown('e')}  />
-      <div className="resize-handle resize-se" onPointerDown={handleResizePointerDown('se')} />
-      <div className="resize-handle resize-s"  onPointerDown={handleResizePointerDown('s')}  />
-      <div className="resize-handle resize-sw" onPointerDown={handleResizePointerDown('sw')} />
-      <div className="resize-handle resize-w"  onPointerDown={handleResizePointerDown('w')}  />
+      <div className="rdd-resize-handle rdd-resize-e"  onPointerDown={handleResizePointerDown('e')}  />
+      <div className="rdd-resize-handle rdd-resize-se" onPointerDown={handleResizePointerDown('se')} />
+      <div className="rdd-resize-handle rdd-resize-s"  onPointerDown={handleResizePointerDown('s')}  />
+      <div className="rdd-resize-handle rdd-resize-sw" onPointerDown={handleResizePointerDown('sw')} />
+      <div className="rdd-resize-handle rdd-resize-w"  onPointerDown={handleResizePointerDown('w')}  />
     </div>
   );
 }

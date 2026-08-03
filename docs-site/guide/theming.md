@@ -8,8 +8,8 @@ The `skin` prop on `<WindowManager />` sets a `data-workspace-skin` attribute on
 
 ```css
 [data-workspace-skin="nord"] {
-  --bg-workspace: #2e3440;
-  --accent-color: #88c0d0;
+  --rdd-bg-workspace: #2e3440;
+  --rdd-accent-color: #88c0d0;
   /* ... */
 }
 ```
@@ -98,13 +98,13 @@ Only override the tokens you want to change; all others inherit their `:root` de
   --toolbar-btn-radio-active-bg: rgba(255, 100, 80, 0.18);
   --toolbar-accent-bar-width:    0px;
 }
-[data-workspace-skin="my-skin"] .sidebar-tab-btn.active {
+[data-workspace-skin="my-skin"] .rdd-sidebar-tab-btn.rdd-active {
   border-top: 1px solid transparent !important;
   border-bottom: 1px solid transparent !important;
   margin: 0 !important;
 }
-[data-workspace-skin="my-skin"] .toolbar-strip .toolbar-btn-radio.active,
-[data-workspace-skin="my-skin"] .toolbar-strip .toolbar-btn-group.active {
+[data-workspace-skin="my-skin"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
+[data-workspace-skin="my-skin"] .rdd-toolbar-strip .rdd-toolbar-btn-group.rdd-active {
   border-radius: 8px !important;
 }
 ```
@@ -141,17 +141,17 @@ Create a file (e.g. `my-skin.css`) and define a block using `[data-workspace-ski
 ```css
 /* my-skin.css */
 [data-workspace-skin="my-brand"] {
-  --bg-workspace:  #0d1117;
-  --bg-panel:      #161b22;
-  --bg-tab-bar:    #0d1117;
-  --accent-color:  #f78166;
-  --accent-glow:   rgba(247, 129, 102, 0.15);
-  --border-panel:  #30363d;
-  --text-tab-inactive: #8b949e;
-  --text-tab-active:   #f0f6fc;
-  --window-bg:     rgba(22, 27, 34, 1.0);
-  --window-border: #30363d;
-  --window-shadow: 0 16px 40px rgba(1, 4, 9, 0.8);
+  --rdd-bg-workspace:  #0d1117;
+  --rdd-bg-panel:      #161b22;
+  --rdd-bg-tab-bar:    #0d1117;
+  --rdd-accent-color:  #f78166;
+  --rdd-accent-glow:   rgba(247, 129, 102, 0.15);
+  --rdd-border-panel:  #30363d;
+  --rdd-text-tab-inactive: #8b949e;
+  --rdd-text-tab-active:   #f0f6fc;
+  --rdd-window-bg:     rgba(22, 27, 34, 1.0);
+  --rdd-window-border: #30363d;
+  --rdd-window-shadow: 0 16px 40px rgba(1, 4, 9, 0.8);
 }
 ```
 
@@ -172,26 +172,26 @@ The library automatically sets `data-color-scheme="dark"` or `"light"` on the wo
 ```css
 /* Dark mode — usually your primary skin definition */
 [data-workspace-skin="my-brand"] {
-  --bg-workspace: #0d1117;
-  --accent-color: #f78166;
+  --rdd-bg-workspace: #0d1117;
+  --rdd-accent-color: #f78166;
   /* ... */
 }
 
 /* Light mode override */
 [data-workspace-skin="my-brand"][data-color-scheme="light"] {
-  --bg-workspace: #ffffff;
-  --bg-panel:     #f6f8fa;
-  --bg-tab-bar:   #f6f8fa;
-  --accent-color: #cf222e;
-  --text-tab-inactive: #57606a;
-  --text-tab-active:   #1f2328;
-  --window-bg:    rgba(246, 248, 250, 1.0);
-  --window-border: #d0d7de;
-  --window-shadow: 0 8px 24px rgba(140, 149, 159, 0.12);
-  --panel-text:   #1f2328;
-  --panel-title-color: #cf222e;
-  --close-btn-color: #57606a;
-  --close-btn-active-color: #1f2328;
+  --rdd-bg-workspace: #ffffff;
+  --rdd-bg-panel:     #f6f8fa;
+  --rdd-bg-tab-bar:   #f6f8fa;
+  --rdd-accent-color: #cf222e;
+  --rdd-text-tab-inactive: #57606a;
+  --rdd-text-tab-active:   #1f2328;
+  --rdd-window-bg:    rgba(246, 248, 250, 1.0);
+  --rdd-window-border: #d0d7de;
+  --rdd-window-shadow: 0 8px 24px rgba(140, 149, 159, 0.12);
+  --rdd-panel-text:   #1f2328;
+  --rdd-panel-title-color: #cf222e;
+  --rdd-close-btn-color: #57606a;
+  --rdd-close-btn-active-color: #1f2328;
 }
 ```
 
@@ -261,112 +261,112 @@ Copy this into your CSS file and fill in the color values. All variable names ar
 [data-workspace-skin="my-skin"] {
 
   /* --- Workspace backgrounds --- */
-  --bg-primary:    #090b11;      /* page/html background behind the workspace */
-  --bg-workspace:  #0f111a;      /* workspace canvas */
-  --bg-panel:      #141722;      /* docked panel background */
-  --bg-tab-bar:    #0d0f16;      /* tab bar strip */
+  --rdd-bg-primary:    #090b11;      /* page/html background behind the workspace */
+  --rdd-bg-workspace:  #0f111a;      /* workspace canvas */
+  --rdd-bg-panel:      #141722;      /* docked panel background */
+  --rdd-bg-tab-bar:    #0d0f16;      /* tab bar strip */
 
   /* --- Text --- */
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
+  --rdd-text-primary:   #f1f5f9;
+  --rdd-text-secondary: #94a3b8;
 
   /* --- Borders --- */
-  --border-color: rgba(255, 255, 255, 0.08);  /* generic border */
-  --border-panel: rgba(255, 255, 255, 0.08);  /* panel border */
+  --rdd-border-color: rgba(255, 255, 255, 0.08);  /* generic border */
+  --rdd-border-panel: rgba(255, 255, 255, 0.08);  /* panel border */
 
   /* --- Accent --- */
-  --accent-color: #38bdf8;                    /* primary interactive color */
-  --accent-glow:  rgba(56, 189, 248, 0.15);  /* focus rings, halos */
+  --rdd-accent-color: #38bdf8;                    /* primary interactive color */
+  --rdd-accent-glow:  rgba(56, 189, 248, 0.15);  /* focus rings, halos */
 
   /* --- Tabs --- */
-  --bg-tab-inactive:  #0c0d12;
-  --bg-tab-hover:     #171a22;
-  --text-tab-inactive: #858b99;
-  --text-tab-active:   #ffffff;
-  --text-tab-hover:    #e2e8f0;
+  --rdd-bg-tab-inactive:  #0c0d12;
+  --rdd-bg-tab-hover:     #171a22;
+  --rdd-text-tab-inactive: #858b99;
+  --rdd-text-tab-active:   #ffffff;
+  --rdd-text-tab-hover:    #e2e8f0;
 
   /* Tab active-state indicators */
-  --tab-indicator-focused:    var(--accent-color);
-  --tab-indicator-unfocused:  rgba(255, 255, 255, 0.3);
-  --tab-bg-active-focused:    var(--bg-panel);
-  --tab-bg-active-unfocused:  rgba(20, 23, 34, 0.55);
-  --tab-text-active-focused:  var(--text-tab-active);
-  --tab-text-active-unfocused: rgba(255, 255, 255, 0.65);
+  --rdd-tab-indicator-focused:    var(--rdd-accent-color);
+  --rdd-tab-indicator-unfocused:  rgba(255, 255, 255, 0.3);
+  --rdd-tab-bg-active-focused:    var(--rdd-bg-panel);
+  --rdd-tab-bg-active-unfocused:  rgba(20, 23, 34, 0.55);
+  --rdd-tab-text-active-focused:  var(--rdd-text-tab-active);
+  --rdd-tab-text-active-unfocused: rgba(255, 255, 255, 0.65);
 
   /* --- Close / control buttons --- */
-  --close-btn-color:        #858b99;
-  --close-btn-active-color: #e2e8f0;
-  --close-btn-hover-bg:     rgba(255, 255, 255, 0.12);
-  --close-btn-hover-color:  #ffffff;
+  --rdd-close-btn-color:        #858b99;
+  --rdd-close-btn-active-color: #e2e8f0;
+  --rdd-close-btn-hover-bg:     rgba(255, 255, 255, 0.12);
+  --rdd-close-btn-hover-color:  #ffffff;
 
   /* Custom (anchor/minimize/maximize) buttons */
-  --custom-btn-bg:         rgba(255, 255, 255, 0.03);
-  --custom-btn-border:     rgba(255, 255, 255, 0.05);
-  --custom-btn-hover-bg:   rgba(255, 255, 255, 0.12);
-  --custom-btn-hover-color: #ffffff;
+  --rdd-custom-btn-bg:         rgba(255, 255, 255, 0.03);
+  --rdd-custom-btn-border:     rgba(255, 255, 255, 0.05);
+  --rdd-custom-btn-hover-bg:   rgba(255, 255, 255, 0.12);
+  --rdd-custom-btn-hover-color: #ffffff;
 
   /* --- Floating windows --- */
-  --window-bg:              rgba(20, 22, 28, 0.85);   /* supports var(--window-opacity) */
-  --window-border:          rgba(255, 255, 255, 0.08);
-  --window-border-focused:  rgba(255, 255, 255, 0.28);
-  --window-header-bg:       rgba(0, 0, 0, 0.25);
-  --window-text:            #f8f9fa;
-  --window-shadow:          0 16px 40px rgba(0, 0, 0, 0.4);
-  --window-shadow-focused:  0 24px 50px rgba(0, 0, 0, 0.55);
+  --rdd-window-bg:              rgba(20, 22, 28, 0.85);   /* supports var(--rdd-window-opacity) */
+  --rdd-window-border:          rgba(255, 255, 255, 0.08);
+  --rdd-window-border-focused:  rgba(255, 255, 255, 0.28);
+  --rdd-window-header-bg:       rgba(0, 0, 0, 0.25);
+  --rdd-window-text:            #f8f9fa;
+  --rdd-window-shadow:          0 16px 40px rgba(0, 0, 0, 0.4);
+  --rdd-window-shadow-focused:  0 24px 50px rgba(0, 0, 0, 0.55);
 
   /* --- Resizer --- */
-  --resizer-bg: rgba(255, 255, 255, 0.08);
+  --rdd-resizer-bg: rgba(255, 255, 255, 0.08);
 
   /* --- Taskbar --- */
-  --taskbar-bg:            rgba(0, 0, 0, 0.75);
-  --taskbar-border:        rgba(255, 255, 255, 0.1);
-  --taskbar-nav-color:     rgba(255, 255, 255, 0.5);
-  --taskbar-item-bg:       rgba(15, 23, 42, 0.6);
-  --taskbar-item-hover-bg: rgba(15, 23, 42, 0.8);
-  --taskbar-item-border:   rgba(255, 255, 255, 0.08);
-  --taskbar-item-text:     var(--accent-color);
+  --rdd-taskbar-bg:            rgba(0, 0, 0, 0.75);
+  --rdd-taskbar-border:        rgba(255, 255, 255, 0.1);
+  --rdd-taskbar-nav-color:     rgba(255, 255, 255, 0.5);
+  --rdd-taskbar-item-bg:       rgba(15, 23, 42, 0.6);
+  --rdd-taskbar-item-hover-bg: rgba(15, 23, 42, 0.8);
+  --rdd-taskbar-item-border:   rgba(255, 255, 255, 0.08);
+  --rdd-taskbar-item-text:     var(--rdd-accent-color);
 
   /* --- Scrollbars --- */
-  --scrollbar-thumb:       rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
-  --scrollbar-track:       rgba(255, 255, 255, 0.01);
+  --rdd-scrollbar-thumb:       rgba(255, 255, 255, 0.1);
+  --rdd-scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  --rdd-scrollbar-track:       rgba(255, 255, 255, 0.01);
 
   /* --- Panel cards (mockup / inner panel chrome) --- */
-  --panel-card-bg:     rgba(0, 0, 0, 0.2);
-  --panel-card-border: rgba(255, 255, 255, 0.1);
-  --panel-text:        var(--text-primary);
-  --panel-title-color: var(--accent-color);
+  --rdd-panel-card-bg:     rgba(0, 0, 0, 0.2);
+  --rdd-panel-card-border: rgba(255, 255, 255, 0.1);
+  --rdd-panel-text:        var(--rdd-text-primary);
+  --rdd-panel-title-color: var(--rdd-accent-color);
 
   /* --- Header button spacing --- */
-  --header-button-gap: 4px;
+  --rdd-header-button-gap: 4px;
 }
 
 /* Optional: light mode variant */
 [data-workspace-skin="my-skin"][data-color-scheme="light"] {
-  --bg-primary:    #f8f9fa;
-  --bg-workspace:  #f1f5f9;
-  --bg-panel:      #ffffff;
-  --bg-tab-bar:    #e9ecef;
-  --text-primary:  #212529;
-  --text-secondary: #6c757d;
-  --border-color:  rgba(0, 0, 0, 0.08);
-  --border-panel:  rgba(0, 0, 0, 0.08);
-  --accent-color:  #0066cc;
-  --accent-glow:   rgba(0, 102, 204, 0.15);
-  --bg-tab-inactive:   #e9ecef;
-  --text-tab-inactive: #495057;
-  --text-tab-active:   #212529;
-  --window-bg:          rgba(243, 244, 246, 0.9);
-  --window-border:      rgba(0, 0, 0, 0.08);
-  --window-border-focused: rgba(0, 0, 0, 0.28);
-  --window-header-bg:   rgba(0, 0, 0, 0.04);
-  --window-text:        #212529;
-  --window-shadow:      0 10px 30px rgba(0, 0, 0, 0.06);
-  --window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
-  --panel-text:         #212529;
-  --panel-title-color:  #0066cc;
-  --close-btn-color:    #495057;
-  --close-btn-active-color: #212529;
+  --rdd-bg-primary:    #f8f9fa;
+  --rdd-bg-workspace:  #f1f5f9;
+  --rdd-bg-panel:      #ffffff;
+  --rdd-bg-tab-bar:    #e9ecef;
+  --rdd-text-primary:  #212529;
+  --rdd-text-secondary: #6c757d;
+  --rdd-border-color:  rgba(0, 0, 0, 0.08);
+  --rdd-border-panel:  rgba(0, 0, 0, 0.08);
+  --rdd-accent-color:  #0066cc;
+  --rdd-accent-glow:   rgba(0, 102, 204, 0.15);
+  --rdd-bg-tab-inactive:   #e9ecef;
+  --rdd-text-tab-inactive: #495057;
+  --rdd-text-tab-active:   #212529;
+  --rdd-window-bg:          rgba(243, 244, 246, 0.9);
+  --rdd-window-border:      rgba(0, 0, 0, 0.08);
+  --rdd-window-border-focused: rgba(0, 0, 0, 0.28);
+  --rdd-window-header-bg:   rgba(0, 0, 0, 0.04);
+  --rdd-window-text:        #212529;
+  --rdd-window-shadow:      0 10px 30px rgba(0, 0, 0, 0.06);
+  --rdd-window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
+  --rdd-panel-text:         #212529;
+  --rdd-panel-title-color:  #0066cc;
+  --rdd-close-btn-color:    #495057;
+  --rdd-close-btn-active-color: #212529;
 }
 ```
 
@@ -403,7 +403,7 @@ The `Sidebar` component uses a separate variable set. Override these if your ski
 ```
 
 ::: tip Minimal overrides
-You don't need to define all variables. A skin that only sets `--accent-color`, `--bg-workspace`, and `--bg-panel` is perfectly valid — everything else inherits from the library default.
+You don't need to define all variables. A skin that only sets `--rdd-accent-color`, `--rdd-bg-workspace`, and `--rdd-bg-panel` is perfectly valid — everything else inherits from the library default.
 :::
 
 ## CSS variable reference
@@ -412,103 +412,103 @@ You don't need to define all variables. A skin that only sets `--accent-color`, 
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--bg-primary` | `#090b11` | Page background behind the workspace. |
-| `--bg-workspace` | `#0f111a` | Workspace canvas background. |
-| `--bg-panel` | `#141722` | Background of docked panel areas. |
-| `--bg-tab-bar` | `#0d0f16` | Tab strip background. |
-| `--border-color` | `rgba(255,255,255,0.08)` | Generic border color. |
-| `--border-panel` | `rgba(255,255,255,0.08)` | Border between panels in the grid. |
+| `--rdd-bg-primary` | `#090b11` | Page background behind the workspace. |
+| `--rdd-bg-workspace` | `#0f111a` | Workspace canvas background. |
+| `--rdd-bg-panel` | `#141722` | Background of docked panel areas. |
+| `--rdd-bg-tab-bar` | `#0d0f16` | Tab strip background. |
+| `--rdd-border-color` | `rgba(255,255,255,0.08)` | Generic border color. |
+| `--rdd-border-panel` | `rgba(255,255,255,0.08)` | Border between panels in the grid. |
 
 ### Text
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--text-primary` | `#f1f5f9` | Main body text. |
-| `--text-secondary` | `#94a3b8` | Muted / secondary text. |
+| `--rdd-text-primary` | `#f1f5f9` | Main body text. |
+| `--rdd-text-secondary` | `#94a3b8` | Muted / secondary text. |
 
 ### Accent
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--accent-color` | `#38bdf8` | Primary interactive color — tab indicators, active borders. |
-| `--accent-glow` | `rgba(56,189,248,0.15)` | Translucent version used for focus halos. |
+| `--rdd-accent-color` | `#38bdf8` | Primary interactive color — tab indicators, active borders. |
+| `--rdd-accent-glow` | `rgba(56,189,248,0.15)` | Translucent version used for focus halos. |
 
 ### Tabs
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--bg-tab-inactive` | `#0c0d12` | Background of unfocused tabs. |
-| `--bg-tab-hover` | `#171a22` | Tab background on hover. |
-| `--text-tab-inactive` | `#858b99` | Label color of unfocused tabs. |
-| `--text-tab-active` | `#ffffff` | Label color of the active tab. |
-| `--text-tab-hover` | `#e2e8f0` | Label color of hovered tabs. |
-| `--tab-indicator-focused` | `var(--accent-color)` | Color of the active-tab indicator bar when the leaf has focus. |
-| `--tab-indicator-unfocused` | `rgba(255,255,255,0.3)` | Indicator bar color when the leaf is not focused. |
-| `--tab-bg-active-focused` | `var(--bg-panel)` | Active tab background when the leaf has focus. |
-| `--tab-bg-active-unfocused` | `rgba(20,23,34,0.55)` | Active tab background when the leaf is unfocused. |
-| `--tab-text-active-focused` | `var(--text-tab-active)` | Active tab text color when focused. |
-| `--tab-text-active-unfocused` | `rgba(255,255,255,0.65)` | Active tab text color when unfocused. |
+| `--rdd-bg-tab-inactive` | `#0c0d12` | Background of unfocused tabs. |
+| `--rdd-bg-tab-hover` | `#171a22` | Tab background on hover. |
+| `--rdd-text-tab-inactive` | `#858b99` | Label color of unfocused tabs. |
+| `--rdd-text-tab-active` | `#ffffff` | Label color of the active tab. |
+| `--rdd-text-tab-hover` | `#e2e8f0` | Label color of hovered tabs. |
+| `--rdd-tab-indicator-focused` | `var(--rdd-accent-color)` | Color of the active-tab indicator bar when the leaf has focus. |
+| `--rdd-tab-indicator-unfocused` | `rgba(255,255,255,0.3)` | Indicator bar color when the leaf is not focused. |
+| `--rdd-tab-bg-active-focused` | `var(--rdd-bg-panel)` | Active tab background when the leaf has focus. |
+| `--rdd-tab-bg-active-unfocused` | `rgba(20,23,34,0.55)` | Active tab background when the leaf is unfocused. |
+| `--rdd-tab-text-active-focused` | `var(--rdd-text-tab-active)` | Active tab text color when focused. |
+| `--rdd-tab-text-active-unfocused` | `rgba(255,255,255,0.65)` | Active tab text color when unfocused. |
 
 ### Control buttons
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--close-btn-color` | `#858b99` | Default color of close/minimize/maximize icons. |
-| `--close-btn-active-color` | `#e2e8f0` | Icon color when the button is active. |
-| `--close-btn-hover-bg` | `rgba(255,255,255,0.12)` | Button background on hover. |
-| `--close-btn-hover-color` | `#ffffff` | Icon color on hover. |
-| `--custom-btn-bg` | `rgba(255,255,255,0.03)` | Background of custom action buttons (anchor, float, etc.). |
-| `--custom-btn-border` | `rgba(255,255,255,0.05)` | Border of custom action buttons. |
-| `--custom-btn-hover-bg` | `rgba(255,255,255,0.12)` | Custom button background on hover. |
-| `--custom-btn-hover-color` | `#ffffff` | Custom button icon color on hover. |
-| `--header-button-gap` | `4px` | Spacing between titlebar action buttons. |
+| `--rdd-close-btn-color` | `#858b99` | Default color of close/minimize/maximize icons. |
+| `--rdd-close-btn-active-color` | `#e2e8f0` | Icon color when the button is active. |
+| `--rdd-close-btn-hover-bg` | `rgba(255,255,255,0.12)` | Button background on hover. |
+| `--rdd-close-btn-hover-color` | `#ffffff` | Icon color on hover. |
+| `--rdd-custom-btn-bg` | `rgba(255,255,255,0.03)` | Background of custom action buttons (anchor, float, etc.). |
+| `--rdd-custom-btn-border` | `rgba(255,255,255,0.05)` | Border of custom action buttons. |
+| `--rdd-custom-btn-hover-bg` | `rgba(255,255,255,0.12)` | Custom button background on hover. |
+| `--rdd-custom-btn-hover-color` | `#ffffff` | Custom button icon color on hover. |
+| `--rdd-header-button-gap` | `4px` | Spacing between titlebar action buttons. |
 
 ### Floating windows
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--window-bg` | `rgba(20,22,28,0.85)` | Floating window background. Supports `var(--window-opacity)` for glassmorphic effects. |
-| `--window-border` | `rgba(255,255,255,0.08)` | Unfocused window border. |
-| `--window-border-focused` | `rgba(255,255,255,0.28)` | Focused window border. |
-| `--window-header-bg` | `rgba(0,0,0,0.25)` | Titlebar background. |
-| `--window-text` | `#f8f9fa` | Titlebar text color. |
-| `--window-shadow` | `0 16px 40px rgba(0,0,0,0.4)` | Unfocused window drop-shadow. |
-| `--window-shadow-focused` | `0 24px 50px rgba(0,0,0,0.55)` | Focused window drop-shadow. |
+| `--rdd-window-bg` | `rgba(20,22,28,0.85)` | Floating window background. Supports `var(--rdd-window-opacity)` for glassmorphic effects. |
+| `--rdd-window-border` | `rgba(255,255,255,0.08)` | Unfocused window border. |
+| `--rdd-window-border-focused` | `rgba(255,255,255,0.28)` | Focused window border. |
+| `--rdd-window-header-bg` | `rgba(0,0,0,0.25)` | Titlebar background. |
+| `--rdd-window-text` | `#f8f9fa` | Titlebar text color. |
+| `--rdd-window-shadow` | `0 16px 40px rgba(0,0,0,0.4)` | Unfocused window drop-shadow. |
+| `--rdd-window-shadow-focused` | `0 24px 50px rgba(0,0,0,0.55)` | Focused window drop-shadow. |
 
 ### Resizer
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--resizer-bg` | `rgba(255,255,255,0.08)` | Split-pane drag handle color. |
+| `--rdd-resizer-bg` | `rgba(255,255,255,0.08)` | Split-pane drag handle color. |
 
 ### Taskbar
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--taskbar-bg` | `rgba(0,0,0,0.75)` | Taskbar strip background. |
-| `--taskbar-border` | `rgba(255,255,255,0.1)` | Taskbar top border. |
-| `--taskbar-nav-color` | `rgba(255,255,255,0.5)` | Navigation icon color in the taskbar. |
-| `--taskbar-item-bg` | `rgba(15,23,42,0.6)` | Minimized-panel chip background. |
-| `--taskbar-item-hover-bg` | `rgba(15,23,42,0.8)` | Chip background on hover. |
-| `--taskbar-item-border` | `rgba(255,255,255,0.08)` | Chip border. |
-| `--taskbar-item-text` | `var(--accent-color)` | Chip text / icon color. |
+| `--rdd-taskbar-bg` | `rgba(0,0,0,0.75)` | Taskbar strip background. |
+| `--rdd-taskbar-border` | `rgba(255,255,255,0.1)` | Taskbar top border. |
+| `--rdd-taskbar-nav-color` | `rgba(255,255,255,0.5)` | Navigation icon color in the taskbar. |
+| `--rdd-taskbar-item-bg` | `rgba(15,23,42,0.6)` | Minimized-panel chip background. |
+| `--rdd-taskbar-item-hover-bg` | `rgba(15,23,42,0.8)` | Chip background on hover. |
+| `--rdd-taskbar-item-border` | `rgba(255,255,255,0.08)` | Chip border. |
+| `--rdd-taskbar-item-text` | `var(--rdd-accent-color)` | Chip text / icon color. |
 
 ### Scrollbars
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--scrollbar-thumb` | `rgba(255,255,255,0.1)` | Scrollbar thumb color. |
-| `--scrollbar-thumb-hover` | `rgba(255,255,255,0.2)` | Scrollbar thumb on hover. |
-| `--scrollbar-track` | `rgba(255,255,255,0.01)` | Scrollbar track background. |
+| `--rdd-scrollbar-thumb` | `rgba(255,255,255,0.1)` | Scrollbar thumb color. |
+| `--rdd-scrollbar-thumb-hover` | `rgba(255,255,255,0.2)` | Scrollbar thumb on hover. |
+| `--rdd-scrollbar-track` | `rgba(255,255,255,0.01)` | Scrollbar track background. |
 
 ### Panel cards
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--panel-card-bg` | `rgba(0,0,0,0.2)` | Background of inner card elements inside panels. |
-| `--panel-card-border` | `rgba(255,255,255,0.1)` | Border of inner card elements. |
-| `--panel-text` | `var(--text-primary)` | Default text color inside panels. |
-| `--panel-title-color` | `var(--accent-color)` | Title / heading accent inside panels. |
+| `--rdd-panel-card-bg` | `rgba(0,0,0,0.2)` | Background of inner card elements inside panels. |
+| `--rdd-panel-card-border` | `rgba(255,255,255,0.1)` | Border of inner card elements. |
+| `--rdd-panel-text` | `var(--rdd-text-primary)` | Default text color inside panels. |
+| `--rdd-panel-title-color` | `var(--rdd-accent-color)` | Title / heading accent inside panels. |
 
 ### Sidebar component
 
@@ -555,12 +555,12 @@ These are set by `[data-color-scheme]` globally, not by `[data-workspace-skin]`.
 CSS variables control colors and shadows. If your skin needs **structural changes** (different tab shape, rounded windows, glassmorphic blur), add class selectors scoped to your skin:
 
 ```css
-[data-workspace-skin="my-skin"] .floating-window {
+[data-workspace-skin="my-skin"] .rdd-floating-window {
   border-radius: 10px;
   backdrop-filter: blur(16px);
 }
 
-[data-workspace-skin="my-skin"] .workspace-tab {
+[data-workspace-skin="my-skin"] .rdd-workspace-tab {
   border-radius: 4px;
   margin: 3px 2px;
 }

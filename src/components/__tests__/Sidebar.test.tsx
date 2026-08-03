@@ -68,7 +68,7 @@ describe('SB1: Renders one button per tab in the strip', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} />);
     });
-    const buttons = container.querySelectorAll('button.sidebar-tab-btn');
+    const buttons = container.querySelectorAll('button.rdd-sidebar-tab-btn');
     expect(buttons).toHaveLength(3);
   });
 });
@@ -82,7 +82,7 @@ describe('SB2: Tab buttons have aria-pressed=false initially', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} />);
     });
-    const buttons = container.querySelectorAll('button.sidebar-tab-btn');
+    const buttons = container.querySelectorAll('button.rdd-sidebar-tab-btn');
     buttons.forEach(btn => {
       expect(btn.getAttribute('aria-pressed')).toBe('false');
     });
@@ -101,7 +101,7 @@ describe('SB3: Clicking a tab opens the drawer', () => {
     // Before click — content not mounted (non-eagerMount)
     expect(container.querySelector('[data-content="a"]')).toBeNull();
 
-    const btn = container.querySelector('button.sidebar-tab-btn')!;
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 
     expect(container.querySelector('[data-content="a"]')).not.toBeNull();
@@ -118,7 +118,7 @@ describe('SB4: Clicking active tab again closes the drawer', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} />);
     });
-    const btn = container.querySelector('button.sidebar-tab-btn')!;
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(btn.getAttribute('aria-pressed')).toBe('true');
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
@@ -161,7 +161,7 @@ describe('SB7: preserveState tabs remain in DOM after close', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} />);
     });
-    const btn = container.querySelector('button.sidebar-tab-btn')!;
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
     // Open
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(container.querySelector('[data-content="a"]')).not.toBeNull();
@@ -181,7 +181,7 @@ describe('SB8: Non-preserveState tabs are removed from DOM after close', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} />);
     });
-    const btn = container.querySelector('button.sidebar-tab-btn')!;
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(container.querySelector('[data-content="a"]')).not.toBeNull();
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
@@ -227,7 +227,7 @@ describe('SB10: Controlled activeTabId drives which drawer is open', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} activeTabId="b" />);
     });
-    const buttons = Array.from(container.querySelectorAll('button.sidebar-tab-btn'));
+    const buttons = Array.from(container.querySelectorAll('button.rdd-sidebar-tab-btn'));
     expect(buttons[0].getAttribute('aria-pressed')).toBe('false');
     expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
     // Content for b should be visible
@@ -241,7 +241,7 @@ describe('SB10: Controlled activeTabId drives which drawer is open', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} activeTabId={null} onActiveTabChange={onChange} />);
     });
-    const btn = container.querySelectorAll('button.sidebar-tab-btn')[0];
+    const btn = container.querySelectorAll('button.rdd-sidebar-tab-btn')[0];
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(onChange).toHaveBeenCalledWith('a');
   });
@@ -258,7 +258,7 @@ describe('SB11-SB14: Imperative handle', () => {
       root.render(<Sidebar tabs={tabs} ref={ref} />);
     });
     act(() => { ref.current!.openTab('b'); });
-    const buttons = Array.from(container.querySelectorAll('button.sidebar-tab-btn'));
+    const buttons = Array.from(container.querySelectorAll('button.rdd-sidebar-tab-btn'));
     expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -270,9 +270,9 @@ describe('SB11-SB14: Imperative handle', () => {
       root.render(<Sidebar tabs={tabs} ref={ref} />);
     });
     act(() => { ref.current!.openTab('a'); });
-    expect(container.querySelector('button.sidebar-tab-btn')!.getAttribute('aria-pressed')).toBe('true');
+    expect(container.querySelector('button.rdd-sidebar-tab-btn')!.getAttribute('aria-pressed')).toBe('true');
     act(() => { ref.current!.closeDrawer(); });
-    expect(container.querySelector('button.sidebar-tab-btn')!.getAttribute('aria-pressed')).toBe('false');
+    expect(container.querySelector('button.rdd-sidebar-tab-btn')!.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('SB14: getActiveTab() returns null initially, tab id when open', () => {
@@ -383,8 +383,8 @@ describe('SB17: position controls strip and drawer order', () => {
     // Strip is inside a transition wrapper div; drawer is a direct child of the root flex div.
     const rootFlexDiv = container.children[0];
     const allChildren = Array.from(rootFlexDiv.children);
-    const stripIdx = allChildren.findIndex(el => el.querySelector('.sidebar-tabs-strip'));
-    const drawerIdx = allChildren.findIndex(el => el.classList.contains('sidebar-content-drawer'));
+    const stripIdx = allChildren.findIndex(el => el.querySelector('.rdd-sidebar-tabs-strip'));
+    const drawerIdx = allChildren.findIndex(el => el.classList.contains('rdd-sidebar-content-drawer'));
     expect(stripIdx).toBeGreaterThanOrEqual(0);
     expect(drawerIdx).toBeGreaterThanOrEqual(0);
     expect(stripIdx).toBeLessThan(drawerIdx);
@@ -398,8 +398,8 @@ describe('SB17: position controls strip and drawer order', () => {
     });
     const rootFlexDiv = container.children[0];
     const allChildren = Array.from(rootFlexDiv.children);
-    const stripIdx = allChildren.findIndex(el => el.querySelector('.sidebar-tabs-strip'));
-    const drawerIdx = allChildren.findIndex(el => el.classList.contains('sidebar-content-drawer'));
+    const stripIdx = allChildren.findIndex(el => el.querySelector('.rdd-sidebar-tabs-strip'));
+    const drawerIdx = allChildren.findIndex(el => el.classList.contains('rdd-sidebar-content-drawer'));
     expect(stripIdx).toBeGreaterThanOrEqual(0);
     expect(drawerIdx).toBeGreaterThanOrEqual(0);
     expect(drawerIdx).toBeLessThan(stripIdx);
@@ -416,7 +416,7 @@ describe('SB18: onActiveTabChange is called on tab selection changes', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} onActiveTabChange={onChange} />);
     });
-    const btn = container.querySelector('button.sidebar-tab-btn')!;
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(onChange).toHaveBeenCalledWith('a');
   });
@@ -428,7 +428,7 @@ describe('SB18: onActiveTabChange is called on tab selection changes', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} onActiveTabChange={onChange} />);
     });
-    const btn = container.querySelector('button.sidebar-tab-btn')!;
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(onChange).toHaveBeenLastCalledWith(null);
@@ -445,7 +445,7 @@ describe('SB19: defaultWidth initializes drawer width in pixels', () => {
       root = createRoot(container);
       root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={300} activeTabId="a" />);
     });
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('300px');
   });
 
@@ -456,7 +456,7 @@ describe('SB19: defaultWidth initializes drawer width in pixels', () => {
       root = createRoot(container);
       root.render(<Sidebar ref={ref} tabs={tabs} activeTabId="a" />);
     });
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('220px');
   });
 });
@@ -471,7 +471,7 @@ describe('SB20: drawerWidth deprecated alias parses pixels from string', () => {
       root = createRoot(container);
       root.render(<Sidebar ref={ref} tabs={tabs} drawerWidth="280px" activeTabId="a" />);
     });
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('280px');
   });
 
@@ -482,7 +482,7 @@ describe('SB20: drawerWidth deprecated alias parses pixels from string', () => {
       root = createRoot(container);
       root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={350} drawerWidth="280px" activeTabId="a" />);
     });
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('350px');
   });
 });
@@ -498,7 +498,7 @@ describe('SB21: setWidth/getWidth imperative methods', () => {
       root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={220} activeTabId="a" />);
     });
     act(() => { ref.current!.setWidth(400); });
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('400px');
   });
 
@@ -548,7 +548,7 @@ describe('SB22: setWidth clamps to minWidth and maxWidth bounds', () => {
     });
     act(() => { ref.current!.setWidth(50); });
     expect(ref.current!.getWidth()).toBe(150);
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('150px');
   });
 
@@ -561,7 +561,7 @@ describe('SB22: setWidth clamps to minWidth and maxWidth bounds', () => {
     });
     act(() => { ref.current!.setWidth(800); });
     expect(ref.current!.getWidth()).toBe(600);
-    const drawer = container.querySelector('.sidebar-content-drawer') as HTMLElement;
+    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('600px');
   });
 });
@@ -576,7 +576,7 @@ describe('SB23: stripVisible=false collapses only the strip', () => {
       root.render(<Sidebar tabs={tabs} stripVisible={false} />);
     });
     const rootFlexDiv = container.children[0];
-    const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.sidebar-tabs-strip')) as HTMLElement | undefined;
+    const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.rdd-sidebar-tabs-strip')) as HTMLElement | undefined;
     expect(stripWrapper).toBeDefined();
     expect(stripWrapper!.style.width).toBe('0px');
   });
@@ -588,7 +588,7 @@ describe('SB23: stripVisible=false collapses only the strip', () => {
       root.render(<Sidebar tabs={tabs} />);
     });
     const rootFlexDiv = container.children[0];
-    const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.sidebar-tabs-strip')) as HTMLElement | undefined;
+    const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.rdd-sidebar-tabs-strip')) as HTMLElement | undefined;
     expect(stripWrapper).toBeDefined();
     expect(stripWrapper!.style.width).toBe('56px');
   });
@@ -635,22 +635,22 @@ describe('SB24: showStrip/hideStrip call onStripVisibilityChange', () => {
 // ─── SB25: resize handle present only when drawer is open ────────────────────
 
 describe('SB25: resize handle renders only when drawer is open', () => {
-  it('no .resizer-bar when no tab is active', () => {
+  it('no .rdd-resizer-bar when no tab is active', () => {
     const tabs = [makeTab('a')];
     act(() => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} />);
     });
-    expect(container.querySelector('.resizer-bar')).toBeNull();
+    expect(container.querySelector('.rdd-resizer-bar')).toBeNull();
   });
 
-  it('.resizer-bar is present when a tab is active', () => {
+  it('.rdd-resizer-bar is present when a tab is active', () => {
     const tabs = [makeTab('a')];
     act(() => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} activeTabId="a" />);
     });
-    expect(container.querySelector('.resizer-bar')).not.toBeNull();
+    expect(container.querySelector('.rdd-resizer-bar')).not.toBeNull();
   });
 });
 

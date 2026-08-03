@@ -73,13 +73,13 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     expect(testState.leftPanel.id).toBe(leftId);
     expect(testState.leftPanel.props.message).toBe('Hello Left');
 
-    const leftTitle = container!.querySelector('.v2-side-panel-left .v2-side-panel-title');
+    const leftTitle = container!.querySelector('.rdd-side-panel-left .rdd-side-panel-title');
     expect(leftTitle?.textContent).toBe('Left Drawer');
-    const leftMsg = container!.querySelector('.v2-side-panel-left .msg-span');
+    const leftMsg = container!.querySelector('.rdd-side-panel-left .msg-span');
     expect(leftMsg?.textContent).toBe('Hello Left');
     
     // Assert left panel width defaults to 400px
-    const leftPanelEl = container!.querySelector('.v2-side-panel-left') as HTMLElement;
+    const leftPanelEl = container!.querySelector('.rdd-side-panel-left') as HTMLElement;
     expect(leftPanelEl.style.width).toBe('400px');
 
     // Open right panel with custom width 550px
@@ -94,7 +94,7 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     expect(testState.rightPanel.props.message).toBe('Hello Right');
 
     // Assert right panel width respects custom override
-    const rightPanelEl = container!.querySelector('.v2-side-panel-right') as HTMLElement;
+    const rightPanelEl = container!.querySelector('.rdd-side-panel-right') as HTMLElement;
     expect(rightPanelEl.style.width).toBe('550px');
   });
 
@@ -113,10 +113,10 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     });
     expect(testState.modals.length).toBe(2);
 
-    const overlays = container!.querySelectorAll('.v2-modal-overlay');
+    const overlays = container!.querySelectorAll('.rdd-modal-overlay');
     expect(overlays.length).toBe(2);
-    expect(overlays[0].querySelector('.v2-modal-title')?.textContent).toBe('First Modal');
-    expect(overlays[1].querySelector('.v2-modal-title')?.textContent).toBe('Second Modal');
+    expect(overlays[0].querySelector('.rdd-modal-title')?.textContent).toBe('First Modal');
+    expect(overlays[1].querySelector('.rdd-modal-title')?.textContent).toBe('Second Modal');
   });
 
   it('should route Escape key closes to topmost modal, and to side drawers only if modals stack is empty', async () => {
@@ -186,7 +186,7 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     expect(testState.modals.length).toBe(1);
     expect(testState.modals[0].options.title).toBe('Confirmation Dialog');
 
-    const modalBody = container!.querySelector('.v2-modal-body');
+    const modalBody = container!.querySelector('.rdd-modal-body');
     expect(modalBody?.textContent).toContain('Critical Action Prompt');
     expect(modalBody?.textContent).toContain('System Alert Notice');
 

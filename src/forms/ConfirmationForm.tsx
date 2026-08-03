@@ -77,9 +77,9 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="confirmation-form-body">
+    <form onSubmit={handleSubmit} className="rdd-confirmation-form-body">
       {alert && (
-        <div className={`confirmation-alert confirmation-alert-${alertType}`}>
+        <div className={`rdd-confirmation-alert confirmation-alert-${alertType}`}>
           <span>ℹ️</span>
           <span>{alert}</span>
         </div>
@@ -91,17 +91,17 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
 
       <hr style={{ marginTop: '0.5rem', marginBottom: '0.5rem', opacity: 0.1 }} />
 
-      <div className="confirmation-actions">
+      <div className="rdd-confirmation-actions">
         <button
           type="button"
-          className="dw-btn dw-btn-sm dw-btn-outline"
+          className="rdd-btn rdd-btn-sm rdd-btn-outline"
           onClick={handleCancel}
         >
           {cancelLabel}
         </button>
         <button
           type="submit"
-          className="dw-btn dw-btn-sm dw-btn-primary"
+          className="rdd-btn rdd-btn-sm rdd-btn-primary"
           ref={confirmButtonRef}
         >
           {confirmLabel}

@@ -125,12 +125,12 @@ All `toast.*` methods accept an optional `ToastOptions` object as the second arg
 
 ## Positioning
 
-Toasts render via `createPortal` directly into `document.body`. Use the CSS custom property `--dw-toast-offset-top` (or `--dw-toast-offset-bottom`) on `:root` to push the container clear of a fixed navbar or status bar:
+Toasts render via `createPortal` directly into `document.body`. Use the CSS custom property `--rdd-toast-offset-top` (or `--rdd-toast-offset-bottom`) on `:root` to push the container clear of a fixed navbar or status bar:
 
 ```css
 /* In your global CSS or via JS */
 :root {
-  --dw-toast-offset-top: 64px;    /* navbar height */
+  --rdd-toast-offset-top: 64px;    /* navbar height */
 }
 ```
 
@@ -138,7 +138,7 @@ Or in React using `useEffect`:
 
 ```ts
 useEffect(() => {
-  document.documentElement.style.setProperty('--dw-toast-offset-top', '64px');
+  document.documentElement.style.setProperty('--rdd-toast-offset-top', '64px');
 }, []);
 ```
 
@@ -152,14 +152,14 @@ Toasts inherit the active skin automatically via CSS custom properties:
 
 | Token | Default (dark) | Default (light) | Purpose |
 |-------|---------------|-----------------|---------|
-| `--toast-bg` | `#2a2d32` | `#ffffff` | Card background — slightly lighter than `--sidebar-bg` so the card lifts off panels behind it |
-| `--toast-border` | `rgba(255,255,255,0.14)` | `rgba(0,0,0,0.14)` | Card border — stronger than `--sidebar-border` for dark-on-dark legibility |
-| `--toast-info-color` | `#67e8f9` | `#0369a1` | Info accent (left border + icon) |
-| `--toast-success-color` | `#4ade80` | `#15803d` | Success accent |
-| `--toast-warning-color` | `#fbbf24` | `#b45309` | Warning accent |
-| `--toast-error-color` | `#f87171` | `#b91c1c` | Error accent |
-| `--dw-toast-offset-top` | `0px` | — | Gap from the top viewport edge |
-| `--dw-toast-offset-bottom` | `0px` | — | Gap from the bottom viewport edge |
+| `--rdd-toast-bg` | `#2a2d32` | `#ffffff` | Card background — slightly lighter than `--sidebar-bg` so the card lifts off panels behind it |
+| `--rdd-toast-border` | `rgba(255,255,255,0.14)` | `rgba(0,0,0,0.14)` | Card border — stronger than `--sidebar-border` for dark-on-dark legibility |
+| `--rdd-toast-info-color` | `#67e8f9` | `#0369a1` | Info accent (left border + icon) |
+| `--rdd-toast-success-color` | `#4ade80` | `#15803d` | Success accent |
+| `--rdd-toast-warning-color` | `#fbbf24` | `#b45309` | Warning accent |
+| `--rdd-toast-error-color` | `#f87171` | `#b91c1c` | Error accent |
+| `--rdd-toast-offset-top` | `0px` | — | Gap from the top viewport edge |
+| `--rdd-toast-offset-bottom` | `0px` | — | Gap from the bottom viewport edge |
 
 All tokens switch automatically with `[data-color-scheme="light"]` — no per-skin overrides needed.
 

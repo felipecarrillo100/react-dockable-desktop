@@ -25,11 +25,11 @@
  * - TB23: Clicking group button renders flyout in document.body
  * - TB24: Clicking sub-item activates it, closes flyout, calls onActivate
  * - TB25: Active sub-item's label replaces default label on parent button
- * - TB26: Parent button gets .active class when any sub-item is active
+ * - TB26: Parent button gets .rdd-active class when any sub-item is active
  * - TB27: Clicking group button again closes flyout (toggle)
  * - TB28: Sub-item separator renders with role="separator" inside flyout
  * - TB29: Disabled group button does not open flyout
- * - TB34: Controlled toggle (active=true) shows .active without context
+ * - TB34: Controlled toggle (active=true) shows .rdd-active without context
  * - TB35: Clicking a controlled toggle calls onToggle and does NOT write to context
  * - TB36: Controlled toggle (active=false) ignores context even if context has it active
  */
@@ -166,7 +166,7 @@ describe('TB9: Toolbar renders action buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const buttons = container.querySelectorAll('button.toolbar-btn-action');
+    const buttons = container.querySelectorAll('button.rdd-toolbar-btn-action');
     expect(buttons).toHaveLength(2);
     expect(buttons[0].getAttribute('aria-label')).toBe('Save');
     expect(buttons[1].getAttribute('aria-label')).toBe('Open');
@@ -183,7 +183,7 @@ describe('TB10: Action button click fires onClick', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const button = container.querySelector('button.toolbar-btn-action')!;
+    const button = container.querySelector('button.rdd-toolbar-btn-action')!;
     act(() => { button.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -200,14 +200,14 @@ describe('TB11: Toolbar renders separators', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const separator = container.querySelector('.toolbar-separator');
+    const separator = container.querySelector('.rdd-toolbar-separator');
     expect(separator).not.toBeNull();
     expect(separator!.getAttribute('role')).toBe('separator');
   });
 });
 
 describe('TB12-TB14: Radio buttons', () => {
-  it('TB12: radio button is inactive (no .active class) by default', () => {
+  it('TB12: radio button is inactive (no .rdd-active class) by default', () => {
     const items: ToolbarItem[] = [
       { type: 'radio', id: 'pencil', group: 'tools', label: 'Pencil', icon: <Icon /> },
     ];
@@ -215,8 +215,8 @@ describe('TB12-TB14: Radio buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-radio')!;
-    expect(btn.classList.contains('active')).toBe(false);
+    const btn = container.querySelector('button.rdd-toolbar-btn-radio')!;
+    expect(btn.classList.contains('rdd-active')).toBe(false);
     expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
@@ -229,9 +229,9 @@ describe('TB12-TB14: Radio buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-radio')!;
+    const btn = container.querySelector('button.rdd-toolbar-btn-radio')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(btn.classList.contains('active')).toBe(true);
+    expect(btn.classList.contains('rdd-active')).toBe(true);
     expect(btn.getAttribute('aria-pressed')).toBe('true');
     expect(onActivate).toHaveBeenCalledWith('pencil');
   });
@@ -245,12 +245,12 @@ describe('TB12-TB14: Radio buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const [pencilBtn, eraserBtn] = Array.from(container.querySelectorAll('button.toolbar-btn-radio'));
+    const [pencilBtn, eraserBtn] = Array.from(container.querySelectorAll('button.rdd-toolbar-btn-radio'));
     act(() => { pencilBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(pencilBtn.classList.contains('active')).toBe(true);
+    expect(pencilBtn.classList.contains('rdd-active')).toBe(true);
     act(() => { eraserBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(pencilBtn.classList.contains('active')).toBe(false);
-    expect(eraserBtn.classList.contains('active')).toBe(true);
+    expect(pencilBtn.classList.contains('rdd-active')).toBe(false);
+    expect(eraserBtn.classList.contains('rdd-active')).toBe(true);
   });
 });
 
@@ -263,8 +263,8 @@ describe('TB15-TB17: Toggle buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-toggle')!;
-    expect(btn.classList.contains('active')).toBe(false);
+    const btn = container.querySelector('button.rdd-toolbar-btn-toggle')!;
+    expect(btn.classList.contains('rdd-active')).toBe(false);
     expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
@@ -277,9 +277,9 @@ describe('TB15-TB17: Toggle buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    const btn = container.querySelector('button.rdd-toolbar-btn-toggle')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(btn.classList.contains('active')).toBe(true);
+    expect(btn.classList.contains('rdd-active')).toBe(true);
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
@@ -292,10 +292,10 @@ describe('TB15-TB17: Toggle buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    const btn = container.querySelector('button.rdd-toolbar-btn-toggle')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(btn.classList.contains('active')).toBe(false);
+    expect(btn.classList.contains('rdd-active')).toBe(false);
     expect(onToggle).toHaveBeenLastCalledWith(false);
   });
 });
@@ -309,7 +309,7 @@ describe('TB18-TB19: Toolbar visibility', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} position="left" visible={false} />));
     });
-    const strip = container.querySelector('.toolbar-strip') as HTMLElement;
+    const strip = container.querySelector('.rdd-toolbar-strip') as HTMLElement;
     expect(strip.style.width).toBe('0px');
   });
 
@@ -319,7 +319,7 @@ describe('TB18-TB19: Toolbar visibility', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} position="left" visible={true} />));
     });
-    const strip = container.querySelector('.toolbar-strip') as HTMLElement;
+    const strip = container.querySelector('.rdd-toolbar-strip') as HTMLElement;
     // CSS owns open width; inline style must not force any width
     expect(strip.style.width).toBe('');
   });
@@ -330,7 +330,7 @@ describe('TB18-TB19: Toolbar visibility', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} position="top" visible={false} />));
     });
-    const strip = container.querySelector('.toolbar-strip') as HTMLElement;
+    const strip = container.querySelector('.rdd-toolbar-strip') as HTMLElement;
     expect(strip.style.height).toBe('0px');
   });
 
@@ -340,7 +340,7 @@ describe('TB18-TB19: Toolbar visibility', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} position="top" visible={true} />));
     });
-    const strip = container.querySelector('.toolbar-strip') as HTMLElement;
+    const strip = container.querySelector('.rdd-toolbar-strip') as HTMLElement;
     // CSS owns open height; inline style must not force any height
     expect(strip.style.height).toBe('');
   });
@@ -418,7 +418,7 @@ describe('TB21: Disabled buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-action') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-action') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(onClick).not.toHaveBeenCalled();
@@ -432,7 +432,7 @@ describe('TB21: Disabled buttons', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-radio') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-radio') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 });
@@ -479,65 +479,65 @@ describe('TB22-TB29: Group button / flyout', () => {
 
   it('TB22: group button renders with default label when no sub-item active', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     expect(btn).not.toBeNull();
     expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
     expect(btn.getAttribute('aria-haspopup')).toBe('menu');
-    expect(btn.classList.contains('active')).toBe(false);
+    expect(btn.classList.contains('rdd-active')).toBe(false);
   });
 
   it('TB23: clicking group button renders flyout in document.body', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const flyout = document.body.querySelector('.toolbar-group-flyout');
+    const flyout = document.body.querySelector('.rdd-toolbar-group-flyout');
     expect(flyout).not.toBeNull();
     expect(flyout!.getAttribute('role')).toBe('menu');
   });
 
   it('TB24: clicking sub-item activates it, closes flyout, calls onActivate', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    const flyoutItems = document.body.querySelectorAll('.rdd-toolbar-group-flyout-item');
     // First item is Pen
     act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(document.body.querySelector('.toolbar-group-flyout')).toBeNull();
+    expect(document.body.querySelector('.rdd-toolbar-group-flyout')).toBeNull();
     expect(onActivate).toHaveBeenCalledWith('tool-pen');
   });
 
   it('TB25: active sub-item label replaces default label on parent button', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    const flyoutItems = document.body.querySelectorAll('.rdd-toolbar-group-flyout-item');
     act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(btn.getAttribute('aria-label')).toBe('Pen');
   });
 
-  it('TB26: parent button gets .active class when any sub-item is active', () => {
+  it('TB26: parent button gets .rdd-active class when any sub-item is active', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    const flyoutItems = document.body.querySelectorAll('.rdd-toolbar-group-flyout-item');
     act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(btn.classList.contains('active')).toBe(true);
+    expect(btn.classList.contains('rdd-active')).toBe(true);
   });
 
   it('TB27: clicking group button again when open closes the flyout', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(document.body.querySelector('.toolbar-group-flyout')).not.toBeNull();
+    expect(document.body.querySelector('.rdd-toolbar-group-flyout')).not.toBeNull();
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(document.body.querySelector('.toolbar-group-flyout')).toBeNull();
+    expect(document.body.querySelector('.rdd-toolbar-group-flyout')).toBeNull();
   });
 
   it('TB28: separator entry renders with role="separator" inside flyout', () => {
     mountGroup();
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const sep = document.body.querySelector('.toolbar-group-flyout-sep');
+    const sep = document.body.querySelector('.rdd-toolbar-group-flyout-sep');
     expect(sep).not.toBeNull();
     expect(sep!.getAttribute('role')).toBe('separator');
   });
@@ -557,10 +557,10 @@ describe('TB22-TB29: Group button / flyout', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={disabledItems} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(document.body.querySelector('.toolbar-group-flyout')).toBeNull();
+    expect(document.body.querySelector('.rdd-toolbar-group-flyout')).toBeNull();
   });
 });
 
@@ -578,15 +578,15 @@ describe('TB30–TB33: Controlled mode', () => {
     ],
   };
 
-  it('TB30: activeItemId="tool-pen" shows Pen label and .active class without context', () => {
+  it('TB30: activeItemId="tool-pen" shows Pen label and .rdd-active class without context', () => {
     const items: ToolbarItem[] = [{ ...controlledBase, activeItemId: 'tool-pen' }];
     act(() => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     expect(btn.getAttribute('aria-label')).toBe('Pen');
-    expect(btn.classList.contains('active')).toBe(true);
+    expect(btn.classList.contains('rdd-active')).toBe(true);
   });
 
   it('TB31: clicking sub-item fires onActiveItemChange and does NOT write to context', () => {
@@ -604,9 +604,9 @@ describe('TB30–TB33: Controlled mode', () => {
         </ToolbarProvider>
       );
     });
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    const flyoutItems = document.body.querySelectorAll('.rdd-toolbar-group-flyout-item');
     act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 
     expect(onActiveItemChange).toHaveBeenCalledWith('tool-pen');
@@ -621,18 +621,18 @@ describe('TB30–TB33: Controlled mode', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    const flyoutItems = document.body.querySelectorAll('.toolbar-group-flyout-item');
+    const flyoutItems = document.body.querySelectorAll('.rdd-toolbar-group-flyout-item');
     act(() => { flyoutItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 
-    // prop is still null — button must still show default label and no .active class
+    // prop is still null — button must still show default label and no .rdd-active class
     expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
-    expect(btn.classList.contains('active')).toBe(false);
+    expect(btn.classList.contains('rdd-active')).toBe(false);
     expect(onActiveItemChange).toHaveBeenCalledWith('tool-pen');
   });
 
-  it('TB33: activeItemId=null ignores context — shows defaultIcon and no .active', () => {
+  it('TB33: activeItemId=null ignores context — shows defaultIcon and no .rdd-active', () => {
     let capturedToolbar: ReturnType<typeof useToolbar> | null = null;
     const Probe: React.FC = () => { capturedToolbar = useToolbar(); return null; };
 
@@ -650,17 +650,17 @@ describe('TB30–TB33: Controlled mode', () => {
     // Manually write to context (simulates uncontrolled code writing a value)
     act(() => { capturedToolbar!.setActiveInGroup('draw-tool', 'tool-pen'); });
 
-    const btn = container.querySelector('button.toolbar-btn-group') as HTMLButtonElement;
-    // controlled prop is null → default label, no .active class despite context having a value
+    const btn = container.querySelector('button.rdd-toolbar-btn-group') as HTMLButtonElement;
+    // controlled prop is null → default label, no .rdd-active class despite context having a value
     expect(btn.getAttribute('aria-label')).toBe('Drawing Tools');
-    expect(btn.classList.contains('active')).toBe(false);
+    expect(btn.classList.contains('rdd-active')).toBe(false);
   });
 });
 
 // ─── TB34-TB36: Controlled toggle mode ────────────────────────────────────────
 
 describe('TB34-TB36: Controlled toggle mode', () => {
-  it('TB34: active=true shows .active class and aria-pressed=true without context', () => {
+  it('TB34: active=true shows .rdd-active class and aria-pressed=true without context', () => {
     const items: ToolbarItem[] = [
       { type: 'toggle', id: 'snap', label: 'Snap', icon: <Icon />, active: true },
     ];
@@ -668,8 +668,8 @@ describe('TB34-TB36: Controlled toggle mode', () => {
       root = createRoot(container);
       root.render(wrapInProvider(<Toolbar items={items} />));
     });
-    const btn = container.querySelector('button.toolbar-btn-toggle')!;
-    expect(btn.classList.contains('active')).toBe(true);
+    const btn = container.querySelector('button.rdd-toolbar-btn-toggle')!;
+    expect(btn.classList.contains('rdd-active')).toBe(true);
     expect(btn.getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -690,7 +690,7 @@ describe('TB34-TB36: Controlled toggle mode', () => {
         </ToolbarProvider>
       );
     });
-    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    const btn = container.querySelector('button.rdd-toolbar-btn-toggle')!;
     act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 
     expect(onToggle).toHaveBeenCalledWith(true);
@@ -718,8 +718,8 @@ describe('TB34-TB36: Controlled toggle mode', () => {
     // Manually write to context (simulates unrelated uncontrolled code writing a value)
     act(() => { capturedToolbar!.setModifierActive('snap', true); });
 
-    const btn = container.querySelector('button.toolbar-btn-toggle')!;
+    const btn = container.querySelector('button.rdd-toolbar-btn-toggle')!;
     // controlled prop is false → inactive despite context having it active
-    expect(btn.classList.contains('active')).toBe(false);
+    expect(btn.classList.contains('rdd-active')).toBe(false);
   });
 });

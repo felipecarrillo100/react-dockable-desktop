@@ -172,7 +172,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
 }: SidebarTabStripProps) {
   return (
     // Outer div drives the collapse transition via overflow:hidden.
-    // The inner sidebar-tabs-strip must NOT have overflow:hidden so the active
+    // The inner rdd-sidebar-tabs-strip must NOT have overflow:hidden so the active
     // tab's negative margin can extend into the drawer border without clipping.
     <div
       style={{
@@ -183,7 +183,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
         flexShrink: 0,
       }}
     >
-      <div className={`sidebar-tabs-strip ${position}`} style={{ width: '56px', height: '100%' }}>
+      <div className={`rdd-sidebar-tabs-strip rdd-${position}`} style={{ width: '56px', height: '100%' }}>
         {tabs.map(tab => {
           const isActive = activeTabId === tab.id;
           return (
@@ -191,7 +191,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
               key={tab.id}
               type="button"
               onClick={() => onTabClick(tab.id)}
-              className={`sidebar-tab-btn${isActive ? ' active' : ''}`}
+              className={`rdd-sidebar-tab-btn${isActive ? ' rdd-active' : ''}`}
               title={tab.label}
               aria-pressed={isActive}
             >
@@ -231,11 +231,11 @@ function SidebarResizeHandle({
     e.preventDefault();
     const el = e.currentTarget;
     const activeClasses: Array<{ el: HTMLElement; classes: string[] }> = [
-      { el, classes: ['active'] },
-      { el: document.body, classes: ['resizing-active', 'resizing-col-active'] },
+      { el, classes: ['rdd-active'] },
+      { el: document.body, classes: ['rdd-resizing-active', 'rdd-resizing-col-active'] },
     ];
     // Suppress the drawer's CSS transition so drag feels instant.
-    if (rootRef.current) activeClasses.push({ el: rootRef.current, classes: ['sidebar-resizing'] });
+    if (rootRef.current) activeClasses.push({ el: rootRef.current, classes: ['rdd-sidebar-resizing'] });
 
     startPointerDrag({
       element: el,
@@ -254,7 +254,7 @@ function SidebarResizeHandle({
 
   return (
     <div
-      className="resizer-bar"
+      className="rdd-resizer-bar"
       style={{
         cursor: 'col-resize',
         width: '1px',
@@ -333,7 +333,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     useEffect(() => { widthRef.current = width; }, [width]);
 
     // Ref to the root flex container — used by SidebarResizeHandle to toggle
-    // the sidebar-resizing class that suppresses the CSS width transition during drag
+    // the rdd-sidebar-resizing class that suppresses the CSS width transition during drag
     const rootRef = useRef<HTMLDivElement | null>(null);
 
     const setActiveTabId = useCallback(
@@ -406,7 +406,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     // ---- Drawer element (shared between left and right) ----
     const drawer = (
       <div
-        className={`sidebar-content-drawer ${position}`}
+        className={`rdd-sidebar-content-drawer rdd-${position}`}
         style={{
           // flex-basis drives the visible width; width: 0px has no effect in flex context
           // when flex-basis is set — so we animate flex-basis, not width.
@@ -416,7 +416,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           minWidth: isDrawerOpen ? `${minWidth}px` : '0px',
           maxWidth: isDrawerOpen ? `${maxWidth}px` : '0px',
           overflow: 'hidden',
-          // transition is suppressed during drag via .sidebar-resizing on the root
+          // transition is suppressed during drag via .rdd-sidebar-resizing on the root
           transition: 'flex-basis 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
@@ -438,12 +438,12 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
               }}
             >
               {/* Drawer header — tab label only, no close button (click active tab icon to close) */}
-              <div className="sidebar-drawer-header">
-                <span className="sidebar-header-title">{tab.label}</span>
+              <div className="rdd-sidebar-drawer-header">
+                <span className="rdd-sidebar-header-title">{tab.label}</span>
               </div>
 
               {/* Drawer body — consumer-supplied content */}
-              <div className="sidebar-drawer-body">
+              <div className="rdd-sidebar-drawer-body">
                 <SidebarTabProvider
                   tabId={tab.id}
                   onClose={handleClose}

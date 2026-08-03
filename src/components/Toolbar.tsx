@@ -42,8 +42,8 @@ export interface ToolbarRadioItem {
 /**
  * An independent on/off toggle modifier (e.g. snap-to-grid).
  *
- * Supports both uncontrolled mode (omit `active` — state lives in
- * ToolbarContext, keyed by `id`) and controlled mode (provide `active` —
+ * Supports both uncontrolled mode (omit `rdd-active` — state lives in
+ * ToolbarContext, keyed by `id`) and controlled mode (provide `rdd-active` —
  * the caller is the single source of truth and must update the prop in
  * response to `onToggle`). Controlled mode is what lets independent
  * instances of the same panel type report independent active state
@@ -272,7 +272,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
       <button
         ref={btnRef}
         type="button"
-        className={`toolbar-btn toolbar-btn-group${isActive ? ' active' : ''}`}
+        className={`rdd-toolbar-btn rdd-toolbar-btn-group${isActive ? ' rdd-active' : ''}`}
         title={displayLabel}
         aria-label={displayLabel}
         aria-expanded={isOpen}
@@ -286,20 +286,20 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
       {isOpen && btnRect && createPortal(
         <div
           ref={flyoutRef}
-          className={`toolbar-group-flyout ${position}`}
+          className={`rdd-toolbar-group-flyout rdd-${position}`}
           style={flyoutPosition(btnRect, position, document.documentElement.dir === 'rtl')}
           role="menu"
         >
           {item.items.map((entry, i) => {
             if ('type' in entry) {
-              return <div key={`sep-${i}`} className="toolbar-group-flyout-sep" role="separator" />;
+              return <div key={`sep-${i}`} className="rdd-toolbar-group-flyout-sep" role="separator" />;
             }
             const isSubActive = activeId === entry.id;
             return (
               <button
                 key={entry.id}
                 type="button"
-                className={`toolbar-group-flyout-item${isSubActive ? ' active' : ''}`}
+                className={`rdd-toolbar-group-flyout-item${isSubActive ? ' rdd-active' : ''}`}
                 disabled={entry.disabled}
                 role="menuitem"
                 aria-pressed={isSubActive}
@@ -313,10 +313,10 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
                   setIsOpen(false);
                 }}
               >
-                <span className="toolbar-group-flyout-icon">{entry.icon}</span>
-                <span className="toolbar-group-flyout-label">{entry.label}</span>
+                <span className="rdd-toolbar-group-flyout-icon">{entry.icon}</span>
+                <span className="rdd-toolbar-group-flyout-label">{entry.label}</span>
                 {entry.shortcut && (
-                  <span className="toolbar-group-flyout-shortcut">{entry.shortcut}</span>
+                  <span className="rdd-toolbar-group-flyout-shortcut">{entry.shortcut}</span>
                 )}
               </button>
             );
@@ -340,14 +340,14 @@ function renderItem(
 ): React.ReactNode {
   switch (item.type) {
     case 'separator':
-      return <div key={`sep-${index}`} className="toolbar-separator" role="separator" />;
+      return <div key={`sep-${index}`} className="rdd-toolbar-separator" role="separator" />;
 
     case 'action':
       return (
         <button
           key={item.id}
           type="button"
-          className="toolbar-btn toolbar-btn-action"
+          className="rdd-toolbar-btn rdd-toolbar-btn-action"
           title={item.label}
           aria-label={item.label}
           disabled={item.disabled}
@@ -363,7 +363,7 @@ function renderItem(
         <button
           key={item.id}
           type="button"
-          className={`toolbar-btn toolbar-btn-radio${isActive ? ' active' : ''}`}
+          className={`rdd-toolbar-btn rdd-toolbar-btn-radio${isActive ? ' rdd-active' : ''}`}
           title={item.label}
           aria-label={item.label}
           aria-pressed={isActive}
@@ -385,7 +385,7 @@ function renderItem(
         <button
           key={item.id}
           type="button"
-          className={`toolbar-btn toolbar-btn-toggle${isActive ? ' active' : ''}`}
+          className={`rdd-toolbar-btn rdd-toolbar-btn-toggle${isActive ? ' rdd-active' : ''}`}
           title={item.label}
           aria-label={item.label}
           aria-pressed={isActive}
@@ -439,7 +439,7 @@ export const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAt
 
   return (
     <div
-      className={`toolbar-strip ${position}${className ? ` ${className}` : ''}`}
+      className={`rdd-toolbar-strip rdd-${position}${className ? ` ${className}` : ''}`}
       role="toolbar"
       aria-orientation={isVertical ? 'vertical' : 'horizontal'}
       style={{ ...collapseStyle, ...style }}
