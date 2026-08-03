@@ -3,8 +3,12 @@ import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import rehypeSlug from 'rehype-slug';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import 'katex/dist/katex.min.css'; // rehype-katex does not import this for you
 import { usePanelContribution } from '../src/index';
 import type { ToolbarItem, PanelSidebarSection } from '../src/index';
 
@@ -37,6 +41,31 @@ function greet(name: string): string {
   return \`Hello, \${name}!\`;
 }
 \`\`\`
+
+## Math
+
+Inline: the lift coefficient $C_L$ is dimensionless, and $E = mc^2$.
+
+Display:
+
+$$
+f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\,e^{2\\pi i \\xi x}\\,d\\xi
+$$
+
+## Raw HTML
+
+<details>
+<summary>Click to expand</summary>
+
+Raw HTML tags like this \`<details>\` accordion are supported too — press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy this panel's content.
+
+</details>
+
+## Footnotes
+
+Here's a statement backed by a reference.[^1]
+
+[^1]: GFM footnotes work out of the box via \`remark-gfm\` — no extra plugin needed.
 
 ## Try it
 
@@ -113,6 +142,11 @@ const markdownComponents: Components = {
   li: withSourceLine('li'),
   blockquote: withSourceLine('blockquote'),
   pre: withSourceLine('pre'),
+  // Tags any raw-HTML <div> that rehype-raw lets through, so it isn't an untagged gap in
+  // the scroll-sync line map. Doesn't help block ($$...$$) math, though: rehype-katex
+  // deletes its wrapping element entirely and splices in bare <span>s with no position
+  // data, so that one stays a (disclosed, accepted) scroll-sync gap regardless of tag.
+  div: withSourceLine('div'),
   table: TableWithScroll,
 };
 
@@ -120,6 +154,15 @@ const markdownComponents: Components = {
 // Same algorithm as VS Code's scroll-sync.ts: find the two source-line-tagged elements
 // bracketing a target line and linearly interpolate a scroll position between them (and
 // the inverse: bracket a scroll offset and interpolate back to a fractional source line).
+//
+// Both directions do this via binary search rather than a linear scan over every tagged
+// element. `computePreviewScrollTopForLine` searches purely on `.line` numbers (cheap,
+// no DOM access) before measuring just the one bracketing pair. `getLineForPreviewOffset`
+// searches on measured position, so it can't avoid `getBoundingClientRect()` entirely, but
+// still only measures the ~log2(N) elements it actually probes — not all N on every single
+// scroll event, which forces a synchronous layout each time and compounds badly on a long
+// document under a fast/continuous scroll gesture (each such reflow is a real cost, and a
+// document with hundreds of tagged elements means hundreds of forced layouts per event).
 
 interface TaggedElement { line: number; el: HTMLElement; }
 
@@ -135,47 +178,63 @@ function getTaggedElements(container: HTMLElement): TaggedElement[] {
 
 // Position of a tagged element relative to previewEl's scrollable content origin
 // (independent of the current scroll offset).
-function contentTop(previewEl: HTMLElement, target: HTMLElement): number {
-  const previewRect = previewEl.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  return targetRect.top - previewRect.top + previewEl.scrollTop;
+function contentTop(previewRect: DOMRect, previewScrollTop: number, target: HTMLElement): number {
+  return target.getBoundingClientRect().top - previewRect.top + previewScrollTop;
 }
 
-function scrollPreviewToLine(previewEl: HTMLElement, tagged: TaggedElement[], targetLine: number): void {
-  if (tagged.length === 0) return;
-  if (targetLine <= tagged[0].line) {
-    previewEl.scrollTop = 0;
-    return;
+// Largest index whose `.line` is <= targetLine (tagged is sorted ascending by line).
+function findLineIndex(tagged: TaggedElement[], targetLine: number): number {
+  let lo = 0;
+  let hi = tagged.length - 1;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (tagged[mid].line <= targetLine) lo = mid; else hi = mid - 1;
   }
-  let prev = tagged[0];
-  let next: TaggedElement | undefined;
-  for (const entry of tagged) {
-    if (entry.line <= targetLine) prev = entry;
-    else { next = entry; break; }
-  }
-  const prevTop = contentTop(previewEl, prev.el);
-  if (!next) {
-    previewEl.scrollTop = prevTop;
-    return;
-  }
-  const nextTop = contentTop(previewEl, next.el);
+  return lo;
+}
+
+function computePreviewScrollTopForLine(previewEl: HTMLElement, tagged: TaggedElement[], targetLine: number): number | null {
+  if (tagged.length === 0) return null;
+  if (targetLine <= tagged[0].line) return 0;
+  const previewRect = previewEl.getBoundingClientRect();
+  const scrollTop = previewEl.scrollTop;
+  const idx = findLineIndex(tagged, targetLine);
+  const prev = tagged[idx];
+  const prevTop = contentTop(previewRect, scrollTop, prev.el);
+  const next = tagged[idx + 1];
+  if (!next) return prevTop;
+  const nextTop = contentTop(previewRect, scrollTop, next.el);
   const progress = next.line === prev.line ? 0 : (targetLine - prev.line) / (next.line - prev.line);
-  previewEl.scrollTop = prevTop + progress * (nextTop - prevTop);
+  return prevTop + progress * (nextTop - prevTop);
+}
+
+// Largest index whose measured top is <= offset. Unlike findLineIndex, this must measure
+// (not just compare numbers), so it costs one getBoundingClientRect() per probed candidate
+// — O(log N) of them, not one per element in `tagged`.
+function findOffsetIndex(previewRect: DOMRect, scrollTop: number, tagged: TaggedElement[], offset: number): number {
+  let lo = 0;
+  let hi = tagged.length - 1;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (contentTop(previewRect, scrollTop, tagged[mid].el) <= offset) lo = mid; else hi = mid - 1;
+  }
+  return lo;
 }
 
 function getLineForPreviewOffset(previewEl: HTMLElement, tagged: TaggedElement[], offset: number): number | null {
   if (tagged.length === 0) return null;
-  const positions = tagged.map((t) => ({ line: t.line, top: contentTop(previewEl, t.el) }));
-  if (offset <= positions[0].top) return positions[0].line;
-  for (let i = 0; i < positions.length - 1; i++) {
-    const cur = positions[i];
-    const next = positions[i + 1];
-    if (offset >= cur.top && offset <= next.top) {
-      const progress = next.top === cur.top ? 0 : (offset - cur.top) / (next.top - cur.top);
-      return cur.line + progress * (next.line - cur.line);
-    }
-  }
-  return positions[positions.length - 1].line;
+  const previewRect = previewEl.getBoundingClientRect();
+  const scrollTop = previewEl.scrollTop;
+  const firstTop = contentTop(previewRect, scrollTop, tagged[0].el);
+  if (offset <= firstTop) return tagged[0].line;
+  const idx = findOffsetIndex(previewRect, scrollTop, tagged, offset);
+  const prev = tagged[idx];
+  const prevTop = contentTop(previewRect, scrollTop, prev.el);
+  const next = tagged[idx + 1];
+  if (!next) return prev.line;
+  const nextTop = contentTop(previewRect, scrollTop, next.el);
+  const progress = nextTop === prevTop ? 0 : (offset - prevTop) / (nextTop - prevTop);
+  return prev.line + progress * (next.line - prev.line);
 }
 
 // Fractional top-of-viewport line, using Monaco's own pixel/line APIs for the sub-line offset.
@@ -190,12 +249,32 @@ function getEditorTopFractionalLine(editorInstance: any): number {
   return topLine + Math.max(0, (scrollTop - lineTop) / lineHeight);
 }
 
-function setEditorScrollForLine(editorInstance: any, targetLine: number): void {
+function computeEditorScrollTopForLine(editorInstance: any, targetLine: number): number {
   const floorLine = Math.max(1, Math.floor(targetLine));
   const fraction = targetLine - floorLine;
   const lineTop = editorInstance.getTopForLineNumber(floorLine);
   const nextLineTop = editorInstance.getTopForLineNumber(floorLine + 1);
-  editorInstance.setScrollTop(Math.max(0, lineTop + fraction * (nextLineTop - lineTop)));
+  return Math.max(0, lineTop + fraction * (nextLineTop - lineTop));
+}
+
+// ─── Scroll-sync diagnostics ────────────────────────────────────────────────
+// A ring buffer of every scroll-sync decision point (real vs. echo, cancelled-stale,
+// already-queued, scheduled target), for capturing an intermittent repro that hasn't shown
+// up in automated testing. To use: reproduce the issue, then in the browser console run
+// `copy(window.__mdScrollDebug.log)` (Chrome/Edge — copies straight to clipboard) or
+// `window.__mdScrollDebug.dump()` (prints it, for browsers without `copy()`).
+const SCROLL_DEBUG_MAX = 500;
+const scrollDebugLog: Record<string, unknown>[] = [];
+function logScrollDebug(entry: Record<string, unknown>): void {
+  scrollDebugLog.push({ t: Math.round(performance.now()), ...entry });
+  if (scrollDebugLog.length > SCROLL_DEBUG_MAX) scrollDebugLog.shift();
+}
+if (typeof window !== 'undefined') {
+  (window as any).__mdScrollDebug = {
+    log: scrollDebugLog,
+    dump: () => { console.log(JSON.stringify(scrollDebugLog, null, 2)); return scrollDebugLog; },
+    clear: () => { scrollDebugLog.length = 0; },
+  };
 }
 
 // ─── Icons (matching the demo's existing 16x16 stroke-icon convention) ─────
@@ -305,10 +384,32 @@ export const MarkdownEditorPanel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const taggedElementsRef = useRef<TaggedElement[]>([]);
-  // Which side is the active driver of an in-flight programmatic scroll — the other
-  // side's handler consumes it (once) and skips forwarding, breaking the feedback loop
-  // that bidirectional sync would otherwise create.
-  const syncSourceRef = useRef<'editor' | 'preview' | null>(null);
+  // The scrollTop each side most recently set on itself via the OTHER side's sync handler.
+  // When that side's own scroll handler fires and observes (approximately) this value, it's
+  // recognizing its own echo rather than a genuine independent scroll, and skips forwarding
+  // it back — breaking the feedback loop bidirectional sync would otherwise create.
+  //
+  // Value comparison alone isn't quite enough, though: on a fast burst with direction
+  // reversals (scroll down, then immediately up, repeatedly), a second round-trip can get
+  // triggered before the first one's echo arrives. That overwrites the expected value, so
+  // when the first (now stale) echo does show up, it no longer matches anything we're
+  // expecting and gets misread as a genuine new scroll — snapping the other side back to a
+  // stale position. The fix is to also make sure at most one round-trip per direction is
+  // ever in flight, via requestAnimationFrame coalescing below (editorSyncFrameRef /
+  // previewSyncFrameRef) — a burst of real scroll events collapses into one sync per frame,
+  // using whatever the latest position is *when the frame fires*, so there's never a second,
+  // still-pending expectation for a late echo to conflict with.
+  const expectedEditorScrollTopRef = useRef<number | null>(null);
+  const expectedPreviewScrollTopRef = useRef<number | null>(null);
+  const previewSyncFrameRef = useRef<number | null>(null);
+  const editorSyncFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewSyncFrameRef.current != null) cancelAnimationFrame(previewSyncFrameRef.current);
+      if (editorSyncFrameRef.current != null) cancelAnimationFrame(editorSyncFrameRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const updateTheme = () => {
@@ -328,11 +429,18 @@ export const MarkdownEditorPanel: React.FC = () => {
     const container = previewRef.current;
     if (!container) return;
     const els = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    setHeadings(Array.from(els).map(el => ({
-      level: Number(el.tagName[1]),
-      text: el.textContent || '',
-      id: el.id,
-    })));
+    setHeadings(
+      Array.from(els)
+        // Excludes the visually-hidden "Footnotes" section label GFM footnotes inject
+        // (<h2 class="sr-only" id="footnote-label">) — a real heading for screen readers,
+        // but not something a sighted ToC click should be able to "jump" to.
+        .filter(el => !el.classList.contains('sr-only'))
+        .map(el => ({
+          level: Number(el.tagName[1]),
+          text: el.textContent || '',
+          id: el.id,
+        }))
+    );
     taggedElementsRef.current = getTaggedElements(container);
   }, [value]);
 
@@ -389,12 +497,20 @@ export const MarkdownEditorPanel: React.FC = () => {
   usePanelContribution(useMemo(() => ({ toolbarItems, sidebarSections }), [toolbarItems, sidebarSections]));
 
   return (
-    <div ref={containerRef} className="w-100 h-100 d-flex" style={{ overflow: 'hidden', position: 'relative' }}>
+    <div ref={containerRef} className="w-100 h-100 d-flex md-editor-panel" style={{ overflow: 'hidden', position: 'relative' }}>
       <style>{`
         .md-editor-divider:hover,
         .md-editor-divider.active {
           background-color: color-mix(in srgb, var(--accent-color) 35%, transparent) !important;
           transform: scaleX(2);
+        }
+
+        /* Isolates this panel's scroll boundaries from the browser's default overscroll
+           chaining/rubber-band handling — without it, a trackpad momentum gesture that
+           drives a scroll region into its boundary can "lock" there for the rest of that
+           physical gesture, ignoring even reversed wheel input until the gesture ends. */
+        .md-editor-panel .monaco-editor .overflow-guard {
+          overscroll-behavior: contain;
         }
 
         .md-preview table {
@@ -457,6 +573,38 @@ export const MarkdownEditorPanel: React.FC = () => {
           border-radius: 4px;
         }
 
+        /* GFM footnotes (remark-gfm) — structure per micromark-extension-gfm-footnote's
+           own docs: <section data-footnotes class="footnotes"><h2 class="sr-only">...  */
+        .md-preview .footnotes {
+          margin-top: 1.5em;
+          padding-top: 0.75em;
+          border-top: 1px solid var(--panel-card-border);
+          font-size: 0.85em;
+          color: color-mix(in srgb, var(--panel-text) 75%, transparent);
+        }
+        .md-preview .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+        .md-preview [data-footnote-ref] {
+          text-decoration: none;
+        }
+        .md-preview .data-footnote-backref {
+          margin-inline-start: 4px;
+        }
+
+        /* KaTeX ($...$ / $$...$$ via remark-math + rehype-katex) — inherit the preview's
+           text color instead of KaTeX's own default black, so it matches both themes. */
+        .md-preview .katex { color: inherit; }
+        .md-preview .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
         /* Fenced code-block syntax highlighting (rehype-highlight token classes),
            themed off the panel's own CSS vars rather than a mismatched prebuilt theme. */
         .md-preview .hljs-keyword,
@@ -492,6 +640,32 @@ export const MarkdownEditorPanel: React.FC = () => {
         [data-color-scheme="light"] .md-preview .hljs-built_in,
         [data-color-scheme="light"] .md-preview .hljs-type { color: #267f99; }
       `}</style>
+      <button
+        type="button"
+        onClick={() => {
+          const blob = new Blob([JSON.stringify(scrollDebugLog, null, 2)], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'md-scroll-debug.json';
+          a.click();
+        }}
+        style={{
+          position: 'absolute',
+          top: 4,
+          insetInlineEnd: 4,
+          zIndex: 50,
+          fontSize: '11px',
+          padding: '3px 8px',
+          borderRadius: '4px',
+          border: '1px solid var(--panel-card-border)',
+          background: 'var(--panel-card-bg)',
+          color: 'var(--panel-text)',
+          cursor: 'pointer',
+        }}
+        title="Downloads a JSON log of every scroll-sync decision, for debugging the intermittent wheel-scroll issue"
+      >
+        ⬇ Download scroll debug log
+      </button>
       <div style={{ width: `${ratio * 100}%`, height: '100%', minWidth: 0 }}>
         <Editor
           height="100%"
@@ -502,15 +676,42 @@ export const MarkdownEditorPanel: React.FC = () => {
           onMount={(editorInstance) => {
             editorRef.current = editorInstance;
             editorInstance.onDidScrollChange(() => {
-              if (syncSourceRef.current === 'preview') {
-                syncSourceRef.current = null;
-                return;
+              const current = editorInstance.getScrollTop();
+              const expected = expectedEditorScrollTopRef.current;
+              expectedEditorScrollTopRef.current = null;
+              const isEcho = expected !== null && Math.abs(current - expected) < 2;
+              logScrollDebug({ event: 'editor-scroll', current, expected, isEcho });
+              if (isEcho) return; // our own echo
+              // This is a genuine scroll on the editor — cancel any stale pending sync that
+              // would otherwise write BACK to the editor a moment from now (scheduled from a
+              // previous, now-superseded preview-side burst). Without this, switching which
+              // side you're actively scrolling (burst the preview, then immediately burst the
+              // editor) can leave a leftover callback that fires just after your fresh input
+              // and clobbers it with a stale, unrelated position.
+              if (editorSyncFrameRef.current != null) {
+                cancelAnimationFrame(editorSyncFrameRef.current);
+                editorSyncFrameRef.current = null;
+                logScrollDebug({ event: 'editor-scroll-cancelled-pending-incoming' });
               }
-              const previewEl = previewRef.current;
-              if (!previewEl) return;
-              const targetLine = getEditorTopFractionalLine(editorInstance);
-              syncSourceRef.current = 'editor';
-              scrollPreviewToLine(previewEl, taggedElementsRef.current, targetLine);
+              if (previewSyncFrameRef.current != null) {
+                logScrollDebug({ event: 'editor-scroll-already-queued' });
+                return; // a sync is already queued for this frame
+              }
+              logScrollDebug({ event: 'editor-scroll-scheduling-preview-sync' });
+              previewSyncFrameRef.current = requestAnimationFrame(() => {
+                previewSyncFrameRef.current = null;
+                const previewEl = previewRef.current;
+                if (!previewEl) return;
+                // Re-read live state now rather than using values captured when this was
+                // scheduled — any further scroll events between then and now (the rest of
+                // a burst) are folded into this one sync instead of queuing their own.
+                const targetLine = getEditorTopFractionalLine(editorInstance);
+                const targetTop = computePreviewScrollTopForLine(previewEl, taggedElementsRef.current, targetLine);
+                logScrollDebug({ event: 'preview-sync-applied', targetLine, targetTop, previewScrollTopBefore: previewEl.scrollTop });
+                if (targetTop == null) return;
+                expectedPreviewScrollTopRef.current = targetTop;
+                previewEl.scrollTop = targetTop;
+              });
             });
           }}
           options={{
@@ -541,22 +742,65 @@ export const MarkdownEditorPanel: React.FC = () => {
       <div
         ref={previewRef}
         className="overflow-auto md-preview"
-        style={{ flex: 1, minWidth: 0, height: '100%', padding: '16px', color: 'var(--panel-text)', backgroundColor: 'var(--panel-card-bg)', boxSizing: 'border-box' }}
+        style={{ flex: 1, minWidth: 0, height: '100%', padding: '16px', color: 'var(--panel-text)', backgroundColor: 'var(--panel-card-bg)', boxSizing: 'border-box', overscrollBehavior: 'contain' }}
+        onWheel={(e) => {
+          const el = previewRef.current;
+          logScrollDebug({
+            event: 'preview-wheel-native',
+            deltaY: e.deltaY,
+            deltaMode: e.deltaMode,
+            scrollTop: el?.scrollTop,
+            scrollHeight: el?.scrollHeight,
+            clientHeight: el?.clientHeight,
+            // Whether there's currently any room to scroll at all — if this is 0 while
+            // large wheel deltas keep coming in, the browser has nothing to scroll into,
+            // regardless of anything our own sync code does.
+            maxScroll: el ? el.scrollHeight - el.clientHeight : null,
+          });
+        }}
         onScroll={() => {
-          if (syncSourceRef.current === 'editor') {
-            syncSourceRef.current = null;
-            return;
-          }
-          const editorInstance = editorRef.current;
           const previewEl = previewRef.current;
-          if (!editorInstance || !previewEl) return;
-          const targetLine = getLineForPreviewOffset(previewEl, taggedElementsRef.current, previewEl.scrollTop);
-          if (targetLine == null) return;
-          syncSourceRef.current = 'preview';
-          setEditorScrollForLine(editorInstance, targetLine);
+          if (!previewEl) return;
+          const current = previewEl.scrollTop;
+          const expected = expectedPreviewScrollTopRef.current;
+          expectedPreviewScrollTopRef.current = null;
+          const isEcho = expected !== null && Math.abs(current - expected) < 2;
+          logScrollDebug({ event: 'preview-scroll', current, expected, isEcho });
+          if (isEcho) return; // our own echo
+          // Genuine scroll on the preview — symmetric to the editor-side handler above:
+          // cancel any stale pending sync about to write BACK to the preview from a
+          // previous, now-superseded editor-side burst, so it can't clobber this.
+          if (previewSyncFrameRef.current != null) {
+            cancelAnimationFrame(previewSyncFrameRef.current);
+            previewSyncFrameRef.current = null;
+            logScrollDebug({ event: 'preview-scroll-cancelled-pending-incoming' });
+          }
+          if (editorSyncFrameRef.current != null) {
+            logScrollDebug({ event: 'preview-scroll-already-queued' });
+            return; // a sync is already queued for this frame
+          }
+          logScrollDebug({ event: 'preview-scroll-scheduling-editor-sync' });
+          editorSyncFrameRef.current = requestAnimationFrame(() => {
+            editorSyncFrameRef.current = null;
+            const previewElNow = previewRef.current;
+            const editorInstance = editorRef.current;
+            if (!previewElNow || !editorInstance) return;
+            // Re-read live scrollTop now, not the value captured when this was scheduled —
+            // same reasoning as the editor-side handler above.
+            const targetLine = getLineForPreviewOffset(previewElNow, taggedElementsRef.current, previewElNow.scrollTop);
+            const targetTop = targetLine == null ? null : computeEditorScrollTopForLine(editorInstance, targetLine);
+            logScrollDebug({ event: 'editor-sync-applied', targetLine, targetTop, editorScrollTopBefore: editorInstance.getScrollTop() });
+            if (targetTop == null) return;
+            expectedEditorScrollTopRef.current = targetTop;
+            editorInstance.setScrollTop(targetTop);
+          });
         }}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug, rehypeHighlight]} components={markdownComponents}>{value}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeRaw, rehypeSlug, rehypeHighlight, rehypeKatex]}
+          components={markdownComponents}
+        >{value}</ReactMarkdown>
       </div>
     </div>
   );
