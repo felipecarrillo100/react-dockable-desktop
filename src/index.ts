@@ -80,7 +80,8 @@ export type {
 export {
   FormContainerContext,
   FormContainerProvider,
-  useFormContainer
+  useFormContainer,
+  usePanelSize
 } from './components/FormContainerContext';
 
 export type {
@@ -193,4 +194,11 @@ export {
   useMergedSidebarTabs,
 } from './components/PanelContributionContext';
 export type { PanelContribution, PanelSidebarSection } from './components/PanelContributionContext';
+
+// ─── Drag-resize primitives — build custom resizable UI inside your own panel content ───
+export { startPointerDrag, computeResizedRect } from './components/dragResize';
+export type { PointerDragConfig, ResizeDir, ResizeRect, ResizeConstraints } from './components/dragResize';
+
+// ─── Color scheme — reactive read of the workspace's current data-color-scheme ───
+export { useColorScheme } from './hooks/useColorScheme';
 

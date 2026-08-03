@@ -3,7 +3,8 @@ import {
   type ContextMenuItem,
   PanelRegistry,
   useFormContainer,
-  useWindowManagerActions
+  useWindowManagerActions,
+  usePanelSize
 } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import { DirtyFormDemoPanel, DirtyEditorDemoPanel, ShowcaseControlCenter, CodeSnippetButton } from '../demo/mockupPanels';
@@ -351,6 +352,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<RIAMap | null>(null);
   const { showContextMenu } = useWindowManagerActions();
+  const panelSize = usePanelSize();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -394,15 +396,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
         };
       });
 
-      const resizeObserver = new ResizeObserver(() => {
-        if (mapRef.current) {
-          mapRef.current.resize();
-        }
-      });
-      resizeObserver.observe(container);
-
       return () => {
-        resizeObserver.disconnect();
         if (mapRef.current) {
           mapRef.current.destroy();
           mapRef.current = null;
@@ -412,6 +406,10 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
       console.error("Failed to initialize MainMap in EPSG:4978:", e);
     }
   }, [showContextMenu]);
+
+  useEffect(() => {
+    if (panelSize) mapRef.current?.resize();
+  }, [panelSize]);
 
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>

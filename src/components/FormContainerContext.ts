@@ -1,4 +1,4 @@
-import { createContext, useContext, type Context, type Provider } from 'react';
+import { createContext, useContext, useSyncExternalStore, type Context, type Provider } from 'react';
 import type { DirtyStateOptions } from './dirtyOptions';
 
 /**
@@ -105,4 +105,19 @@ export const FormContainerProvider: Provider<FormContainerContract> = FormContai
  */
 export const useFormContainer = (): FormContainerContract => {
   return useContext(FormContainerContext);
+};
+
+/**
+ * Reactive alternative to calling {@link FormContainerContract.getDimensions} yourself.
+ * Returns the panel's current `{ width, height }`, or `null` before it has been laid
+ * out, and re-renders whenever the panel's rendered box changes — including resizes
+ * caused by the workspace itself (a grid split being dragged, docking, floating, or
+ * tab activation), not just resizes of an element the panel created.
+ */
+export const usePanelSize = (): { width: number; height: number } | null => {
+  const { onResize, getDimensions } = useFormContainer();
+  return useSyncExternalStore(
+    (onStoreChange) => (onResize ? onResize(() => onStoreChange()) : () => {}),
+    () => (getDimensions ? getDimensions() : null)
+  );
 };

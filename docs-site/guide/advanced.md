@@ -90,6 +90,50 @@ const client = new WorkspaceClient({
 });
 ```
 
+## Building custom drag-resize interactions
+
+`startPointerDrag()` is the same pointer-capture primitive the library's own grid resizer, sidebar drawer resizer, and floating-window resize handles are built on — exported so you can build a resizable divider or handle inside your own panel content without reimplementing pointer capture, delta tracking, and cleanup.
+
+```tsx
+import { startPointerDrag } from 'react-dockable-desktop';
+
+function ResizableSplit() {
+  const [ratio, setRatio] = useState(0.5);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const bar = e.currentTarget;
+    const startClientX = e.clientX;
+
+    startPointerDrag({
+      element: bar,
+      pointerId: e.pointerId,
+      startClientX,
+      startClientY: e.clientY,
+      captureStart: () => {},
+      activeClasses: [{ el: bar, classes: ['active'] }],
+      onMove: (dx) => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        setRatio(Math.min(0.85, Math.max(0.15, (startClientX + dx - rect.left) / rect.width)));
+      },
+    });
+  };
+
+  return (
+    <div ref={containerRef} style={{ display: 'flex', width: '100%', height: '100%' }}>
+      <div style={{ flexBasis: `${ratio * 100}%` }}>{/* left pane */}</div>
+      <div onPointerDown={handlePointerDown} className="resizer-bar" />
+      <div style={{ flexBasis: `${(1 - ratio) * 100}%` }}>{/* right pane */}</div>
+    </div>
+  );
+}
+```
+
+`onMove` receives the delta from the drag's start position, not the live pointer coordinate — recover an absolute position with `startClientX + dx` as shown above. `activeClasses` toggles CSS classes for the duration of the drag; for anything beyond classes (e.g. `document.body.style.cursor`), set it before calling `startPointerDrag` and reset it in `onEnd`.
+
+For a resize handle that grows/shrinks a box in up to 8 directions instead of a single-axis divider, pair it with `computeResizedRect(dir, dx, dy, start, constraints)` — the same pure function the floating-window resize handles use — which supports independent `minW`/`minH`/`maxW`/`maxH`/`minX`/`minY` constraints per call site.
+
 ## RTL support
 
 See the dedicated [RTL Support →](./rtl) guide for the full wiring pattern, what flips automatically, macOS skin behaviour, and the `isElementRtl` utility.
