@@ -207,8 +207,8 @@ function MapPanel() {
 | `setModifierActive(id, active)` | `(id: string, active: boolean) => void` | Explicitly set a toggle modifier's state. |
 | `toggleModifier(id)` | `(id: string) => void` | Flip a toggle modifier. |
 
-::: tip
-`useToolbar()` returns a no-op object (and logs a warning) when called outside `<DockableDesktopProvider>`. This makes it safe to use in reusable components that might be rendered in tests or outside the provider.
+::: warning
+`useToolbar()` throws if called outside `<DockableDesktopProvider>`. Reusable components that might render in tests or standalone should ensure a provider is present (or wrap the call in a `try`/`catch` if they genuinely need to tolerate its absence).
 :::
 
 ## External control pattern

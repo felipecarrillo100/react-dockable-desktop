@@ -85,8 +85,9 @@ export const PanelContributionProvider: React.FC<{ children: React.ReactNode }> 
  * `useMemo`/`useCallback`) to avoid republishing on every unrelated re-render.
  *
  * Contributions are only ever surfaced while this panel is `state.activePanelId` —
- * see `useActivePanelContribution()`. No-op outside a `PanelContributionProvider` tree.
+ * see `useActivePanelContribution()`.
  *
+ * @throws Error if used outside of a {@link PanelContributionProvider}.
  * @example
  * function MapPanel() {
  *   const [controller, setController] = useState<'pan' | 'draw' | 'measure'>('pan');
@@ -105,9 +106,7 @@ export function usePanelContribution(contribution: PanelContribution): void {
   const store = useContext(PanelContributionContext);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  if (!store) {
-    console.warn('usePanelContribution() called outside <PanelContributionProvider>. Returning no-op.');
-  }
+  if (!store) throw new Error('usePanelContribution must be used within PanelContributionProvider');
 
   useLayoutEffect(() => {
     if (!store) return;
@@ -125,14 +124,14 @@ export function usePanelContribution(contribution: PanelContribution): void {
  * via `usePanelContribution()`, or `null` if no panel is active or the active panel
  * hasn't contributed anything. Intended for the app shell to merge into its own
  * `<Toolbar items={...}>` / `<Sidebar tabs={...}>` calls.
+ *
+ * @throws Error if used outside of a {@link PanelContributionProvider}.
  */
 export function useActivePanelContribution(): PanelContribution | null {
   const activePanelId = useWindowManagerState(s => s.activePanelId);
   const store = useContext(PanelContributionContext);
 
-  if (!store) {
-    console.warn('useActivePanelContribution() called outside <PanelContributionProvider>. Returning null.');
-  }
+  if (!store) throw new Error('useActivePanelContribution must be used within PanelContributionProvider');
 
   const subscribe = useCallback(
     (onChange: Listener) => (store ? store.subscribe(onChange) : () => {}),

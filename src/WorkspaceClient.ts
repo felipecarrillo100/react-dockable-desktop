@@ -1,7 +1,16 @@
 import type { ComponentType } from 'react';
 import { PanelRegistryClass } from './components/PanelRegistry';
 import type { PanelRegistryEntry } from './components/PanelRegistry';
-import type { WindowActions, MessageFormatter, ContextMenuPredefinedMessage } from './components/WindowManagerContext';
+import type {
+  WindowActions,
+  MessageFormatter,
+  ContextMenuPredefinedMessage,
+  DropPosition,
+  SplitDirection,
+  DirtyStateOptions,
+  FloatingWindow,
+} from './components/WindowManagerContext';
+import type { ShowContextMenuOptions } from './components/ContextMenu';
 
 /** Built-in lifecycle events always available on the WorkspaceClient event bus. */
 export interface BuiltInPanelEvents {
@@ -252,6 +261,72 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
   }
 
   setDirection(dir: 'ltr' | 'rtl'): void { this._dispatch(a => a.setDirection(dir)); }
+
+  /** Updates the split-size fractions at the given grid path. */
+  updateSplitSizes(path: number[], sizes: number[]): void {
+    this._dispatch(a => a.updateSplitSizes(path, sizes));
+  }
+
+  /** Updates position/size/anchor of a floating panel. */
+  updateFloatingPosition(id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>): void {
+    this._dispatch(a => a.updateFloatingPosition(id, updates));
+  }
+
+  /** @internal Drives the drag-in-progress visual state; normally only the library's own drag UI calls this. */
+  setDraggedPanelId(id: string | null): void { this._dispatch(a => a.setDraggedPanelId(id)); }
+
+  /** Docks a panel into an existing leaf group at the given drop position. */
+  dockPanelToGroup(id: string, targetLeafId: string, position: DropPosition): void {
+    this._dispatch(a => a.dockPanelToGroup(id, targetLeafId, position));
+  }
+
+  /** Reorders a panel's tab within its leaf group. */
+  movePanelOrder(panelId: string, targetLeafId: string, targetIndex: number): void {
+    this._dispatch(a => a.movePanelOrder(panelId, targetLeafId, targetIndex));
+  }
+
+  /** Closes an entire leaf group (all of its tabs) at once. */
+  closeLeafGroup(leafId: string): void { this._dispatch(a => a.closeLeafGroup(leafId)); }
+
+  /** Registers a guard that can veto closing the given panel. */
+  registerCloseGuard(id: string, guard: () => boolean | Promise<boolean>): void {
+    this._dispatch(a => a.registerCloseGuard(id, guard));
+  }
+
+  /** Removes a previously registered close guard. */
+  unregisterCloseGuard(id: string): void { this._dispatch(a => a.unregisterCloseGuard(id)); }
+
+  /** Sets/clears a panel's dirty (unsaved changes) flag. */
+  setPanelDirty(id: string, dirty: boolean, options?: DirtyStateOptions): void {
+    this._dispatch(a => a.setPanelDirty(id, dirty, options));
+  }
+
+  /** Updates a panel's displayed title. */
+  updatePanelTitle(id: string, title: string | ContextMenuPredefinedMessage): void {
+    this._dispatch(a => a.updatePanelTitle(id, title));
+  }
+
+  /**
+   * Requests that a panel close, honoring its dirty flag and any registered close guard.
+   * Resolves once the close (or user cancellation) has been resolved.
+   *
+   * @remarks If called before the provider mounts, the request is queued and this
+   * returns an already-resolved promise immediately — the caller can't observe the
+   * eventual outcome of a queued call, only that the request was accepted.
+   */
+  requestClosePanel(id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }): Promise<void> {
+    if (this._actions) return this._actions.requestClosePanel(id, options);
+    this._pendingCalls.push(a => { a.requestClosePanel(id, options); });
+    return Promise.resolve();
+  }
+
+  /** Docks a panel to one of the workspace's outer edges. */
+  dockPanelToWorkspaceEdge(id: string, position: SplitDirection): void {
+    this._dispatch(a => a.dockPanelToWorkspaceEdge(id, position));
+  }
+
+  /** Shows a context menu using the app's configured ContextMenuAdapter. */
+  showContextMenu(options: ShowContextMenuOptions): void { this._dispatch(a => a.showContextMenu(options)); }
 
   // ── Typed event bus ───────────────────────────────────────────────────────
 

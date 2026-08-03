@@ -67,6 +67,7 @@ client.loadLayout(localStorage.getItem('layout') ?? '');
 ```
 
 The snapshot JSON contains:
+- `version` — schema version, for migrating older saved layouts as the format evolves
 - `gridRoot` — the full tree of branches and leaf groups
 - `floating` — positions and sizes of floating windows
 - `minimized` — panels in the taskbar

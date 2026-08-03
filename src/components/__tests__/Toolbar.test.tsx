@@ -1,6 +1,6 @@
 /**
  * Tests for Toolbar and ToolbarContext:
- * - TB1: useToolbar() outside provider returns no-op with console.warn
+ * - TB1: useToolbar() outside provider throws
  * - TB2: getActiveInGroup() returns null initially
  * - TB3: setActiveInGroup() / getActiveInGroup() round-trip
  * - TB4: setActiveInGroup(group, null) deselects
@@ -61,28 +61,20 @@ const Icon: React.FC = () => <svg data-testid="icon" />;
 // ─── TB1: useToolbar() outside provider ──────────────────────────────────────
 
 describe('TB1: useToolbar() outside provider', () => {
-  it('returns a no-op object and emits console.warn', () => {
-    let capturedToolbar: ReturnType<typeof useToolbar> | null = null;
+  it('throws when rendered outside a provider', () => {
     const Probe: React.FC = () => {
-      capturedToolbar = useToolbar();
+      useToolbar();
       return null;
     };
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    act(() => {
-      root = createRoot(container);
-      root.render(<Probe />);
-    });
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('useToolbar()'));
-    expect(capturedToolbar!.getActiveInGroup('g')).toBeNull();
-    expect(capturedToolbar!.isModifierActive('m')).toBe(false);
-    // No-op calls should not throw
-    expect(() => capturedToolbar!.setActiveInGroup('g', 'x')).not.toThrow();
-    expect(() => capturedToolbar!.setModifierActive('m', true)).not.toThrow();
-    expect(() => capturedToolbar!.toggleModifier('m')).not.toThrow();
-
-    warnSpy.mockRestore();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => {
+      act(() => {
+        root = createRoot(container);
+        root.render(<Probe />);
+      });
+    }).toThrow('useToolbar must be used within DockableDesktopProvider');
+    errorSpy.mockRestore();
   });
 });
 

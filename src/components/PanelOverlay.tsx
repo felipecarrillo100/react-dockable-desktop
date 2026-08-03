@@ -12,6 +12,8 @@ import { createPortal } from 'react-dom';
 import { WindowStateContext } from './WindowManagerContext';
 import type { FloatAnchor } from './WindowManagerContext';
 import { flipZoneHorizontal } from './anchorGeometry';
+import { startPointerDrag, computeResizedRect } from './dragResize';
+import type { ResizeDir } from './dragResize';
 export type { FloatAnchor };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -698,7 +700,6 @@ interface FloatingWindowBodyProps extends PanelFloatingWindowProps {
 }
 
 type WindowMode = 'docked' | 'free';
-type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
 const MIN_W = 120;
 const MIN_H = 60;
@@ -722,7 +723,6 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   sizeRef.current = size;
 
   const dragState = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number; hasDragged: boolean } | null>(null);
-  const resizeState = useRef<{ dir: ResizeDir; mouseX: number; mouseY: number; startX: number; startY: number; w: number; h: number } | null>(null);
 
   // Register in stack on mount; unregister on unmount (close).
   // Close resets to defaultAnchor on next open (fresh mount = fresh state).
@@ -802,8 +802,29 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         startY = er.top - cr.top;
       }
     }
-    resizeState.current = { dir, mouseX: e.clientX, mouseY: e.clientY, startX, startY, w: sizeRef.current.w, h: sizeRef.current.h };
-    windowRef.current?.setPointerCapture(e.pointerId);
+    const startRect = { x: startX, y: startY, w: sizeRef.current.w, h: sizeRef.current.h };
+
+    startPointerDrag({
+      element: e.currentTarget,
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      captureStart: () => startRect,
+      onMove: (dx, dy, start) => {
+        // Re-measured every move, matching the original's live re-measurement —
+        // the container can in principle change size during a drag.
+        const { cw, ch } = getContainerBounds();
+        const { x: newX, y: newY, w: newW, h: newH } = computeResizedRect(dir, dx, dy, start, {
+          minW: MIN_W, minH: MIN_H,
+          maxW: cw - start.x, maxH: ch - start.y,
+          minX: 0, minY: 0,
+        });
+        setSize({ w: newW, h: newH });
+        if (modeRef.current === 'free') {
+          setFreePos({ x: newX, y: newY });
+        }
+      },
+    });
   };
 
   const handleWindowPointerMove = (e: React.PointerEvent): void => {
@@ -825,35 +846,6 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         const rawZone = getHoveredZone(container, e.clientX, e.clientY);
         ctx?.setHoveredZone(rawZone && isRtl ? flipZoneHorizontal(rawZone) : rawZone);
       }
-    } else if (resizeState.current) {
-      const rs = resizeState.current;
-      const dx = e.clientX - rs.mouseX;
-      const dy = e.clientY - rs.mouseY;
-      const { cw, ch } = getContainerBounds();
-
-      let newX = rs.startX, newY = rs.startY, newW = rs.w, newH = rs.h;
-
-      if (rs.dir.includes('e')) {
-        newW = Math.max(MIN_W, Math.min(rs.w + dx, cw - rs.startX));
-      }
-      if (rs.dir.includes('s')) {
-        newH = Math.max(MIN_H, Math.min(rs.h + dy, ch - rs.startY));
-      }
-      if (rs.dir.includes('n')) {
-        const clampedDY = Math.max(-(rs.startY), Math.min(dy, rs.h - MIN_H));
-        newH = rs.h - clampedDY;
-        newY = rs.startY + clampedDY;
-      }
-      if (rs.dir.includes('w')) {
-        const clampedDX = Math.max(-(rs.startX), Math.min(dx, rs.w - MIN_W));
-        newW = rs.w - clampedDX;
-        newX = rs.startX + clampedDX;
-      }
-
-      setSize({ w: newW, h: newH });
-      if (modeRef.current === 'free') {
-        setFreePos({ x: newX, y: newY });
-      }
     }
   };
 
@@ -870,7 +862,6 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       ctx?.setDraggingId(null);
     }
     dragState.current = null;
-    resizeState.current = null;
   };
 
   // ── Compute position style ─────────────────────────────────────────────────

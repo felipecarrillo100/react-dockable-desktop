@@ -16,7 +16,7 @@ Panel Contributions let any panel publish toolbar items and sidebar sections tha
 
 ## `usePanelContribution(contribution)`
 
-Call inside a panel component, on every render, to publish what it wants shown. Republishes automatically when `contribution` changes; cleared automatically on unmount. No-op (with a console warning) outside a `PanelContributionProvider` tree — mounted automatically by `DockableDesktopProvider`.
+Call inside a panel component, on every render, to publish what it wants shown. Republishes automatically when `contribution` changes; cleared automatically on unmount. Throws if used outside a `PanelContributionProvider` tree — mounted automatically by `DockableDesktopProvider`, so this only matters if you're composing `WindowManagerProvider` directly without it.
 
 ```tsx
 import { usePanelContribution } from 'react-dockable-desktop';

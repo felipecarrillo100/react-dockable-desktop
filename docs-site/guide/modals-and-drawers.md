@@ -312,8 +312,8 @@ function LayerTree() {
 | `closeDrawer()` | `() => void` | Collapse the drawer. |
 | `getActiveTab()` | `() => string \| null` | Returns the current tab ID, or `null` if collapsed. |
 
-::: tip
-`useSidebar()` returns a no-op object (and logs a warning) when called outside a `<Sidebar>` tree. This makes it safe to use in reusable panel components that may be rendered with or without a surrounding Sidebar.
+::: warning
+`useSidebar()` throws if called outside a `<Sidebar>` tree. A reusable panel component that may render with or without a surrounding Sidebar should check for that possibility itself (e.g. a prop indicating whether one is present) rather than relying on this hook to degrade gracefully.
 :::
 
 #### `useSidebarTab()`

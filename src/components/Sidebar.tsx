@@ -18,6 +18,7 @@ import React, {
   forwardRef,
   memo,
 } from 'react';
+import { startPointerDrag } from './dragResize';
 
 // ==========================================
 // Types
@@ -229,35 +230,26 @@ function SidebarResizeHandle({
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     const el = e.currentTarget;
-    el.setPointerCapture(e.pointerId);
+    const activeClasses: Array<{ el: HTMLElement; classes: string[] }> = [
+      { el, classes: ['active'] },
+      { el: document.body, classes: ['resizing-active', 'resizing-col-active'] },
+    ];
+    // Suppress the drawer's CSS transition so drag feels instant.
+    if (rootRef.current) activeClasses.push({ el: rootRef.current, classes: ['sidebar-resizing'] });
 
-    const startX = e.clientX;
-    const startWidth = currentWidth;
-
-    el.classList.add('active');
-    document.body.classList.add('resizing-active', 'resizing-col-active');
-    // Suppress the drawer's CSS transition so drag feels instant
-    rootRef.current?.classList.add('sidebar-resizing');
-
-    const onMove = (me: PointerEvent) => {
-      const delta = me.clientX - startX;
-      // Right sidebar: dragging left (negative delta) widens the drawer
-      const newW = position === 'right' ? startWidth - delta : startWidth + delta;
-      onWidthChange(Math.max(minWidth, Math.min(maxWidth, newW)));
-    };
-
-    const onEnd = () => {
-      el.classList.remove('active');
-      document.body.classList.remove('resizing-active', 'resizing-col-active');
-      rootRef.current?.classList.remove('sidebar-resizing');
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', onEnd);
-      el.removeEventListener('pointercancel', onEnd);
-    };
-
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onEnd);
-    el.addEventListener('pointercancel', onEnd);
+    startPointerDrag({
+      element: el,
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      captureStart: () => currentWidth,
+      activeClasses,
+      onMove: (dx, _dy, startWidth) => {
+        // Right sidebar: dragging left (negative dx) widens the drawer
+        const newW = position === 'right' ? startWidth - dx : startWidth + dx;
+        onWidthChange(Math.max(minWidth, Math.min(maxWidth, newW)));
+      },
+    });
   };
 
   return (
@@ -532,14 +524,11 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
  * Returns sidebar control functions from anywhere inside a `<Sidebar>` tree,
  * including floating panels rendered via `{children}`.
  *
- * Returns a no-op object with a console warning when called outside a Sidebar.
+ * @throws Error if used outside of a {@link Sidebar}.
  */
 export function useSidebar(): SidebarContextValue {
   const ctx = useContext(SidebarContext);
-  if (!ctx) {
-    console.warn('useSidebar() called outside a <Sidebar> tree. Returning no-op.');
-    return { openTab: () => {}, closeDrawer: () => {}, getActiveTab: () => null };
-  }
+  if (!ctx) throw new Error('useSidebar must be used within Sidebar');
   return ctx;
 }
 
@@ -547,14 +536,11 @@ export function useSidebar(): SidebarContextValue {
  * Returns tab-specific control functions for components rendered inside a
  * sidebar tab's `renderContent` tree.
  *
- * Returns a no-op object with a console warning when called outside tab content.
+ * @throws Error if used outside of a {@link Sidebar} tab's `renderContent` tree.
  */
 export function useSidebarTab(): SidebarTabContextValue {
   const ctx = useContext(SidebarTabContext);
-  if (!ctx) {
-    console.warn('useSidebarTab() called outside a <Sidebar> tab renderContent tree. Returning no-op.');
-    return { tabId: '', onOpen: () => {}, onClose: () => {}, openTab: () => {} };
-  }
+  if (!ctx) throw new Error('useSidebarTab must be used within a Sidebar tab renderContent tree');
   return ctx;
 }
 

@@ -47,6 +47,7 @@ export type {
   PanelInfo,
   WindowState,
   WindowActions,
+  SerializedLayout,
   ContextMenuPredefinedMessage,
   MessageFormatter,
   PredefinedMessageKey,
