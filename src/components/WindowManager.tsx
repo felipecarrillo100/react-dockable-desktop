@@ -115,7 +115,7 @@ const renderPanelContent = (id: string, componentKey: string, registry: PanelReg
     return (
       <div className="rdd-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
         <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ Component Unregistered</h6>
-        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>Key: {componentKey}</span>
+        <span style={{ fontSize: '0.875rem', color: 'var(--rdd-text-secondary, #94a3b8)' }}>Key: {componentKey}</span>
       </div>
     );
   }
@@ -251,14 +251,14 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
           alignItems: 'center',
           justifyContent: 'center',
           background: 'rgba(108, 117, 125, 0.15)',
-          border: '1px dashed var(--taskbar-item-border, rgba(255, 255, 255, 0.15))'
+          border: '1px dashed var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.15))'
         }}
       >
         <div
           style={{
             fontSize: '2rem',
             fontWeight: 600,
-            color: 'var(--panel-title-color, var(--panel-text, rgba(255, 255, 255, 0.85)))',
+            color: 'var(--rdd-panel-title-color, var(--rdd-panel-text, rgba(255, 255, 255, 0.85)))',
             userSelect: 'none'
           }}
         >
@@ -287,7 +287,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
           position: 'absolute',
           top: 0,
           left: 0,
-          ['--preview-scale' as string]: scale
+          ['--rdd-preview-scale' as string]: scale
         }}
       />
     </div>
@@ -1801,7 +1801,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       {panel.dirty ? ' *' : ''}
                     </span>
                   </span>
-                  <div className="rdd-titlebar-actions" style={{ gap: 'var(--header-button-gap, 4px)' }} onPointerDown={(e) => e.stopPropagation()}>
+                  <div className="rdd-titlebar-actions" style={{ gap: 'var(--rdd-header-button-gap, 4px)' }} onPointerDown={(e) => e.stopPropagation()}>
                     {options?.renderHeaderActions && (
                       <div className="rdd-window-header-actions">
                         {options.renderHeaderActions(w.id)}

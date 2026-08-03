@@ -2296,7 +2296,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
  * Counteract scale for canvas and its siblings inside Luciad containers.
  * 
  * When rendering a panel's mini hover-preview in the taskbar, the parent container 
- * is scaled down using CSS transform scale(var(--preview-scale)). For standard HTML UI, 
+ * is scaled down using CSS transform scale(var(--rdd-preview-scale)). For standard HTML UI, 
  * this works natively. However, for web maps (like WebGL / canvas-based engines such as 
  * LuciadRIA), scaling down the browser container causes the rendering canvas and its absolute 
  * siblings (e.g. HTML overlays, labels, shapes) to blur or offset.
@@ -2307,10 +2307,10 @@ html.rdd-no-animations [class*="rdd-"]::after {
  */
 .rdd-taskbar-item-preview-host .luciad canvas,
 .rdd-taskbar-item-preview-host .luciad canvas ~ * {
-  transform: scale(calc(1 / var(--preview-scale, 1))) !important;
+  transform: scale(calc(1 / var(--rdd-preview-scale, 1))) !important;
   transform-origin: top left;
-  width: calc(100% * var(--preview-scale, 1)) !important;
-  height: calc(100% * var(--preview-scale, 1)) !important;
+  width: calc(100% * var(--rdd-preview-scale, 1)) !important;
+  height: calc(100% * var(--rdd-preview-scale, 1)) !important;
 }
 
 /* ==========================================

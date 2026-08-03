@@ -419,7 +419,7 @@ export const MarkdownEditorPanel: React.FC = () => {
   };
 
   // Draggable divider — mirrors the workspace grid resizer's interaction shape and look
-  // (src/components/WindowManager.tsx's handleResizerPointerDown, src/index.css's .resizer-bar),
+  // (src/components/WindowManager.tsx's handleResizerPointerDown, src/index.css's .rdd-resizer-bar),
   // built on the library's own exported startPointerDrag() primitive.
   const handleDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();

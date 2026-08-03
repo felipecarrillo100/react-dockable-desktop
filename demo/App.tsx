@@ -183,7 +183,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   }, [windowOpacity]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--dw-toast-offset-top', '68px');
+    document.documentElement.style.setProperty('--rdd-toast-offset-top', '68px');
   }, []);
 
   useEffect(() => {

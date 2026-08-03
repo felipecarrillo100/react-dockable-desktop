@@ -356,7 +356,7 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
   } : {};
 
   const sizeStyle: React.CSSProperties = buttonSize != null
-    ? { ['--panel-toolbar-btn-size' as string]: `${buttonSize}px` }
+    ? { ['--rdd-panel-toolbar-btn-size' as string]: `${buttonSize}px` }
     : {};
 
   return (
