@@ -3,17 +3,24 @@ export interface ThrottleOptions {
     trailing?: boolean;
 }
 
-export interface ThrottledFunction<T extends (...args: any[]) => void> {
+// `(...args: any[]) => any` (below, and on `throttle`/`debounce`) is the standard,
+// idiomatic constraint for "any function type" in a higher-order generic — TypeScript's
+// own bivariant parameter checking means only `any[]`, not `unknown[]`, accepts arbitrary
+// concrete function signatures here. Everything actually flowing through this file past
+// that point (`result`, `invokeFunc`, `trailingEdge`, `leadingEdge`, `flush`, `lastThis`)
+// is precisely typed via `ReturnType<T>`/`Parameters<T>`/`unknown`.
+
+export interface ThrottledFunction<T extends (...args: any[]) => any> {
     (...args: Parameters<T>): void;
     cancel(): void;
-    flush(): void;
+    flush(): ReturnType<T> | undefined;
 }
 
 /**
  * Creates a throttled function that only invokes `func` at most once per
  * every `wait` milliseconds. Mimics Lodash's architecture.
  */
-export function throttle<T extends (...args: any[]) => void>(
+export function throttle<T extends (...args: any[]) => any>(
     func: T,
     wait: number,
     options: ThrottleOptions = {}
@@ -40,15 +47,15 @@ interface DebounceOptions {
 /**
  * Internal helper: Full-featured debounce that supports maxWait, leading, and trailing.
  */
-function debounce<T extends (...args: any[]) => void>(
+function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number,
     options: DebounceOptions = {}
 ): ThrottledFunction<T> {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let lastArgs: Parameters<T> | null = null;
-    let lastThis: any = null;
-    let result: any = null;
+    let lastThis: unknown = null;
+    let result: ReturnType<T> | undefined = undefined;
 
     let lastCallTime: number | null = null;
     let lastInvokeTime = 0;
@@ -76,7 +83,7 @@ function debounce<T extends (...args: any[]) => void>(
         );
     }
 
-    function invokeFunc(time: number): any {
+    function invokeFunc(time: number): ReturnType<T> | undefined {
         const args = lastArgs;
         const thisArg = lastThis;
 
@@ -110,7 +117,7 @@ function debounce<T extends (...args: any[]) => void>(
         return timeWaiting;
     }
 
-    function trailingEdge(time: number): any {
+    function trailingEdge(time: number): ReturnType<T> | undefined {
         timeoutId = null;
 
         // Only invoke on trailing edge if we have args saved (meaning it was called during the wait period)
@@ -133,7 +140,7 @@ function debounce<T extends (...args: any[]) => void>(
         timeoutId = startTimer(timerExpired, remainingWait(time));
     }
 
-    function leadingEdge(time: number): any {
+    function leadingEdge(time: number): ReturnType<T> | undefined {
         // Reset any existing maxWait timers
         lastInvokeTime = time;
         // Start the timer for the trailing edge
@@ -143,7 +150,7 @@ function debounce<T extends (...args: any[]) => void>(
     }
 
     // --- The returned throttled function ---
-    function throttled(this: any, ...args: Parameters<T>): void {
+    function throttled(this: unknown, ...args: Parameters<T>): void {
         const time = Date.now();
         const isInvoking = shouldInvoke(time);
 
@@ -182,7 +189,7 @@ function debounce<T extends (...args: any[]) => void>(
         timeoutId = null;
     };
 
-    throttled.flush = function(): any {
+    throttled.flush = function(): ReturnType<T> | undefined {
         return timeoutId === null ? result : trailingEdge(Date.now());
     };
 

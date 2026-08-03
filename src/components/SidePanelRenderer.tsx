@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
 import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProviderContext';
+import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 
@@ -87,7 +88,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
     return () => unregisterCloseHandler(id);
   }, [id, canClose, registerCloseHandler, unregisterCloseHandler]);
 
-  const handleSetDirty = useCallback((dirty: boolean, options?: any) => setDirty(id, dirty, options), [setDirty, id]);
+  const handleSetDirty = useCallback((dirty: boolean, options?: DirtyStateOptions) => setDirty(id, dirty, options), [setDirty, id]);
   const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id]);
   const handleSetIcon = useCallback((newIcon: React.ReactNode) => setIconState(newIcon), []);
   const handleOnCloseRequested = useCallback((handler: () => boolean | Promise<boolean>) => {

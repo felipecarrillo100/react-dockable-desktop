@@ -30,8 +30,10 @@ import Editor from '@monaco-editor/react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet's default marker icon paths in Vite builds
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+// Fix Leaflet's default marker icon paths in Vite builds. `_getIconUrl` is a private,
+// undocumented Leaflet internal not in its public type declarations — this cast names
+// exactly the one property being deleted, rather than opening up arbitrary access via `any`.
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',

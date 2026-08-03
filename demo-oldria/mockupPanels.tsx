@@ -285,7 +285,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
 
       addMapLayers(map, (layer) => {
         layer.onCreateContextMenu = (contextMenu: ContextMenu, _map, info: unknown) => {
-          const objects: unknown[] = (info as any)?.objects ?? [];
+          const objects: unknown[] = (info as { objects?: unknown[] } | null)?.objects ?? [];
           if (objects.length === 0) return;
           const feature = objects[0] as Feature;
           contextMenu.addItem({
@@ -370,7 +370,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
 
       addMapLayers(map, (layer) => {
         layer.onCreateContextMenu = (contextMenu: ContextMenu, _map, info: unknown) => {
-          const objects: unknown[] = (info as any)?.objects ?? [];
+          const objects: unknown[] = (info as { objects?: unknown[] } | null)?.objects ?? [];
           if (objects.length === 0) return;
           const feature = objects[0] as Feature;
           contextMenu.addItem({
