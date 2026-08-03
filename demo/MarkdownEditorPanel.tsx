@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
+import type { editor as MonacoEditorNS } from 'monaco-editor';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -78,9 +79,10 @@ Some *sample* text to format.
 
 // ─── Monaco selection helpers ──────────────────────────────────────────────
 
-function wrapSelection(editorInstance: any, before: string, after: string = before): void {
-  const selection = editorInstance?.getSelection();
-  const model = editorInstance?.getModel();
+function wrapSelection(editorInstance: MonacoEditorNS.IStandaloneCodeEditor | null, before: string, after: string = before): void {
+  if (!editorInstance) return;
+  const selection = editorInstance.getSelection();
+  const model = editorInstance.getModel();
   if (!selection || !model) return;
   // Trim whitespace/newlines out of the wrap so a whole-line selection (e.g. from a
   // triple-click, which includes the trailing line break) doesn't push the closing
@@ -92,8 +94,9 @@ function wrapSelection(editorInstance: any, before: string, after: string = befo
   editorInstance.focus();
 }
 
-function prefixLines(editorInstance: any, prefix: string): void {
-  const selection = editorInstance?.getSelection();
+function prefixLines(editorInstance: MonacoEditorNS.IStandaloneCodeEditor | null, prefix: string): void {
+  if (!editorInstance) return;
+  const selection = editorInstance.getSelection();
   if (!selection) return;
   const edits = [];
   for (let line = selection.startLineNumber; line <= selection.endLineNumber; line++) {
@@ -112,9 +115,19 @@ function prefixLines(editorInstance: any, prefix: string): void {
 // below possible, without a dedicated position-tracking plugin.
 
 function withSourceLine<Tag extends keyof JSX.IntrinsicElements>(tag: Tag): Components[Tag] {
+  // `props` is intentionally untyped here, not left untyped by omission: it's whatever
+  // intrinsic-element props `Tag` resolves to, but `React.ComponentPropsWithoutRef<Tag>`
+  // can't be used — it requires `Tag` to satisfy `ElementType`, which cascades into the
+  // same pre-existing `JSX.IntrinsicElements` resolution gap this generic constraint
+  // already hits (see the cast below), producing *more* errors than typing it precisely.
   const Tagged = ({ node, ...props }: any) => {
     const line = node?.position?.start.line;
-    const Element = tag as any;
+    // `tag` is a generic type parameter, not a literal tag name — TypeScript's JSX
+    // factory can't verify a generic as an intrinsic element, even though it's
+    // constrained to `keyof JSX.IntrinsicElements`. This cast is the standard,
+    // narrowly-scoped escape hatch for that specific limitation (not a stand-in
+    // for "didn't bother typing this").
+    const Element = tag as React.ElementType;
     return <Element {...props} data-source-line={line} />;
   };
   return Tagged as Components[Tag];
@@ -238,7 +251,8 @@ function getLineForPreviewOffset(previewEl: HTMLElement, tagged: TaggedElement[]
 }
 
 // Fractional top-of-viewport line, using Monaco's own pixel/line APIs for the sub-line offset.
-function getEditorTopFractionalLine(editorInstance: any): number {
+function getEditorTopFractionalLine(editorInstance: MonacoEditorNS.IStandaloneCodeEditor | null): number {
+  if (!editorInstance) return 1;
   const visible = editorInstance.getVisibleRanges();
   if (!visible || visible.length === 0) return 1;
   const topLine = visible[0].startLineNumber;
@@ -249,7 +263,8 @@ function getEditorTopFractionalLine(editorInstance: any): number {
   return topLine + Math.max(0, (scrollTop - lineTop) / lineHeight);
 }
 
-function computeEditorScrollTopForLine(editorInstance: any, targetLine: number): number {
+function computeEditorScrollTopForLine(editorInstance: MonacoEditorNS.IStandaloneCodeEditor | null, targetLine: number): number {
+  if (!editorInstance) return 0;
   const floorLine = Math.max(1, Math.floor(targetLine));
   const fraction = targetLine - floorLine;
   const lineTop = editorInstance.getTopForLineNumber(floorLine);
@@ -360,7 +375,7 @@ export const MarkdownEditorPanel: React.FC = () => {
   const [ratio, setRatio] = useState(0.5);
   const [headings, setHeadings] = useState<HeadingInfo[]>([]);
 
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const taggedElementsRef = useRef<TaggedElement[]>([]);

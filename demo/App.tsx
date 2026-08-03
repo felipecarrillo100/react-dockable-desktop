@@ -445,9 +445,9 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
 
   // Listen for control center custom events
   useEffect(() => {
-    const handleSkin = (e: any) => setSkin(e.detail);
+    const handleSkin = (e: CustomEvent<string>) => setSkin(e.detail);
     const handleTheme = () => toggleTheme();
-    const handleLayout = (e: any) => {
+    const handleLayout = (e: CustomEvent<string>) => {
       switch (e.detail) {
         case 'default': resetWorkspaceLayout(); break;
         case 'developer': applyDeveloperLayout(); break;
@@ -456,14 +456,14 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
       }
     };
 
-    window.addEventListener('demo-change-skin', handleSkin);
+    window.addEventListener('demo-change-skin', handleSkin as EventListener);
     window.addEventListener('demo-change-theme', handleTheme);
-    window.addEventListener('demo-apply-layout', handleLayout);
+    window.addEventListener('demo-apply-layout', handleLayout as EventListener);
 
     return () => {
-      window.removeEventListener('demo-change-skin', handleSkin);
+      window.removeEventListener('demo-change-skin', handleSkin as EventListener);
       window.removeEventListener('demo-change-theme', handleTheme);
-      window.removeEventListener('demo-apply-layout', handleLayout);
+      window.removeEventListener('demo-apply-layout', handleLayout as EventListener);
     };
   }, [toggleTheme, resetWorkspaceLayout, applyDeveloperLayout, applyEditorOnlyLayout, applyDataAnalysisLayout]);
 

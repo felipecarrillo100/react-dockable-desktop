@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
 import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderContext';
+import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 
@@ -75,7 +76,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
     close(id);
   }, [close, openModal, id, dirty, dirtyOptions, baseTitle, predefinedMessages]);
 
-  const handleSetDirty = useCallback((dirty: boolean, options?: any) => setDirty(id, dirty, options), [setDirty, id]);
+  const handleSetDirty = useCallback((dirty: boolean, options?: DirtyStateOptions) => setDirty(id, dirty, options), [setDirty, id]);
   const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id]);
   const handleSetIcon = useCallback((newIcon: React.ReactNode) => setIconState(newIcon), []);
   const handleOnCloseRequested = useCallback((handler: () => boolean | Promise<boolean>) => {
