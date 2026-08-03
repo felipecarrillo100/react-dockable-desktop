@@ -91,10 +91,24 @@
   --rdd-panel-float-title-color-active: var(--rdd-window-text, #f8f9fa);
 }
 
-/* Scoped to the library's own root element — never touches the consumer's page,
-   html/body, or their own mount div. Sizing/overflow come from .rdd-workspace's
-   own inline styles; consumers are responsible for their own page-level reset
-   (e.g. `body { margin: 0; overflow: hidden; }`) if they want a full-viewport app. */
+/* Sizing only — margin/overflow/height/width, no cosmetic properties. This is a
+   structural requirement, not a style choice: `.full-viewport-layout` and every
+   percentage-height element the workspace nests inside (including WindowManager's
+   own root) can only resolve `height: 100%` if this chain has a real height all
+   the way up to <html>. Removing this (rather than just the cosmetic properties
+   below) collapses the whole page to content-height instead of the viewport. */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Cosmetic properties are scoped to the library's own root element only — never
+   the consumer's page, html/body, or their own mount div. */
 .rdd-workspace {
   background-color: var(--rdd-bg-primary);
   color: var(--rdd-text-primary);

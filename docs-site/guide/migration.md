@@ -17,7 +17,7 @@ v5.0.0 closes gaps found in two audits: a core-API review, and a framework-agnos
 
    If you have custom CSS targeting any of the library's classes or variables (skin overrides, `[data-workspace-skin="my-skin"] .some-class { ... }`, or reading/setting one of the default variables), find-and-replace the old name with its `rdd-`-prefixed form. Cross-check against the [Theming guide](./theming) for the current variable reference and [Advanced Topics](./advanced) for the current class names used in the drag-resize example.
 
-3. **The library no longer sets page-wide CSS.** Previously, importing `styles.css` set `font-family`/background/margin/overflow on `html, body, #root` and restyled scrollbars on the bare `*` selector — affecting your entire page, not just the workspace. These are now scoped to the workspace's own root element and its descendants only. If you relied on this for full-viewport sizing, add it yourself: `body { margin: 0; overflow: hidden; }`.
+3. **The library no longer sets cosmetic page-wide CSS.** Previously, importing `styles.css` set `font-family`/background/text-color on `html, body, #root` and restyled scrollbars on the bare `*` selector — affecting your entire page, not just the workspace. These are now scoped to the workspace's own root element and its descendants only. The `margin`/`padding`/`width`/`height`/`overflow` reset on `html, body, #root` is unchanged, since it's structurally required for `height: 100%` to resolve anywhere in the page — no action needed here.
 
 4. **Animations are now enabled by default.** Previously, every transition/animation on your *entire page* was force-disabled unless `<html>` had an undocumented `enable-animations` class — something only the demo apps' own UI ever set. If you were relying on animations being off by default, pass `<WindowManager animations={false} />`.
 
@@ -31,8 +31,7 @@ v5.0.0 closes gaps found in two audits: a core-API review, and a framework-agnos
 1. `npm install react-dockable-desktop@5`
 2. If you call any of the five hooks in #1 above outside `DockableDesktopProvider`, wrap them in it (or the specific provider they need).
 3. If you have custom CSS targeting the library's classes/variables, apply the rename pattern in #2.
-4. If your app relied on the library zeroing `body` margin/overflow, add that yourself.
-5. If you were relying on animations being off by default with no `enable-animations` class anywhere, pass `<WindowManager animations={false} />`.
+4. If you were relying on animations being off by default with no `enable-animations` class anywhere, pass `<WindowManager animations={false} />`.
 
 ---
 

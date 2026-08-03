@@ -333,7 +333,7 @@ const TocList: React.FC<{ headings: HeadingInfo[]; onSelect: (id: string) => voi
               textAlign: 'start',
               background: 'transparent',
               border: 'none',
-              color: 'var(--panel-text)',
+              color: 'var(--rdd-panel-text)',
               padding: '4px 6px',
               paddingInlineStart: `${6 + (h.level - 1) * 14}px`,
               fontSize: h.level === 1 ? '0.85rem' : '0.8rem',
@@ -341,7 +341,7 @@ const TocList: React.FC<{ headings: HeadingInfo[]; onSelect: (id: string) => voi
               cursor: 'pointer',
               borderRadius: '4px',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--panel-card-bg)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rdd-panel-card-bg)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
             {h.text}
@@ -473,7 +473,7 @@ export const MarkdownEditorPanel: React.FC = () => {
       <style>{`
         .md-editor-divider:hover,
         .md-editor-divider.active {
-          background-color: color-mix(in srgb, var(--accent-color) 35%, transparent) !important;
+          background-color: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent) !important;
           transform: scaleX(2);
         }
 
@@ -500,26 +500,26 @@ export const MarkdownEditorPanel: React.FC = () => {
         }
         .md-preview th,
         .md-preview td {
-          border: 1px solid var(--panel-card-border);
+          border: 1px solid var(--rdd-panel-card-border);
           padding: 6px 10px;
           text-align: left;
         }
         .md-preview thead th {
-          background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+          background: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
           font-weight: 600;
         }
         .md-preview tbody tr:nth-child(even) {
-          background: color-mix(in srgb, var(--panel-text) 4%, transparent);
+          background: color-mix(in srgb, var(--rdd-panel-text) 4%, transparent);
         }
         .md-preview blockquote {
           margin: 0.75em 0;
           padding: 4px 12px;
-          border-inline-start: 3px solid var(--accent-color);
-          color: color-mix(in srgb, var(--panel-text) 75%, transparent);
-          background: color-mix(in srgb, var(--panel-text) 4%, transparent);
+          border-inline-start: 3px solid var(--rdd-accent-color);
+          color: color-mix(in srgb, var(--rdd-panel-text) 75%, transparent);
+          background: color-mix(in srgb, var(--rdd-panel-text) 4%, transparent);
         }
         .md-preview a {
-          color: var(--accent-color);
+          color: var(--rdd-accent-color);
           text-decoration: none;
         }
         .md-preview a:hover {
@@ -533,8 +533,8 @@ export const MarkdownEditorPanel: React.FC = () => {
           margin-inline-end: 6px;
         }
         .md-preview pre {
-          background: color-mix(in srgb, var(--panel-text) 6%, transparent);
-          border: 1px solid var(--panel-card-border);
+          background: color-mix(in srgb, var(--rdd-panel-text) 6%, transparent);
+          border: 1px solid var(--rdd-panel-card-border);
           border-radius: 6px;
           padding: 10px 12px;
           overflow-x: auto;
@@ -547,7 +547,7 @@ export const MarkdownEditorPanel: React.FC = () => {
           background: transparent;
         }
         .md-preview :not(pre) > code {
-          background: color-mix(in srgb, var(--panel-text) 8%, transparent);
+          background: color-mix(in srgb, var(--rdd-panel-text) 8%, transparent);
           padding: 2px 5px;
           border-radius: 4px;
         }
@@ -557,9 +557,9 @@ export const MarkdownEditorPanel: React.FC = () => {
         .md-preview .footnotes {
           margin-top: 1.5em;
           padding-top: 0.75em;
-          border-top: 1px solid var(--panel-card-border);
+          border-top: 1px solid var(--rdd-panel-card-border);
           font-size: 0.85em;
-          color: color-mix(in srgb, var(--panel-text) 75%, transparent);
+          color: color-mix(in srgb, var(--rdd-panel-text) 75%, transparent);
         }
         .md-preview .sr-only {
           position: absolute;
@@ -592,7 +592,7 @@ export const MarkdownEditorPanel: React.FC = () => {
         .md-preview .hljs-string,
         .md-preview .hljs-attr { color: #ce9178; }
         .md-preview .hljs-comment {
-          color: color-mix(in srgb, var(--panel-text) 55%, transparent);
+          color: color-mix(in srgb, var(--rdd-panel-text) 55%, transparent);
           font-style: italic;
         }
         .md-preview .hljs-number { color: #b5cea8; }
@@ -600,7 +600,7 @@ export const MarkdownEditorPanel: React.FC = () => {
         .md-preview .hljs-title.function_,
         .md-preview .hljs-section { color: #dcdcaa; }
         .md-preview .hljs-variable,
-        .md-preview .hljs-name { color: var(--accent-color); }
+        .md-preview .hljs-name { color: var(--rdd-accent-color); }
         .md-preview .hljs-built_in,
         .md-preview .hljs-type { color: #4ec9b0; }
 
@@ -610,7 +610,7 @@ export const MarkdownEditorPanel: React.FC = () => {
         [data-color-scheme="light"] .md-preview .hljs-string,
         [data-color-scheme="light"] .md-preview .hljs-attr { color: #a31515; }
         [data-color-scheme="light"] .md-preview .hljs-comment {
-          color: color-mix(in srgb, var(--panel-text) 55%, transparent);
+          color: color-mix(in srgb, var(--rdd-panel-text) 55%, transparent);
         }
         [data-color-scheme="light"] .md-preview .hljs-number { color: #098658; }
         [data-color-scheme="light"] .md-preview .hljs-title,
@@ -676,7 +676,7 @@ export const MarkdownEditorPanel: React.FC = () => {
           height: '100%',
           flexShrink: 0,
           cursor: 'col-resize',
-          background: 'var(--panel-card-border)',
+          background: 'var(--rdd-panel-card-border)',
           position: 'relative',
           zIndex: 5,
           transition: 'background-color 0.15s ease, transform 0.15s ease',
@@ -687,7 +687,7 @@ export const MarkdownEditorPanel: React.FC = () => {
       <div
         ref={previewRef}
         className="overflow-auto md-preview"
-        style={{ flex: 1, minWidth: 0, height: '100%', padding: '16px', color: 'var(--panel-text)', backgroundColor: 'var(--panel-card-bg)', boxSizing: 'border-box', overscrollBehavior: 'contain' }}
+        style={{ flex: 1, minWidth: 0, height: '100%', padding: '16px', color: 'var(--rdd-panel-text)', backgroundColor: 'var(--rdd-panel-card-bg)', boxSizing: 'border-box', overscrollBehavior: 'contain' }}
         onScroll={() => {
           const previewEl = previewRef.current;
           if (!previewEl) return;

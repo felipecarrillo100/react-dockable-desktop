@@ -257,7 +257,7 @@ export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({
       style={{
         width: '20px',
         height: '20px',
-        backgroundColor: 'var(--panel-card-border)',
+        backgroundColor: 'var(--rdd-panel-card-border)',
         opacity: 0.8,
         transition: 'all 0.2s ease',
       }}
@@ -372,18 +372,18 @@ export const ShowcaseControlCenter: React.FC = () => {
   }, [state.floating, state.minimized]);
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent d-flex flex-column" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
-      <div className="border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between" style={{ borderColor: 'var(--panel-card-border)' }}>
+    <div className="w-100 h-100 p-3 bg-transparent d-flex flex-column" style={{ color: 'var(--rdd-panel-text)', overflow: 'hidden' }}>
+      <div className="border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between" style={{ borderColor: 'var(--rdd-panel-card-border)' }}>
         <h5 className="m-0 text-primary fw-bold d-flex align-items-center gap-2" style={{ fontSize: '1.05rem' }}>
           🚀 Control Center
         </h5>
-        <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', padding: '2px 8px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: 'var(--accent-color, #38bdf8)', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
+        <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', padding: '2px 8px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: 'var(--rdd-accent-color, #38bdf8)', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
           Interactive
         </span>
       </div>
 
       {/* Tabs */}
-      <div className="d-flex border-bottom mb-3" style={{ borderColor: 'var(--panel-card-border)', fontSize: '0.8rem' }}>
+      <div className="d-flex border-bottom mb-3" style={{ borderColor: 'var(--rdd-panel-card-border)', fontSize: '0.8rem' }}>
         <button
           className={`btn btn-link py-1 px-2 text-decoration-none font-monospace ${activeTab === 'tour' ? 'text-primary border-bottom border-primary fw-bold' : 'text-secondary'}`}
           onClick={() => setActiveTab('tour')}
@@ -431,7 +431,7 @@ export const ShowcaseControlCenter: React.FC = () => {
 
             <div className="d-flex flex-column gap-2">
               {/* Step 1 */}
-              <div className="p-2 rounded border" style={{ borderColor: steps.drag ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+              <div className="p-2 rounded border" style={{ borderColor: steps.drag ? 'var(--bs-success)' : 'var(--rdd-panel-card-border)', backgroundColor: 'var(--rdd-panel-card-bg)' }}>
                 <div className="d-flex align-items-center justify-content-between">
                   <span className="fw-semibold">1. Grid Drag & Split</span>
                   <input type="checkbox" className="form-check-input" checked={steps.drag} onChange={(e) => setSteps(s => ({ ...s, drag: e.target.checked }))} />
@@ -443,7 +443,7 @@ export const ShowcaseControlCenter: React.FC = () => {
               </div>
 
               {/* Step 2 */}
-              <div className="p-2 rounded border" style={{ borderColor: steps.float ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+              <div className="p-2 rounded border" style={{ borderColor: steps.float ? 'var(--bs-success)' : 'var(--rdd-panel-card-border)', backgroundColor: 'var(--rdd-panel-card-bg)' }}>
                 <div className="d-flex align-items-center justify-content-between">
                   <span className="fw-semibold">2. Floating Windows</span>
                   <input type="checkbox" className="form-check-input" checked={steps.float} readOnly />
@@ -455,7 +455,7 @@ export const ShowcaseControlCenter: React.FC = () => {
               </div>
 
               {/* Step 3 */}
-              <div className="p-2 rounded border" style={{ borderColor: steps.minimize ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+              <div className="p-2 rounded border" style={{ borderColor: steps.minimize ? 'var(--bs-success)' : 'var(--rdd-panel-card-border)', backgroundColor: 'var(--rdd-panel-card-bg)' }}>
                 <div className="d-flex align-items-center justify-content-between">
                   <span className="fw-semibold">3. Minimize & Taskbar</span>
                   <input type="checkbox" className="form-check-input" checked={steps.minimize} readOnly />
@@ -464,7 +464,7 @@ export const ShowcaseControlCenter: React.FC = () => {
               </div>
 
               {/* Step 4 */}
-              <div className="p-2 rounded border" style={{ borderColor: steps.dirty ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+              <div className="p-2 rounded border" style={{ borderColor: steps.dirty ? 'var(--bs-success)' : 'var(--rdd-panel-card-border)', backgroundColor: 'var(--rdd-panel-card-bg)' }}>
                 <div className="d-flex align-items-center justify-content-between">
                   <span className="fw-semibold">4. Unsaved Close Intercept</span>
                   <input type="checkbox" className="form-check-input" checked={steps.dirty} onChange={(e) => setSteps(s => ({ ...s, dirty: e.target.checked }))} />
@@ -476,7 +476,7 @@ export const ShowcaseControlCenter: React.FC = () => {
               </div>
 
               {/* Step 5 */}
-              <div className="p-2 rounded border" style={{ borderColor: steps.drawer ? 'var(--bs-success)' : 'var(--panel-card-border)', backgroundColor: 'var(--panel-card-bg)' }}>
+              <div className="p-2 rounded border" style={{ borderColor: steps.drawer ? 'var(--bs-success)' : 'var(--rdd-panel-card-border)', backgroundColor: 'var(--rdd-panel-card-bg)' }}>
                 <div className="d-flex align-items-center justify-content-between">
                   <span className="fw-semibold">5. Slide Drawer Menus</span>
                   <input type="checkbox" className="form-check-input" checked={steps.drawer} readOnly />
@@ -586,7 +586,7 @@ export const ShowcaseControlCenter: React.FC = () => {
             {/* F4 — State Selectors */}
             <div>
               <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F4 — State Selectors (live)</h6>
-              <div className="p-2 rounded border border-secondary border-opacity-15" style={{ background: 'var(--panel-card-bg)' }}>
+              <div className="p-2 rounded border border-secondary border-opacity-15" style={{ background: 'var(--rdd-panel-card-bg)' }}>
                 <div className="d-flex justify-content-between mb-1">
                   <span className="text-secondary" style={{ fontSize: '0.7rem' }}>activePanelId:</span>
                   <span className="text-info" style={{ fontSize: '0.7rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activePanelId || '—'}</span>
@@ -606,7 +606,7 @@ export const ShowcaseControlCenter: React.FC = () => {
             {/* F5 — Lifecycle Events */}
             <div>
               <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F5 — Lifecycle Events (live log)</h6>
-              <div className="p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ background: 'var(--panel-card-bg)', maxHeight: '120px' }}>
+              <div className="p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ background: 'var(--rdd-panel-card-bg)', maxHeight: '120px' }}>
                 {lifecycleLog.length === 0 ? (
                   <span className="text-muted" style={{ fontSize: '0.7rem' }}>No events yet — open or close a panel</span>
                 ) : (
@@ -625,7 +625,7 @@ export const ShowcaseControlCenter: React.FC = () => {
             {/* F6/F7/F8 — Quick References */}
             <div>
               <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F6/F7/F8 — Quick Reference</h6>
-              <pre className="mb-0 text-muted p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap', background: 'var(--panel-card-bg)', maxHeight: '120px' }}>{`// F6: one provider replaces two\n<DockableDesktopProvider client={ws}>\n  ...\n</DockableDesktopProvider>\n\n// F7: panel reads own ID without props\nconst id = usePanelId();\n\n// F8: fully-typed event bus\nconst ws = new WorkspaceClient<MyEvents>({...});\nws.publish('layer:toggle', { id: 'a' });`}</pre>
+              <pre className="mb-0 text-muted p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap', background: 'var(--rdd-panel-card-bg)', maxHeight: '120px' }}>{`// F6: one provider replaces two\n<DockableDesktopProvider client={ws}>\n  ...\n</DockableDesktopProvider>\n\n// F7: panel reads own ID without props\nconst id = usePanelId();\n\n// F8: fully-typed event bus\nconst ws = new WorkspaceClient<MyEvents>({...});\nws.publish('layer:toggle', { id: 'a' });`}</pre>
             </div>
 
           </div>
@@ -754,9 +754,9 @@ export const CodeEditor: React.FC = () => {
 };
 
 export const TerminalConsole: React.FC = () => (
-  <div className="w-100 h-100 p-3 font-monospace" style={{ backgroundColor: 'var(--panel-card-bg)', color: 'var(--panel-text)', overflow: 'auto' }}>
-    <div style={{ color: 'var(--panel-title-color)' }}>[system] Custom Window Manager registered.</div>
-    <div style={{ color: 'var(--panel-title-color)' }}>[system] Drag split lines or float tabs by right clicking.</div>
+  <div className="w-100 h-100 p-3 font-monospace" style={{ backgroundColor: 'var(--rdd-panel-card-bg)', color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <div style={{ color: 'var(--rdd-panel-title-color)' }}>[system] Custom Window Manager registered.</div>
+    <div style={{ color: 'var(--rdd-panel-title-color)' }}>[system] Drag split lines or float tabs by right clicking.</div>
     <div>[info] Floating windows cascade algorithms ready.</div>
     <div className="mt-2" style={{ fontWeight: 'bold' }}>$ npm run dev</div>
     <div style={{ opacity: 0.7 }}>  VITE v8.0.12  ready in 200 ms</div>
@@ -766,13 +766,13 @@ export const TerminalConsole: React.FC = () => (
 export const PreviewOutput: React.FC = () => {
   const [count, setCount] = useState(0);
   return (
-    <div className="w-100 h-100 p-3 bg-transparent d-flex flex-column justify-content-between" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent d-flex flex-column justify-content-between" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
       <div>
-        <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3" style={{ borderColor: 'var(--panel-card-border)' }}>
-          <h6 className="mb-0 font-monospace" style={{ fontSize: '0.8rem', color: 'var(--panel-title-color)' }}>live-preview-window</h6>
+        <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3" style={{ borderColor: 'var(--rdd-panel-card-border)' }}>
+          <h6 className="mb-0 font-monospace" style={{ fontSize: '0.8rem', color: 'var(--rdd-panel-title-color)' }}>live-preview-window</h6>
         </div>
-        <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)' }}>
-          <h6 className="mb-2" style={{ fontSize: '0.9rem', color: 'var(--panel-text)' }}>UI Sandbox Widget</h6>
+        <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--rdd-panel-card-bg)', border: '1px solid var(--rdd-panel-card-border)' }}>
+          <h6 className="mb-2" style={{ fontSize: '0.9rem', color: 'var(--rdd-panel-text)' }}>UI Sandbox Widget</h6>
           <div className="d-flex align-items-center gap-2 mt-3">
             <button
               type="button"
@@ -792,14 +792,14 @@ export const PreviewOutput: React.FC = () => {
 export const HelpCenter: React.FC = () => {
   const panelId = usePanelId();
   return (
-    <div className="w-100 h-100 p-4 bg-transparent" style={{ color: 'var(--panel-text)', opacity: 0.85, overflow: 'auto' }}>
-      <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }}>Workspace Guide</h5>
+    <div className="w-100 h-100 p-4 bg-transparent" style={{ color: 'var(--rdd-panel-text)', opacity: 0.85, overflow: 'auto' }}>
+      <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--rdd-panel-text)', borderColor: 'var(--rdd-panel-card-border)' }}>Workspace Guide</h5>
       <ul className="small d-flex flex-column gap-2 ps-3">
         <li><strong>Float Tabs:</strong> Click the "▢" in a tab header or right-click to float a docked tab.</li>
         <li><strong>Minimize:</strong> Minimize panels to see them slide into the macOS taskbar at the bottom.</li>
         <li><strong>Save & Restore:</strong> Save your customized layout to JSON and restore it instantly.</li>
       </ul>
-      <div className="mt-4 pt-3 border-top small font-monospace d-flex align-items-center gap-2" style={{ borderColor: 'var(--panel-card-border)' }}>
+      <div className="mt-4 pt-3 border-top small font-monospace d-flex align-items-center gap-2" style={{ borderColor: 'var(--rdd-panel-card-border)' }}>
         <span className="text-secondary" style={{ fontSize: '0.75rem' }}>usePanelId()</span>
         <span className="text-muted">→</span>
         <code className="text-info" style={{ fontSize: '0.75rem' }}>{panelId}</code>
@@ -844,9 +844,9 @@ export const LayerTree: React.FC = () => {
   };
 
   return (
-    <div className="w-100 h-100 p-3 bg-transparent" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
-      <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Layer Catalog Explorer</h6>
-      <div className="p-2 rounded mb-2 font-monospace small" style={{ background: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)', color: 'var(--panel-title-color)' }}>
+    <div className="w-100 h-100 p-3 bg-transparent" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+      <h6 className="border-bottom pb-2" style={{ color: 'var(--rdd-panel-title-color)', borderColor: 'var(--rdd-panel-card-border)' }}>Layer Catalog Explorer</h6>
+      <div className="p-2 rounded mb-2 font-monospace small" style={{ background: 'var(--rdd-panel-card-bg)', border: '1px solid var(--rdd-panel-card-border)', color: 'var(--rdd-panel-title-color)' }}>
         Active tool: <strong>{activeTool ?? 'none'}</strong>
       </div>
       <div className="d-flex gap-1 mb-1">
@@ -869,8 +869,8 @@ export const LayerTree: React.FC = () => {
       </div>
       <div className="d-flex flex-column gap-2 mt-3">
         {LAYER_DEFINITIONS.map(layer => (
-          <div key={layer.id} className="d-flex align-items-center justify-content-between p-2 rounded" style={{ backgroundColor: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)' }}>
-            <span className="font-monospace small" style={{ opacity: visibility[layer.id] ? 1 : 0.5, color: 'var(--panel-text)' }}>{layer.name}</span>
+          <div key={layer.id} className="d-flex align-items-center justify-content-between p-2 rounded" style={{ backgroundColor: 'var(--rdd-panel-card-bg)', border: '1px solid var(--rdd-panel-card-border)' }}>
+            <span className="font-monospace small" style={{ opacity: visibility[layer.id] ? 1 : 0.5, color: 'var(--rdd-panel-text)' }}>{layer.name}</span>
             <div className="form-check form-switch m-0">
               <input
                 className="form-check-input"
@@ -895,7 +895,7 @@ export const TimeControl: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [time, setTime] = useState(50);
   return (
-    <div className="w-100 h-100 p-3 bg-transparent d-flex align-items-center gap-3" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
+    <div className="w-100 h-100 p-3 bg-transparent d-flex align-items-center gap-3" style={{ color: 'var(--rdd-panel-text)', overflow: 'hidden' }}>
       <button
         type="button"
         onClick={() => setIsPlaying(!isPlaying)}
@@ -911,7 +911,7 @@ export const TimeControl: React.FC = () => {
           className="form-range"
         />
       </div>
-      <span className="font-monospace small" style={{ minWidth: '100px', color: 'var(--panel-title-color)' }}>
+      <span className="font-monospace small" style={{ minWidth: '100px', color: 'var(--rdd-panel-title-color)' }}>
         Frame: {time} / 100
       </span>
     </div>
@@ -928,8 +928,8 @@ export const OverviewMap: React.FC = () => (
 );
 
 export const TablePanel: React.FC = () => (
-  <div className="w-100 h-100 p-2 bg-transparent" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
-    <table className="table table-sm table-striped font-monospace" style={{ fontSize: '0.75rem', color: 'var(--panel-text)' }}>
+  <div className="w-100 h-100 p-2 bg-transparent" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <table className="table table-sm table-striped font-monospace" style={{ fontSize: '0.75rem', color: 'var(--rdd-panel-text)' }}>
       <thead>
         <tr>
           <th>ID</th>
@@ -948,8 +948,8 @@ export const TablePanel: React.FC = () => (
 );
 
 export const ToolPanel: React.FC = () => (
-  <div className="w-100 h-100 p-3 bg-transparent" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
-    <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Operations Toolbox</h6>
+  <div className="w-100 h-100 p-3 bg-transparent" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <h6 className="border-bottom pb-2" style={{ color: 'var(--rdd-panel-title-color)', borderColor: 'var(--rdd-panel-card-border)' }}>Operations Toolbox</h6>
     <div className="d-flex flex-wrap gap-2 mt-3">
       <button type="button" className="btn btn-sm btn-outline-primary font-monospace">Measure Line</button>
       <button type="button" className="btn btn-sm btn-outline-success font-monospace">Point Buffer</button>
@@ -1132,7 +1132,7 @@ const MockCameraFeed: React.FC<{ name: string; color: string }> = ({ name, color
 // ─── Static content components for managed floating windows ──────────────────
 
 const MapLegendContent: React.FC = () => (
-  <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
+  <div style={{ padding: '12px', fontSize: 12, color: 'var(--rdd-panel-text)' }}>
     {[
       { label: 'Cameras', color: '#38bdf8' },
       { label: 'Districts', color: '#a78bfa' },
@@ -1147,7 +1147,7 @@ const MapLegendContent: React.FC = () => (
 );
 
 const MapInfoContent: React.FC = () => (
-  <div style={{ padding: '12px', fontSize: 12, color: 'var(--panel-text)' }}>
+  <div style={{ padding: '12px', fontSize: 12, color: 'var(--rdd-panel-text)' }}>
     {[
       { label: 'Center', value: '51.505°N, 0.090°W' },
       { label: 'Zoom', value: '13' },
@@ -1507,7 +1507,7 @@ export const DirtyEditorDemoPanel: React.FC = () => {
   };
 
   const iconSave = (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
         <polyline points="17 21 17 13 7 13 7 21"/>
@@ -1516,7 +1516,7 @@ export const DirtyEditorDemoPanel: React.FC = () => {
     </span>
   );
   const iconReset = (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
         <path d="M3 3v5h5"/>
@@ -1636,7 +1636,7 @@ export const RTLShowcasePanel: React.FC = () => {
   return (
     <div
       className="w-100 h-100 p-3 d-flex flex-column gap-3 overflow-auto"
-      style={{ color: 'var(--panel-text)', fontFamily: isRtl ? '"Noto Sans Arabic", "Segoe UI", sans-serif' : 'inherit' }}
+      style={{ color: 'var(--rdd-panel-text)', fontFamily: isRtl ? '"Noto Sans Arabic", "Segoe UI", sans-serif' : 'inherit' }}
     >
       {/* Direction badge */}
       <div className="d-flex align-items-center gap-2">
@@ -1659,23 +1659,23 @@ export const RTLShowcasePanel: React.FC = () => {
 
       {/* Heading */}
       <div style={{ textAlign: 'start' }}>
-        <h5 className="mb-1 fw-bold" style={{ color: 'var(--accent-color)', textAlign: 'start' }}>{c.heading}</h5>
+        <h5 className="mb-1 fw-bold" style={{ color: 'var(--rdd-accent-color)', textAlign: 'start' }}>{c.heading}</h5>
         <p className="text-secondary mb-0 small" style={{ textAlign: 'start' }}>{c.subtitle}</p>
       </div>
 
       {/* Article card */}
-      <div className="rounded-3 p-3" style={{ background: 'var(--panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-panel)', textAlign: 'start' }}>
-        <h6 className="mb-2" style={{ color: 'var(--panel-title-color)', textAlign: 'start' }}>{c.article.title}</h6>
-        <p className="mb-2 small" style={{ lineHeight: '1.7', color: 'var(--panel-text)', textAlign: 'start' }}>{c.article.body}</p>
+      <div className="rounded-3 p-3" style={{ background: 'var(--rdd-panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--rdd-border-panel)', textAlign: 'start' }}>
+        <h6 className="mb-2" style={{ color: 'var(--rdd-panel-title-color)', textAlign: 'start' }}>{c.article.title}</h6>
+        <p className="mb-2 small" style={{ lineHeight: '1.7', color: 'var(--rdd-panel-text)', textAlign: 'start' }}>{c.article.body}</p>
         <small className="text-secondary fst-italic">{c.article.author}</small>
       </div>
 
       {/* Table */}
-      <div className="rounded-3 p-3" style={{ background: 'var(--panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-panel)', textAlign: 'start' }}>
-        <h6 className="mb-2" style={{ color: 'var(--panel-title-color)', textAlign: 'start' }}>{c.table.title}</h6>
-        <table className="table table-sm table-borderless mb-0 small" style={{ color: 'var(--panel-text)', textAlign: 'start' }}>
+      <div className="rounded-3 p-3" style={{ background: 'var(--rdd-panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--rdd-border-panel)', textAlign: 'start' }}>
+        <h6 className="mb-2" style={{ color: 'var(--rdd-panel-title-color)', textAlign: 'start' }}>{c.table.title}</h6>
+        <table className="table table-sm table-borderless mb-0 small" style={{ color: 'var(--rdd-panel-text)', textAlign: 'start' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-panel)' }}>
+            <tr style={{ borderBottom: '1px solid var(--rdd-border-panel)' }}>
               {c.table.headers.map((h, i) => (
                 <th key={i} className="py-1 text-secondary fw-normal" style={{ textAlign: 'start' }}>{h}</th>
               ))}
@@ -1683,7 +1683,7 @@ export const RTLShowcasePanel: React.FC = () => {
           </thead>
           <tbody>
             {c.table.rows.map((row, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid var(--border-panel, rgba(255,255,255,0.05))' }}>
+              <tr key={i} style={{ borderBottom: '1px solid var(--rdd-border-panel, rgba(255,255,255,0.05))' }}>
                 {row.map((cell, j) => (
                   <td key={j} className="py-1" style={{ textAlign: 'start' }}>{cell}</td>
                 ))}
@@ -1694,8 +1694,8 @@ export const RTLShowcasePanel: React.FC = () => {
       </div>
 
       {/* Form */}
-      <div className="rounded-3 p-3" style={{ background: 'var(--panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-panel)', textAlign: 'start' }}>
-        <h6 className="mb-2" style={{ color: 'var(--panel-title-color)', textAlign: 'start' }}>{c.form.title}</h6>
+      <div className="rounded-3 p-3" style={{ background: 'var(--rdd-panel-card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--rdd-border-panel)', textAlign: 'start' }}>
+        <h6 className="mb-2" style={{ color: 'var(--rdd-panel-title-color)', textAlign: 'start' }}>{c.form.title}</h6>
         <div className="d-flex flex-column gap-2">
           <div>
             <label className="form-label small text-secondary mb-1">{c.form.name}</label>
@@ -1714,7 +1714,7 @@ export const RTLShowcasePanel: React.FC = () => {
       </div>
 
       {/* Footer note */}
-      <div className="text-center small text-secondary fst-italic border-top pt-2" style={{ borderColor: 'var(--border-panel) !important' }}>
+      <div className="text-center small text-secondary fst-italic border-top pt-2" style={{ borderColor: 'var(--rdd-border-panel) !important' }}>
         {c.footer}
       </div>
     </div>

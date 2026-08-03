@@ -120,9 +120,9 @@ export const CodeEditor: React.FC = () => (
 );
 
 export const TerminalConsole: React.FC = () => (
-  <div className="w-100 h-100 p-3 font-monospace text-start" style={{ backgroundColor: 'var(--panel-card-bg)', color: 'var(--panel-text)', overflow: 'auto' }}>
-    <div style={{ color: 'var(--panel-title-color)' }}>[system] Custom Window Manager registered.</div>
-    <div style={{ color: 'var(--panel-title-color)' }}>[system] Drag split lines or float tabs by right clicking.</div>
+  <div className="w-100 h-100 p-3 font-monospace text-start" style={{ backgroundColor: 'var(--rdd-panel-card-bg)', color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <div style={{ color: 'var(--rdd-panel-title-color)' }}>[system] Custom Window Manager registered.</div>
+    <div style={{ color: 'var(--rdd-panel-title-color)' }}>[system] Drag split lines or float tabs by right clicking.</div>
     <div>[info] Floating windows cascade algorithms ready.</div>
     <div className="mt-2" style={{ fontWeight: 'bold' }}>$ npm run dev</div>
     <div style={{ opacity: 0.7 }}>  VITE v8.0.12  ready in 200 ms</div>
@@ -132,13 +132,13 @@ export const TerminalConsole: React.FC = () => (
 export const PreviewOutput: React.FC = () => {
   const [count, setCount] = useState(0);
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex flex-column justify-content-between" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex flex-column justify-content-between" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
       <div>
-        <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3" style={{ borderColor: 'var(--panel-card-border)' }}>
-          <h6 className="mb-0 font-monospace" style={{ fontSize: '0.8rem', color: 'var(--panel-title-color)' }}>live-preview-window</h6>
+        <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3" style={{ borderColor: 'var(--rdd-panel-card-border)' }}>
+          <h6 className="mb-0 font-monospace" style={{ fontSize: '0.8rem', color: 'var(--rdd-panel-title-color)' }}>live-preview-window</h6>
         </div>
-        <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)' }}>
-          <h6 className="mb-2" style={{ fontSize: '0.9rem', color: 'var(--panel-text)' }}>UI Sandbox Widget</h6>
+        <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--rdd-panel-card-bg)', border: '1px solid var(--rdd-panel-card-border)' }}>
+          <h6 className="mb-2" style={{ fontSize: '0.9rem', color: 'var(--rdd-panel-text)' }}>UI Sandbox Widget</h6>
           <div className="d-flex align-items-center gap-2 mt-3">
             <button
               type="button"
@@ -156,8 +156,8 @@ export const PreviewOutput: React.FC = () => {
 };
 
 export const HelpCenter: React.FC = () => (
-  <div className="w-100 h-100 p-4 bg-transparent text-start" style={{ color: 'var(--panel-text)', opacity: 0.85, overflow: 'auto' }}>
-    <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--panel-text)', borderColor: 'var(--panel-card-border)' }}>Workspace Guide</h5>
+  <div className="w-100 h-100 p-4 bg-transparent text-start" style={{ color: 'var(--rdd-panel-text)', opacity: 0.85, overflow: 'auto' }}>
+    <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--rdd-panel-text)', borderColor: 'var(--rdd-panel-card-border)' }}>Workspace Guide</h5>
     <ul className="small d-flex flex-column gap-2 ps-3">
       <li><strong>Float Tabs:</strong> Click the "▢" in a tab header or right-click to float a docked tab.</li>
       <li><strong>Minimize:</strong> Minimize panels to see them slide into the macOS taskbar at the bottom.</li>
@@ -167,12 +167,12 @@ export const HelpCenter: React.FC = () => (
 );
 
 export const LayerTree: React.FC = () => (
-  <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
-    <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Layer Catalog Explorer</h6>
+  <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <h6 className="border-bottom pb-2" style={{ color: 'var(--rdd-panel-title-color)', borderColor: 'var(--rdd-panel-card-border)' }}>Layer Catalog Explorer</h6>
     <div className="d-flex flex-column gap-2 mt-3">
       {['World Imagery (XYZ)', 'Terrain Grid (EPSG:4978)', 'Weather Overlay (WMS)', 'City Vector Model'].map((l, i) => (
-        <div key={l} className="d-flex align-items-center justify-content-between p-2 rounded" style={{ backgroundColor: 'var(--panel-card-bg)', border: '1px solid var(--panel-card-border)' }}>
-          <span className="font-monospace small" style={{ color: 'var(--panel-text)' }}>{l}</span>
+        <div key={l} className="d-flex align-items-center justify-content-between p-2 rounded" style={{ backgroundColor: 'var(--rdd-panel-card-bg)', border: '1px solid var(--rdd-panel-card-border)' }}>
+          <span className="font-monospace small" style={{ color: 'var(--rdd-panel-text)' }}>{l}</span>
           <div className="form-check form-switch m-0">
             <input className="form-check-input" type="checkbox" defaultChecked={i < 2} role="switch" />
           </div>
@@ -186,7 +186,7 @@ export const TimeControl: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [time, setTime] = useState(50);
   return (
-    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex align-items-center gap-3" style={{ color: 'var(--panel-text)', overflow: 'hidden' }}>
+    <div className="w-100 h-100 p-3 bg-transparent text-start d-flex align-items-center gap-3" style={{ color: 'var(--rdd-panel-text)', overflow: 'hidden' }}>
       <button
         type="button"
         onClick={() => setIsPlaying(!isPlaying)}
@@ -202,7 +202,7 @@ export const TimeControl: React.FC = () => {
           className="form-range"
         />
       </div>
-      <span className="font-monospace small" style={{ minWidth: '100px', color: 'var(--panel-title-color)' }}>
+      <span className="font-monospace small" style={{ minWidth: '100px', color: 'var(--rdd-panel-title-color)' }}>
         Frame: {time} / 100
       </span>
     </div>
@@ -219,8 +219,8 @@ export const OverviewMap: React.FC = () => (
 );
 
 export const TablePanel: React.FC = () => (
-  <div className="w-100 h-100 p-2 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
-    <table className="table table-sm table-striped font-monospace" style={{ fontSize: '0.75rem', color: 'var(--panel-text)' }}>
+  <div className="w-100 h-100 p-2 bg-transparent text-start" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <table className="table table-sm table-striped font-monospace" style={{ fontSize: '0.75rem', color: 'var(--rdd-panel-text)' }}>
       <thead>
         <tr>
           <th>ID</th>
@@ -239,8 +239,8 @@ export const TablePanel: React.FC = () => (
 );
 
 export const ToolPanel: React.FC = () => (
-  <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--panel-text)', overflow: 'auto' }}>
-    <h6 className="border-bottom pb-2" style={{ color: 'var(--panel-title-color)', borderColor: 'var(--panel-card-border)' }}>Operations Toolbox</h6>
+  <div className="w-100 h-100 p-3 bg-transparent text-start" style={{ color: 'var(--rdd-panel-text)', overflow: 'auto' }}>
+    <h6 className="border-bottom pb-2" style={{ color: 'var(--rdd-panel-title-color)', borderColor: 'var(--rdd-panel-card-border)' }}>Operations Toolbox</h6>
     <div className="d-flex flex-wrap gap-2 mt-3">
       <button type="button" className="btn btn-sm btn-outline-primary font-monospace">Measure Line</button>
       <button type="button" className="btn btn-sm btn-outline-success font-monospace">Point Buffer</button>
