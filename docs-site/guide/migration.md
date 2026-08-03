@@ -21,6 +21,8 @@ v5.0.0 closes gaps found in two audits: a core-API review, and a framework-agnos
 
 4. **Animations are now enabled by default.** Previously, every transition/animation on your *entire page* was force-disabled unless `<html>` had an undocumented `enable-animations` class — something only the demo apps' own UI ever set. If you were relying on animations being off by default, pass `<WindowManager animations={false} />`.
 
+5. **`<Sidebar>`'s deprecated `drawerWidth` (string) prop has been removed.** It was deprecated in v3.1.0 in favor of `defaultWidth` (number, pixels) and has been unused internally since. Replace `drawerWidth="280px"` with `defaultWidth={280}`. Separately, `defaultWidth`'s own default (when omitted entirely) changed from `220` to `280` — a better fit for typical drawer content (forms, labeled toggles, card metadata) without feeling cramped.
+
 ### Not breaking
 
 - `WorkspaceClient`'s new methods, `SerializedLayout.version`, `startPointerDrag()`/`computeResizedRect()`, `useColorScheme()`, `usePanelSize()`, and `zIndexBase` are all purely additive.
@@ -32,6 +34,7 @@ v5.0.0 closes gaps found in two audits: a core-API review, and a framework-agnos
 2. If you call any of the five hooks in #1 above outside `DockableDesktopProvider`, wrap them in it (or the specific provider they need).
 3. If you have custom CSS targeting the library's classes/variables, apply the rename pattern in #2.
 4. If you were relying on animations being off by default with no `enable-animations` class anywhere, pass `<WindowManager animations={false} />`.
+5. Replace any `<Sidebar drawerWidth="Npx">` with `<Sidebar defaultWidth={N}>`.
 
 ---
 

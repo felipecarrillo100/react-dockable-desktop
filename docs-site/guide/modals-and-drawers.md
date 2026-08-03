@@ -201,7 +201,7 @@ const sidebarRef = useRef<SidebarHandle>(null);
 <Sidebar
   ref={sidebarRef}
   position="right"
-  drawerWidth="280px"
+  defaultWidth={280}
   tabs={[
     {
       id: 'layers',
@@ -241,7 +241,7 @@ const sidebarRef = useRef<SidebarHandle>(null);
 |------|------|---------|-------------|
 | `tabs` | `SidebarTab[]` | — | **Required.** Tab definitions. |
 | `position` | `'left' \| 'right'` | `'right'` | Side the tab strip and drawer appear on. |
-| `defaultWidth` | `number` | `220` | Initial drawer width in pixels. |
+| `defaultWidth` | `number` | `280` | Initial drawer width in pixels. |
 | `minWidth` | `number` | `150` | Minimum drawer width in pixels during drag-resize. |
 | `maxWidth` | `number` | `600` | Maximum drawer width in pixels during drag-resize. |
 | `onWidthChange` | `(px: number) => void` | — | Called during drag-resize and when `setWidth()` is invoked. |
@@ -252,7 +252,6 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | `stripVisible` | `boolean` | `true` | Collapse only the activity bar strip, leaving the drawer unaffected. |
 | `onStripVisibilityChange` | `(visible: boolean) => void` | — | Called when `showStrip/hideStrip` is invoked on the imperative handle. |
 | `children` | `ReactNode` | — | Main content (rendered in the area beside the sidebar). |
-| ~~`drawerWidth`~~ | `string` | — | **Deprecated.** Use `defaultWidth` (number, pixels) instead. |
 
 **Active tab styling** — The visual treatment of the active tab button (shape, fill, indicator) is controlled entirely by CSS design tokens and varies per skin. `vscode` uses a transparent fill with a 2 px accent bar; `macos` renders a floating glass chip; `nord` draws a short horizontal line below the icon. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) to customise this in your own skin.
 
