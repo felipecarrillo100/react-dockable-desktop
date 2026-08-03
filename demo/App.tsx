@@ -206,13 +206,13 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
     document.documentElement.setAttribute('data-color-scheme', theme);
     document.documentElement.setAttribute('data-bs-theme', theme); // Bootstrap needs its own attribute for bg-body-* variables
     if (theme === 'light') {
-      document.documentElement.style.setProperty('--bg-primary', '#f8f9fa');
-      document.documentElement.style.setProperty('--bg-workspace', '#e9ecef');
-      document.documentElement.style.setProperty('--text-primary', '#212529');
+      document.documentElement.style.setProperty('--rdd-bg-primary', '#f8f9fa');
+      document.documentElement.style.setProperty('--rdd-bg-workspace', '#e9ecef');
+      document.documentElement.style.setProperty('--rdd-text-primary', '#212529');
     } else {
-      document.documentElement.style.setProperty('--bg-primary', '#090a0f');
-      document.documentElement.style.setProperty('--bg-workspace', '#0f1015');
-      document.documentElement.style.setProperty('--text-primary', '#f8f9fa');
+      document.documentElement.style.setProperty('--rdd-bg-primary', '#090a0f');
+      document.documentElement.style.setProperty('--rdd-bg-workspace', '#0f1015');
+      document.documentElement.style.setProperty('--rdd-text-primary', '#f8f9fa');
     }
   }, [theme]);
 
@@ -1042,7 +1042,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                 value={skin}
                 onChange={(e) => setSkin(e.target.value)}
                 className="form-select form-select-sm font-monospace"
-                style={{ width: '130px', fontSize: '0.75rem', backgroundColor: 'var(--bg-panel)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}
+                style={{ width: '130px', fontSize: '0.75rem', backgroundColor: 'var(--rdd-bg-panel)', color: 'var(--rdd-text-primary)', borderColor: 'var(--rdd-border-color)' }}
                 title="Select Workspace Preset Skin"
               >
                 <option value="vscode">VS Code</option>
