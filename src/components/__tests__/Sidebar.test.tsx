@@ -14,8 +14,8 @@
  * - SB12: Imperative handle closeDrawer() closes the drawer
  * - SB13: Imperative handle show/hide/toggle calls onVisibilityChange
  * - SB14: getActiveTab() returns the current tab or null
- * - SB15: useSidebar() outside Sidebar returns no-op + console.warn
- * - SB16: useSidebarTab() outside Sidebar returns no-op + console.warn
+ * - SB15: useSidebar() outside Sidebar throws
+ * - SB16: useSidebarTab() outside Sidebar throws
  * - SB17: position='left' places strip before drawer in DOM order
  * - SB18: onActiveTabChange is called when tab selection changes
  * - SB19: defaultWidth initializes drawer width in pixels
@@ -334,46 +334,39 @@ describe('SB11-SB14: Imperative handle', () => {
 
 // ─── SB15: useSidebar() outside Sidebar ──────────────────────────────────────
 
-describe('SB15: useSidebar() outside Sidebar returns no-op + console.warn', () => {
-  it('warns and returns no-op', () => {
-    let ctx: ReturnType<typeof useSidebar> | null = null;
+describe('SB15: useSidebar() outside Sidebar throws', () => {
+  it('throws when rendered outside a Sidebar tree', () => {
     const Probe: React.FC = () => {
-      ctx = useSidebar();
+      useSidebar();
       return null;
     };
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    act(() => {
-      root = createRoot(container);
-      root.render(<Probe />);
-    });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('useSidebar()'));
-    expect(ctx!.getActiveTab()).toBeNull();
-    expect(() => ctx!.openTab('x')).not.toThrow();
-    expect(() => ctx!.closeDrawer()).not.toThrow();
-    warnSpy.mockRestore();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => {
+      act(() => {
+        root = createRoot(container);
+        root.render(<Probe />);
+      });
+    }).toThrow('useSidebar must be used within Sidebar');
+    errorSpy.mockRestore();
   });
 });
 
 // ─── SB16: useSidebarTab() outside Sidebar ───────────────────────────────────
 
-describe('SB16: useSidebarTab() outside Sidebar returns no-op + console.warn', () => {
-  it('warns and returns no-op with empty tabId', () => {
-    let ctx: ReturnType<typeof useSidebarTab> | null = null;
+describe('SB16: useSidebarTab() outside Sidebar throws', () => {
+  it('throws when rendered outside a Sidebar tab renderContent tree', () => {
     const Probe: React.FC = () => {
-      ctx = useSidebarTab();
+      useSidebarTab();
       return null;
     };
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    act(() => {
-      root = createRoot(container);
-      root.render(<Probe />);
-    });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('useSidebarTab()'));
-    expect(ctx!.tabId).toBe('');
-    expect(() => ctx!.onOpen()).not.toThrow();
-    expect(() => ctx!.onClose()).not.toThrow();
-    expect(() => ctx!.openTab('x')).not.toThrow();
-    warnSpy.mockRestore();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => {
+      act(() => {
+        root = createRoot(container);
+        root.render(<Probe />);
+      });
+    }).toThrow('useSidebarTab must be used within a Sidebar tab renderContent tree');
+    errorSpy.mockRestore();
   });
 });
 

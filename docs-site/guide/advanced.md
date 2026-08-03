@@ -51,9 +51,9 @@ The `initialState` is read **once at construction time** — it is not reactive.
 
 ## Zero-unmount DOM preservation
 
-Heavy widgets (WebGL contexts, Leaflet maps, CodeMirror instances) maintain their DOM nodes when a panel is hidden, minimized, or covered by another tab. The library moves the DOM subtree into a hidden container (`#preserved-dom-container`) rather than unmounting it.
+Heavy widgets (WebGL contexts, Leaflet maps, CodeMirror instances) keep their DOM nodes — and everything alive inside them — across all three ways a panel's visibility can change: **docking** it into a different tab group, **floating** it into a detached window, and **switching tabs** to cover it. The library moves the DOM subtree into a hidden container (`#preserved-dom-container`) rather than unmounting it, in every case.
 
-This is automatic — you do not need to configure anything. The implication is that your panel components should be written to tolerate visibility changes without relying on mount/unmount cycles.
+This is automatic and unconditional — by default, across all three transitions simultaneously, with no configuration and no integration work. The implication is that your panel components should be written to tolerate visibility changes without relying on mount/unmount cycles.
 
 If you need to react to visibility, use the lifecycle hooks:
 

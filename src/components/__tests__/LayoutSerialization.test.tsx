@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
 import { PanelRegistry } from '../PanelRegistry';
+import { WorkspaceClient } from '../../WorkspaceClient';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
 PanelRegistry.register('map', MockPanel);
@@ -184,5 +185,63 @@ describe('Layout Serialization (saveLayout / loadLayout)', () => {
     expect(lastState.panels['cycle-panel']).toBeDefined();
     expect(JSON.parse(snap1).panels['cycle-panel'].title)
       .toBe(JSON.parse(snap2).panels['cycle-panel'].title);
+  });
+
+  it('saveLayout stamps a version field', () => {
+    mount();
+    const snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.version).toBe(1);
+  });
+
+  it('loadLayout accepts a legacy layout with no version field at all', () => {
+    mount();
+    const legacyLayout = JSON.stringify({
+      gridRoot: { type: 'leaf', id: 'legacy-leaf', panels: ['legacy-panel'], activePanelId: 'legacy-panel' },
+      floating: [], minimized: [],
+      panels: { 'legacy-panel': { id: 'legacy-panel', title: 'Legacy', component: 'map', state: 'docked' } },
+    });
+    act(() => { lastActions.loadLayout(legacyLayout); });
+    expect(lastState.panels['legacy-panel']).toBeDefined();
+  });
+
+  it('loadLayout migrates legacy stickyRight/stickyBottom flags to anchor', () => {
+    mount();
+    const legacyLayout = JSON.stringify({
+      gridRoot: { type: 'leaf', id: 'root', panels: [], activePanelId: null },
+      floating: [
+        { id: 'sticky-1', x: 10, y: 20, width: 300, height: 200, z: 1, stickyRight: true, stickyBottom: false },
+      ],
+      minimized: [], panels: {},
+    });
+    act(() => { lastActions.loadLayout(legacyLayout); });
+    const win = lastState.floating.find((w: any) => w.id === 'sticky-1');
+    expect(win.anchor).toBe('top-right');
+    expect(win.stickyRight).toBeUndefined();
+    expect(win.stickyBottom).toBeUndefined();
+  });
+
+  it('parseInitialState (via WorkspaceClient.initialState) migrates stickyRight/stickyBottom identically to loadLayout', () => {
+    // Before this refactor, initialState bypassed the migration loadLayout applied —
+    // this test locks in that both entry points now share the same code path.
+    const legacyLayout = JSON.stringify({
+      gridRoot: { type: 'leaf', id: 'root', panels: [], activePanelId: null },
+      floating: [
+        { id: 'sticky-initial', x: 10, y: 20, width: 300, height: 200, z: 1, stickyRight: true, stickyBottom: true },
+      ],
+      minimized: [], panels: {},
+    });
+    const client = new WorkspaceClient({ panels: { map: { component: MockPanel } }, initialState: legacyLayout });
+    act(() => {
+      root = createRoot(container!);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <StateExtractor />
+        </WindowManagerProvider>
+      );
+    });
+    const win = lastState.floating.find((w: any) => w.id === 'sticky-initial');
+    expect(win.anchor).toBe('bottom-right');
+    expect(win.stickyRight).toBeUndefined();
+    expect(win.stickyBottom).toBeUndefined();
   });
 });

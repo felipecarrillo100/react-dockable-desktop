@@ -17,6 +17,8 @@ import type { FormContainerContract, ContainerType } from './FormContainerContex
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 import { flipZoneHorizontal } from './anchorGeometry';
+import { startPointerDrag, computeResizedRect } from './dragResize';
+import type { ResizeDir } from './dragResize';
 
 const findLeaf = (node: LayoutNode | null, leafId: string): LayoutLeafNode | null => {
   if (!node) return null;
@@ -450,41 +452,31 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
   const handleResizerPointerDown = (idx: number, e: React.PointerEvent) => {
     e.preventDefault();
     const resizerEl = e.currentTarget as HTMLDivElement;
-    resizerEl.setPointerCapture(e.pointerId);
-
-    const startOffset = isRow ? e.clientX : e.clientY;
-    const startSizes = [...node.sizes];
-
-    resizerEl.classList.add('active');
-    document.body.classList.add('resizing-active', isRow ? 'resizing-col-active' : 'resizing-row-active');
-
     const parentEl = resizerEl.parentElement;
     const parentSize = parentEl
       ? (isRow ? parentEl.clientWidth : parentEl.clientHeight)
       : (isRow ? 1000 : 800);
 
-    const onMove = (me: PointerEvent) => {
-      const delta = (isRow ? me.clientX : me.clientY) - startOffset;
-      const deltaPercentage = delta / parentSize;
-      const newSizes = [...startSizes];
-      newSizes[idx] += deltaPercentage;
-      newSizes[idx + 1] -= deltaPercentage;
-      if (newSizes[idx] > 0.1 && newSizes[idx + 1] > 0.1) {
-        updateSplitSizes(path, newSizes);
-      }
-    };
-
-    const onEnd = () => {
-      resizerEl.classList.remove('active');
-      document.body.classList.remove('resizing-active', 'resizing-row-active', 'resizing-col-active');
-      resizerEl.removeEventListener('pointermove', onMove);
-      resizerEl.removeEventListener('pointerup', onEnd);
-      resizerEl.removeEventListener('pointercancel', onEnd);
-    };
-
-    resizerEl.addEventListener('pointermove', onMove);
-    resizerEl.addEventListener('pointerup', onEnd);
-    resizerEl.addEventListener('pointercancel', onEnd);
+    startPointerDrag({
+      element: resizerEl,
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      captureStart: () => [...node.sizes],
+      activeClasses: [
+        { el: resizerEl, classes: ['active'] },
+        { el: document.body, classes: ['resizing-active', isRow ? 'resizing-col-active' : 'resizing-row-active'] },
+      ],
+      onMove: (dx, dy, startSizes) => {
+        const deltaPercentage = (isRow ? dx : dy) / parentSize;
+        const newSizes = [...startSizes];
+        newSizes[idx] += deltaPercentage;
+        newSizes[idx + 1] -= deltaPercentage;
+        if (newSizes[idx] > 0.1 && newSizes[idx + 1] > 0.1) {
+          updateSplitSizes(path, newSizes);
+        }
+      },
+    });
   };
 
   return (
@@ -1513,8 +1505,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     }
   };
 
-  type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
-
   // Floating Window resizing handler — supports 8 directions
   const startResize = (id: string, dir: ResizeDir, e: React.PointerEvent) => {
     e.stopPropagation();
@@ -1523,15 +1513,13 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     focusPanel(id);
 
     const el = e.currentTarget as HTMLDivElement;
-    el.setPointerCapture(e.pointerId);
-
-    const startX = e.clientX;
-    const startY = e.clientY;
     const windowEl = el.closest('.floating-window') as HTMLDivElement | null;
-    const startW = windowEl ? windowEl.offsetWidth : 400;
-    const startH = windowEl ? windowEl.offsetHeight : 300;
-    const startPosX = windowEl ? windowEl.offsetLeft : 0;
-    const startPosY = windowEl ? windowEl.offsetTop : 0;
+    const startRect = {
+      x: windowEl ? windowEl.offsetLeft : 0,
+      y: windowEl ? windowEl.offsetTop : 0,
+      w: windowEl ? windowEl.offsetWidth : 400,
+      h: windowEl ? windowEl.offsetHeight : 300,
+    };
 
     const viewW = workspaceSize.width;
     const viewH = workspaceSize.height;
@@ -1542,45 +1530,31 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const isRightSnapped = dir === 'se' && Math.abs(parsedX + parsedW - viewW) < 4;
     const isBottomSnapped = dir === 'se' && Math.abs(parsedY + parsedH - viewH) < 4;
 
-    const onMove = (me: PointerEvent) => {
-      const dx = me.clientX - startX;
-      const dy = me.clientY - startY;
+    startPointerDrag({
+      element: el,
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      captureStart: () => startRect,
+      // No maxW/maxH/minX/minY: this window is intentionally allowed to grow
+      // unbounded and be dragged fully off-screen, same as before this refactor.
+      onMove: (dx, dy, start) => {
+        const resized = computeResizedRect(dir, dx, dy, start, { minW: 200, minH: 150 });
+        let { x: newX, y: newY, w: newW, h: newH } = resized;
 
-      let newX = startPosX;
-      let newY = startPosY;
-      let newW = startW;
-      let newH = startH;
+        // Snap adjustments for SE corner when previously snapped to workspace edges
+        if (isRightSnapped) {
+          newX = viewW - newW;
+          if (newX < 0) { newX = 0; newW = viewW; }
+        }
+        if (isBottomSnapped) {
+          newY = viewH - newH;
+          if (newY < 0) { newY = 0; newH = viewH; }
+        }
 
-      if (dir.includes('e')) newW = Math.max(200, startW + dx);
-      if (dir.includes('w')) { newW = Math.max(200, startW - dx); newX = startPosX + startW - newW; }
-      if (dir.includes('s')) newH = Math.max(150, startH + dy);
-      if (dir.includes('n')) { newH = Math.max(150, startH - dy); newY = startPosY + startH - newH; }
-
-      // Snap adjustments for SE corner when previously snapped to workspace edges
-      if (isRightSnapped) {
-        newX = viewW - newW;
-        if (newX < 0) { newX = 0; newW = viewW; }
-      }
-      if (isBottomSnapped) {
-        newY = viewH - newH;
-        if (newY < 0) { newY = 0; newH = viewH; }
-      }
-
-      updateFloatingPosition(id, {
-        x: newX, y: newY,
-        width: newW, height: newH,
-      });
-    };
-
-    const onEnd = () => {
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', onEnd);
-      el.removeEventListener('pointercancel', onEnd);
-    };
-
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onEnd);
-    el.addEventListener('pointercancel', onEnd);
+        updateFloatingPosition(id, { x: newX, y: newY, width: newW, height: newH });
+      },
+    });
   };
 
   // horizontal scroll for minimized taskbar

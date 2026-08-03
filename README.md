@@ -1,13 +1,13 @@
     # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v4.3.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v5.0.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
 [![Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/demo/)
 [![Docs](https://img.shields.io/badge/docs-site-blue.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/)
 
-A premium dockable layout engine for React. Build desktop-class applications with fluid split-docking grids, tabbed panels, resizable floating windows, and **zero-unmount DOM preservation** — so WebGL contexts, live maps, and stateful editors never lose their state when moved or re-tabbed.
+A premium dockable layout engine for React. Build desktop-class applications with fluid split-docking grids, tabbed panels, resizable floating windows, and **zero-unmount DOM preservation** — by default, across docking, floating, *and* tab-switching alike, so WebGL contexts, live maps, and stateful editors never lose their state no matter how a panel is moved.
 
 **[Live Demo](https://felipecarrillo100.github.io/react-dockable-desktop/demo/)** &nbsp;|&nbsp;
 **[Full Documentation](https://felipecarrillo100.github.io/react-dockable-desktop/)** &nbsp;|&nbsp;
@@ -22,7 +22,7 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 - **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
 - **Panel Overlay** — per-panel overlay layer with anchored toolbars (`PanelToolbar`, `ToolbarButton`, `ToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; `usePanelFloatingWindowManager()` opens N named windows dynamically from data or event handlers
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
-- **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed; WebGL, maps, terminals, and forms retain full state
+- **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed, across docking, floating, and tab-switching alike, all by default; WebGL, maps, terminals, and forms retain full state with zero integration work
 - **i18n & RTL** — full Right-to-Left layout support; `dir="rtl"` flips every control, tab order, and drop zone automatically
 - **Inter-Panel Pub/Sub** — lightweight typed event bus for decoupled panel-to-panel communication
 - **Imperative API** — `WorkspaceClient` opens, closes, focuses, and serializes panels from anywhere — inside or outside React

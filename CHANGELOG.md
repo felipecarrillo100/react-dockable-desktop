@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] — 2026-08-03
+
+### Changed
+- **BREAKING: `useSidebar()`, `useSidebarTab()`, `useToolbar()`, `usePanelContribution()`, and `useActivePanelContribution()` now throw when used outside their required provider**, instead of silently returning a no-op object (and logging a `console.warn`). This aligns them with `useWindowManagerActions()`, `useWindowManagerState()`, `usePanelState()`, `usePanelActions()`, and `useShowContextMenu()`, which already threw — previously, "does this hook throw or degrade gracefully?" had no learnable rule and depended on which hook you were looking at. `DockableDesktopProvider` already wraps every provider these hooks need, so apps using it are unaffected; only code calling one of the five listed hooks with **no** ancestor provider at all needs to add one (or catch the resulting error, if graceful degradation outside a provider is genuinely required).
+
+### Added
+- **`WorkspaceClient` now mirrors the full `WindowActions` interface** — added `updateSplitSizes`, `updateFloatingPosition`, `setDraggedPanelId`, `dockPanelToGroup`, `movePanelOrder`, `closeLeafGroup`, `registerCloseGuard`, `unregisterCloseGuard`, `setPanelDirty`, `updatePanelTitle`, `requestClosePanel`, `dockPanelToWorkspaceEdge`, and `showContextMenu`. Previously 13 of the ~28 actions available via `useWindowManagerActions()` had no equivalent on `WorkspaceClient`, so code built entirely against the imperative client (rather than hooks) could hit an unexpected capability gap.
+- **Serialized layouts now carry a `version` field** (`SerializedLayout` type, currently `1`) — purely additive; layouts saved before this change (with no `version` field) still load correctly. This gives the *next* breaking change to the layout JSON shape a clean version to branch on, instead of another ad hoc field-presence sniff like the existing `stickyRight`/`stickyBottom` → `anchor` migration.
+
+### Fixed
+- **`WorkspaceClient.initialState` silently skipped the `stickyRight`/`stickyBottom` → `anchor` migration that `loadLayout()` already applied** — the two entry points independently duplicated their shape-checking logic, and only one of the two copies had the migration. Both now share a single `parseLayoutPayload()` function, so a legacy-format layout behaves identically regardless of which entry point loads it.
+- **Four independent implementations of "pointer-capture drag, resize on move" had quietly drifted apart** — the workspace grid split resizer, the sidebar drawer resizer, and two separate floating-window 8-direction resize-handle implementations (one in `WindowManager`, one in `PanelOverlay`) each hand-rolled the same mechanics. This is the same class of drift that caused the docked-panel resize bug fixed in 4.3.0 (a property present in one implementation's inline styles but missing in the other). All four now share `startPointerDrag()` and `computeResizedRect()` (`src/components/dragResize.ts`) for the pointer-capture/delta/cleanup mechanics and the 8-directional resize math respectively — behavior is unchanged for every existing call site (verified: unbounded floating-window growth stays unbounded, container-clamped `PanelOverlay` resizing stays clamped, grid/drawer resize math is bit-for-bit the same).
+
 ## [4.3.0] — 2026-08-02
 
 ### Added
@@ -172,7 +185,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.3.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.3.0...v5.0.0
 [4.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.2...v4.3.0
 [4.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.1...v4.2.2
 [4.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.0.0...v4.2.0

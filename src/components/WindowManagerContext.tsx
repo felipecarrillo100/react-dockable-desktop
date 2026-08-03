@@ -472,17 +472,54 @@ const EMPTY_LEAF: LayoutLeafNode = {
   activePanelId: null,
 };
 
+/** The on-disk shape produced by `saveLayout()` and accepted by `loadLayout()`/`initialState`. */
+export interface SerializedLayout {
+  /** Schema version — absent on layouts saved before this field was introduced (treated as 0). */
+  version?: number;
+  gridRoot: LayoutNode;
+  floating: FloatingWindow[];
+  minimized: { id: string; title: string | ContextMenuPredefinedMessage; component: string }[];
+  panels: Record<string, PanelInfo>;
+}
+
+type ParsedLayoutPayload = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'minimized' | 'panels'>;
+
+/**
+ * Shared shape-check + migration for a parsed (but not yet validated) layout payload,
+ * used by both `parseInitialState` (the `initialState`/`WorkspaceClient.initialState`
+ * entry point) and `loadLayout` — previously these duplicated the check independently
+ * and only one of them ran the stickyRight/stickyBottom migration, so a layout fed
+ * through `initialState` silently skipped it. `version` is read but not yet branched on
+ * — it's read here so a future migration has a version to gate on without needing
+ * another ad hoc field-presence sniff like this one.
+ */
+function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
+  if (!parsed || !parsed.gridRoot || !Array.isArray(parsed.floating) || !Array.isArray(parsed.minimized) || !parsed.panels) {
+    return null;
+  }
+  // const version = typeof parsed.version === 'number' ? parsed.version : 0; // reserved for future migrations
+  const floating = (parsed.floating as any[]).map((fw: any) => {
+    if ('stickyRight' in fw || 'stickyBottom' in fw) {
+      const anchor: FloatAnchor | null = fw.stickyRight && fw.stickyBottom ? 'bottom-right'
+        : fw.stickyRight ? 'top-right'
+        : fw.stickyBottom ? 'bottom-left'
+        : null;
+      const { stickyRight: _sr, stickyBottom: _sb, ...rest } = fw;
+      return { ...rest, anchor };
+    }
+    return fw;
+  });
+  return { gridRoot: parsed.gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels };
+}
+
 function parseInitialState(json: string | null): Pick<WindowState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
   if (json) {
     try {
-      const parsed = JSON.parse(json);
-      if (parsed.gridRoot && Array.isArray(parsed.floating) && Array.isArray(parsed.minimized) && parsed.panels) {
+      const payload = parseLayoutPayload(JSON.parse(json));
+      if (payload) {
         return {
-          gridRoot: parsed.gridRoot,
-          floating: parsed.floating,
-          minimized: parsed.minimized,
-          panels: parsed.panels,
-          activePanelId: Object.keys(parsed.panels)[0] ?? null,
+          ...payload,
+          activePanelId: Object.keys(payload.panels)[0] ?? null,
         };
       }
     } catch {
@@ -1330,43 +1367,31 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, []);
 
   const saveLayout = useCallback(() => {
-    return JSON.stringify({
+    const payload: SerializedLayout = {
+      version: 1,
       gridRoot: stateRef.current.gridRoot,
       floating: stateRef.current.floating,
       minimized: stateRef.current.minimized,
       panels: stateRef.current.panels
-    });
+    };
+    return JSON.stringify(payload);
   }, []);
 
   const loadLayout = useCallback((layoutJson: string): boolean => {
     try {
-      const parsed = JSON.parse(layoutJson);
-      if (parsed.gridRoot && parsed.floating && parsed.minimized && parsed.panels) {
-        // Migrate old stickyRight/stickyBottom flags to anchor
-        const migratedFloating = (parsed.floating as any[]).map((fw: any) => {
-          if ('stickyRight' in fw || 'stickyBottom' in fw) {
-            const anchor: FloatAnchor | null = fw.stickyRight && fw.stickyBottom ? 'bottom-right'
-              : fw.stickyRight ? 'top-right'
-              : fw.stickyBottom ? 'bottom-left'
-              : null;
-            const { stickyRight: _sr, stickyBottom: _sb, ...rest } = fw;
-            return { ...rest, anchor };
-          }
-          return fw;
-        });
-        const firstActive = Object.keys(parsed.panels)[0] || null;
-        setState(prev => ({
-          ...prev,
-          gridRoot: parsed.gridRoot,
-          floating: migratedFloating,
-          minimized: parsed.minimized,
-          panels: parsed.panels,
-          draggedPanelId: null,
-          activePanelId: firstActive
-        }));
-        return true;
-      }
-      return false;
+      const payload = parseLayoutPayload(JSON.parse(layoutJson));
+      if (!payload) return false;
+      const firstActive = Object.keys(payload.panels)[0] || null;
+      setState(prev => ({
+        ...prev,
+        gridRoot: payload.gridRoot,
+        floating: payload.floating,
+        minimized: payload.minimized,
+        panels: payload.panels,
+        draggedPanelId: null,
+        activePanelId: firstActive
+      }));
+      return true;
     } catch (e) {
       console.error('Failed to parse layout configuration:', e);
       return false;

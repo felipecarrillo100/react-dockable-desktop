@@ -40,19 +40,10 @@ export const ToolbarProvider: React.FC<{ children: React.ReactNode }> = ({ child
  * Returns toolbar state and control functions from anywhere inside
  * a `<DockableDesktopProvider>` tree.
  *
- * Returns a no-op object with a console warning when called outside the provider.
+ * @throws Error if used outside of a {@link DockableDesktopProvider}.
  */
 export function useToolbar(): ToolbarContextValue {
   const ctx = useContext(ToolbarContext);
-  if (!ctx) {
-    console.warn('useToolbar() called outside <DockableDesktopProvider>. Returning no-op.');
-    return {
-      getActiveInGroup: () => null,
-      setActiveInGroup: () => {},
-      isModifierActive: () => false,
-      setModifierActive: () => {},
-      toggleModifier: () => {},
-    };
-  }
+  if (!ctx) throw new Error('useToolbar must be used within DockableDesktopProvider');
   return ctx;
 }

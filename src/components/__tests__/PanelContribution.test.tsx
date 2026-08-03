@@ -7,8 +7,8 @@
  *        preserved exactly when switching away and back (the core use case)
  * - PC5: Unmounting the active panel clears its contribution
  * - PC6: A panel can contribute multiple sidebar sections at once
- * - PC7: usePanelContribution() outside provider warns and no-ops
- * - PC8: useActivePanelContribution() outside provider warns and returns null
+ * - PC7: usePanelContribution() outside provider throws
+ * - PC8: useActivePanelContribution() outside provider throws
  * - PC9: sidebarSectionToTab() converts, using fallbackIcon when section.icon is omitted
  * - PC10: useMergedToolbarItems() appends contributed items behind a separator, unchanged when empty
  * - PC11: useMergedSidebarTabs() appends contributed sections as tabs, unchanged when empty
@@ -211,46 +211,46 @@ describe('PanelContribution', () => {
     expect(lastContribution).toBeNull();
   });
 
-  it('PC7: usePanelContribution() outside provider warns and no-ops', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('PC7: usePanelContribution() outside provider throws', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const Publisher: React.FC = () => {
       usePanelContribution({ toolbarItems: [] });
       return null;
     };
-    act(() => {
-      root = createRoot(container!);
-      root.render(
-        <WindowManagerProvider>
-          <PanelProvider>
-            <Publisher />
-          </PanelProvider>
-        </WindowManagerProvider>
-      );
-    });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('usePanelContribution()'));
-    warnSpy.mockRestore();
+    expect(() => {
+      act(() => {
+        root = createRoot(container!);
+        root.render(
+          <WindowManagerProvider>
+            <PanelProvider>
+              <Publisher />
+            </PanelProvider>
+          </WindowManagerProvider>
+        );
+      });
+    }).toThrow('usePanelContribution must be used within PanelContributionProvider');
+    errorSpy.mockRestore();
   });
 
-  it('PC8: useActivePanelContribution() outside provider warns and returns null', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    let result: PanelContribution | null = { toolbarItems: [] }; // sentinel, must become null
+  it('PC8: useActivePanelContribution() outside provider throws', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const Reader: React.FC = () => {
-      result = useActivePanelContribution();
+      useActivePanelContribution();
       return null;
     };
-    act(() => {
-      root = createRoot(container!);
-      root.render(
-        <WindowManagerProvider>
-          <PanelProvider>
-            <Reader />
-          </PanelProvider>
-        </WindowManagerProvider>
-      );
-    });
-    expect(result).toBeNull();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('useActivePanelContribution()'));
-    warnSpy.mockRestore();
+    expect(() => {
+      act(() => {
+        root = createRoot(container!);
+        root.render(
+          <WindowManagerProvider>
+            <PanelProvider>
+              <Reader />
+            </PanelProvider>
+          </WindowManagerProvider>
+        );
+      });
+    }).toThrow('useActivePanelContribution must be used within PanelContributionProvider');
+    errorSpy.mockRestore();
   });
 
   it('PC9: sidebarSectionToTab() converts, using fallbackIcon when section.icon is omitted', () => {
