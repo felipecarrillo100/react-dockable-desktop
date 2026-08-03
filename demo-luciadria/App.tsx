@@ -865,7 +865,6 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           ref={sidebarRef}
           position={sidebarPosition}
           tabs={sidebarTabs}
-          drawerWidth="220px"
         >
           <WindowManager />
         </Sidebar>

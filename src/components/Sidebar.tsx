@@ -56,7 +56,7 @@ export interface SidebarProps {
   /** Which side the activity bar and drawer appear on. Default: 'right' */
   position?: 'left' | 'right';
   tabs: SidebarTab[];
-  /** Initial drawer width in pixels. Default: 220 */
+  /** Initial drawer width in pixels. Default: 280 */
   defaultWidth?: number;
   /** Minimum drawer width in pixels during drag-resize. Default: 150 */
   minWidth?: number;
@@ -78,8 +78,6 @@ export interface SidebarProps {
   onStripVisibilityChange?: (visible: boolean) => void;
   /** Main workspace content rendered alongside the sidebar. */
   children?: React.ReactNode;
-  /** @deprecated Use defaultWidth (number, pixels) instead. */
-  drawerWidth?: string;
 }
 
 /**
@@ -280,7 +278,6 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       minWidth = 150,
       maxWidth = 600,
       onWidthChange,
-      drawerWidth,
       activeTabId: controlledActiveTabId,
       onActiveTabChange,
       visible,
@@ -293,12 +290,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
   ) {
     const isControlled = controlledActiveTabId !== undefined;
 
-    // Pixel width — initialised from defaultWidth, falling back to deprecated drawerWidth
-    const [width, setWidthState] = useState<number>(() => {
-      if (defaultWidth !== undefined) return defaultWidth;
-      if (drawerWidth !== undefined) return parseInt(drawerWidth, 10) || 220;
-      return 220;
-    });
+    const [width, setWidthState] = useState<number>(() => defaultWidth ?? 280);
 
     const setWidth = useCallback((px: number) => {
       setWidthState(px);

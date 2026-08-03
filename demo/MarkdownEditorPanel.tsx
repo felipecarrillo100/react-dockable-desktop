@@ -322,7 +322,6 @@ const TocList: React.FC<{ headings: HeadingInfo[]; onSelect: (id: string) => voi
   }
   return (
     <div className="sb-section">
-      <div className="sb-section-title">Table of Contents</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {headings.map((h, i) => (
           <button

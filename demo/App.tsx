@@ -1102,7 +1102,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
           ref={sidebarRef}
           position={sidebarPosition}
           tabs={mergedSidebarTabs}
-          drawerWidth="220px"
+          defaultWidth={280}
           visible={showSidebar}
           onVisibilityChange={setShowSidebar}
         >

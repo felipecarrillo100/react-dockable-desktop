@@ -19,7 +19,6 @@
  * - SB17: position='left' places strip before drawer in DOM order
  * - SB18: onActiveTabChange is called when tab selection changes
  * - SB19: defaultWidth initializes drawer width in pixels
- * - SB20: drawerWidth deprecated alias parses pixels from string
  * - SB21: setWidth/getWidth imperative methods
  * - SB22: setWidth clamps to minWidth and maxWidth bounds
  * - SB23: stripVisible=false collapses only the strip, drawer unaffected
@@ -449,7 +448,7 @@ describe('SB19: defaultWidth initializes drawer width in pixels', () => {
     expect(drawer.style.flexBasis).toBe('300px');
   });
 
-  it('defaults to 220px when defaultWidth is omitted', () => {
+  it('defaults to 280px when defaultWidth is omitted', () => {
     const ref = createRef<SidebarHandle>();
     const tabs = [makeTab('a')];
     act(() => {
@@ -457,33 +456,7 @@ describe('SB19: defaultWidth initializes drawer width in pixels', () => {
       root.render(<Sidebar ref={ref} tabs={tabs} activeTabId="a" />);
     });
     const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
-    expect(drawer.style.flexBasis).toBe('220px');
-  });
-});
-
-// ─── SB20: drawerWidth deprecated alias ──────────────────────────────────────
-
-describe('SB20: drawerWidth deprecated alias parses pixels from string', () => {
-  it('initializes from drawerWidth="280px" when defaultWidth is absent', () => {
-    const ref = createRef<SidebarHandle>();
-    const tabs = [makeTab('a')];
-    act(() => {
-      root = createRoot(container);
-      root.render(<Sidebar ref={ref} tabs={tabs} drawerWidth="280px" activeTabId="a" />);
-    });
-    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
     expect(drawer.style.flexBasis).toBe('280px');
-  });
-
-  it('defaultWidth takes precedence over drawerWidth', () => {
-    const ref = createRef<SidebarHandle>();
-    const tabs = [makeTab('a')];
-    act(() => {
-      root = createRoot(container);
-      root.render(<Sidebar ref={ref} tabs={tabs} defaultWidth={350} drawerWidth="280px" activeTabId="a" />);
-    });
-    const drawer = container.querySelector('.rdd-sidebar-content-drawer') as HTMLElement;
-    expect(drawer.style.flexBasis).toBe('350px');
   });
 });
 

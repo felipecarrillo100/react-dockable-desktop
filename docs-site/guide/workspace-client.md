@@ -19,6 +19,9 @@ const client = new WorkspaceClient(config?: WorkspaceClientConfig)
 | `formatMessage` | `MessageFormatter` | Custom i18n formatter for all built-in strings. |
 | `predefinedMessages` | `Record<string, ...>` | Override any subset of the built-in context menu message catalog. |
 | `dir` | `'ltr' \| 'rtl'` | Initial layout direction. Auto-detected if omitted. |
+| `defaultSplitRatio` | `number` | Fraction (0.1–0.9) the new panel takes when dropped on a panel's top/bottom/left/right cross target. Default: `0.5`. |
+| `defaultEdgeSplitRatio` | `number` | Fraction (0.1–0.9) the new panel takes when dropped on the workspace's outer edge. Default: `0.2`. |
+| `zIndexBase` | `number` | Starting z-index for floating windows and the library's own chrome overlays (context menu, toolbar flyout, modal stack, toast, workspace edge zones) — all shift together via `--rdd-z-base`. Set this above/below a host app's own modal z-index range to control stacking against it. Default: `1000`. |
 
 ## Imperative API
 
@@ -165,6 +168,7 @@ import type { WindowManagerProps, TaskbarVisibility } from 'react-dockable-deskt
 | `defaultPanelIcon` | `ReactNode` | — | Fallback icon used when a panel definition has no `icon`. |
 | `taskbarVisibility` | `TaskbarVisibility` | `'always'` | Controls when the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows the bar only when at least one panel is minimized. `'autohide'` renders the bar as a full-screen overlay with an 8 px peek strip that expands on pointer-enter; briefly auto-expands for 2 s when a panel is minimized. |
 | `contextMenuAdapter` | `ContextMenuAdapter` | `DefaultContextMenuAdapter` | Custom context menu renderer. Pass your own adapter to replace the built-in menu with a design-system component. See [Context Menus →](/guide/context-menus). |
+| `animations` | `boolean` | `true` | Enables the library's own transitions/animations (tab hover, dock preview, etc.). Set to `false` to disable them — scoped to only the library's own elements, never the host page's. |
 
 ```tsx
 <WindowManager skin="nord" taskbarVisibility="autohide" defaultPanelIcon={<FolderIcon />} />
