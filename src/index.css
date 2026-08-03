@@ -2909,15 +2909,6 @@ html.rdd-no-animations [class*="rdd-"]::after {
   color: var(--rdd-text-primary);
 }
 
-/* Deprecated aliases — keep existing consumer code working for one release */
-.sidebar-window-card { background-color: var(--sidebar-card-bg) !important; border: 1px solid var(--sidebar-card-border) !important; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; transition: all 0.15s ease; }
-.sidebar-window-card:hover { border-color: var(--sidebar-card-hover-border) !important; background-color: var(--sidebar-card-hover-bg) !important; }
-.sidebar-window-card.rdd-active { background-color: var(--sidebar-card-active-bg) !important; border-color: var(--sidebar-card-active-border) !important; box-shadow: 0 0 10px var(--sidebar-card-active-shadow); }
-.btn-pill-outline { border: 1px solid var(--sidebar-btn-front-border) !important; color: var(--sidebar-btn-front-text) !important; background: var(--sidebar-btn-front-bg) !important; font-size: 0.68rem !important; font-weight: 500 !important; border-radius: 12px !important; padding: 2px 10px !important; transition: all 0.15s ease !important; line-height: 1 !important; text-decoration: none !important; }
-.btn-pill-outline:hover { background: var(--sidebar-btn-front-hover-bg) !important; transform: scale(1.03); }
-.badge-pill-dark { background-color: var(--sidebar-badge-bg) !important; color: var(--sidebar-badge-text) !important; font-size: 0.65rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
-.sidebar-card-title { font-size: 0.82rem; font-weight: 600; color: var(--sidebar-text-title); max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
 /* ==========================================================================
    TOOLBAR STRIP
    ========================================================================== */

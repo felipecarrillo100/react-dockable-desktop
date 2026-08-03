@@ -164,7 +164,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   };
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--window-opacity', String(windowOpacity / 100));
+    document.documentElement.style.setProperty('--rdd-window-opacity', String(windowOpacity / 100));
   }, [windowOpacity]);
 
   useEffect(() => {
@@ -174,14 +174,6 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
       document.documentElement.classList.remove('show-grid');
     }
   }, [showGrid]);
-
-  useEffect(() => {
-    if (enableAnimations) {
-      document.documentElement.classList.add('enable-animations');
-    } else {
-      document.documentElement.classList.remove('enable-animations');
-    }
-  }, [enableAnimations]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', theme);
@@ -588,13 +580,13 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             ) : (
               <div className="d-flex flex-column gap-2 mb-4">
                 {openPanels.map(panel => (
-                  <div key={panel.id} className="sidebar-window-card">
+                  <div key={panel.id} className="sb-card">
                     <div className="d-flex align-items-center justify-content-between">
-                      <span className="sidebar-card-title">{panel.title}</span>
-                      <span className="badge-pill-dark">{panel.isFloating ? 'Float' : 'Grid'}</span>
+                      <span className="sb-card-title">{panel.title}</span>
+                      <span className="sb-badge">{panel.isFloating ? 'Float' : 'Grid'}</span>
                     </div>
                     <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="btn-pill-outline" onClick={() => focusPanel(panel.id)}>Front</button>
+                      <button type="button" className="sb-btn-outline" onClick={() => focusPanel(panel.id)}>Front</button>
                       <div className="d-flex gap-2">
                         {panel.canMinimize && (
                           <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Minimize" onClick={() => minimizePanel(panel.id)} style={{ fontSize: '0.85rem' }}>_</button>
@@ -618,13 +610,13 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
             ) : (
               <div className="d-flex flex-column gap-2">
                 {minimizedList.map(panel => (
-                  <div key={panel.id} className="sidebar-window-card">
+                  <div key={panel.id} className="sb-card">
                     <div className="d-flex align-items-center justify-content-between">
-                      <span className="sidebar-card-title">{panel.title}</span>
-                      <span className="badge-pill-dark">Min</span>
+                      <span className="sb-card-title">{panel.title}</span>
+                      <span className="sb-badge">Min</span>
                     </div>
                     <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="btn-pill-outline" onClick={() => restorePanel(panel.id)}>Restore</button>
+                      <button type="button" className="sb-btn-outline" onClick={() => restorePanel(panel.id)}>Restore</button>
                       {panel.canClose && (
                         <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
                       )}
@@ -857,7 +849,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           position={sidebarPosition}
           tabs={sidebarTabs}
         >
-          <WindowManager />
+          <WindowManager animations={enableAnimations} />
         </Sidebar>
         <SidePanelRenderer />
       </div>
