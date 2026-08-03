@@ -179,7 +179,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   };
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--window-opacity', String(windowOpacity / 100));
+    document.documentElement.style.setProperty('--rdd-window-opacity', String(windowOpacity / 100));
   }, [windowOpacity]);
 
   useEffect(() => {
@@ -193,14 +193,6 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
       document.documentElement.classList.remove('show-grid');
     }
   }, [showGrid]);
-
-  useEffect(() => {
-    if (enableAnimations) {
-      document.documentElement.classList.add('enable-animations');
-    } else {
-      document.documentElement.classList.remove('enable-animations');
-    }
-  }, [enableAnimations]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', theme);
@@ -1108,6 +1100,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         >
           <WindowManager
             skin={skin}
+            animations={enableAnimations}
             defaultPanelIcon={
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', opacity: 0.85 }}>
                 <polygon points="12 2 2 7 12 12 22 7 12 2" />
