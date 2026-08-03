@@ -257,26 +257,6 @@ function computeEditorScrollTopForLine(editorInstance: any, targetLine: number):
   return Math.max(0, lineTop + fraction * (nextLineTop - lineTop));
 }
 
-// ─── Scroll-sync diagnostics ────────────────────────────────────────────────
-// A ring buffer of every scroll-sync decision point (real vs. echo, cancelled-stale,
-// already-queued, scheduled target), for capturing an intermittent repro that hasn't shown
-// up in automated testing. To use: reproduce the issue, then in the browser console run
-// `copy(window.__mdScrollDebug.log)` (Chrome/Edge — copies straight to clipboard) or
-// `window.__mdScrollDebug.dump()` (prints it, for browsers without `copy()`).
-const SCROLL_DEBUG_MAX = 500;
-const scrollDebugLog: Record<string, unknown>[] = [];
-function logScrollDebug(entry: Record<string, unknown>): void {
-  scrollDebugLog.push({ t: Math.round(performance.now()), ...entry });
-  if (scrollDebugLog.length > SCROLL_DEBUG_MAX) scrollDebugLog.shift();
-}
-if (typeof window !== 'undefined') {
-  (window as any).__mdScrollDebug = {
-    log: scrollDebugLog,
-    dump: () => { console.log(JSON.stringify(scrollDebugLog, null, 2)); return scrollDebugLog; },
-    clear: () => { scrollDebugLog.length = 0; },
-  };
-}
-
 // ─── Icons (matching the demo's existing 16x16 stroke-icon convention) ─────
 
 const BoldIcon = (
@@ -640,32 +620,6 @@ export const MarkdownEditorPanel: React.FC = () => {
         [data-color-scheme="light"] .md-preview .hljs-built_in,
         [data-color-scheme="light"] .md-preview .hljs-type { color: #267f99; }
       `}</style>
-      <button
-        type="button"
-        onClick={() => {
-          const blob = new Blob([JSON.stringify(scrollDebugLog, null, 2)], { type: 'application/json' });
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'md-scroll-debug.json';
-          a.click();
-        }}
-        style={{
-          position: 'absolute',
-          top: 4,
-          insetInlineEnd: 4,
-          zIndex: 50,
-          fontSize: '11px',
-          padding: '3px 8px',
-          borderRadius: '4px',
-          border: '1px solid var(--panel-card-border)',
-          background: 'var(--panel-card-bg)',
-          color: 'var(--panel-text)',
-          cursor: 'pointer',
-        }}
-        title="Downloads a JSON log of every scroll-sync decision, for debugging the intermittent wheel-scroll issue"
-      >
-        ⬇ Download scroll debug log
-      </button>
       <div style={{ width: `${ratio * 100}%`, height: '100%', minWidth: 0 }}>
         <Editor
           height="100%"
@@ -679,9 +633,7 @@ export const MarkdownEditorPanel: React.FC = () => {
               const current = editorInstance.getScrollTop();
               const expected = expectedEditorScrollTopRef.current;
               expectedEditorScrollTopRef.current = null;
-              const isEcho = expected !== null && Math.abs(current - expected) < 2;
-              logScrollDebug({ event: 'editor-scroll', current, expected, isEcho });
-              if (isEcho) return; // our own echo
+              if (expected !== null && Math.abs(current - expected) < 2) return; // our own echo
               // This is a genuine scroll on the editor — cancel any stale pending sync that
               // would otherwise write BACK to the editor a moment from now (scheduled from a
               // previous, now-superseded preview-side burst). Without this, switching which
@@ -691,13 +643,8 @@ export const MarkdownEditorPanel: React.FC = () => {
               if (editorSyncFrameRef.current != null) {
                 cancelAnimationFrame(editorSyncFrameRef.current);
                 editorSyncFrameRef.current = null;
-                logScrollDebug({ event: 'editor-scroll-cancelled-pending-incoming' });
               }
-              if (previewSyncFrameRef.current != null) {
-                logScrollDebug({ event: 'editor-scroll-already-queued' });
-                return; // a sync is already queued for this frame
-              }
-              logScrollDebug({ event: 'editor-scroll-scheduling-preview-sync' });
+              if (previewSyncFrameRef.current != null) return; // a sync is already queued for this frame
               previewSyncFrameRef.current = requestAnimationFrame(() => {
                 previewSyncFrameRef.current = null;
                 const previewEl = previewRef.current;
@@ -707,7 +654,6 @@ export const MarkdownEditorPanel: React.FC = () => {
                 // a burst) are folded into this one sync instead of queuing their own.
                 const targetLine = getEditorTopFractionalLine(editorInstance);
                 const targetTop = computePreviewScrollTopForLine(previewEl, taggedElementsRef.current, targetLine);
-                logScrollDebug({ event: 'preview-sync-applied', targetLine, targetTop, previewScrollTopBefore: previewEl.scrollTop });
                 if (targetTop == null) return;
                 expectedPreviewScrollTopRef.current = targetTop;
                 previewEl.scrollTop = targetTop;
@@ -743,43 +689,21 @@ export const MarkdownEditorPanel: React.FC = () => {
         ref={previewRef}
         className="overflow-auto md-preview"
         style={{ flex: 1, minWidth: 0, height: '100%', padding: '16px', color: 'var(--panel-text)', backgroundColor: 'var(--panel-card-bg)', boxSizing: 'border-box', overscrollBehavior: 'contain' }}
-        onWheel={(e) => {
-          const el = previewRef.current;
-          logScrollDebug({
-            event: 'preview-wheel-native',
-            deltaY: e.deltaY,
-            deltaMode: e.deltaMode,
-            scrollTop: el?.scrollTop,
-            scrollHeight: el?.scrollHeight,
-            clientHeight: el?.clientHeight,
-            // Whether there's currently any room to scroll at all — if this is 0 while
-            // large wheel deltas keep coming in, the browser has nothing to scroll into,
-            // regardless of anything our own sync code does.
-            maxScroll: el ? el.scrollHeight - el.clientHeight : null,
-          });
-        }}
         onScroll={() => {
           const previewEl = previewRef.current;
           if (!previewEl) return;
           const current = previewEl.scrollTop;
           const expected = expectedPreviewScrollTopRef.current;
           expectedPreviewScrollTopRef.current = null;
-          const isEcho = expected !== null && Math.abs(current - expected) < 2;
-          logScrollDebug({ event: 'preview-scroll', current, expected, isEcho });
-          if (isEcho) return; // our own echo
+          if (expected !== null && Math.abs(current - expected) < 2) return; // our own echo
           // Genuine scroll on the preview — symmetric to the editor-side handler above:
           // cancel any stale pending sync about to write BACK to the preview from a
           // previous, now-superseded editor-side burst, so it can't clobber this.
           if (previewSyncFrameRef.current != null) {
             cancelAnimationFrame(previewSyncFrameRef.current);
             previewSyncFrameRef.current = null;
-            logScrollDebug({ event: 'preview-scroll-cancelled-pending-incoming' });
           }
-          if (editorSyncFrameRef.current != null) {
-            logScrollDebug({ event: 'preview-scroll-already-queued' });
-            return; // a sync is already queued for this frame
-          }
-          logScrollDebug({ event: 'preview-scroll-scheduling-editor-sync' });
+          if (editorSyncFrameRef.current != null) return; // a sync is already queued for this frame
           editorSyncFrameRef.current = requestAnimationFrame(() => {
             editorSyncFrameRef.current = null;
             const previewElNow = previewRef.current;
@@ -789,7 +713,6 @@ export const MarkdownEditorPanel: React.FC = () => {
             // same reasoning as the editor-side handler above.
             const targetLine = getLineForPreviewOffset(previewElNow, taggedElementsRef.current, previewElNow.scrollTop);
             const targetTop = targetLine == null ? null : computeEditorScrollTopForLine(editorInstance, targetLine);
-            logScrollDebug({ event: 'editor-sync-applied', targetLine, targetTop, editorScrollTopBefore: editorInstance.getScrollTop() });
             if (targetTop == null) return;
             expectedEditorScrollTopRef.current = targetTop;
             editorInstance.setScrollTop(targetTop);
