@@ -36,3 +36,6 @@ docs-site/.vitepress/cache
 
 # TypeDoc generated API reference (rebuilt in CI)
 docs-site/api/
+
+# Local-only notes, not meant for version control
+RETROSPECTIVE.md
