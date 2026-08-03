@@ -219,25 +219,25 @@ export const toast: ToastFunction = Object.assign(
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
 const InfoIcon = () => (
-  <svg className="dw-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+  <svg className="rdd-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
     <path d="M8 5v.01M8 7.5v3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
 const SuccessIcon = () => (
-  <svg className="dw-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+  <svg className="rdd-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
     <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const WarningIcon = () => (
-  <svg className="dw-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+  <svg className="rdd-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path d="M8 2.5L14 13.5H2L8 2.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
     <path d="M8 7v2.5M8 11.5v.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
 const ErrorIcon = () => (
-  <svg className="dw-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+  <svg className="rdd-toast__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
     <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
@@ -281,10 +281,10 @@ function ToastItem({
   const [paused, setPaused] = useState(false);
 
   const startEntry =
-    animation === 'none' ? 'dw-toast--visible' :
-    animation === 'fade' ? 'dw-toast--fade-entering' :
-    isLeft               ? 'dw-toast--entering-left' :
-                           'dw-toast--entering';
+    animation === 'none' ? 'rdd-toast--visible' :
+    animation === 'fade' ? 'rdd-toast--fade-entering' :
+    isLeft               ? 'rdd-toast--entering-left' :
+                           'rdd-toast--entering';
   const [entryClass, setEntryClass] = useState(startEntry);
 
   // Lock max-height for exit collapse animation
@@ -297,7 +297,7 @@ function ToastItem({
   // Trigger entry transition on next frame
   useEffect(() => {
     if (animation === 'none') return;
-    const raf = requestAnimationFrame(() => setEntryClass('dw-toast--visible'));
+    const raf = requestAnimationFrame(() => setEntryClass('rdd-toast--visible'));
     return () => cancelAnimationFrame(raf);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -351,11 +351,11 @@ function ToastItem({
   };
 
   const cls = [
-    'dw-toast',
-    options.type && `dw-toast--${options.type}`,
+    'rdd-toast',
+    options.type && `rdd-toast--${options.type}`,
     entryClass,
-    exiting && 'dw-toast--exiting',
-    paused  && 'dw-toast--paused',
+    exiting && 'rdd-toast--exiting',
+    paused  && 'rdd-toast--paused',
   ].filter(Boolean).join(' ');
 
   const icon = options.icon !== undefined ? options.icon : (options.type ? DEFAULT_ICONS[options.type] : null);
@@ -370,13 +370,13 @@ function ToastItem({
       onMouseLeave={handleMouseLeave}
     >
       {icon && icon}
-      <div className="dw-toast__body">
+      <div className="rdd-toast__body">
         {options.content !== undefined ? options.content : message}
       </div>
       {options.closable && (
         <button
           type="button"
-          className="dw-toast__close"
+          className="rdd-toast__close"
           onClick={() => onDismiss(id)}
           aria-label="Close notification"
         >
@@ -385,7 +385,7 @@ function ToastItem({
       )}
       {showProgress && options.duration > 0 && (
         <div
-          className="dw-toast__progress"
+          className="rdd-toast__progress"
           style={{ animationDuration: `${options.duration}ms` }}
         />
       )}
@@ -532,10 +532,10 @@ export function ToastContainer({
 
   const isLeft = position.endsWith('left');
   let dirMod   = '';
-  if (newestOnTop === true)  dirMod = 'dw-toast-container--newest-top';
-  if (newestOnTop === false) dirMod = 'dw-toast-container--newest-bottom';
+  if (newestOnTop === true)  dirMod = 'rdd-toast-container--newest-top';
+  if (newestOnTop === false) dirMod = 'rdd-toast-container--newest-bottom';
 
-  const cls = ['dw-toast-container', `dw-toast-container--${position}`, dirMod]
+  const cls = ['rdd-toast-container', `rdd-toast-container--${position}`, dirMod]
     .filter(Boolean).join(' ');
 
   return createPortal(

@@ -77,7 +77,7 @@ describe('T1: Resizer uses pointer events', () => {
 
     // The resizer only appears when there are 2+ panels in a split
     // We check that if a resizer exists, it reacts to pointerdown
-    const resizerBars = container.querySelectorAll('.resizer-bar');
+    const resizerBars = container.querySelectorAll('.rdd-resizer-bar');
     resizerBars.forEach(bar => {
       // React binds events via delegation, not attributes
       // Just verify the element exists and doesn't have a legacy mouse listener
@@ -118,7 +118,7 @@ describe('T2: Tab drag starts on pointerdown', () => {
 
     act(() => { client.openPanel('panel1', 'map'); });
 
-    const tab = container.querySelector('.workspace-tab');
+    const tab = container.querySelector('.rdd-workspace-tab');
     if (!tab) return; // panel might not be docked
 
     expect(() => {
@@ -142,7 +142,7 @@ describe('T2: Tab drag starts on pointerdown', () => {
 
     act(() => { client.openPanel('panel1', 'map'); });
 
-    const tab = container.querySelector('.workspace-tab');
+    const tab = container.querySelector('.rdd-workspace-tab');
     if (!tab) return;
 
     // Right-click should not throw and should not start drag
@@ -174,7 +174,7 @@ describe('T3: Touch long-press activates drag after 300ms', () => {
     document.body.removeChild(container);
   });
 
-  it('long-press-active class is added after 300ms hold on touch', () => {
+  it('rdd-long-press-active class is added after 300ms hold on touch', () => {
     act(() => {
       root = createRoot(container);
       root.render(
@@ -188,7 +188,7 @@ describe('T3: Touch long-press activates drag after 300ms', () => {
 
     act(() => { client.openPanel('panel1', 'map'); });
 
-    const tab = container.querySelector('.workspace-tab') as HTMLElement | null;
+    const tab = container.querySelector('.rdd-workspace-tab') as HTMLElement | null;
     if (!tab) return;
 
     act(() => {
@@ -196,12 +196,12 @@ describe('T3: Touch long-press activates drag after 300ms', () => {
     });
 
     // Not active yet (< 300ms)
-    expect(tab.classList.contains('long-press-active')).toBe(false);
+    expect(tab.classList.contains('rdd-long-press-active')).toBe(false);
 
     // Advance past 300ms
     act(() => { vi.advanceTimersByTime(310); });
 
-    expect(tab.classList.contains('long-press-active')).toBe(true);
+    expect(tab.classList.contains('rdd-long-press-active')).toBe(true);
   });
 });
 
@@ -225,7 +225,7 @@ describe('T4: Touch long-press cancelled if moved > 8px', () => {
     document.body.removeChild(container);
   });
 
-  it('long-press-active class NOT added if finger moved > 8px before 300ms', () => {
+  it('rdd-long-press-active class NOT added if finger moved > 8px before 300ms', () => {
     act(() => {
       root = createRoot(container);
       root.render(
@@ -239,7 +239,7 @@ describe('T4: Touch long-press cancelled if moved > 8px', () => {
 
     act(() => { client.openPanel('panel1', 'map'); });
 
-    const tab = container.querySelector('.workspace-tab') as HTMLElement | null;
+    const tab = container.querySelector('.rdd-workspace-tab') as HTMLElement | null;
     if (!tab) return;
 
     act(() => {
@@ -254,7 +254,7 @@ describe('T4: Touch long-press cancelled if moved > 8px', () => {
     // Advance past 300ms — should NOT activate because cancelled by movement
     act(() => { vi.advanceTimersByTime(310); });
 
-    expect(tab.classList.contains('long-press-active')).toBe(false);
+    expect(tab.classList.contains('rdd-long-press-active')).toBe(false);
   });
 });
 
@@ -294,7 +294,7 @@ describe('T5: Floating windows have 8-direction resize handles', () => {
 
     const directions = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
     directions.forEach(dir => {
-      const handle = container.querySelector(`.resize-${dir}`);
+      const handle = container.querySelector(`.rdd-resize-${dir}`);
       expect(handle, `Missing resize handle for direction: ${dir}`).toBeTruthy();
     });
   });
@@ -314,7 +314,7 @@ describe('T5: Floating windows have 8-direction resize handles', () => {
     act(() => { client.floatPanel('fp', { x: 100, y: 100, width: 300, height: 200 }); });
     act(() => { client.openPanel('fp', 'map'); });
 
-    const seHandle = container.querySelector('.resize-se') as HTMLElement | null;
+    const seHandle = container.querySelector('.rdd-resize-se') as HTMLElement | null;
     if (!seHandle) return;
 
     expect(() => {
@@ -357,7 +357,7 @@ describe('T6: Global focus uses pointerdown', () => {
 
     act(() => { client.openPanel('panel1', 'map'); });
 
-    const panel = container.querySelector('.workspace-panel') as HTMLElement | null;
+    const panel = container.querySelector('.rdd-workspace-panel') as HTMLElement | null;
 
     expect(() => {
       act(() => {

@@ -95,7 +95,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
 
   const displayTitle = dirty ? `${baseTitle} *` : baseTitle;
 
-  const sizeClass = modalOptions.size ? `v2-modal-size-${modalOptions.size}` : 'v2-modal-size-auto';
+  const sizeClass = modalOptions.size ? `rdd-modal-size-${modalOptions.size}` : 'rdd-modal-size-auto';
   const showCloseButton = modalOptions.closable !== false;
 
   useEffect(() => {
@@ -111,19 +111,21 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleClose, showCloseButton, isTopmost]);
 
-  const baseZIndex = 10000;
-  const modalZIndex = baseZIndex + (index * 10);
+  // Reads the same --rdd-z-base a WindowManagerProvider's zIndexBase config mirrors
+  // onto documentElement (falls back to 1000 so this also works standalone, with
+  // no WindowManager mounted, matching the :root default in index.css).
+  const modalZIndex = `calc(var(--rdd-z-base, 1000) + 9000 + ${index * 10})`;
 
   return (
-    <div className="v2-modal-overlay" style={{ zIndex: modalZIndex }} dir={dir}>
-      <div className="v2-modal-curtain" onClick={showCloseButton ? () => handleClose() : undefined} />
-      <div className={`v2-modal-window ${sizeClass} ${modalClass ?? ''}`}>
-        <div className="v2-modal-header">
-          {icon && <div className="v2-modal-icon">{icon}</div>}
-          <h4 className="v2-modal-title">{displayTitle}</h4>
+    <div className="rdd-modal-overlay" style={{ zIndex: modalZIndex }} dir={dir}>
+      <div className="rdd-modal-curtain" onClick={showCloseButton ? () => handleClose() : undefined} />
+      <div className={`rdd-modal-window ${sizeClass} ${modalClass ?? ''}`}>
+        <div className="rdd-modal-header">
+          {icon && <div className="rdd-modal-icon">{icon}</div>}
+          <h4 className="rdd-modal-title">{displayTitle}</h4>
           {showCloseButton && (
             <button
-              className="v2-modal-close-button"
+              className="rdd-modal-close-button"
               onClick={() => handleClose()}
               title={formatMessage(predefinedMessages.closeTooltip)}
               type="button"
@@ -134,7 +136,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
             </button>
           )}
         </div>
-        <div className={`v2-modal-body ${modalBodyClass ?? ''}`}>
+        <div className={`rdd-modal-body ${modalBodyClass ?? ''}`}>
           <FormContainerProvider value={contract}>
             <Component {...props} panelId={id} />
           </FormContainerProvider>

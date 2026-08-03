@@ -2,15 +2,15 @@
  * Tests for the Panel Overlay system: PanelOverlayRoot, PanelToolbar,
  * PanelFloatingWindow, usePanelFloatingWindow, usePanelFloatingWindowManager.
  *
- * PO1:  PanelOverlayRoot renders .dw-panel-overlay-root container
- * PO2:  PanelFloatingWindow open=true renders .dw-panel-float in DOM
+ * PO1:  PanelOverlayRoot renders .rdd-panel-overlay-root container
+ * PO2:  PanelFloatingWindow open=true renders .rdd-panel-float in DOM
  * PO3:  PanelFloatingWindow open=false renders nothing
  * PO4:  Close button on a floating window triggers onClose callback
  * PO5:  PanelToolbar renders with the correct position modifier class
  * PO6:  usePanelFloatingWindow — open()/close() control window visibility
  * PO7:  usePanelFloatingWindowManager — openManaged/closeManaged/openIds
  * PO8:  usePanelFloatingWindowManager — closeAll() removes all managed windows
- * PO9:  Focused window gains .dw-panel-float--active after pointerdown
+ * PO9:  Focused window gains .rdd-panel-float--active after pointerdown
  * PO10: PanelToolbar does NOT re-render when window focus changes (PanelToolbarCtx isolation)
  * PO11: usePanelFloatingWindowManager consumer does NOT re-render on focus change (PanelManagerCtx isolation)
  */
@@ -49,14 +49,14 @@ describe('PO1: PanelOverlayRoot', () => {
       root = createRoot(container);
       root.render(<PanelOverlayRoot><span /></PanelOverlayRoot>);
     });
-    expect(container.querySelector('.dw-panel-overlay-root')).not.toBeNull();
+    expect(container.querySelector('.rdd-panel-overlay-root')).not.toBeNull();
   });
 });
 
 // ─── PO2 ──────────────────────────────────────────────────────────────────────
 
 describe('PO2: PanelFloatingWindow open=true', () => {
-  it('renders .dw-panel-float in the DOM', () => {
+  it('renders .rdd-panel-float in the DOM', () => {
     act(() => {
       root = createRoot(container);
       root.render(
@@ -67,7 +67,7 @@ describe('PO2: PanelFloatingWindow open=true', () => {
         </PanelOverlayRoot>
       );
     });
-    expect(container.querySelector('.dw-panel-float')).not.toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).not.toBeNull();
   });
 });
 
@@ -88,7 +88,7 @@ describe('PO2b: PanelFloatingWindow anchor positioning under RTL', () => {
       );
     });
 
-    const el = container.querySelector('.dw-panel-float') as HTMLElement;
+    const el = container.querySelector('.rdd-panel-float') as HTMLElement;
     expect(el.getAttribute('dir')).toBe('rtl');
     expect(el.style.insetInlineEnd).not.toBe('');
     expect(el.style.insetInlineStart).toBe('');
@@ -108,7 +108,7 @@ describe('PO2b: PanelFloatingWindow anchor positioning under RTL', () => {
       );
     });
 
-    const el = container.querySelector('.dw-panel-float') as HTMLElement;
+    const el = container.querySelector('.rdd-panel-float') as HTMLElement;
     expect(el.getAttribute('dir')).toBe('ltr');
     expect(el.style.insetInlineEnd).not.toBe('');
     expect(el.style.insetInlineStart).toBe('');
@@ -129,7 +129,7 @@ describe('PO3: PanelFloatingWindow open=false', () => {
         </PanelOverlayRoot>
       );
     });
-    expect(container.querySelector('.dw-panel-float')).toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).toBeNull();
   });
 });
 
@@ -154,7 +154,7 @@ describe('PO4: Close button triggers onClose', () => {
         </PanelOverlayRoot>
       );
     });
-    const closeBtn = container.querySelector<HTMLButtonElement>('.dw-panel-float__close');
+    const closeBtn = container.querySelector<HTMLButtonElement>('.rdd-panel-float__close');
     expect(closeBtn).not.toBeNull();
     act(() => { closeBtn!.click(); });
     expect(callCount).toBe(1);
@@ -164,7 +164,7 @@ describe('PO4: Close button triggers onClose', () => {
 // ─── PO5 ──────────────────────────────────────────────────────────────────────
 
 describe('PO5: PanelToolbar position class', () => {
-  it('renders .dw-panel-toolbar--top for position="top"', () => {
+  it('renders .rdd-panel-toolbar--top for position="top"', () => {
     act(() => {
       root = createRoot(container);
       root.render(
@@ -173,11 +173,11 @@ describe('PO5: PanelToolbar position class', () => {
         </PanelOverlayRoot>
       );
     });
-    expect(container.querySelector('.dw-panel-toolbar--top')).not.toBeNull();
-    expect(container.querySelector('.dw-panel-toolbar--bottom')).toBeNull();
+    expect(container.querySelector('.rdd-panel-toolbar--top')).not.toBeNull();
+    expect(container.querySelector('.rdd-panel-toolbar--bottom')).toBeNull();
   });
 
-  it('renders .dw-panel-toolbar--bottom for position="bottom"', () => {
+  it('renders .rdd-panel-toolbar--bottom for position="bottom"', () => {
     act(() => {
       root = createRoot(container);
       root.render(
@@ -186,7 +186,7 @@ describe('PO5: PanelToolbar position class', () => {
         </PanelOverlayRoot>
       );
     });
-    expect(container.querySelector('.dw-panel-toolbar--bottom')).not.toBeNull();
+    expect(container.querySelector('.rdd-panel-toolbar--bottom')).not.toBeNull();
   });
 });
 
@@ -212,15 +212,15 @@ describe('PO6: usePanelFloatingWindow', () => {
       root.render(<Harness />);
     });
     expect(hook!.isOpen).toBe(false);
-    expect(container.querySelector('.dw-panel-float')).toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).toBeNull();
 
     act(() => { hook!.open(); });
     expect(hook!.isOpen).toBe(true);
-    expect(container.querySelector('.dw-panel-float')).not.toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).not.toBeNull();
 
     act(() => { hook!.close(); });
     expect(hook!.isOpen).toBe(false);
-    expect(container.querySelector('.dw-panel-float')).toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).toBeNull();
   });
 });
 
@@ -249,7 +249,7 @@ describe('PO7: usePanelFloatingWindowManager — open / close', () => {
     act(() => { mgr!.open('p1', { title: 'Panel 1', content: <span /> }); });
     expect(mgr!.openIds).toContain('p1');
     expect(mgr!.isOpen('p1')).toBe(true);
-    expect(container.querySelector('.dw-panel-float')).not.toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).not.toBeNull();
   });
 
   it('closeManaged removes a window and updates openIds', () => {
@@ -257,7 +257,7 @@ describe('PO7: usePanelFloatingWindowManager — open / close', () => {
     act(() => { mgr!.close('p2'); });
     expect(mgr!.openIds).not.toContain('p2');
     expect(mgr!.isOpen('p2')).toBe(false);
-    expect(container.querySelector('.dw-panel-float')).toBeNull();
+    expect(container.querySelector('.rdd-panel-float')).toBeNull();
   });
 
   it('multiple managed windows can coexist', () => {
@@ -266,7 +266,7 @@ describe('PO7: usePanelFloatingWindowManager — open / close', () => {
       mgr!.open('mb', { title: 'B', content: <span /> });
     });
     expect(mgr!.openIds).toHaveLength(2);
-    expect(container.querySelectorAll('.dw-panel-float')).toHaveLength(2);
+    expect(container.querySelectorAll('.rdd-panel-float')).toHaveLength(2);
   });
 });
 
@@ -294,14 +294,14 @@ describe('PO8: usePanelFloatingWindowManager — closeAll', () => {
 
     act(() => { mgr!.closeAll(); });
     expect(mgr!.openIds).toHaveLength(0);
-    expect(container.querySelectorAll('.dw-panel-float')).toHaveLength(0);
+    expect(container.querySelectorAll('.rdd-panel-float')).toHaveLength(0);
   });
 });
 
 // ─── PO9 ──────────────────────────────────────────────────────────────────────
 
 describe('PO9: Window focus — active class', () => {
-  it('focused window gains .dw-panel-float--active and other windows lose it', () => {
+  it('focused window gains .rdd-panel-float--active and other windows lose it', () => {
     act(() => {
       root = createRoot(container);
       root.render(
@@ -311,15 +311,15 @@ describe('PO9: Window focus — active class', () => {
         </PanelOverlayRoot>
       );
     });
-    const [winA, winB] = Array.from(container.querySelectorAll('.dw-panel-float'));
+    const [winA, winB] = Array.from(container.querySelectorAll('.rdd-panel-float'));
 
     // Focus window B via pointerdown (calls focusWindow('focus-b'))
     act(() => {
       winB.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
     });
 
-    expect(winB.classList.contains('dw-panel-float--active')).toBe(true);
-    expect(winA.classList.contains('dw-panel-float--active')).toBe(false);
+    expect(winB.classList.contains('rdd-panel-float--active')).toBe(true);
+    expect(winA.classList.contains('rdd-panel-float--active')).toBe(false);
   });
 });
 
@@ -349,7 +349,7 @@ describe('PO10: PanelToolbar render isolation', () => {
     // Focus win B — triggers setTopId + setZOrders in PanelOverlayRoot, but
     // toolbarCtxValue is stable (useMemo with unrelated deps), so PanelToolbar
     // and its children must NOT re-render.
-    const winB = container.querySelectorAll('.dw-panel-float')[1];
+    const winB = container.querySelectorAll('.rdd-panel-float')[1];
     act(() => {
       winB.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
     });
@@ -384,7 +384,7 @@ describe('PO11: Manager consumer render isolation', () => {
     const countAfterMount = renderCount;
     expect(countAfterMount).toBeGreaterThan(0);
 
-    const winB = container.querySelectorAll('.dw-panel-float')[1];
+    const winB = container.querySelectorAll('.rdd-panel-float')[1];
     act(() => {
       winB.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
     });

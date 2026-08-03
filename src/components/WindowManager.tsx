@@ -47,7 +47,7 @@ const DefaultGridIcon = (
 const ContextMenuIcons = {
   // Two offset equal rects — Windows "restore-down / new window" language
   float: (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
         <rect x="2" y="8" width="14" height="14" rx="1"/>
         <rect x="8" y="2" width="14" height="14" rx="1"/>
@@ -56,7 +56,7 @@ const ContextMenuIcons = {
   ),
   // Single horizontal dash — Windows minimize language
   minimize: (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: 'block' }}>
         <line x1="4" y1="18" x2="20" y2="18"/>
       </svg>
@@ -64,7 +64,7 @@ const ContextMenuIcons = {
   ),
   // Single inset rect — restore to normal windowed state
   restore: (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
         <rect x="4" y="4" width="16" height="16" rx="1"/>
       </svg>
@@ -72,7 +72,7 @@ const ContextMenuIcons = {
   ),
   // Near-full rect — maximize / fill workspace
   maximize: (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
         <rect x="2" y="2" width="20" height="20" rx="1"/>
       </svg>
@@ -80,7 +80,7 @@ const ContextMenuIcons = {
   ),
   // × — close
   close: (
-    <span className="wm-menu-icon">
+    <span className="rdd-menu-icon">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
@@ -113,7 +113,7 @@ const renderPanelContent = (id: string, componentKey: string, registry: PanelReg
       `  new WorkspaceClient({ panels: { "${componentKey}": { component: YourComponent } } })`
     );
     return (
-      <div className="dw-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
+      <div className="rdd-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
         <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ Component Unregistered</h6>
         <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>Key: {componentKey}</span>
       </div>
@@ -243,7 +243,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
     return (
       <div
-        className="taskbar-item-preview-frame"
+        className="rdd-taskbar-item-preview-frame"
         style={{
           width: `${displayW}px`,
           height: `${displayH}px`,
@@ -270,7 +270,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
   return (
     <div
-      className="taskbar-item-preview-frame"
+      className="rdd-taskbar-item-preview-frame"
       style={{
         width: `${origW * scale}px`,
         height: `${origH * scale}px`,
@@ -278,7 +278,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
     >
       <div
         ref={hostRef}
-        className="taskbar-item-preview-host"
+        className="rdd-taskbar-item-preview-host"
         style={{
           width: `${origW}px`,
           height: `${origH}px`,
@@ -465,8 +465,8 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
       startClientY: e.clientY,
       captureStart: () => [...node.sizes],
       activeClasses: [
-        { el: resizerEl, classes: ['active'] },
-        { el: document.body, classes: ['resizing-active', isRow ? 'resizing-col-active' : 'resizing-row-active'] },
+        { el: resizerEl, classes: ['rdd-active'] },
+        { el: document.body, classes: ['rdd-resizing-active', isRow ? 'rdd-resizing-col-active' : 'rdd-resizing-row-active'] },
       ],
       onMove: (dx, dy, startSizes) => {
         const deltaPercentage = (isRow ? dx : dy) / parentSize;
@@ -500,7 +500,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
                   height: isRow ? '100%' : '1px',
                   zIndex: 20,
                 }}
-                className="resizer-bar"
+                className="rdd-resizer-bar"
               />
             )}
           </React.Fragment>
@@ -564,14 +564,14 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
   return (
     <div
       data-active-panel-id={leaf.activePanelId || ''}
-      className={`workspace-panel ${windowClass ?? ''}`}
+      className={`rdd-workspace-panel ${windowClass ?? ''}`}
       style={{ overflow: 'hidden', position: 'relative' }}
     >
       {/* Tab Headers */}
-      <div className="workspace-tab-bar" style={{ minHeight: '38px' }}>
+      <div className="rdd-workspace-tab-bar" style={{ minHeight: '38px' }}>
         {tabScroll.left && (
           <button
-            className="tab-scroll-btn tab-scroll-btn-left"
+            className="rdd-tab-scroll-btn rdd-tab-scroll-btn-left"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => scrollTabs('left')}
             tabIndex={-1}
@@ -580,7 +580,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         )}
         <div
           ref={tabContainerRef}
-          className="tab-headers-container"
+          className="rdd-tab-headers-container"
           style={{ scrollbarWidth: 'none' }}
           onPointerMove={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
@@ -606,12 +606,12 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             const isLast = idx === leaf.panels.length - 1;
             const isHoveredEmpty = hoveredTab && hoveredTab.leafId === leaf.id && hoveredTab.panelId === 'EMPTY' && isLast;
             const sideClass = isHovered
-              ? (hoveredTab.side === 'left' ? 'drag-hover-left' : 'drag-hover-right')
-              : (isHoveredEmpty ? 'drag-hover-right' : '');
+              ? (hoveredTab.side === 'left' ? 'rdd-drag-hover-left' : 'rdd-drag-hover-right')
+              : (isHoveredEmpty ? 'rdd-drag-hover-right' : '');
 
             const tabFocusClass = isSelected
-              ? (isGloballyActive ? 'active workspace-tab-active-focused' : 'active workspace-tab-active-unfocused')
-              : 'workspace-tab-inactive';
+              ? (isGloballyActive ? 'rdd-active rdd-workspace-tab-active-focused' : 'rdd-active rdd-workspace-tab-active-unfocused')
+              : 'rdd-workspace-tab-inactive';
 
             return (
               <div
@@ -639,11 +639,11 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                     onTabHover(leaf.id, '', -1, null);
                   }
                 }}
-                className={`workspace-tab ${tabFocusClass} ${sideClass}`}
+                className={`rdd-workspace-tab ${tabFocusClass} ${sideClass}`}
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
-                <span className="text-truncate" style={{ maxWidth: '120px', display: 'flex', alignItems: 'center' }}>
-                  <span className="workspace-tab-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
+                <span className="rdd-text-truncate" style={{ maxWidth: '120px', display: 'flex', alignItems: 'center' }}>
+                  <span className="rdd-workspace-tab-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
                   <span>
                     {formatLabel(panel.title, formatMessage)}
                     {panel.dirty ? ' *' : ''}
@@ -651,7 +651,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 </span>
                 {options?.renderHeaderActions && (
                   <span
-                    className="tab-header-actions"
+                    className="rdd-tab-header-actions"
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
@@ -665,7 +665,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                       onRequestClosePanel(id);
                     }}
                     title={formatLabel(messages.closeTab, formatMessage)}
-                    className="close-tab-x"
+                    className="rdd-close-tab-x"
                     style={{ width: '18px', height: '18px', ...(options?.renderHeaderActions ? {} : { marginInlineStart: 'auto' }) }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -679,7 +679,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         </div>
         {tabScroll.right && (
           <button
-            className="tab-scroll-btn tab-scroll-btn-right"
+            className="rdd-tab-scroll-btn rdd-tab-scroll-btn-right"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => scrollTabs('right')}
             tabIndex={-1}
@@ -691,7 +691,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         {leaf.panels.length === 0 && leaf.keepOnEmpty && leaf.canClose !== false && (
           <span
             onClick={() => closeLeafGroup(leaf.id)}
-            className="close-tab-x header-close-empty-group"
+            className="rdd-close-tab-x rdd-header-close-empty-group"
             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             title={formatLabel(messages.closeEmptyGroup, formatMessage)}
           >
@@ -703,26 +703,26 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
       </div>
 
       {/* Tab Content Display Area */}
-      <div className={`dw-panel-body ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className={`rdd-panel-body ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
         {leaf.activePanelId && state.panels[leaf.activePanelId] ? (
           <PreservedDOMWrapper key={leaf.activePanelId} panelId={leaf.activePanelId} />
         ) : (
-          <div className="empty-leaf-placeholder">
+          <div className="rdd-empty-leaf-placeholder">
             <span>Empty Workspace Section</span>
           </div>
         )}
 
         {/* Drag overlay targets cross */}
         {state.draggedPanelId !== null && (
-          <div className="dock-drop-zone-overlay">
-            <div className="dock-target-cross">
+          <div className="rdd-dock-drop-zone-overlay">
+            <div className="rdd-dock-target-cross">
               {/* Top target */}
               <div
                 data-leaf-id={leaf.id}
                 data-drop-zone="top"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'top')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="dock-target-box dock-target-top"
+                className="rdd-dock-target-box rdd-dock-target-top"
               >
                 ▲
               </div>
@@ -732,7 +732,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="bottom"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'bottom')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="dock-target-box dock-target-bottom"
+                className="rdd-dock-target-box rdd-dock-target-bottom"
               >
                 ▼
               </div>
@@ -742,7 +742,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="left"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'left')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="dock-target-box dock-target-left"
+                className="rdd-dock-target-box rdd-dock-target-left"
               >
                 ◀
               </div>
@@ -752,7 +752,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="right"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'right')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="dock-target-box dock-target-right"
+                className="rdd-dock-target-box rdd-dock-target-right"
               >
                 ▶
               </div>
@@ -762,7 +762,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="center"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'center')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="dock-target-box dock-target-center"
+                className="rdd-dock-target-box rdd-dock-target-center"
               >
                 ▣
               </div>
@@ -773,7 +773,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         {/* Visual preview highlight overlay */}
         {state.draggedPanelId !== null && activeDropZone !== null && activeDropZone.leafId === leaf.id && (
           <div
-            className="dock-preview-highlight"
+            className="rdd-dock-preview-highlight"
             style={(() => {
               const pos = activeDropZone.position;
               const pct = `${state.splitRatio * 100}%`;
@@ -816,9 +816,11 @@ export interface WindowManagerProps {
   taskbarVisibility?: TaskbarVisibility;
   /** Custom context menu renderer. Defaults to the built-in `DefaultContextMenuAdapter`. */
   contextMenuAdapter?: ContextMenuAdapter;
+  /** Enables the library's own transitions/animations (tab hover, dock preview, etc.). Never affects the consumer's own page. @default true */
+  animations?: boolean;
 }
 
-export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always', contextMenuAdapter = DefaultContextMenuAdapter }) => {
+export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always', contextMenuAdapter = DefaultContextMenuAdapter, animations = true }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn } = useWindowManagerActionsInternal();
@@ -897,7 +899,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     if (!hoveredMinimized?.fromTouch) return;
     const handler = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
-      const tooltip = document.querySelector('.taskbar-item-tooltip');
+      const tooltip = document.querySelector('.rdd-taskbar-item-tooltip');
       if (tooltip?.contains(e.target as Node)) return;
       setHoveredMinimized(null);
     };
@@ -1066,7 +1068,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         el.removeEventListener('pointercancel', cancel);
 
         try { el.setPointerCapture(pointerId); } catch { return; }
-        el.classList.add('long-press-active');
+        el.classList.add('rdd-long-press-active');
         if (navigator.vibrate) navigator.vibrate(10);
 
         // Long-press captured: move → drag, release → context menu
@@ -1082,7 +1084,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         };
 
         const onEnd = (me: PointerEvent) => {
-          el.classList.remove('long-press-active');
+          el.classList.remove('rdd-long-press-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1096,7 +1098,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         };
 
         const onCancel = () => {
-          el.classList.remove('long-press-active');
+          el.classList.remove('rdd-long-press-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1362,7 +1364,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       if (!target || typeof target.closest !== 'function') return;
 
       // 1. Check if click is inside a floating window
-      const windowEl = target.closest('.floating-window') as HTMLElement | null;
+      const windowEl = target.closest('.rdd-floating-window') as HTMLElement | null;
       if (windowEl) {
         const winId = windowEl.getAttribute('data-window-id');
         if (winId) {
@@ -1373,7 +1375,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       }
 
       // 2. Check if click is inside a grid split pane
-      const panelEl = target.closest('.workspace-panel') as HTMLElement | null;
+      const panelEl = target.closest('.rdd-workspace-panel') as HTMLElement | null;
       if (panelEl) {
         const panelId = panelEl.getAttribute('data-active-panel-id');
         if (panelId) {
@@ -1395,7 +1397,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     focusPanel(id);
 
     const el = e.currentTarget as HTMLDivElement;
-    const windowEl = el.closest('.floating-window') as HTMLDivElement | null;
+    const windowEl = el.closest('.rdd-floating-window') as HTMLDivElement | null;
     const startX = e.clientX;
     const startY = e.clientY;
     const startPosX = windowEl ? windowEl.offsetLeft : 0;
@@ -1444,7 +1446,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         el.removeEventListener('pointercancel', cancel);
 
         try { el.setPointerCapture(pointerId); } catch { return; }
-        el.classList.add('long-press-active');
+        el.classList.add('rdd-long-press-active');
         setDraggedPanelId(id);
 
         const onMove = (me: PointerEvent) => {
@@ -1455,7 +1457,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         };
 
         const onEnd = () => {
-          el.classList.remove('long-press-active');
+          el.classList.remove('rdd-long-press-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1463,7 +1465,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         };
 
         const onCancel = () => {
-          el.classList.remove('long-press-active');
+          el.classList.remove('rdd-long-press-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1514,7 +1516,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     focusPanel(id);
 
     const el = e.currentTarget as HTMLDivElement;
-    const windowEl = el.closest('.floating-window') as HTMLDivElement | null;
+    const windowEl = el.closest('.rdd-floating-window') as HTMLDivElement | null;
     const startRect = {
       x: windowEl ? windowEl.offsetLeft : 0,
       y: windowEl ? windowEl.offsetTop : 0,
@@ -1598,8 +1600,36 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     return () => { document.documentElement.removeAttribute('data-workspace-skin'); };
   }, [skin]);
 
+  // Mirror color-scheme onto documentElement too — Toolbar/Sidebar are siblings (or,
+  // for Sidebar, an ancestor) of this div, not descendants, so without this they never
+  // actually receive the [data-color-scheme]-scoped tokens (e.g. --sidebar-*) despite
+  // the comment above claiming parity with the skin mirroring. Only mirror 'light' —
+  // 'dark' is the unscoped :root default, so leaving the attribute absent for it avoids
+  // writing back the exact value useColorScheme() just read from this same attribute,
+  // which would otherwise re-trigger its own MutationObserver on every mount.
+  useEffect(() => {
+    if (currentColorScheme === 'light') {
+      document.documentElement.setAttribute('data-color-scheme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-color-scheme');
+    }
+    return () => { document.documentElement.removeAttribute('data-color-scheme'); };
+  }, [currentColorScheme]);
+
+  // Mirror the animations opt-out the same way — covers portaled chrome (ContextMenu,
+  // Toast, Toolbar's flyout) that renders outside this div via createPortal.
+  useEffect(() => {
+    if (!animations) {
+      document.documentElement.classList.add('rdd-no-animations');
+    } else {
+      document.documentElement.classList.remove('rdd-no-animations');
+    }
+    return () => { document.documentElement.classList.remove('rdd-no-animations'); };
+  }, [animations]);
+
   return (
     <div
+      className={`rdd-workspace${animations ? '' : ' rdd-no-animations'}`}
       data-workspace-skin={skin}
       data-color-scheme={currentColorScheme}
       style={{ display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
@@ -1609,7 +1639,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
       <div
         ref={workspaceRef}
-        className={state.draggedPanelId ? 'dragging-active' : undefined}
+        className={state.draggedPanelId ? 'rdd-dragging-active' : undefined}
         style={{ flexGrow: 1, width: '100%', position: 'relative', overflow: 'hidden' }}
       >
         {/* Workspace outer edge drop zone targets */}
@@ -1617,25 +1647,25 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           <>
             <div
               data-edge-trigger="left"
-              className="workspace-edge-trigger edge-trigger-left"
+              className="rdd-workspace-edge-trigger rdd-edge-trigger-left"
               onPointerEnter={() => setActiveEdgeDrop('left')}
               onPointerLeave={() => setActiveEdgeDrop(null)}
             />
             <div
               data-edge-trigger="right"
-              className="workspace-edge-trigger edge-trigger-right"
+              className="rdd-workspace-edge-trigger rdd-edge-trigger-right"
               onPointerEnter={() => setActiveEdgeDrop('right')}
               onPointerLeave={() => setActiveEdgeDrop(null)}
             />
             <div
               data-edge-trigger="top"
-              className="workspace-edge-trigger edge-trigger-top"
+              className="rdd-workspace-edge-trigger rdd-edge-trigger-top"
               onPointerEnter={() => setActiveEdgeDrop('top')}
               onPointerLeave={() => setActiveEdgeDrop(null)}
             />
             <div
               data-edge-trigger="bottom"
-              className="workspace-edge-trigger edge-trigger-bottom"
+              className="rdd-workspace-edge-trigger rdd-edge-trigger-bottom"
               onPointerEnter={() => setActiveEdgeDrop('bottom')}
               onPointerLeave={() => setActiveEdgeDrop(null)}
             />
@@ -1646,7 +1676,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         {state.draggedPanelId !== null && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as FloatAnchor[]).map(corner => (
           <div
             key={corner}
-            className={`fw-corner-zone fw-corner-zone--${corner}${activeCornerAnchor === corner ? ' fw-corner-zone--hovered' : ''}`}
+            className={`rdd-corner-zone rdd-corner-zone--${corner}${activeCornerAnchor === corner ? ' rdd-corner-zone--hovered' : ''}`}
             onPointerEnter={() => { setActiveCornerAnchor(corner); setActiveEdgeDrop(null); }}
             onPointerLeave={() => setActiveCornerAnchor(null)}
             aria-hidden="true"
@@ -1656,7 +1686,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         {/* Edge drop visual preview overlay */}
         {state.draggedPanelId !== null && activeEdgeDrop !== null && (
           <div
-            className="workspace-edge-preview"
+            className="rdd-workspace-edge-preview"
             style={(() => {
               const pct = `${state.edgeSplitRatio * 100}%`;
               switch (activeEdgeDrop) {
@@ -1685,7 +1715,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               onRequestClosePanel={handleRequestClose}
             />
           ) : (
-            <div className="empty-workspace-grid">
+            <div className="rdd-empty-workspace-grid">
               Grid Empty
             </div>
           )}
@@ -1712,7 +1742,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   setActivePanel(w.id);
                   focusPanel(w.id);
                 }}
-                className={`floating-window ${isMaximized ? 'maximized' : ''} ${isFocused ? 'v2-window-focused' : ''} ${windowClass ?? ''}`}
+                className={`rdd-floating-window ${isMaximized ? 'rdd-maximized' : ''} ${isFocused ? 'rdd-window-focused' : ''} ${windowClass ?? ''}`}
                 style={(() => {
                   const CORNER_INSET = 8;
                   const CORNER_GAP = 8;
@@ -1761,26 +1791,26 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       startDrag(w.id, e);
                     }
                   }}
-                  className="floating-window-titlebar cursor-move"
+                  className="rdd-floating-window-titlebar rdd-cursor-move"
                   style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
                 >
-                  <span className="floating-window-title">
-                    <span className="window-title-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
+                  <span className="rdd-floating-window-title">
+                    <span className="rdd-window-title-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
                     <span>
                       {formatLabel(panel.title, formatMessage)}
                       {panel.dirty ? ' *' : ''}
                     </span>
                   </span>
-                  <div className="fw-titlebar-actions" style={{ gap: 'var(--header-button-gap, 4px)' }} onPointerDown={(e) => e.stopPropagation()}>
+                  <div className="rdd-titlebar-actions" style={{ gap: 'var(--header-button-gap, 4px)' }} onPointerDown={(e) => e.stopPropagation()}>
                     {options?.renderHeaderActions && (
-                      <div className="window-header-actions">
+                      <div className="rdd-window-header-actions">
                         {options.renderHeaderActions(w.id)}
                       </div>
                     )}
                     {getPanelContextMenuItems(w.id).length > 0 && (
                       <button
                         type="button"
-                        className="custom-tab-btn btn-more-actions"
+                        className="rdd-custom-tab-btn rdd-btn-more-actions"
                         title="More actions"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1805,7 +1835,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                         ? formatLabel(messages.restoreSize, formatMessage)
                         : formatLabel(messages.maximize, formatMessage)}
                       onClick={() => maximizePanel(w.id)}
-                      className="custom-tab-btn btn-maximize-tab"
+                      className="rdd-custom-tab-btn rdd-btn-maximize-tab"
                     >
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <rect x="4" y="4" width="16" height="16" rx="1.5"/>
@@ -1816,7 +1846,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                         type="button"
                         title={formatLabel(messages.minimize, formatMessage)}
                         onClick={() => minimizePanel(w.id)}
-                        className="custom-tab-btn btn-minimize-tab"
+                        className="rdd-custom-tab-btn rdd-btn-minimize-tab"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                           <path d="M5 12h14"/>
@@ -1828,7 +1858,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                         type="button"
                         title={formatLabel(messages.close, formatMessage)}
                         onClick={() => handleRequestClose(w.id)}
-                        className="custom-tab-btn btn-close-tab"
+                        className="rdd-custom-tab-btn rdd-btn-close-tab"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                           <path d="M18 6L6 18M6 6l12 12"/>
@@ -1846,14 +1876,14 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 {/* 8-direction resize handles */}
                 {!isMaximized && (
                   <>
-                    <div onPointerDown={(e) => startResize(w.id, 'n',  e)} className="resize-handle resize-n"  />
-                    <div onPointerDown={(e) => startResize(w.id, 'ne', e)} className="resize-handle resize-ne" />
-                    <div onPointerDown={(e) => startResize(w.id, 'e',  e)} className="resize-handle resize-e"  />
-                    <div onPointerDown={(e) => startResize(w.id, 'se', e)} className="resize-handle resize-se" />
-                    <div onPointerDown={(e) => startResize(w.id, 's',  e)} className="resize-handle resize-s"  />
-                    <div onPointerDown={(e) => startResize(w.id, 'sw', e)} className="resize-handle resize-sw" />
-                    <div onPointerDown={(e) => startResize(w.id, 'w',  e)} className="resize-handle resize-w"  />
-                    <div onPointerDown={(e) => startResize(w.id, 'nw', e)} className="resize-handle resize-nw" />
+                    <div onPointerDown={(e) => startResize(w.id, 'n',  e)} className="rdd-resize-handle rdd-resize-n"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'ne', e)} className="rdd-resize-handle rdd-resize-ne" />
+                    <div onPointerDown={(e) => startResize(w.id, 'e',  e)} className="rdd-resize-handle rdd-resize-e"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'se', e)} className="rdd-resize-handle rdd-resize-se" />
+                    <div onPointerDown={(e) => startResize(w.id, 's',  e)} className="rdd-resize-handle rdd-resize-s"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'sw', e)} className="rdd-resize-handle rdd-resize-sw" />
+                    <div onPointerDown={(e) => startResize(w.id, 'w',  e)} className="rdd-resize-handle rdd-resize-w"  />
+                    <div onPointerDown={(e) => startResize(w.id, 'nw', e)} className="rdd-resize-handle rdd-resize-nw" />
                   </>
                 )}
               </div>
@@ -1866,19 +1896,19 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       {(taskbarVisibility === 'always' || state.minimized.length > 0) && (
         <div
           className={[
-            'taskbar-footer-container',
+            'rdd-taskbar-footer-container',
             `taskbar-mode-${taskbarVisibility}`,
-            taskbarVisibility === 'autohide' && taskbarExpanded ? 'taskbar-expanded' : '',
+            taskbarVisibility === 'autohide' && taskbarExpanded ? 'rdd-taskbar-expanded' : '',
           ].filter(Boolean).join(' ')}
           style={{ height: '48px', zIndex: 100 }}
           onPointerEnter={taskbarVisibility === 'autohide' ? expandTaskbar : undefined}
           onPointerLeave={taskbarVisibility === 'autohide' ? scheduleCollapseTaskbar : undefined}
         >
-          {taskbarVisibility === 'autohide' && <div className="taskbar-peek-handle" />}
+          {taskbarVisibility === 'autohide' && <div className="rdd-taskbar-peek-handle" />}
           <button
             type="button"
             onClick={() => scrollTaskbar('left')}
-            className="taskbar-nav-btn"
+            className="rdd-taskbar-nav-btn"
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ◀
@@ -1886,7 +1916,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
           <div
             ref={taskbarRef}
-            className="taskbar-items-container"
+            className="rdd-taskbar-items-container"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {state.minimized.map(m => {
@@ -1971,7 +2001,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       setHoveredMinimized(null);
                     }, 150);
                   }}
-                  className="taskbar-glassmorphic-item"
+                  className="rdd-taskbar-glassmorphic-item"
                   style={{
                     backdropFilter: 'blur(6px)',
                     transition: 'all 0.2s',
@@ -1983,7 +2013,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     padding: 0
                   }}
                 >
-                  <span className="taskbar-item-icon">
+                  <span className="rdd-taskbar-item-icon">
                     {icon}
                   </span>
                 </div>
@@ -1993,7 +2023,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
           {hoveredMinimized && createPortal(
             <div
-              className="taskbar-item-tooltip"
+              className="rdd-taskbar-item-tooltip"
               dir={state.dir}
               style={{
                 position: 'fixed',
@@ -2056,8 +2086,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 el.addEventListener('pointercancel', cancel);
               }}
             >
-               <div className="tooltip-header-row">
-                  <span className="tooltip-title-text text-truncate" style={{ maxWidth: '140px' }}>
+               <div className="rdd-tooltip-header-row">
+                  <span className="rdd-tooltip-title-text rdd-text-truncate" style={{ maxWidth: '140px' }}>
                     {formatLabel(hoveredMinimized.title, formatMessage)}
                     {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
                   </span>
@@ -2068,7 +2098,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       setHoveredMinimized(null);
                     }}
                     title={formatLabel(messages.closePanel, formatMessage)}
-                    className="tooltip-close-x"
+                    className="rdd-tooltip-close-x"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M18 6L6 18M6 6l12 12"/>
@@ -2083,7 +2113,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           <button
             type="button"
             onClick={() => scrollTaskbar('right')}
-            className="taskbar-nav-btn"
+            className="rdd-taskbar-nav-btn"
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ▶
@@ -2121,7 +2151,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (
         <div
-          className="drag-ghost-tab"
+          className="rdd-drag-ghost-tab"
           style={{
             left: dragPos.x + 12,
             top: dragPos.y + 12,

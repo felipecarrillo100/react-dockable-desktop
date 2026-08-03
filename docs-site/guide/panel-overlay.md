@@ -71,7 +71,7 @@ A toolbar strip that attaches to any edge of the `PanelOverlayRoot` container. M
 | `position` | `ToolbarPosition` | — | **Required.** Which edge to attach to. One of `'top'`, `'bottom'`, `'left'`, `'right'`. |
 | `variant` | `'transparent' \| 'frosted' \| 'solid'` | `'transparent'` | Background style. `frosted` adds a blur/tint; `solid` uses the panel background color. |
 | `buttonVariant` | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` | `'ghost'` | Default button appearance inherited by all child buttons. Overridable per-button. |
-| `buttonSize` | `number` | — | Overrides the `--panel-toolbar-btn-size` CSS variable (pixels). |
+| `buttonSize` | `number` | — | Overrides the `--rdd-panel-toolbar-btn-size` CSS variable (pixels). |
 | `className` | `string` | — | Extra CSS class. |
 | `style` | `React.CSSProperties` | — | Inline styles merged after position styles. |
 

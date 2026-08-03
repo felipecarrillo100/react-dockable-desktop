@@ -123,7 +123,7 @@ function ResizableSplit() {
   return (
     <div ref={containerRef} style={{ display: 'flex', width: '100%', height: '100%' }}>
       <div style={{ flexBasis: `${ratio * 100}%` }}>{/* left pane */}</div>
-      <div onPointerDown={handlePointerDown} className="resizer-bar" />
+      <div onPointerDown={handlePointerDown} className="rdd-resizer-bar" />
       <div style={{ flexBasis: `${(1 - ratio) * 100}%` }}>{/* right pane */}</div>
     </div>
   );

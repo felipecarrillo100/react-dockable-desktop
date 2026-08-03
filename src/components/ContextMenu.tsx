@@ -139,7 +139,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
     return createPortal(
       <div
         ref={ref}
-        className={`dw-context-menu dw-context-menu--${theme} dw-context-menu--submenu`}
+        className={`rdd-context-menu rdd-context-menu--${theme} rdd-context-menu--submenu`}
         style={{ position: 'fixed', left: x, top: y, zIndex: 9501 }}
         role="menu"
         onMouseEnter={onMouseEnter}
@@ -147,7 +147,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
       >
         {items.map((item, i) => {
           if (isSeparator(item)) {
-            return <hr key={i} className="dw-context-menu__separator" role="separator" />;
+            return <hr key={i} className="rdd-context-menu__separator" role="separator" />;
           }
           const simple = item as ContextMenuSimpleItem;
           const showChk = simple.checkbox && simple.checkbox.active !== false;
@@ -157,7 +157,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
             <button
               key={i}
               type="button"
-              className={`dw-context-menu__item${isDisabled ? ' dw-context-menu__item--disabled' : ''}`}
+              className={`rdd-context-menu__item${isDisabled ? ' rdd-context-menu__item--disabled' : ''}`}
               title={simple.title ? resolveLabel(simple.title, fmt) : undefined}
               disabled={isDisabled}
               data-cy-action={simple.cyAction}
@@ -166,11 +166,11 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
               aria-checked={showChk ? isChecked : undefined}
             >
               {simple.icon
-                ? <span className="dw-context-menu__icon">{simple.icon}</span>
-                : <span className="dw-context-menu__icon" aria-hidden="true" />}
-              <span className="dw-context-menu__label">{resolveLabel(simple.label, fmt)}</span>
+                ? <span className="rdd-context-menu__icon">{simple.icon}</span>
+                : <span className="rdd-context-menu__icon" aria-hidden="true" />}
+              <span className="rdd-context-menu__label">{resolveLabel(simple.label, fmt)}</span>
               {showChk && (
-                <span className={`dw-context-menu__checkbox${isChecked ? ' dw-context-menu__checkbox--checked' : ''}`} aria-hidden="true">
+                <span className={`rdd-context-menu__checkbox${isChecked ? ' rdd-context-menu__checkbox--checked' : ''}`} aria-hidden="true">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2"
                       fill="none"
@@ -345,14 +345,14 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       <>
         <div
           ref={menuRef}
-          className={`dw-context-menu dw-context-menu--${theme}${className ? ` ${className}` : ''}`}
+          className={`rdd-context-menu rdd-context-menu--${theme}${className ? ` ${className}` : ''}`}
           style={{ position: 'fixed', left: menuState.x, top: menuState.y, zIndex: 9500, ...style }}
           role="menu"
           aria-orientation="vertical"
         >
           {menuState.items.map((item, i) => {
             if (isSeparator(item)) {
-              return <hr key={i} className="dw-context-menu__separator" role="separator" />;
+              return <hr key={i} className="rdd-context-menu__separator" role="separator" />;
             }
 
             if (isSubMenu(item)) {
@@ -361,7 +361,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                   key={i}
                   ref={el => { itemRefs.current.set(i, el); }}
                   type="button"
-                  className={`dw-context-menu__item dw-context-menu__item--has-submenu${submenuIndex === i ? ' dw-context-menu__item--submenu-open' : ''}`}
+                  className={`rdd-context-menu__item rdd-context-menu__item--has-submenu${submenuIndex === i ? ' rdd-context-menu__item--submenu-open' : ''}`}
                   title={item.title ? resolveLabel(item.title, fmt) : undefined}
                   onMouseEnter={() => handleItemMouseEnter(i, item)}
                   onMouseLeave={() => handleItemMouseLeave(item)}
@@ -369,9 +369,9 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                   aria-haspopup="true"
                   aria-expanded={submenuIndex === i}
                 >
-                  <span className="dw-context-menu__icon" aria-hidden="true" />
-                  <span className="dw-context-menu__label">{resolveLabel(item.label, fmt)}</span>
-                  <span className="dw-context-menu__chevron" aria-hidden="true">›</span>
+                  <span className="rdd-context-menu__icon" aria-hidden="true" />
+                  <span className="rdd-context-menu__label">{resolveLabel(item.label, fmt)}</span>
+                  <span className="rdd-context-menu__chevron" aria-hidden="true">›</span>
                 </button>
               );
             }
@@ -386,7 +386,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                 key={i}
                 ref={el => { itemRefs.current.set(i, el); }}
                 type="button"
-                className={`dw-context-menu__item${isDisabled ? ' dw-context-menu__item--disabled' : ''}`}
+                className={`rdd-context-menu__item${isDisabled ? ' rdd-context-menu__item--disabled' : ''}`}
                 title={simple.title ? resolveLabel(simple.title, fmt) : undefined}
                 disabled={isDisabled}
                 data-cy-action={simple.cyAction}
@@ -397,11 +397,11 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                 aria-checked={showChk ? isChecked : undefined}
               >
                 {simple.icon
-                  ? <span className="dw-context-menu__icon">{simple.icon}</span>
-                  : <span className="dw-context-menu__icon" aria-hidden="true" />}
-                <span className="dw-context-menu__label">{resolveLabel(simple.label, fmt)}</span>
+                  ? <span className="rdd-context-menu__icon">{simple.icon}</span>
+                  : <span className="rdd-context-menu__icon" aria-hidden="true" />}
+                <span className="rdd-context-menu__label">{resolveLabel(simple.label, fmt)}</span>
                 {showChk && (
-                  <span className={`dw-context-menu__checkbox${isChecked ? ' dw-context-menu__checkbox--checked' : ''}`} aria-hidden="true">
+                  <span className={`rdd-context-menu__checkbox${isChecked ? ' rdd-context-menu__checkbox--checked' : ''}`} aria-hidden="true">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2"
                         fill={isChecked ? 'currentColor' : 'none'}

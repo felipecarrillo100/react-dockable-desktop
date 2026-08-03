@@ -561,6 +561,13 @@ export interface WindowManagerProviderProps {
   windowClass?: string;
   /** CSS class applied to the inner content area of floating panel windows. */
   windowBodyClass?: string;
+  /**
+   * Starting z-index for floating windows and the library's own chrome overlays
+   * (context menu, toolbar flyout, modal stack, toast, workspace edge zones),
+   * all of which shift together via `--rdd-z-base`. Set this above/below a host
+   * app's own modal z-index range to control stacking against it. @default 1000
+   */
+  zIndexBase?: number;
 }
 
 export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
@@ -574,7 +581,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   sidePanelClass,
   sidePanelBodyClass,
   windowClass,
-  windowBodyClass
+  windowBodyClass,
+  zIndexBase: zIndexBaseProp
 }) => {
   // Scoped registry: client's own instance, or fall back to the global singleton for backward compat
   const registry = useRef(client?.registry ?? PanelRegistry).current;
@@ -583,6 +591,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   const effectiveFormatMessage = client?.config.formatMessage ?? formatMessage;
   const effectivePredefinedMessages = client?.config.predefinedMessages ?? predefinedMessages;
   const effectiveDir = client?.config.dir ?? dirProp;
+  const effectiveZIndexBase = client?.config.zIndexBase ?? zIndexBaseProp ?? 1000;
 
   const [state, setState] = useState<WindowState>(() => {
     const layout = parseInitialState(client?.initialState ?? null);
@@ -619,7 +628,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }), [effectivePredefinedMessages]);
 
   const eventBusRef = useRef(new PanelEventBus());
-  const maxZRef = useRef(1000);
+  const maxZRef = useRef(effectiveZIndexBase);
+
+  // Mirror the z-index base onto document.documentElement as a CSS variable so the
+  // library's portaled chrome (ContextMenu, Toast, Toolbar's flyout, ModalStackRenderer),
+  // which renders outside this provider's own DOM subtree, shifts in lockstep with
+  // maxZRef — same rationale as the data-workspace-skin mirroring in WindowManager.tsx.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--rdd-z-base', String(effectiveZIndexBase));
+    return () => { document.documentElement.style.removeProperty('--rdd-z-base'); };
+  }, [effectiveZIndexBase]);
 
   const subscribe = useCallback((event: string, callback: (data: any) => void) => {
     return eventBusRef.current.subscribe(event, callback);

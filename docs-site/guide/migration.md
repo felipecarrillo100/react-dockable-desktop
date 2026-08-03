@@ -1,5 +1,41 @@
 # Migration Guide
 
+## v4.x → v5.0.0
+
+v5.0.0 closes gaps found in two audits: a core-API review, and a framework-agnosticism review (the library's primary users build with Material-UI, React-Bootstrap, Tailwind, and shadcn/ui). Most apps are unaffected by the two hook-related breaking changes below (see why under each), but every app importing `styles.css` is affected by the CSS renames.
+
+### Breaking changes
+
+1. **Five hooks now throw instead of silently degrading.** `useSidebar()`, `useSidebarTab()`, `useToolbar()`, `usePanelContribution()`, `useActivePanelContribution()` used to log a `console.warn` and return a no-op object when called outside their required provider; they now throw, matching every other hook in the library. `DockableDesktopProvider` already wraps every provider these need, so apps using it are unaffected. Only code calling one of these five hooks with **no** ancestor provider at all needs to add one.
+
+2. **Every CSS class and custom property is now prefixed with `rdd-`.** The previous naming was an inconsistent mix of five prefixes (`dw-`, `v2-`, `sb-`, `fw-`, `wm-`) plus many unprefixed classes — including a bare `.active` that collides with Bootstrap's own global `.active` class, and `:root`-scoped design tokens (`--accent-color`, `--bg-primary`, etc.) using the same short-generic-name convention shadcn/ui uses for its own theme tokens. This only affects you if you have custom CSS **overriding the library's internal classes or default variable values** (not if you only use documented props/skins). The demo apps' own classes (`sb-*` and similar) are unaffected — they're sample-app code, not library API.
+
+   The rename follows one mechanical pattern:
+   - Classes that had one of the five old prefixes: **the old prefix is replaced** by `rdd-` — e.g. `dw-context-menu` → `rdd-context-menu`, `v2-modal-overlay` → `rdd-modal-overlay`, `fw-corner-zone` → `rdd-corner-zone`, `wm-menu-icon` → `rdd-menu-icon`.
+   - Classes that had no prefix: **`rdd-` is prepended** — e.g. `floating-window` → `rdd-floating-window`, `workspace-tab` → `rdd-workspace-tab`, `active` → `rdd-active`, `resizer-bar` → `rdd-resizer-bar`.
+   - Every `--custom-property` at `:root` gets `--rdd-` prepended — e.g. `--accent-color` → `--rdd-accent-color`, `--bg-workspace` → `--rdd-bg-workspace`, `--window-opacity` → `--rdd-window-opacity`.
+
+   If you have custom CSS targeting any of the library's classes or variables (skin overrides, `[data-workspace-skin="my-skin"] .some-class { ... }`, or reading/setting one of the default variables), find-and-replace the old name with its `rdd-`-prefixed form. Cross-check against the [Theming guide](./theming) for the current variable reference and [Advanced Topics](./advanced) for the current class names used in the drag-resize example.
+
+3. **The library no longer sets page-wide CSS.** Previously, importing `styles.css` set `font-family`/background/margin/overflow on `html, body, #root` and restyled scrollbars on the bare `*` selector — affecting your entire page, not just the workspace. These are now scoped to the workspace's own root element and its descendants only. If you relied on this for full-viewport sizing, add it yourself: `body { margin: 0; overflow: hidden; }`.
+
+4. **Animations are now enabled by default.** Previously, every transition/animation on your *entire page* was force-disabled unless `<html>` had an undocumented `enable-animations` class — something only the demo apps' own UI ever set. If you were relying on animations being off by default, pass `<WindowManager animations={false} />`.
+
+### Not breaking
+
+- `WorkspaceClient`'s new methods, `SerializedLayout.version`, `startPointerDrag()`/`computeResizedRect()`, `useColorScheme()`, `usePanelSize()`, and `zIndexBase` are all purely additive.
+- Layouts saved before this change still load correctly.
+
+### Upgrade steps
+
+1. `npm install react-dockable-desktop@5`
+2. If you call any of the five hooks in #1 above outside `DockableDesktopProvider`, wrap them in it (or the specific provider they need).
+3. If you have custom CSS targeting the library's classes/variables, apply the rename pattern in #2.
+4. If your app relied on the library zeroing `body` margin/overflow, add that yourself.
+5. If you were relying on animations being off by default with no `enable-animations` class anywhere, pass `<WindowManager animations={false} />`.
+
+---
+
 ## v3.x → v4.0.0
 
 v4.0.0 removes the `replace-react-contexify` peer dependency. The library now ships a built-in `<ContextMenu>` component. All user-facing API is unchanged.

@@ -257,7 +257,7 @@ Always pass an `icon` node to items that appear alongside built-in actions — t
 
 ```tsx
 const SaveIcon = (
-  <span className="wm-menu-icon">
+  <span className="rdd-menu-icon">
     <svg width="14" height="14" viewBox="0 0 24 24" ...>...</svg>
   </span>
 );

@@ -122,16 +122,16 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
 
   return (
     <div 
-      className={`v2-side-panel v2-side-panel-${position} v2-side-panel-visible ${sidePanelClass ?? ''}`}
+      className={`rdd-side-panel rdd-side-panel-${position} rdd-side-panel-visible ${sidePanelClass ?? ''}`}
       style={{ width: widthStyle }}
       dir={dir}
     >
-      <div className="v2-side-panel-window">
-        <div className="v2-side-panel-header">
-          {icon && <div className="v2-side-panel-icon">{icon}</div>}
-          <h4 className="v2-side-panel-title">{displayTitle}</h4>
+      <div className="rdd-side-panel-window">
+        <div className="rdd-side-panel-header">
+          {icon && <div className="rdd-side-panel-icon">{icon}</div>}
+          <h4 className="rdd-side-panel-title">{displayTitle}</h4>
           <button
-            className="v2-side-panel-close-button"
+            className="rdd-side-panel-close-button"
             onClick={() => handleClose()}
             title={formatMessage(predefinedMessages.closeTooltip)}
             type="button"
@@ -141,7 +141,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
             </svg>
           </button>
         </div>
-        <div className={`v2-side-panel-body ${sidePanelBodyClass ?? ''}`}>
+        <div className={`rdd-side-panel-body ${sidePanelBodyClass ?? ''}`}>
           <FormContainerProvider value={contract}>
             <Component {...props} panelId={id} />
           </FormContainerProvider>
