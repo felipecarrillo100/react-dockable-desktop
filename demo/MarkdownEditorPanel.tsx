@@ -493,6 +493,13 @@ export const MarkdownEditorPanel: React.FC = () => {
           overscroll-behavior: contain;
         }
 
+        /* WindowManager's root sets user-select:none on the whole workspace (to avoid
+           accidental text selection while dragging tabs/resizing splits), which panel
+           content inherits unless it opts back in — rendered prose should be selectable. */
+        .md-preview {
+          user-select: text;
+        }
+
         .md-preview table {
           border-collapse: collapse;
           width: 100%;
