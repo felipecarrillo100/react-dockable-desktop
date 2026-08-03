@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
+import rehypeHighlight from 'rehype-highlight';
 import { usePanelContribution } from '../src/index';
 import type { ToolbarItem, PanelSidebarSection } from '../src/index';
 
@@ -20,11 +22,21 @@ renders live on the right — drag the divider between them to resize.
 
 ## Example table
 
-| Feature       | Status |
-| ------------- | ------ |
-| Bold / Italic | ✅ |
-| Headings      | ✅ |
-| Code          | ✅ |
+| Feature       | Status | Notes                    |
+| ------------- | :----: | ------------------------- |
+| Bold / Italic | ✅     | via toolbar or \`**\`/\`*\` |
+| Headings      | ✅     | contributes to the ToC    |
+| Tables        | ✅     | GFM, with alignment       |
+| Code          | ✅     | syntax-highlighted below  |
+
+## Example code
+
+\`\`\`ts
+function greet(name: string): string {
+  // Scroll this editor — the preview follows along, and vice versa.
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
 
 ## Try it
 
@@ -60,6 +72,130 @@ function prefixLines(editorInstance: any, prefix: string): void {
   }
   editorInstance.executeEdits('markdown-toolbar', edits);
   editorInstance.focus();
+}
+
+// ─── Markdown rendering: tag every block with its source line ─────────────
+// react-markdown always passes a `node` prop to component overrides (`passNode: true`
+// internally) whose `position.start.line` is the markdown source line that produced it —
+// this is the same `data-line` tagging VS Code's own markdown preview injects manually
+// (see extensions/markdown-language-features/preview-src/scroll-sync.ts) to drive its
+// dual-pane scroll sync. Tagging block-level elements here is what makes scroll sync
+// below possible, without a dedicated position-tracking plugin.
+
+function withSourceLine<Tag extends keyof JSX.IntrinsicElements>(tag: Tag): Components[Tag] {
+  const Tagged = ({ node, ...props }: any) => {
+    const line = node?.position?.start.line;
+    const Element = tag as any;
+    return <Element {...props} data-source-line={line} />;
+  };
+  return Tagged as Components[Tag];
+}
+
+const TableWithScroll: Components['table'] = ({ node, ...props }) => {
+  const line = node?.position?.start.line;
+  // Wraps rather than styling <table> directly with overflow-x, so a wide table scrolls
+  // horizontally inside the preview instead of overflowing the panel.
+  return (
+    <div style={{ overflowX: 'auto' }} data-source-line={line}>
+      <table {...props} />
+    </div>
+  );
+};
+
+const markdownComponents: Components = {
+  h1: withSourceLine('h1'),
+  h2: withSourceLine('h2'),
+  h3: withSourceLine('h3'),
+  h4: withSourceLine('h4'),
+  h5: withSourceLine('h5'),
+  h6: withSourceLine('h6'),
+  p: withSourceLine('p'),
+  li: withSourceLine('li'),
+  blockquote: withSourceLine('blockquote'),
+  pre: withSourceLine('pre'),
+  table: TableWithScroll,
+};
+
+// ─── Scroll sync (Monaco ⇄ preview) ────────────────────────────────────────
+// Same algorithm as VS Code's scroll-sync.ts: find the two source-line-tagged elements
+// bracketing a target line and linearly interpolate a scroll position between them (and
+// the inverse: bracket a scroll offset and interpolate back to a fractional source line).
+
+interface TaggedElement { line: number; el: HTMLElement; }
+
+function getTaggedElements(container: HTMLElement): TaggedElement[] {
+  const out: TaggedElement[] = [];
+  container.querySelectorAll<HTMLElement>('[data-source-line]').forEach((el) => {
+    const line = Number(el.getAttribute('data-source-line'));
+    if (!Number.isNaN(line)) out.push({ line, el });
+  });
+  out.sort((a, b) => a.line - b.line);
+  return out;
+}
+
+// Position of a tagged element relative to previewEl's scrollable content origin
+// (independent of the current scroll offset).
+function contentTop(previewEl: HTMLElement, target: HTMLElement): number {
+  const previewRect = previewEl.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  return targetRect.top - previewRect.top + previewEl.scrollTop;
+}
+
+function scrollPreviewToLine(previewEl: HTMLElement, tagged: TaggedElement[], targetLine: number): void {
+  if (tagged.length === 0) return;
+  if (targetLine <= tagged[0].line) {
+    previewEl.scrollTop = 0;
+    return;
+  }
+  let prev = tagged[0];
+  let next: TaggedElement | undefined;
+  for (const entry of tagged) {
+    if (entry.line <= targetLine) prev = entry;
+    else { next = entry; break; }
+  }
+  const prevTop = contentTop(previewEl, prev.el);
+  if (!next) {
+    previewEl.scrollTop = prevTop;
+    return;
+  }
+  const nextTop = contentTop(previewEl, next.el);
+  const progress = next.line === prev.line ? 0 : (targetLine - prev.line) / (next.line - prev.line);
+  previewEl.scrollTop = prevTop + progress * (nextTop - prevTop);
+}
+
+function getLineForPreviewOffset(previewEl: HTMLElement, tagged: TaggedElement[], offset: number): number | null {
+  if (tagged.length === 0) return null;
+  const positions = tagged.map((t) => ({ line: t.line, top: contentTop(previewEl, t.el) }));
+  if (offset <= positions[0].top) return positions[0].line;
+  for (let i = 0; i < positions.length - 1; i++) {
+    const cur = positions[i];
+    const next = positions[i + 1];
+    if (offset >= cur.top && offset <= next.top) {
+      const progress = next.top === cur.top ? 0 : (offset - cur.top) / (next.top - cur.top);
+      return cur.line + progress * (next.line - cur.line);
+    }
+  }
+  return positions[positions.length - 1].line;
+}
+
+// Fractional top-of-viewport line, using Monaco's own pixel/line APIs for the sub-line offset.
+function getEditorTopFractionalLine(editorInstance: any): number {
+  const visible = editorInstance.getVisibleRanges();
+  if (!visible || visible.length === 0) return 1;
+  const topLine = visible[0].startLineNumber;
+  const scrollTop = editorInstance.getScrollTop();
+  const lineTop = editorInstance.getTopForLineNumber(topLine);
+  const nextLineTop = editorInstance.getTopForLineNumber(topLine + 1);
+  const lineHeight = nextLineTop - lineTop || 1;
+  return topLine + Math.max(0, (scrollTop - lineTop) / lineHeight);
+}
+
+function setEditorScrollForLine(editorInstance: any, targetLine: number): void {
+  const floorLine = Math.max(1, Math.floor(targetLine));
+  const fraction = targetLine - floorLine;
+  const lineTop = editorInstance.getTopForLineNumber(floorLine);
+  const nextLineTop = editorInstance.getTopForLineNumber(floorLine + 1);
+  editorInstance.setScrollTop(Math.max(0, lineTop + fraction * (nextLineTop - lineTop)));
 }
 
 // ─── Icons (matching the demo's existing 16x16 stroke-icon convention) ─────
@@ -168,6 +304,11 @@ export const MarkdownEditorPanel: React.FC = () => {
   const editorRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const taggedElementsRef = useRef<TaggedElement[]>([]);
+  // Which side is the active driver of an in-flight programmatic scroll — the other
+  // side's handler consumes it (once) and skips forwarding, breaking the feedback loop
+  // that bidirectional sync would otherwise create.
+  const syncSourceRef = useRef<'editor' | 'preview' | null>(null);
 
   useEffect(() => {
     const updateTheme = () => {
@@ -192,6 +333,7 @@ export const MarkdownEditorPanel: React.FC = () => {
       text: el.textContent || '',
       id: el.id,
     })));
+    taggedElementsRef.current = getTaggedElements(container);
   }, [value]);
 
   const scrollToHeading = (id: string) => {
@@ -254,6 +396,101 @@ export const MarkdownEditorPanel: React.FC = () => {
           background-color: color-mix(in srgb, var(--accent-color) 35%, transparent) !important;
           transform: scaleX(2);
         }
+
+        .md-preview table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 0.75em 0;
+          font-size: 0.9rem;
+        }
+        .md-preview th,
+        .md-preview td {
+          border: 1px solid var(--panel-card-border);
+          padding: 6px 10px;
+          text-align: left;
+        }
+        .md-preview thead th {
+          background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+          font-weight: 600;
+        }
+        .md-preview tbody tr:nth-child(even) {
+          background: color-mix(in srgb, var(--panel-text) 4%, transparent);
+        }
+        .md-preview blockquote {
+          margin: 0.75em 0;
+          padding: 4px 12px;
+          border-inline-start: 3px solid var(--accent-color);
+          color: color-mix(in srgb, var(--panel-text) 75%, transparent);
+          background: color-mix(in srgb, var(--panel-text) 4%, transparent);
+        }
+        .md-preview a {
+          color: var(--accent-color);
+          text-decoration: none;
+        }
+        .md-preview a:hover {
+          text-decoration: underline;
+        }
+        .md-preview li.task-list-item {
+          list-style: none;
+          margin-inline-start: -1.4em;
+        }
+        .md-preview li.task-list-item input[type="checkbox"] {
+          margin-inline-end: 6px;
+        }
+        .md-preview pre {
+          background: color-mix(in srgb, var(--panel-text) 6%, transparent);
+          border: 1px solid var(--panel-card-border);
+          border-radius: 6px;
+          padding: 10px 12px;
+          overflow-x: auto;
+        }
+        .md-preview code {
+          font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+          font-size: 0.85em;
+        }
+        .md-preview pre code {
+          background: transparent;
+        }
+        .md-preview :not(pre) > code {
+          background: color-mix(in srgb, var(--panel-text) 8%, transparent);
+          padding: 2px 5px;
+          border-radius: 4px;
+        }
+
+        /* Fenced code-block syntax highlighting (rehype-highlight token classes),
+           themed off the panel's own CSS vars rather than a mismatched prebuilt theme. */
+        .md-preview .hljs-keyword,
+        .md-preview .hljs-selector-tag,
+        .md-preview .hljs-literal { color: #c586c0; }
+        .md-preview .hljs-string,
+        .md-preview .hljs-attr { color: #ce9178; }
+        .md-preview .hljs-comment {
+          color: color-mix(in srgb, var(--panel-text) 55%, transparent);
+          font-style: italic;
+        }
+        .md-preview .hljs-number { color: #b5cea8; }
+        .md-preview .hljs-title,
+        .md-preview .hljs-title.function_,
+        .md-preview .hljs-section { color: #dcdcaa; }
+        .md-preview .hljs-variable,
+        .md-preview .hljs-name { color: var(--accent-color); }
+        .md-preview .hljs-built_in,
+        .md-preview .hljs-type { color: #4ec9b0; }
+
+        [data-color-scheme="light"] .md-preview .hljs-keyword,
+        [data-color-scheme="light"] .md-preview .hljs-selector-tag,
+        [data-color-scheme="light"] .md-preview .hljs-literal { color: #af00db; }
+        [data-color-scheme="light"] .md-preview .hljs-string,
+        [data-color-scheme="light"] .md-preview .hljs-attr { color: #a31515; }
+        [data-color-scheme="light"] .md-preview .hljs-comment {
+          color: color-mix(in srgb, var(--panel-text) 55%, transparent);
+        }
+        [data-color-scheme="light"] .md-preview .hljs-number { color: #098658; }
+        [data-color-scheme="light"] .md-preview .hljs-title,
+        [data-color-scheme="light"] .md-preview .hljs-title.function_,
+        [data-color-scheme="light"] .md-preview .hljs-section { color: #795e26; }
+        [data-color-scheme="light"] .md-preview .hljs-built_in,
+        [data-color-scheme="light"] .md-preview .hljs-type { color: #267f99; }
       `}</style>
       <div style={{ width: `${ratio * 100}%`, height: '100%', minWidth: 0 }}>
         <Editor
@@ -262,7 +499,20 @@ export const MarkdownEditorPanel: React.FC = () => {
           theme={editorTheme}
           value={value}
           onChange={(v) => setValue(v ?? '')}
-          onMount={(editorInstance) => { editorRef.current = editorInstance; }}
+          onMount={(editorInstance) => {
+            editorRef.current = editorInstance;
+            editorInstance.onDidScrollChange(() => {
+              if (syncSourceRef.current === 'preview') {
+                syncSourceRef.current = null;
+                return;
+              }
+              const previewEl = previewRef.current;
+              if (!previewEl) return;
+              const targetLine = getEditorTopFractionalLine(editorInstance);
+              syncSourceRef.current = 'editor';
+              scrollPreviewToLine(previewEl, taggedElementsRef.current, targetLine);
+            });
+          }}
           options={{
             minimap: { enabled: false },
             fontSize: 13,
@@ -290,10 +540,23 @@ export const MarkdownEditorPanel: React.FC = () => {
       </div>
       <div
         ref={previewRef}
-        className="overflow-auto"
+        className="overflow-auto md-preview"
         style={{ flex: 1, minWidth: 0, height: '100%', padding: '16px', color: 'var(--panel-text)', backgroundColor: 'var(--panel-card-bg)', boxSizing: 'border-box' }}
+        onScroll={() => {
+          if (syncSourceRef.current === 'editor') {
+            syncSourceRef.current = null;
+            return;
+          }
+          const editorInstance = editorRef.current;
+          const previewEl = previewRef.current;
+          if (!editorInstance || !previewEl) return;
+          const targetLine = getLineForPreviewOffset(previewEl, taggedElementsRef.current, previewEl.scrollTop);
+          if (targetLine == null) return;
+          syncSourceRef.current = 'preview';
+          setEditorScrollForLine(editorInstance, targetLine);
+        }}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>{value}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug, rehypeHighlight]} components={markdownComponents}>{value}</ReactMarkdown>
       </div>
     </div>
   );
