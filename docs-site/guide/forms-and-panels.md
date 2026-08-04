@@ -93,6 +93,27 @@ container.requestClose({ force: true });
 
 This skips both the `onCloseRequested` handler and the dirty-state dialog. Use it for explicit "Discard and close" actions where the user has already confirmed intent in your own UI.
 
+## Reporting state to be saved
+
+For a **docked or floating** panel opened with `openPanel(id, key, { props })`, static `props` are frozen at open time — fine for identity/config, but they can't capture state the panel accumulates afterward (scroll position, an in-progress edit, a view-mode toggle). Register a callback instead, and `saveLayout()` pulls it fresh every time it's called:
+
+```tsx
+function MyDocumentPanel() {
+  const container = useFormContainer();
+  const scrollLineRef = useRef(0);
+
+  useEffect(() => {
+    return container.registerStateProvider?.(() => ({ scrollLine: scrollLineRef.current }));
+  }, [container]);
+
+  // ...
+}
+```
+
+Return `undefined` to fall back to the panel's static `props` for that particular save. Only meaningful for docked/floating panels — `registerStateProvider` is `undefined` on left/right side panels and modals, which already have a complete, different answer to per-instance data (their own `props` argument on `openLeftPanel`/`openRightPanel`/`openModal`, plus `updateInstance`).
+
+See [WorkspaceClient → Per-panel props](./workspace-client#per-panel-props) for the full picture, including what makes a value "serializable enough" to survive `saveLayout()`, and the `'layout:panels-excluded'` event that fires when it doesn't.
+
 ## Dynamic panel title
 
 Update the tab or window title at runtime:
@@ -300,6 +321,7 @@ interface FormContainerContract {
 
   // ── Subscriptions (each returns an unsubscribe function) ─────────────────
   onCloseRequested:      (handler: () => boolean | Promise<boolean>) => () => void;
+  registerStateProvider?: (getState: () => unknown) => () => void; // docked/floating only — see below
   onClose?:              (handler: () => void) => () => void;
   onMinimize?:           (handler: () => void) => () => void;
   onRestore?:            (handler: () => void) => () => void;

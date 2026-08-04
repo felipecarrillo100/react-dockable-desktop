@@ -8,7 +8,7 @@
 import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
-import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor } from './WindowManagerContext';
+import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo } from './WindowManagerContext';
 import type { PanelRegistryClass } from './PanelRegistry';
 import { DefaultContextMenuAdapter, ContextMenuContext } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
@@ -104,7 +104,8 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
 // 3. Persistent DOM Container Host & Slot
 // ==========================================
 
-const renderPanelContent = (id: string, componentKey: string, registry: PanelRegistryClass) => {
+const renderPanelContent = (id: string, panel: PanelInfo, registry: PanelRegistryClass) => {
+  const componentKey = panel.component;
   const registryEntry = registry.get(componentKey);
   if (!registryEntry) {
     console.warn(
@@ -120,7 +121,9 @@ const renderPanelContent = (id: string, componentKey: string, registry: PanelReg
     );
   }
   const Component = registryEntry.Component;
-  return <Component panelId={id} />;
+  // Props spread first, panelId second — a caller-supplied prop of the same name can never
+  // shadow the injected id. Matches ModalStackRenderer/SidePanelRenderer's spread order exactly.
+  return <Component {...(panel.props ?? {})} panelId={id} />;
 };
 
 const activePanelDimensions = new Map<string, { width: number; height: number }>();
@@ -296,7 +299,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
 const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
   const state = useWindowManagerState();
-  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle, minimizePanel } = useWindowManagerActions();
+  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, minimizePanel } = useWindowManagerActions();
 
   // ── minimize / restore ──────────────────────────────────────────────────
   const isMin = state.minimized.some(m => m.id === panelId);
@@ -372,6 +375,10 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
       registerCloseGuard(panelId, handler);
       return () => unregisterCloseGuard(panelId);
     },
+    registerStateProvider: (getState) => {
+      registerStateProvider(panelId, getState);
+      return () => unregisterStateProvider(panelId);
+    },
     setTitle: (title) => updatePanelTitle(panelId, title),
     instanceId: panelId,
     containerType: initialContainerTypeRef.current,
@@ -412,7 +419,7 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
       reg.onContainerTypeChange.add(handler);
       return () => reg.onContainerTypeChange.delete(handler);
     },
-  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, updatePanelTitle, minimizePanel]);
+  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, minimizePanel]);
 
   return (
     <FormContainerProvider value={contract}>
@@ -2129,7 +2136,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
             <div style={{ width: '100%', height: '100%' }} dir={state.dir}>
-              {renderPanelContent(id, panel.component, registry)}
+              {renderPanelContent(id, panel, registry)}
             </div>
           </FormContainerProviderWrapper>,
           targetEl,

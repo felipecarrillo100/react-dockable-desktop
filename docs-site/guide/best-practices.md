@@ -39,6 +39,23 @@ if (!client.isOpen('my-map')) {
 
 `openPanel(id, key)` on an already-open panel re-focuses it, but using `focusPanel(id)` is more explicit and semantically correct when you just want to bring a panel to the user's attention.
 
+## Use `dedupeKey` when call sites can't agree on an `id`
+
+`isOpen`/`focusPanel` above assume every call site already knows and reuses the same literal `id` for a given entity. When that's not guaranteed — multiple places in your app can open "the panel for this document" without necessarily generating the same id — use `dedupeKey` instead of hand-rolling an id → panel lookup:
+
+```ts
+client.openPanel(crypto.randomUUID(), 'document', {
+  props: { path: doc.path },
+  dedupeKey: doc.path,
+});
+```
+
+Any later call with the same `component` and `dedupeKey` focuses the existing panel instead of opening a duplicate — the new call's `id`/`props` are ignored when a match is found.
+
+## Keep per-panel `props` small, and prefer `registerStateProvider` for anything that changes
+
+`props` on `openPanel` rides through `saveLayout()`'s JSON wholesale on every save. That's fine for small identity/config values (a document id, a filename, a filter selection) but the wrong tool for anything content-sized or high-frequency-changing (a whole document's text, a large dataset) — bundling that into the layout blob means re-serializing it on every save, not just when it actually changes. Keep large/volatile content in your own store keyed by `panelId`, and use `props`/`registerStateProvider` only for what you actually want persisted alongside the layout.
+
 ## Persist layouts with beforeunload
 
 ```ts

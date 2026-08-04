@@ -29,6 +29,17 @@ export interface FormContainerContract {
   setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
   /** Register a custom close guard handler. Returning false or a promise resolving to false blocks closing. */
   onCloseRequested: (handler: () => boolean | Promise<boolean>) => (() => void);
+  /**
+   * Registers a callback reporting this panel's *current* restorable state, pulled fresh by
+   * `WorkspaceClient.saveLayout()` every time it's called — for panels whose static open-time
+   * props can't capture state accumulated after opening (scroll position, an in-progress edit, a
+   * view-mode toggle). Only meaningful for docked/floating panels — left/right side panels and
+   * modals already have a complete answer to this via `openLeftPanel`/`openRightPanel`/
+   * `openModal`'s own `props` argument plus `updateInstance`, so this is `undefined` there.
+   * The returned value must be synchronous — `saveLayout()` itself never returns a `Promise`.
+   * Return `undefined` to fall back to the static `props` this panel was opened with.
+   */
+  registerStateProvider?: (getState: () => unknown) => (() => void);
   /** Change the display title of the containing tab or window dynamically. */
   setTitle: (title: string | { id: string; defaultMessage: string; values?: Record<string, any> }) => void;
   /** Change the tab or window icon dynamically. */
@@ -76,6 +87,7 @@ const defaultContract: FormContainerContract = {
   },
   setDirty: () => {},
   onCloseRequested: () => () => {},
+  registerStateProvider: () => () => {},
   setTitle: () => {},
   setIcon: () => {},
   containerType: 'standalone',

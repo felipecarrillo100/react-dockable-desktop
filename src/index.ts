@@ -34,6 +34,11 @@ export {
   usePanelContextMenu
 } from './components/WindowManagerContext';
 
+// Runtime serializability check — used internally to decide whether a panel's props can be
+// included in WorkspaceClient.saveLayout()'s output; exported so apps can apply the same check
+// themselves (e.g. before calling openPanel, to warn early rather than discover it at save time).
+export { isSerializable } from './components/serializable';
+
 // TypeScript Types and Interfaces
 export type {
   SplitOrientation,
@@ -45,6 +50,7 @@ export type {
   LayoutNode,
   FloatingWindow,
   PanelInfo,
+  OpenPanelOptions,
   WindowState,
   WindowActions,
   SerializedLayout,

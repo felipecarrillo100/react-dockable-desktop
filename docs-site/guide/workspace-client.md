@@ -37,6 +37,72 @@ client.restorePanel(id)                        // restore from taskbar
 client.focusPanel(id)                          // bring to front / select tab
 ```
 
+### `openPanel` options
+
+| Option | Type | Description |
+|---|---|---|
+| `title` | `string \| ContextMenuPredefinedMessage` | Overrides the panel tab/window title. |
+| `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | Initial placement. Defaults to `'docked'` when a grid exists. |
+| `anchor` | `FloatAnchor \| null` | Pin a new floating window to a workspace corner. No effect when docked/tabbed. |
+| `focus` | `boolean` | Set `activePanelId` to this panel. Default `true`. |
+| `props` | `object` | Custom per-instance data spread onto the panel component alongside `panelId` — see **Per-panel props** below. Unconstrained, matching `openModal`/`openLeftPanel`/`openRightPanel`'s own `props` argument. |
+| `dedupeKey` | `string` | If another open panel of the same `componentKey` already has this exact key, that panel is focused instead of opening a new one — see **Instance dedup** below. |
+
+## Per-panel props
+
+```ts
+client.openPanel('doc-1', 'markdownDocument', { props: { filename: 'notes.md', content: '# Hi' } });
+```
+
+`props` is spread onto the component the same way `openModal`/`openLeftPanel`/`openRightPanel` already spread theirs — `<Component {...props} panelId={id} />` (props first, so a prop literally named `panelId` can never shadow the injected one). There's **no type restriction** on `props` — a function, a `ReactNode`, a class instance, anything is accepted.
+
+Whether a specific `props` value survives a `saveLayout()` call is a **runtime fact**, not a compile-time guarantee:
+
+- Every panel has a `serializable: boolean` field (readable via `useWindowManagerState().panels[id].serializable`), computed by recursively checking `props` for anything that can't round-trip through `JSON.stringify`/`JSON.parse` — functions, symbols, React elements, class instances, `Map`/`Set`, or `undefined` anywhere in the tree. (`Date` is treated as serializable-enough, matching `JSON.stringify`'s own behavior, even though it doesn't round-trip back to a `Date` instance.)
+- A panel with `serializable: false` **keeps working normally on screen** — it's simply excluded from the *next* `saveLayout()` call, pruned from the grid/floating/minimized structures in that saved snapshot so a later `loadLayout()` never references a panel it has no data to recreate.
+- `saveLayout()` publishes `'layout:panels-excluded'` (see **Event bus** below) whenever a specific call excludes at least one panel — subscribe to it if you want to tell the user ("2 panels couldn't be saved") rather than relying on them noticing something's missing after a reload.
+
+```ts
+import { isSerializable } from 'react-dockable-desktop';
+
+// Check before opening, if you want to warn early instead of discovering it at save time:
+if (!isSerializable(myProps)) { /* ... */ }
+```
+
+### Reporting state pulled fresh at save time
+
+Static `props` are frozen at open time — fine for identity/config, but they can't capture state a panel accumulates *after* opening (scroll position, an in-progress edit, a view-mode toggle). A panel can instead register a callback reporting its *current* state, called by `saveLayout()` every time:
+
+```tsx
+import { useFormContainer } from 'react-dockable-desktop';
+
+function MyPanel() {
+  const container = useFormContainer();
+  const scrollLineRef = useRef(0);
+
+  useEffect(() => {
+    return container.registerStateProvider?.(() => ({ scrollLine: scrollLineRef.current }));
+  }, [container]);
+
+  // ...
+}
+```
+
+Return `undefined` to fall back to the panel's static `props` for that save. The returned value is re-checked against the same serializability rule on **every** save — a provider-backed panel's exclusion status can flip from one save to the next. Only meaningful for docked/floating panels; left/right side panels and modals already have a complete, different answer to this (their own `props` argument plus `updateInstance`).
+
+## Instance dedup
+
+```ts
+client.openPanel('doc-1', 'markdownDocument', { props: { path: '/notes.md' }, dedupeKey: '/notes.md' });
+client.openPanel('doc-2', 'markdownDocument', { dedupeKey: '/notes.md' }); // focuses doc-1 instead — doc-2 never exists
+```
+
+Re-opening the exact same `id` already focuses the existing panel rather than duplicating it — `dedupeKey` covers the case where multiple call sites might not agree on the same literal `id` for what is semantically the same entity. When a match is found, the redirect entirely ignores the new call's `id`/`props`.
+
+```ts
+client.findPanelId('markdownDocument', '/notes.md')  // → the matching panel's id, or null
+```
+
 ### Floating / docking
 
 ```ts
@@ -55,8 +121,9 @@ client.loadLayout(json);                       // restore from JSON string
 ### Query methods
 
 ```ts
-client.isOpen(id)          // → boolean — is this panel currently open?
-client.getOpenPanelIds()   // → string[] — IDs of all open panels
+client.isOpen(id)                        // → boolean — is this panel currently open?
+client.getOpenPanelIds()                 // → string[] — IDs of all open panels
+client.findPanelId(componentKey, dedupeKey) // → string | null — see Instance dedup above
 ```
 
 ### Event bus
@@ -87,6 +154,19 @@ workspace.subscribe('panel:opened', data => console.log(data.id, data.component)
 
 The default (`WorkspaceClient` without a type parameter) accepts any string key with `unknown` data — fully backward-compatible.
 
+Two more built-in events, added alongside per-panel props:
+
+```ts
+// Fires whenever something saveLayout() would capture changes — coalesces open/close/minimize/
+// restore/dedupe-redirect into one signal for autosave-style consumers. Does NOT cover a
+// registerStateProvider callback's value changing on its own (that's a pull, unobservable without
+// the panel notifying separately), nor resize/split-drag/dock-rearrange (no hooks yet).
+workspace.subscribe('layout:changed', () => { /* ... */ });
+
+// Fires from inside saveLayout() itself, only when that call excluded at least one panel.
+workspace.subscribe('layout:panels-excluded', data => console.log(data.panels)); // { id, component }[]
+```
+
 ### Lifecycle convenience methods (v3)
 
 ```ts
@@ -94,6 +174,8 @@ const unsub = workspace.onPanelOpen((id, component) => { /* ... */ });
 const unsub = workspace.onPanelClose(id => { /* ... */ });
 const unsub = workspace.onPanelMinimize(id => { /* ... */ });
 const unsub = workspace.onPanelRestore(id => { /* ... */ });
+const unsub = workspace.onLayoutChanged(() => { /* ... */ });
+const unsub = workspace.onPanelsExcluded(panels => { /* ... */ });
 ```
 
 Each returns an unsubscribe function. See [Lifecycle callbacks](/guide/advanced#lifecycle-callbacks-v3) for patterns.

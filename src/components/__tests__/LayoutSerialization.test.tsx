@@ -190,7 +190,116 @@ describe('Layout Serialization (saveLayout / loadLayout)', () => {
   it('saveLayout stamps a version field', () => {
     mount();
     const snapshot = JSON.parse(lastActions.saveLayout());
-    expect(snapshot.version).toBe(1);
+    // v2: panels may carry `props`/`dedupeKey`, and the payload may omit panels the live
+    // workspace still has open (see the "excludes non-serializable panels" tests below).
+    expect(snapshot.version).toBe(2);
+  });
+
+  it('openPanel props round-trip through saveLayout/loadLayout', () => {
+    mount();
+    act(() => {
+      lastActions.openPanel('props-panel', 'map', { title: 'Props Panel', props: { filename: 'a.md', count: 3 } });
+    });
+    expect(lastState.panels['props-panel'].props).toEqual({ filename: 'a.md', count: 3 });
+    expect(lastState.panels['props-panel'].serializable).toBe(true);
+
+    const snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['props-panel'].props).toEqual({ filename: 'a.md', count: 3 });
+
+    act(() => { lastActions.closePanel('props-panel'); });
+    act(() => { lastActions.loadLayout(JSON.stringify(snapshot)); });
+    expect(lastState.panels['props-panel'].props).toEqual({ filename: 'a.md', count: 3 });
+  });
+
+  it('a panel with no props at all is serializable by default', () => {
+    mount();
+    act(() => { lastActions.openPanel('no-props-panel', 'map', { title: 'No Props' }); });
+    expect(lastState.panels['no-props-panel'].serializable).toBe(true);
+    expect(lastState.panels['no-props-panel'].props).toBeUndefined();
+  });
+
+  it('a panel opened with non-serializable props is excluded from saveLayout, pruned from ' +
+    'gridRoot/floating/minimized, but keeps existing live and unaffected', () => {
+    mount();
+    act(() => {
+      lastActions.openPanel('fn-panel', 'map', {
+        title: 'Fn Panel',
+        initialTarget: 'floating',
+        props: { onSave: () => {} },
+      });
+    });
+    expect(lastState.panels['fn-panel'].serializable).toBe(false);
+    expect(lastState.floating.some((w: any) => w.id === 'fn-panel')).toBe(true);
+
+    const snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['fn-panel']).toBeUndefined();
+    expect(snapshot.floating.some((w: any) => w.id === 'fn-panel')).toBe(false);
+
+    // The live, on-screen workspace must be completely unaffected by computing a save.
+    expect(lastState.panels['fn-panel']).toBeDefined();
+    expect(lastState.floating.some((w: any) => w.id === 'fn-panel')).toBe(true);
+  });
+
+  it('publishes layout:panels-excluded only when a save actually excludes something', () => {
+    mount();
+    const excludedCalls: any[] = [];
+    lastActions.subscribe('layout:panels-excluded', (data: any) => excludedCalls.push(data));
+
+    act(() => { lastActions.openPanel('clean-panel', 'map', { props: { ok: true } }); });
+    lastActions.saveLayout();
+    expect(excludedCalls.length).toBe(0);
+
+    act(() => {
+      lastActions.openPanel('bad-panel', 'editor', { props: { onSave: () => {} } });
+    });
+    lastActions.saveLayout();
+    expect(excludedCalls.length).toBe(1);
+    expect(excludedCalls[0].panels).toEqual([{ id: 'bad-panel', component: 'editor' }]);
+  });
+
+  it('dedupeKey redirects to an already-open panel of the same component instead of duplicating', () => {
+    mount();
+    act(() => {
+      lastActions.openPanel('doc-1', 'map', { title: 'Doc', props: { path: '/a.md' }, dedupeKey: '/a.md' });
+    });
+    act(() => {
+      lastActions.openPanel('doc-2', 'map', { title: 'Doc Again', dedupeKey: '/a.md' });
+    });
+
+    expect(lastState.panels['doc-2']).toBeUndefined();
+    expect(lastState.panels['doc-1']).toBeDefined();
+    expect(lastState.panels['doc-1'].title).toBe('Doc'); // the second call's title/props are ignored
+    expect(Object.keys(lastState.panels).length).toBe(1);
+    expect(lastActions.findPanelId('map', '/a.md')).toBe('doc-1');
+  });
+
+  it('registerStateProvider is pulled fresh on every saveLayout call, overriding static props', () => {
+    mount();
+    act(() => { lastActions.openPanel('dyn-panel', 'map', { props: { initial: true } }); });
+
+    let currentValue: unknown = { scrollLine: 1 };
+    act(() => { lastActions.registerStateProvider('dyn-panel', () => currentValue); });
+
+    let snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['dyn-panel'].props).toEqual({ scrollLine: 1 });
+
+    currentValue = { scrollLine: 42 };
+    snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['dyn-panel'].props).toEqual({ scrollLine: 42 });
+
+    // Serializability is re-evaluated per save, not cached — a provider can flip a panel's
+    // exclusion status from one save to the next.
+    currentValue = { onSave: () => {} };
+    snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['dyn-panel']).toBeUndefined();
+
+    currentValue = { scrollLine: 7 };
+    snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['dyn-panel'].props).toEqual({ scrollLine: 7 });
+
+    act(() => { lastActions.unregisterStateProvider('dyn-panel'); });
+    snapshot = JSON.parse(lastActions.saveLayout());
+    expect(snapshot.panels['dyn-panel'].props).toEqual({ initial: true }); // falls back to static props
   });
 
   it('loadLayout accepts a legacy layout with no version field at all', () => {
