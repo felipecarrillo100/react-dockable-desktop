@@ -9,6 +9,7 @@ export { defaultPredefinedMessages } from './predefinedMessages';
 import type { DirtyStateOptions } from './dirtyOptions';
 export type { DirtyStateOptions };
 import type { ContextMenuItem, ShowContextMenuOptions } from './ContextMenu';
+import { isSerializable } from './serializable';
 
 /**
  * Structure representing localizable message descriptors used in context menus.
@@ -129,6 +130,52 @@ export interface PanelInfo {
   dirty?: boolean;
   /** Custom options applied to the automatic unsaved changes modal. */
   dirtyOptions?: DirtyStateOptions;
+  /** Custom per-instance data passed via `openPanel(id, component, { props })`. Unconstrained —
+   *  any value is accepted, but only a value that passes {@link isSerializable} is actually
+   *  included in {@link WindowActions.saveLayout}'s output. See {@link PanelInfo.serializable}. */
+  props?: Record<string, unknown>;
+  /** Whether this panel's current `props` can round-trip through `saveLayout()`/`loadLayout()`.
+   *  Computed automatically — `true` when no `props` were passed, or when they were and passed
+   *  {@link isSerializable}. A panel with `serializable: false` still renders and works normally;
+   *  it's simply excluded from the next `saveLayout()` call (and pruned from `gridRoot`/
+   *  `floating`/`minimized` in that saved snapshot) rather than corrupting or throwing. */
+  serializable: boolean;
+  /** Optional dedup key. If another open panel of the same `component` already has this exact
+   *  key, `openPanel` focuses that existing panel instead of creating a new one — see
+   *  {@link WindowActions.openPanel}'s `dedupeKey` option and {@link WindowActions.findPanelId}. */
+  dedupeKey?: string;
+}
+
+/**
+ * Options accepted by {@link WindowActions.openPanel}.
+ */
+export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
+  /** Override the panel tab/window title. Accepts a plain string or an i18n message descriptor. */
+  title?: string | ContextMenuPredefinedMessage;
+  /** Initial placement: `'floating'`, `'docked'` (default when a grid exists), or `'tabbed'`. */
+  initialTarget?: 'floating' | 'docked' | 'tabbed';
+  /** Pin the new floating window to a workspace corner on creation. Has no effect when
+   *  `initialTarget` is `'docked'` or `'tabbed'`. */
+  anchor?: FloatAnchor | null;
+  /** Set `state.activePanelId` to this panel. @default true */
+  focus?: boolean;
+  /**
+   * Custom per-instance data spread onto the panel component alongside `panelId`, matching
+   * `openModal`/`openLeftPanel`/`openRightPanel`'s already-unconstrained `props` argument — no
+   * type restriction here either. Whether a specific value round-trips through `saveLayout()` is
+   * a runtime fact, not a type-level guarantee: see {@link PanelInfo.serializable} and the
+   * `'layout:panels-excluded'` event.
+   */
+  props?: P;
+  /**
+   * If set, and another currently-open panel of the same `component` already has this exact
+   * `dedupeKey`, that existing panel is focused instead of opening a new one — the `id`/`props`
+   * passed to *this* call are ignored in that case, the same way re-opening an already-open exact
+   * `id` already focuses it instead of duplicating it. Use this when multiple call sites might
+   * not agree on the same literal `id` for what is semantically the same entity (e.g. "the panel
+   * for the document at this path"). See also {@link WindowActions.findPanelId}.
+   */
+  dedupeKey?: string;
 }
 
 /**
@@ -185,6 +232,8 @@ export interface WindowActions {
    * @param options.initialTarget - Initial placement: `'floating'`, `'docked'` (default when a grid exists), or `'tabbed'`.
    * @param options.anchor - Pin the new floating window to a workspace corner on creation. Has no effect when `initialTarget` is `'docked'` or `'tabbed'`.
    * @param options.focus - Set `state.activePanelId` to this panel. @default true
+   * @param options.props - Custom per-instance data spread onto the component alongside `panelId`. Unconstrained, like `openModal`/`openLeftPanel`/`openRightPanel`'s `props` — see {@link PanelInfo.serializable} for what determines whether it survives `saveLayout()`.
+   * @param options.dedupeKey - If another open panel of the same `component` already has this key, that panel is focused instead of opening a new one.
    * @example
    * ```ts
    * // Open floating and pin to the top-right corner:
@@ -192,9 +241,15 @@ export interface WindowActions {
    *
    * // Open in the background without stealing focus:
    * actions.openPanel('prefetch', 'report', { focus: false });
+   *
+   * // Open with per-instance data, deduped by document path:
+   * actions.openPanel(crypto.randomUUID(), 'document', {
+   *   props: { path: '/notes/todo.md' },
+   *   dedupeKey: '/notes/todo.md',
+   * });
    * ```
    */
-  openPanel: (id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null; focus?: boolean }) => void;
+  openPanel: <P extends object = Record<string, unknown>>(id: string, component: string, options?: OpenPanelOptions<P>) => void;
   /**
    * Closes a panel immediately, bypassing dirty-state close guards.
    * For guarded close, use {@link requestClosePanel}.
@@ -275,6 +330,15 @@ export interface WindowActions {
    */
   getOpenPanelIds: () => string[];
   /**
+   * Finds the ID of an already-open panel of the given `component` with a matching `dedupeKey`
+   * (set via `openPanel`'s `dedupeKey` option). Uses a synchronous `stateRef` read — safe to
+   * call outside of render.
+   * @param component - Component key registered in the panel catalog.
+   * @param dedupeKey - The dedup key to search for.
+   * @returns The matching panel's ID, or `null` if none is open.
+   */
+  findPanelId: (component: string, dedupeKey: string) => string | null;
+  /**
    * Serializes the entire workspace state to a JSON string.
    * Includes grid layout, floating window positions, minimized panels, and panel metadata.
    * @returns JSON string suitable for storage and later restoration via {@link loadLayout}.
@@ -340,6 +404,23 @@ export interface WindowActions {
    * @param id - Panel instance ID.
    */
   unregisterCloseGuard: (id: string) => void;
+  /**
+   * Registers a callback reporting a docked/floating panel's *current* restorable state, pulled
+   * fresh every `saveLayout()` call — for panels whose props alone can't capture state they
+   * accumulate after opening (scroll position, an in-progress edit, a view-mode toggle). A panel
+   * that registers nothing keeps its static open-time `props` (or none). The returned value goes
+   * through the same {@link isSerializable} check as static props, re-evaluated on every save —
+   * a provider-backed panel's serializability can flip over its lifetime.
+   * @param id - Panel instance ID.
+   * @param provider - Called synchronously at each `saveLayout()`; return the current state (or
+   * `undefined` to fall back to the static `props` this panel was opened with).
+   */
+  registerStateProvider: (id: string, provider: () => unknown) => void;
+  /**
+   * Removes a previously registered state provider.
+   * @param id - Panel instance ID.
+   */
+  unregisterStateProvider: (id: string) => void;
   /**
    * Marks a panel as dirty (has unsaved changes). Dirty panels show a visual indicator
    * and the built-in close guard prompts the user before closing.
@@ -621,6 +702,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, []);
 
   const closeGuardsRef = useRef<Record<string, () => boolean | Promise<boolean>>>({});
+  const stateProvidersRef = useRef<Record<string, () => unknown>>({});
 
   const mergedMessages = useMemo(() => ({
     ...defaultPredefinedMessages,
@@ -791,30 +873,44 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return null;
   };
 
-  const openPanel = useCallback((id: string, component: string, options?: { title?: string | ContextMenuPredefinedMessage; initialTarget?: 'floating' | 'docked' | 'tabbed'; anchor?: FloatAnchor | null; focus?: boolean }) => {
-    const isNew = !(id in stateRef.current.panels);
+  const openPanel = useCallback(<P extends object = Record<string, unknown>>(id: string, component: string, options?: OpenPanelOptions<P>) => {
+    // Dedup redirect: resolve to an already-open panel of the same component/dedupeKey, if any,
+    // before anything else runs — the caller's own `id`/`props` are ignored for this call in
+    // that case, the same way re-opening an already-open exact `id` already focuses it instead
+    // of duplicating it.
+    let resolvedId = id;
+    if (options?.dedupeKey !== undefined) {
+      const match = Object.values(stateRef.current.panels).find(
+        p => p.component === component && p.dedupeKey === options.dedupeKey
+      );
+      if (match) resolvedId = match.id;
+    }
+    const isNew = !(resolvedId in stateRef.current.panels);
+    const isRedirect = resolvedId !== id;
     const shouldFocus = options?.focus !== false;
+    const propsProvided = options?.props !== undefined;
+    const serializable = propsProvided ? isSerializable(options.props) : true;
     setState(prev => {
-      const exists = prev.panels[id];
+      const exists = prev.panels[resolvedId];
       const entry = registry.get(component);
-      const title = options?.title || options?.title || entry?.defaultOptions?.title || id;
+      const title = options?.title || options?.title || entry?.defaultOptions?.title || resolvedId;
       const target = options?.initialTarget || entry?.defaultOptions?.initialTarget || 'docked';
       const favPos = entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
-      const activePanelId = shouldFocus ? id : prev.activePanelId;
+      const activePanelId = shouldFocus ? resolvedId : prev.activePanelId;
 
       // Case 1: Already exists
       if (exists) {
         if (exists.state === 'minimized') {
           // Restore
-          const nextMinimized = prev.minimized.filter(m => m.id !== id);
+          const nextMinimized = prev.minimized.filter(m => m.id !== resolvedId);
           if (target === 'floating' || !prev.gridRoot) {
             maxZRef.current += 1;
             const cascaded = getCascadedPosition(favPos, prev.floating);
             return {
               ...prev,
               minimized: nextMinimized,
-              floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current }],
-              panels: { ...prev.panels, [id]: { ...exists, state: 'floating' } },
+              floating: [...prev.floating, { ...cascaded, id: resolvedId, z: maxZRef.current }],
+              panels: { ...prev.panels, [resolvedId]: { ...exists, state: 'floating' } },
               activePanelId
             };
           } else {
@@ -822,20 +918,20 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             return {
               ...prev,
               minimized: nextMinimized,
-              gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, id),
-              panels: { ...prev.panels, [id]: { ...exists, state: 'docked' } },
+              gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, resolvedId),
+              panels: { ...prev.panels, [resolvedId]: { ...exists, state: 'docked' } },
               activePanelId
             };
           }
         } else if (exists.state === 'floating') {
-          if (shouldFocus) focusPanel(id);
+          if (shouldFocus) focusPanel(resolvedId);
           return prev;
         } else {
           // Focus in tab group
           const selectActiveInTree = (node: LayoutNode): LayoutNode => {
             if (node.type === 'leaf') {
-              if (node.panels.includes(id)) {
-                return { ...node, activePanelId: id };
+              if (node.panels.includes(resolvedId)) {
+                return { ...node, activePanelId: resolvedId };
               }
               return node;
             } else {
@@ -852,8 +948,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
       // Case 2: New panel
       const targetState = target === 'tabbed' ? 'docked' : target;
-      const newPanelInfo: PanelInfo = { id, title, component, state: targetState };
-      const nextPanels = { ...prev.panels, [id]: newPanelInfo };
+      const newPanelInfo: PanelInfo = {
+        id: resolvedId,
+        title,
+        component,
+        state: targetState,
+        props: options?.props as Record<string, unknown> | undefined,
+        serializable,
+        dedupeKey: options?.dedupeKey,
+      };
+      const nextPanels = { ...prev.panels, [resolvedId]: newPanelInfo };
 
       if (target === 'floating') {
         maxZRef.current += 1;
@@ -863,7 +967,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
         return {
           ...prev,
-          floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, anchor }],
+          floating: [...prev.floating, { ...cascaded, id: resolvedId, z: maxZRef.current, anchor }],
           panels: nextPanels,
           activePanelId
         };
@@ -871,13 +975,14 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-default';
         return {
           ...prev,
-          gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, id),
+          gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, resolvedId),
           panels: nextPanels,
           activePanelId
         };
       }
     });
-    if (isNew) eventBusRef.current.publish('panel:opened', { id, component });
+    if (isNew) eventBusRef.current.publish('panel:opened', { id: resolvedId, component });
+    if (isNew || isRedirect) eventBusRef.current.publish('layout:changed', {});
   }, [getCascadedPosition, focusPanel]);
 
   const closePanel = useCallback((id: string) => {
@@ -892,6 +997,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       }
 
       delete closeGuardsRef.current[id];
+      delete stateProvidersRef.current[id];
 
       const nextPanels = { ...prev.panels };
       delete nextPanels[id];
@@ -905,7 +1011,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         panels: nextPanels
       };
     });
-    if (exists) eventBusRef.current.publish('panel:closed', { id });
+    if (exists) {
+      eventBusRef.current.publish('panel:closed', { id });
+      eventBusRef.current.publish('layout:changed', {});
+    }
   }, []);
 
   const registerCloseGuard = useCallback((id: string, guard: () => boolean | Promise<boolean>) => {
@@ -914,6 +1023,14 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   const unregisterCloseGuard = useCallback((id: string) => {
     delete closeGuardsRef.current[id];
+  }, []);
+
+  const registerStateProvider = useCallback((id: string, provider: () => unknown) => {
+    stateProvidersRef.current[id] = provider;
+  }, []);
+
+  const unregisterStateProvider = useCallback((id: string) => {
+    delete stateProvidersRef.current[id];
   }, []);
 
   const setPanelDirty = useCallback((id: string, dirty: boolean, options?: DirtyStateOptions) => {
@@ -1029,7 +1146,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         }
       };
     });
-    if (wasActive) eventBusRef.current.publish('panel:minimized', { id });
+    if (wasActive) {
+      eventBusRef.current.publish('panel:minimized', { id });
+      eventBusRef.current.publish('layout:changed', {});
+    }
   }, []);
 
   const restorePanel = useCallback((id: string) => {
@@ -1108,7 +1228,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         }
       }
     });
-    if (wasMinimized) eventBusRef.current.publish('panel:restored', { id });
+    if (wasMinimized) {
+      eventBusRef.current.publish('panel:restored', { id });
+      eventBusRef.current.publish('layout:changed', {});
+    }
   }, [getCascadedPosition]);
 
   const floatPanel = useCallback((id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
@@ -1385,12 +1508,56 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, []);
 
   const saveLayout = useCallback(() => {
+    const currentPanels = stateRef.current.panels;
+    const excludedIds: string[] = [];
+    const includedPanels: Record<string, PanelInfo> = {};
+
+    // A registered state provider (see registerStateProvider) is pulled fresh on every save —
+    // a panel's serializability can flip over its lifetime, so this is never cached from open
+    // time for provider-backed panels. Panels with no provider keep their static open-time
+    // props/serializable classification unchanged.
+    for (const [id, info] of Object.entries(currentPanels)) {
+      const provider = stateProvidersRef.current[id];
+      const dynamicValue = provider?.();
+      const hasDynamicValue = provider !== undefined && dynamicValue !== undefined;
+      const effectiveProps = hasDynamicValue ? (dynamicValue as Record<string, unknown>) : info.props;
+      const effectiveSerializable = hasDynamicValue ? isSerializable(dynamicValue) : info.serializable;
+
+      if (effectiveSerializable) {
+        includedPanels[id] = hasDynamicValue ? { ...info, props: effectiveProps, serializable: effectiveSerializable } : info;
+      } else {
+        excludedIds.push(id);
+      }
+    }
+
+    // Non-serializable panels are excluded from this saved snapshot — pruned from gridRoot/
+    // floating/minimized too, so a restore never references a panel with no data to recreate it
+    // meaningfully. This computes a derived copy for the JSON string only; none of this touches
+    // stateRef/setState, so the live, on-screen workspace is completely unaffected — an excluded
+    // panel keeps existing and working normally on screen, it simply won't be there after the
+    // *next* loadLayout().
+    let gridRoot = stateRef.current.gridRoot;
+    let floating = stateRef.current.floating;
+    let minimized = stateRef.current.minimized;
+    for (const id of excludedIds) {
+      gridRoot = removePanelFromTree(gridRoot, id) || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null };
+      floating = floating.filter(w => w.id !== id);
+      minimized = minimized.filter(m => m.id !== id);
+    }
+
+    if (excludedIds.length > 0) {
+      eventBusRef.current.publish('layout:panels-excluded', {
+        panels: excludedIds.map(id => ({ id, component: currentPanels[id].component }))
+      });
+    }
+
     const payload: SerializedLayout = {
-      version: 1,
-      gridRoot: stateRef.current.gridRoot,
-      floating: stateRef.current.floating,
-      minimized: stateRef.current.minimized,
-      panels: stateRef.current.panels
+      version: 2, // v2: panels may carry `props`/`dedupeKey`; the payload may omit panels the
+                  // live workspace still has open (see the exclusion pass above).
+      gridRoot,
+      floating,
+      minimized,
+      panels: includedPanels
     };
     return JSON.stringify(payload);
   }, []);
@@ -1433,6 +1600,13 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   const isOpen = useCallback((id: string) => id in stateRef.current.panels, []);
 
   const getOpenPanelIds = useCallback(() => Object.keys(stateRef.current.panels), []);
+
+  const findPanelId = useCallback((component: string, dedupeKey: string): string | null => {
+    const match = Object.values(stateRef.current.panels).find(
+      p => p.component === component && p.dedupeKey === dedupeKey
+    );
+    return match?.id ?? null;
+  }, []);
 
   useEffect(() => {
     if (effectiveDir) {
@@ -1482,6 +1656,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     focusPanel,
     isOpen,
     getOpenPanelIds,
+    findPanelId,
     saveLayout,
     loadLayout,
     publish,
@@ -1492,6 +1667,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     closeLeafGroup,
     registerCloseGuard,
     unregisterCloseGuard,
+    registerStateProvider,
+    unregisterStateProvider,
     setPanelDirty,
     updatePanelTitle,
     requestClosePanel,
@@ -1515,6 +1692,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     focusPanel,
     isOpen,
     getOpenPanelIds,
+    findPanelId,
     saveLayout,
     loadLayout,
     publish,
@@ -1525,6 +1703,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     closeLeafGroup,
     registerCloseGuard,
     unregisterCloseGuard,
+    registerStateProvider,
+    unregisterStateProvider,
     setPanelDirty,
     updatePanelTitle,
     requestClosePanel,

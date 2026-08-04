@@ -18,6 +18,25 @@ export interface BuiltInPanelEvents {
   'panel:closed':    { id: string };
   'panel:minimized': { id: string };
   'panel:restored':  { id: string };
+  /**
+   * Fires whenever something `saveLayout()` would capture changes — open/close/minimize/restore,
+   * and an `openPanel` `dedupeKey` redirect. Coalesces those into one signal for autosave-style
+   * consumers, so they don't need to subscribe to four separate events. Does **not** cover a
+   * `registerStateProvider` callback's return value changing on its own — that's a pull, there's
+   * no way to observe it changing without the panel separately notifying — nor resize/split-ratio
+   * drag/dock-rearrange, which have no hooks yet.
+   */
+  'layout:changed': Record<string, never>;
+  /**
+   * Fires from inside `saveLayout()` itself, only when that specific call excluded at least one
+   * panel (a panel whose current `props` — static or from a `registerStateProvider` — failed
+   * {@link isSerializable}). A passive `PanelInfo.serializable` flag alone isn't enough for this:
+   * nobody may be polling it at the exact moment a save happens and something silently drops out
+   * (e.g. a floating window rendering data from a live class instance). This is deliberately just
+   * a signal, not a UI opinion — decide for yourself whether that becomes a toast, a console
+   * warning, or nothing.
+   */
+  'layout:panels-excluded': { panels: { id: string; component: string }[] };
 }
 
 /** Per-panel definition supplied to WorkspaceClient constructor. */
@@ -260,6 +279,12 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
   /** Returns the IDs of all currently open panels. */
   getOpenPanelIds(): string[] { return this._actions?.getOpenPanelIds() ?? []; }
 
+  /** Finds an already-open panel of the given component with a matching `dedupeKey` (set via
+   * `openPanel`'s `dedupeKey` option). Returns `null` if none is open. */
+  findPanelId(component: string, dedupeKey: string): string | null {
+    return this._actions?.findPanelId(component, dedupeKey) ?? null;
+  }
+
   saveLayout(): string { return this._actions?.saveLayout() ?? ''; }
 
   loadLayout(json: string): boolean {
@@ -303,6 +328,16 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
 
   /** Removes a previously registered close guard. */
   unregisterCloseGuard(id: string): void { this._dispatch(a => a.unregisterCloseGuard(id)); }
+
+  /** Registers a callback reporting a panel's current restorable state, pulled fresh on every
+   * `saveLayout()` call — see {@link BuiltInPanelEvents}'s `'layout:panels-excluded'` doc and
+   * `FormContainerContract.registerStateProvider`. */
+  registerStateProvider(id: string, provider: () => unknown): void {
+    this._dispatch(a => a.registerStateProvider(id, provider));
+  }
+
+  /** Removes a previously registered state provider. */
+  unregisterStateProvider(id: string): void { this._dispatch(a => a.unregisterStateProvider(id)); }
 
   /** Sets/clears a panel's dirty (unsaved changes) flag. */
   setPanelDirty(id: string, dirty: boolean, options?: DirtyStateOptions): void {
@@ -380,6 +415,21 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
   onPanelRestore(callback: (id: string) => void): () => void {
     return this._subscribeRaw('panel:restored', data => {
       callback((data as BuiltInPanelEvents['panel:restored']).id);
+    });
+  }
+
+  /** Subscribe to the coalesced layout-change signal — see {@link BuiltInPanelEvents}'s
+   * `'layout:changed'` doc for exactly what it covers (and doesn't). */
+  onLayoutChanged(callback: () => void): () => void {
+    return this._subscribeRaw('layout:changed', () => callback());
+  }
+
+  /** Subscribe to notification that a `saveLayout()` call excluded one or more panels because
+   * their current props weren't serializable — see {@link BuiltInPanelEvents}'s
+   * `'layout:panels-excluded'` doc. */
+  onPanelsExcluded(callback: (panels: { id: string; component: string }[]) => void): () => void {
+    return this._subscribeRaw('layout:panels-excluded', data => {
+      callback((data as BuiltInPanelEvents['layout:panels-excluded']).panels);
     });
   }
 }

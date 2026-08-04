@@ -65,6 +65,44 @@ const TestFormChild: React.FC<{ panelId: string }> = ({ panelId }) => {
 
 PanelRegistry.register('testForm', TestFormChild);
 
+// Panel that registers a pull-based state provider via useFormContainer(), driven by buttons
+// so tests can mutate its "current state" and confirm saveLayout() pulls it fresh each time.
+const TestStateProviderChild: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const container = useFormContainer();
+  const valueRef = React.useRef<unknown>({ count: 0 });
+
+  React.useEffect(() => {
+    return container.registerStateProvider?.(() => valueRef.current);
+  }, [container]);
+
+  return (
+    <div id={`state-provider-${panelId}`}>
+      <button
+        id={`bump-btn-${panelId}`}
+        onClick={() => { valueRef.current = { count: (valueRef.current as { count: number }).count + 1 }; }}
+      >
+        Bump
+      </button>
+      <button
+        id={`break-btn-${panelId}`}
+        onClick={() => { valueRef.current = { onSave: () => {} }; }}
+      >
+        Make Non-Serializable
+      </button>
+    </div>
+  );
+};
+
+PanelRegistry.register('testStateProvider', TestStateProviderChild);
+
+// Panel that renders a custom prop, to verify openPanel's `props` option is actually spread
+// onto the component alongside `panelId`.
+const TestPropsChild: React.FC<{ panelId: string; label?: string }> = ({ panelId, label }) => (
+  <div id={`props-child-${panelId}`}>{label ?? 'no-label'}</div>
+);
+
+PanelRegistry.register('testProps', TestPropsChild);
+
 let testActions: any = null;
 let testState: any = null;
 let panelState: any = null;
@@ -330,6 +368,47 @@ describe('FormContainer Integration', () => {
 
     expect(container!.querySelector('.rdd-modal-overlay')).toBeNull();
     expect(testState.panels['test-panel']).toBeDefined();
+  });
+
+  it('registerStateProvider (via useFormContainer, from inside the panel) is reflected in ' +
+    'saveLayout live, pulled fresh on every call', () => {
+    mount();
+    act(() => {
+      testActions.openPanel('sp-panel', 'testStateProvider', { title: 'State Provider Panel' });
+    });
+
+    let snapshot = JSON.parse(testActions.saveLayout());
+    expect(snapshot.panels['sp-panel'].props).toEqual({ count: 0 });
+
+    act(() => {
+      (container!.querySelector('#bump-btn-sp-panel') as HTMLButtonElement).click();
+    });
+    snapshot = JSON.parse(testActions.saveLayout());
+    expect(snapshot.panels['sp-panel'].props).toEqual({ count: 1 });
+
+    act(() => {
+      (container!.querySelector('#break-btn-sp-panel') as HTMLButtonElement).click();
+    });
+    snapshot = JSON.parse(testActions.saveLayout());
+    expect(snapshot.panels['sp-panel']).toBeUndefined();
+  });
+
+  it('openPanel props are spread onto the rendered component alongside panelId', () => {
+    mount();
+    act(() => {
+      testActions.openPanel('props-panel', 'testProps', { props: { label: 'Hello From Props' } });
+    });
+    const el = container!.querySelector('#props-child-props-panel');
+    expect(el?.textContent).toBe('Hello From Props');
+  });
+
+  it('a caller-supplied prop named panelId can never override the injected id', () => {
+    mount();
+    act(() => {
+      testActions.openPanel('real-id', 'testProps', { props: { panelId: 'spoofed-id', label: 'x' } as any });
+    });
+    expect(container!.querySelector('#props-child-real-id')).not.toBeNull();
+    expect(container!.querySelector('#props-child-spoofed-id')).toBeNull();
   });
 });
 
