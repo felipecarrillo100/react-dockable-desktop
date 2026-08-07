@@ -860,7 +860,10 @@ body.rdd-resizing-col-active * {
 .rdd-dock-drop-zone-overlay {
   position: absolute;
   inset: 0;
-  z-index: 100;
+  /* Must outrank .rdd-workspace-edge-trigger (+8999) and .rdd-corner-zone (+9000) —
+     a leaf's cross commonly falls within the outer edge band or a corner region,
+     and the more specific per-leaf target should win the hover/drop hit-test there. */
+  z-index: calc(var(--rdd-z-base, 1000) + 9001);
   display: flex;
   align-items: center;
   justify-content: center;

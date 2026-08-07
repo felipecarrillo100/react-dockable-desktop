@@ -8,6 +8,7 @@
  * - T6: Global focus handler fires on pointerdown, not mousedown
  * - T7: Dragging a floating window by its title bar suppresses body selection
  * - T8: Dragging a docked tab out (pre-float ghost drag) suppresses body selection
+ * - T9: Hovering a leaf's drop-target cross box takes priority over the edge zone
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
@@ -573,5 +574,58 @@ describe('T8: Docked tab drag-to-float suppresses selection (regression: WebKit 
       window.dispatchEvent(makePointerEvent('pointercancel', { pointerType: 'mouse', button: 0, clientX: 130, clientY: 130 }));
     });
     expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+  });
+});
+
+// ─── T9: Cross drop-zone wins hover priority over edge/corner zones ─────────
+
+describe('T9: Drop-target cross box takes priority over the edge zone (regression: hover priority inversion)', () => {
+  let container: HTMLDivElement;
+  let root: Root | null = null;
+  let client: WorkspaceClient;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    client = makeClient();
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); root = null; });
+    document.body.removeChild(container);
+  });
+
+  it('hovering a cross target box clears the active edge-drop highlight', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.openPanel('panel1', 'map'); });
+    act(() => { client.setDraggedPanelId('panel1'); });
+
+    const edgeTrigger = container.querySelector('.rdd-edge-trigger-left') as HTMLElement | null;
+    const crossBox = container.querySelector('.rdd-dock-target-box[data-drop-zone="top"]') as HTMLElement | null;
+    if (!edgeTrigger || !crossBox) return;
+
+    // React derives onPointerEnter/Leave from the bubbling 'pointerover'/'pointerout'
+    // events, not the native non-bubbling 'pointerenter'/'pointerleave' — dispatch
+    // the former to exercise the same handler a real hover would trigger.
+    act(() => {
+      edgeTrigger.dispatchEvent(makePointerEvent('pointerover', { pointerType: 'mouse' }));
+    });
+    expect(container.querySelector('.rdd-workspace-edge-preview')).not.toBeNull();
+
+    act(() => {
+      crossBox.dispatchEvent(makePointerEvent('pointerover', { pointerType: 'mouse' }));
+    });
+    expect(container.querySelector('.rdd-workspace-edge-preview')).toBeNull();
+    expect(container.querySelector('.rdd-dock-preview-highlight')).not.toBeNull();
   });
 });

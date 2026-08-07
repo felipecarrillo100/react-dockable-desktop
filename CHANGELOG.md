@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.2] — 2026-08-07
+
+### Fixed
+- **A leaf's drop-target "cross" (the 5-box overlay for docking within the grid, shown while dragging a floating window or a docked tab) never won hover priority over the workspace's outer-edge or corner drop zones — in every browser, most consistently broken in Safari.** Root cause: `.rdd-dock-drop-zone-overlay` (the cross's wrapper) had a hardcoded `z-index: 100`, far below `.rdd-workspace-edge-trigger` (`--rdd-z-base + 8999`) and `.rdd-corner-zone` (`--rdd-z-base + 9000`). Since none of the intervening ancestors establish their own stacking context, the edge/corner overlays sat visually on top of the cross wherever a leaf's cross fell within the outer edge band (any leaf touching the workspace boundary — the common case) or a corner region, silently intercepting the pointer events meant for the cross box underneath: the box never highlighted there, and the edge/corner highlighted instead. Rebased `.rdd-dock-drop-zone-overlay` onto the same `--rdd-z-base` scale, above both (`+9001`), so the more specific per-leaf target now always wins. Also hardened `handleHoverDropZone` to explicitly clear `activeEdgeDrop`/`activeCornerAnchor` when a cross box is hovered, mirroring the pattern the corner-zone's own hover handler already used for the edge — a defensive guard against stale hover state surviving a rapid overlapping-overlay re-render without an intervening pointer move, which WebKit is more prone to than Chromium/Firefox. Purely cosmetic during a drag — actual drop placement was already correct in all browsers, since only one zone was ever genuinely hovered at release time in practice.
+
 ## [5.1.1] — 2026-08-07
 
 ### Fixed
@@ -217,7 +222,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.2...HEAD
+[5.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.1...v5.1.2
 [5.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.0...v5.1.1
 [5.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.3.0...v5.0.0

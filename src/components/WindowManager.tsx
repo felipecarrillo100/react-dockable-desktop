@@ -947,6 +947,13 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     const val = position ? { leafId, position } : null;
     setActiveDropZone(val);
     activeDropZoneRef.current = val;
+    // A leaf's cross commonly overlaps the workspace edge/corner zones underneath it —
+    // the more specific per-leaf target wins, matching the corner zone's own handler,
+    // which already clears the edge the same way.
+    if (val) {
+      setActiveEdgeDrop(null);
+      setActiveCornerAnchor(null);
+    }
   };
 
   // Used during touch drag (pointer capture suppresses hover events on other elements)
