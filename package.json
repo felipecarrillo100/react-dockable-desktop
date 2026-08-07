@@ -1,6 +1,6 @@
 {
   "name": "react-dockable-desktop",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "A premium, state-of-the-art window manager and dockable layout engine for React. Supports fluid grid splits, tabbed groups, floating resizable windows, zero-unmount state preservation, context menus, and internationalization.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",

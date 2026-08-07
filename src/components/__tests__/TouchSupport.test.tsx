@@ -6,6 +6,8 @@
  * - T4: Long-press is cancelled if finger moves > 8px before 300ms
  * - T5: 8-direction resize handles are rendered on floating windows
  * - T6: Global focus handler fires on pointerdown, not mousedown
+ * - T7: Dragging a floating window by its title bar suppresses body selection
+ * - T8: Dragging a docked tab out (pre-float ghost drag) suppresses body selection
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
@@ -40,6 +42,15 @@ const makePointerEvent = (
     ...overrides,
   });
 };
+
+// A few tests below (T3/T4) deliberately stop mid-gesture to assert on an
+// in-progress drag state, without ever firing the pointerup/pointercancel
+// that would clean up document.body's drag-scoped classes in real usage.
+// Reset them here so that doesn't leak into later tests sharing the same
+// real document.body.
+afterEach(() => {
+  document.body.classList.remove('rdd-dragging-active', 'rdd-resizing-active');
+});
 
 // ─── T1: Resizer responds to pointerdown ─────────────────────────────────────
 
@@ -126,6 +137,13 @@ describe('T2: Tab drag starts on pointerdown', () => {
         tab.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'mouse', button: 0 }));
       });
     }).not.toThrow();
+
+    // Close out the drag session the pointerdown started (window-level
+    // listeners + document.body.rdd-dragging-active), so it doesn't leak into
+    // other tests sharing the same real document.body.
+    act(() => {
+      window.dispatchEvent(makePointerEvent('pointerup', { pointerType: 'mouse', button: 0 }));
+    });
   });
 
   it('right-click (button=2) on mouse does not start drag', () => {
@@ -323,6 +341,37 @@ describe('T5: Floating windows have 8-direction resize handles', () => {
       });
     }).not.toThrow();
   });
+
+  it('dragging a resize handle suppresses body text-selection for the drag duration (regression: WebKit selection bleed-through)', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.floatPanel('fp', { x: 100, y: 100, width: 300, height: 200 }); });
+    act(() => { client.openPanel('fp', 'map'); });
+
+    const seHandle = container.querySelector('.rdd-resize-se') as HTMLElement | null;
+    if (!seHandle) return;
+
+    expect(document.body.classList.contains('rdd-resizing-active')).toBe(false);
+
+    act(() => {
+      seHandle.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'mouse', button: 0, clientX: 100, clientY: 100 }));
+    });
+    expect(document.body.classList.contains('rdd-resizing-active')).toBe(true);
+
+    act(() => {
+      seHandle.dispatchEvent(makePointerEvent('pointerup', { pointerType: 'mouse', button: 0, clientX: 130, clientY: 130 }));
+    });
+    expect(document.body.classList.contains('rdd-resizing-active')).toBe(false);
+  });
 });
 
 // ─── T6: Global focus on pointerdown ─────────────────────────────────────────
@@ -364,5 +413,165 @@ describe('T6: Global focus uses pointerdown', () => {
         document.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'touch', button: 0, clientX: 200, clientY: 200 }));
       });
     }).not.toThrow();
+  });
+});
+
+// ─── T7: Dragging a window by its title bar suppresses selection ────────────
+
+describe('T7: Header drag suppresses selection (regression: WebKit selection bleed-through)', () => {
+  let container: HTMLDivElement;
+  let root: Root | null = null;
+  let client: WorkspaceClient;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    client = makeClient();
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); root = null; });
+    document.body.removeChild(container);
+  });
+
+  it('dragging the title bar toggles document.body.rdd-dragging-active for the drag duration', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.floatPanel('fp', { x: 100, y: 100, width: 300, height: 200 }); });
+    act(() => { client.openPanel('fp', 'map'); });
+
+    const titlebar = container.querySelector('.rdd-floating-window-titlebar') as HTMLElement | null;
+    if (!titlebar) return;
+
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+
+    act(() => {
+      titlebar.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'mouse', button: 0, clientX: 100, clientY: 100 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(true);
+
+    // The mouse/pen branch attaches window-level listeners, so pointerup must
+    // be dispatched on window to match how the real drag ends.
+    act(() => {
+      window.dispatchEvent(makePointerEvent('pointerup', { pointerType: 'mouse', button: 0, clientX: 130, clientY: 130 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+  });
+
+  it('cancelling the drag (pointercancel) also removes rdd-dragging-active', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.floatPanel('fp', { x: 100, y: 100, width: 300, height: 200 }); });
+    act(() => { client.openPanel('fp', 'map'); });
+
+    const titlebar = container.querySelector('.rdd-floating-window-titlebar') as HTMLElement | null;
+    if (!titlebar) return;
+
+    act(() => {
+      titlebar.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'mouse', button: 0, clientX: 100, clientY: 100 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(true);
+
+    act(() => {
+      window.dispatchEvent(makePointerEvent('pointercancel', { pointerType: 'mouse', button: 0, clientX: 130, clientY: 130 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+  });
+});
+
+// ─── T8: Dragging a docked tab out suppresses selection ─────────────────────
+
+describe('T8: Docked tab drag-to-float suppresses selection (regression: WebKit selection bleed-through)', () => {
+  let container: HTMLDivElement;
+  let root: Root | null = null;
+  let client: WorkspaceClient;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    client = makeClient();
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); root = null; });
+    document.body.removeChild(container);
+  });
+
+  it('dragging a docked tab toggles document.body.rdd-dragging-active for the drag duration', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.openPanel('panel1', 'map'); });
+
+    const tab = container.querySelector('.rdd-workspace-tab') as HTMLElement | null;
+    if (!tab) return;
+
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+
+    act(() => {
+      tab.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'mouse', button: 0, clientX: 100, clientY: 100 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(true);
+
+    // The mouse/pen branch attaches window-level listeners, so pointerup must
+    // be dispatched on window to match how the real drag ends.
+    act(() => {
+      window.dispatchEvent(makePointerEvent('pointerup', { pointerType: 'mouse', button: 0, clientX: 130, clientY: 130 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+  });
+
+  it('cancelling the tab drag (pointercancel) also removes rdd-dragging-active', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.openPanel('panel1', 'map'); });
+
+    const tab = container.querySelector('.rdd-workspace-tab') as HTMLElement | null;
+    if (!tab) return;
+
+    act(() => {
+      tab.dispatchEvent(makePointerEvent('pointerdown', { pointerType: 'mouse', button: 0, clientX: 100, clientY: 100 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(true);
+
+    act(() => {
+      window.dispatchEvent(makePointerEvent('pointercancel', { pointerType: 'mouse', button: 0, clientX: 130, clientY: 130 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
   });
 });

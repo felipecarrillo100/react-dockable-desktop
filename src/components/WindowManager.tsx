@@ -1047,6 +1047,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
   const handleTabDragStart = (id: string, e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
 
     const el = e.currentTarget as HTMLElement;
     const startX = e.clientX;
@@ -1076,6 +1077,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         try { el.setPointerCapture(pointerId); } catch { return; }
         el.classList.add('rdd-long-press-active');
+        document.body.classList.add('rdd-dragging-active');
         if (navigator.vibrate) navigator.vibrate(10);
 
         // Long-press captured: move → drag, release → context menu
@@ -1092,6 +1094,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         const onEnd = (me: PointerEvent) => {
           el.classList.remove('rdd-long-press-active');
+          document.body.classList.remove('rdd-dragging-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1106,6 +1109,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         const onCancel = () => {
           el.classList.remove('rdd-long-press-active');
+          document.body.classList.remove('rdd-dragging-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1136,13 +1140,25 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       };
 
       const onEnd = (me: PointerEvent) => {
+        document.body.classList.remove('rdd-dragging-active');
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onCancel);
         if (dragStarted) executeDrop(id, me);
       };
 
+      const onCancel = () => {
+        document.body.classList.remove('rdd-dragging-active');
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onCancel);
+        if (dragStarted) clearDragState();
+      };
+
+      document.body.classList.add('rdd-dragging-active');
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onCancel);
     }
   };
 
@@ -1399,6 +1415,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
   // Floating Window dragging handler
   const startDrag = (id: string, e: React.PointerEvent) => {
+    e.preventDefault();
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
     focusPanel(id);
@@ -1454,6 +1471,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         try { el.setPointerCapture(pointerId); } catch { return; }
         el.classList.add('rdd-long-press-active');
+        document.body.classList.add('rdd-dragging-active');
         setDraggedPanelId(id);
 
         const onMove = (me: PointerEvent) => {
@@ -1465,6 +1483,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         const onEnd = () => {
           el.classList.remove('rdd-long-press-active');
+          document.body.classList.remove('rdd-dragging-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1473,6 +1492,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
 
         const onCancel = () => {
           el.classList.remove('rdd-long-press-active');
+          document.body.classList.remove('rdd-dragging-active');
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
@@ -1505,18 +1525,31 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       };
 
       const onEnd = () => {
+        document.body.classList.remove('rdd-dragging-active');
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onCancel);
         if (dragStarted) executeFWDrop();
       };
 
+      const onCancel = () => {
+        document.body.classList.remove('rdd-dragging-active');
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onCancel);
+        if (dragStarted) clearDragState();
+      };
+
+      document.body.classList.add('rdd-dragging-active');
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onCancel);
     }
   };
 
   // Floating Window resizing handler — supports 8 directions
   const startResize = (id: string, dir: ResizeDir, e: React.PointerEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     const floatingWin = state.floating.find(w => w.id === id);
     if (!floatingWin || floatingWin.maximized) return;
@@ -1546,6 +1579,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
       startClientX: e.clientX,
       startClientY: e.clientY,
       captureStart: () => startRect,
+      activeClasses: [{ el: document.body, classes: ['rdd-resizing-active'] }],
       // No maxW/maxH/minX/minY: this window is intentionally allowed to grow
       // unbounded and be dragged fully off-screen, same as before this refactor.
       onMove: (dx, dy, start) => {
