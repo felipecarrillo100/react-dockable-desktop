@@ -363,6 +363,16 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       [isControlled, onActiveTabChange, tabs]
     );
 
+    // If the active tab stops existing in `tabs` (its contributing panel changed/closed,
+    // or the tab was otherwise removed), close the drawer rather than leaving it open and
+    // empty with no tab button left to click closed — never silently fall back to a
+    // different tab the user didn't choose.
+    useEffect(() => {
+      if (activeTabId != null && !tabs.some(t => t.id === activeTabId)) {
+        setActiveTabId(null);
+      }
+    }, [activeTabId, tabs, setActiveTabId]);
+
     useImperativeHandle(ref, () => ({
       openTab: (tabId: string) => setActiveTabId(tabId),
       closeDrawer: () => setActiveTabId(null),
