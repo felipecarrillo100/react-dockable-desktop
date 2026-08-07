@@ -906,7 +906,9 @@ body.rdd-resizing-col-active * {
   color: var(--rdd-text-secondary);
 }
 
-.rdd-dock-target-box:hover {
+/* State-driven (activeDropZone), not :hover-driven — :hover never reliably
+   updates during an active drag in Safari, and doesn't exist on touch at all. */
+.rdd-dock-target-box--active {
   background-color: var(--rdd-accent-color) !important;
   border-color: #ffffff !important;
   color: #090b11 !important;

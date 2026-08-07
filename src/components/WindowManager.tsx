@@ -720,7 +720,12 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         )}
 
         {/* Drag overlay targets cross */}
-        {state.draggedPanelId !== null && (
+        {state.draggedPanelId !== null && (() => {
+          // State-driven, not :hover-driven — :hover never fires reliably in Safari
+          // during an active drag, and doesn't exist at all on touch. activeDropZone
+          // already tracks this for mouse, pen, and touch alike (see updateHoverFromPoint).
+          const isActive = (pos: DropPosition) => activeDropZone?.leafId === leaf.id && activeDropZone.position === pos;
+          return (
           <div className="rdd-dock-drop-zone-overlay">
             <div className="rdd-dock-target-cross">
               {/* Top target */}
@@ -729,7 +734,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="top"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'top')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="rdd-dock-target-box rdd-dock-target-top"
+                className={`rdd-dock-target-box rdd-dock-target-top${isActive('top') ? ' rdd-dock-target-box--active' : ''}`}
               >
                 ▲
               </div>
@@ -739,7 +744,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="bottom"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'bottom')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="rdd-dock-target-box rdd-dock-target-bottom"
+                className={`rdd-dock-target-box rdd-dock-target-bottom${isActive('bottom') ? ' rdd-dock-target-box--active' : ''}`}
               >
                 ▼
               </div>
@@ -749,7 +754,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="left"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'left')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="rdd-dock-target-box rdd-dock-target-left"
+                className={`rdd-dock-target-box rdd-dock-target-left${isActive('left') ? ' rdd-dock-target-box--active' : ''}`}
               >
                 ◀
               </div>
@@ -759,7 +764,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="right"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'right')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="rdd-dock-target-box rdd-dock-target-right"
+                className={`rdd-dock-target-box rdd-dock-target-right${isActive('right') ? ' rdd-dock-target-box--active' : ''}`}
               >
                 ▶
               </div>
@@ -769,13 +774,14 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 data-drop-zone="center"
                 onPointerEnter={() => onHoverDropZone(leaf.id, 'center')}
                 onPointerLeave={() => onHoverDropZone(leaf.id, null)}
-                className="rdd-dock-target-box rdd-dock-target-center"
+                className={`rdd-dock-target-box rdd-dock-target-center${isActive('center') ? ' rdd-dock-target-box--active' : ''}`}
               >
                 ▣
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Visual preview highlight overlay */}
         {state.draggedPanelId !== null && activeDropZone !== null && activeDropZone.leafId === leaf.id && (
