@@ -13,6 +13,8 @@
  * PO9:  Focused window gains .rdd-panel-float--active after pointerdown
  * PO10: PanelToolbar does NOT re-render when window focus changes (PanelToolbarCtx isolation)
  * PO11: usePanelFloatingWindowManager consumer does NOT re-render on focus change (PanelManagerCtx isolation)
+ * PO12: Resize handle drag toggles document.body.rdd-resizing-active (WebKit selection regression)
+ * PO13: Header drag toggles document.body.rdd-dragging-active (WebKit selection regression)
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React, { useState } from 'react';
@@ -390,5 +392,107 @@ describe('PO11: Manager consumer render isolation', () => {
     });
 
     expect(renderCount).toBe(countAfterMount);
+  });
+});
+
+// ─── PO12 ─────────────────────────────────────────────────────────────────────
+
+describe('PO12: Resize handle drag suppresses selection', () => {
+  it('dragging a resize handle toggles document.body.rdd-resizing-active for the drag duration (regression: WebKit selection bleed-through)', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <PanelOverlayRoot>
+          <PanelFloatingWindow id="resize-win" title="Resize" open defaultAnchor="top-right" defaultWidth={300} defaultHeight={200} onClose={() => {}}>
+            <span />
+          </PanelFloatingWindow>
+        </PanelOverlayRoot>
+      );
+    });
+
+    const win = container.querySelector('.rdd-panel-float') as HTMLElement;
+    const header = win.querySelector('.rdd-panel-float__header') as HTMLElement;
+
+    // Undock to 'free' mode first — resize handles only render once the window
+    // has left its corner-anchored 'docked' mode (see handleHeaderPointerDown).
+    act(() => {
+      header.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
+    });
+    act(() => {
+      header.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
+    });
+
+    const seHandle = container.querySelector('.rdd-resize-se') as HTMLElement | null;
+    expect(seHandle).not.toBeNull();
+
+    expect(document.body.classList.contains('rdd-resizing-active')).toBe(false);
+
+    act(() => {
+      seHandle!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 100, clientY: 100, button: 0 }));
+    });
+    expect(document.body.classList.contains('rdd-resizing-active')).toBe(true);
+
+    act(() => {
+      seHandle!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2, clientX: 130, clientY: 130, button: 0 }));
+    });
+    expect(document.body.classList.contains('rdd-resizing-active')).toBe(false);
+  });
+});
+
+// ─── PO13 ─────────────────────────────────────────────────────────────────────
+
+describe('PO13: Header drag suppresses selection (regression: WebKit selection bleed-through)', () => {
+  it('dragging the header toggles document.body.rdd-dragging-active for the drag duration', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <PanelOverlayRoot>
+          <PanelFloatingWindow id="drag-win" title="Drag" open defaultAnchor="top-right" defaultWidth={300} defaultHeight={200} onClose={() => {}}>
+            <span />
+          </PanelFloatingWindow>
+        </PanelOverlayRoot>
+      );
+    });
+
+    const win = container.querySelector('.rdd-panel-float') as HTMLElement;
+    const header = win.querySelector('.rdd-panel-float__header') as HTMLElement;
+
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+
+    act(() => {
+      header.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(true);
+
+    act(() => {
+      win.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: 80, clientY: 80, button: 0 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+  });
+
+  it('cancelling the drag (pointercancel) also removes rdd-dragging-active', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <PanelOverlayRoot>
+          <PanelFloatingWindow id="drag-win-2" title="Drag" open defaultAnchor="top-right" defaultWidth={300} defaultHeight={200} onClose={() => {}}>
+            <span />
+          </PanelFloatingWindow>
+        </PanelOverlayRoot>
+      );
+    });
+
+    const win = container.querySelector('.rdd-panel-float') as HTMLElement;
+    const header = win.querySelector('.rdd-panel-float__header') as HTMLElement;
+
+    act(() => {
+      header.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(true);
+
+    act(() => {
+      win.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1, clientX: 80, clientY: 80, button: 0 }));
+    });
+    expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
   });
 });

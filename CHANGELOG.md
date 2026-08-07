@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.1] — 2026-08-07
+
+### Fixed
+- **Dragging a floating window — either by a resize handle or by its title bar — selected text in whatever docked panel sat behind it, Safari/WebKit only.** The shared `startPointerDrag()` mechanics (`src/components/dragResize.ts`) support an `activeClasses` option that toggles a `document.body` class — and matching `user-select: none` CSS — for the duration of a drag; the workspace grid splitter and the sidebar drawer resizer already passed it, which is why those two were never affected.
+  - **Resize handles**: both floating-window resize-handle implementations (`WindowManager`'s `startResize` and `PanelOverlay`'s `handleResizePointerDown`) never passed `activeClasses` at all, so nothing suppressed selection while their handles were dragged. Both now pass it, toggling `rdd-resizing-active`, whose CSS rule also gained `-webkit-user-select: none` alongside the existing unprefixed property, for full Safari reliability.
+  - **Header drag (moving an already-floating window)**: unlike resize, this was never built on `startPointerDrag()` at all — both `WindowManager`'s `startDrag` and `PanelOverlay`'s `handleHeaderPointerDown`/`handleWindowPointerMove` are independent, hand-rolled pointer-drag implementations with extra logic (drop-zone/tab-swap/corner-anchor hover detection, touch long-press-to-drag) that the shared utility doesn't model, so neither ever toggled a body-level selection-suppressing class. Both now toggle a new `rdd-dragging-active` class on `document.body` for the drag's duration (paired with `-webkit-user-select`/`user-select: none` in CSS), added at pointerdown rather than after any move threshold, since WebKit can start extending a selection from the very first pixel of movement. `WindowManager`'s `startDrag` also gained the `e.preventDefault()` it was missing entirely, and both implementations now clean up correctly on `pointercancel`, not just `pointerup`, so an interrupted drag can't leave selection disabled indefinitely.
+  - **Dragging a docked panel's tab out** (the drag-preview "ghost" label shown before it becomes an actual floating window, or before it's dropped onto a new dock target): a third, independent hand-rolled implementation, `WindowManager`'s `handleTabDragStart`, had the identical gap — no `preventDefault()`, no selection-suppressing class. It now reuses the same `rdd-dragging-active` class (no CSS changes needed, since this is the same kind of "moving a panel around" interaction as the header-drag case above), added/removed at the same points, with the same `pointercancel` hardening.
+
+  In all cases, Chromium/Firefox apparently tolerate the drag without this CSS-level suppression (via `preventDefault()` alone), but Safari doesn't once a native selection drag is already extending.
+
 ## [5.1.0] — 2026-08-04
 
 ### Added
@@ -207,7 +217,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.1...HEAD
+[5.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.0...v5.1.1
 [5.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.3.0...v5.0.0
 [4.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v4.2.2...v4.3.0

@@ -781,6 +781,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
 
     dragState.current = { mouseX: e.clientX, mouseY: e.clientY, posX: startX, posY: startY, hasDragged: false };
     windowRef.current?.setPointerCapture(e.pointerId);
+    document.body.classList.add('rdd-dragging-active');
   };
 
   const handleResizePointerDown = (dir: ResizeDir) => (e: React.PointerEvent<HTMLDivElement>): void => {
@@ -810,6 +811,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       startClientX: e.clientX,
       startClientY: e.clientY,
       captureStart: () => startRect,
+      activeClasses: [{ el: document.body, classes: ['rdd-resizing-active'] }],
       onMove: (dx, dy, start) => {
         // Re-measured every move, matching the original's live re-measurement —
         // the container can in principle change size during a drag.
@@ -861,6 +863,16 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       ctx?.setHoveredZone(null);
       ctx?.setDraggingId(null);
     }
+    document.body.classList.remove('rdd-dragging-active');
+    dragState.current = null;
+  };
+
+  const handleWindowPointerCancel = (): void => {
+    if (dragState.current) {
+      ctx?.setHoveredZone(null);
+      ctx?.setDraggingId(null);
+    }
+    document.body.classList.remove('rdd-dragging-active');
     dragState.current = null;
   };
 
@@ -918,6 +930,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       onPointerDown={handleWindowPointerDown}
       onPointerMove={handleWindowPointerMove}
       onPointerUp={handleWindowPointerUp}
+      onPointerCancel={handleWindowPointerCancel}
     >
       <div className="rdd-panel-float__header" onPointerDown={handleHeaderPointerDown}>
         {icon && <span className="rdd-panel-float__icon">{icon}</span>}

@@ -378,6 +378,7 @@ body,
 
 /* Global body cursor overrides during active resize drag to prevent cursor flickering */
 body.rdd-resizing-active {
+  -webkit-user-select: none !important;
   user-select: none !important;
 }
 body.rdd-resizing-row-active,
@@ -978,6 +979,10 @@ body.rdd-resizing-col-active * {
 .rdd-dragging-active,
 .rdd-dragging-active * {
   cursor: grabbing !important;
+}
+body.rdd-dragging-active {
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 /* --- Theme Variables for Sidebar and Tabs --- */
