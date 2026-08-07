@@ -628,4 +628,37 @@ describe('T9: Drop-target cross box takes priority over the edge zone (regressio
     expect(container.querySelector('.rdd-workspace-edge-preview')).toBeNull();
     expect(container.querySelector('.rdd-dock-preview-highlight')).not.toBeNull();
   });
+
+  it('hovering a cross target box applies a state-driven active class, not :hover (regression: Safari/touch never highlighted)', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+
+    act(() => { client.openPanel('panel1', 'map'); });
+    act(() => { client.setDraggedPanelId('panel1'); });
+
+    const topBox = container.querySelector('.rdd-dock-target-box[data-drop-zone="top"]') as HTMLElement | null;
+    const bottomBox = container.querySelector('.rdd-dock-target-box[data-drop-zone="bottom"]') as HTMLElement | null;
+    if (!topBox || !bottomBox) return;
+
+    expect(topBox.classList.contains('rdd-dock-target-box--active')).toBe(false);
+
+    act(() => {
+      topBox.dispatchEvent(makePointerEvent('pointerover', { pointerType: 'mouse' }));
+    });
+    expect(topBox.classList.contains('rdd-dock-target-box--active')).toBe(true);
+    expect(bottomBox.classList.contains('rdd-dock-target-box--active')).toBe(false);
+
+    act(() => {
+      topBox.dispatchEvent(makePointerEvent('pointerout', { pointerType: 'mouse' }));
+    });
+    expect(topBox.classList.contains('rdd-dock-target-box--active')).toBe(false);
+  });
 });
