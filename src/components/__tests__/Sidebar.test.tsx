@@ -25,6 +25,7 @@
  * - SB24: showStrip/hideStrip imperative methods call onStripVisibilityChange
  * - SB25: resize handle renders only when drawer is open
  * - SB26: children wrapper uses flex-basis:0 (content can't inflate it and shift the drawer)
+ * - SB27: drawer auto-closes when the active tab stops existing in `tabs`
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
@@ -652,5 +653,72 @@ describe('SB26: children wrapper uses flex-basis:0 (content can\'t inflate it an
     expect(wrapper).toBeDefined();
     expect(wrapper!.style.flexBasis).toBe('0%');
     expect(wrapper!.style.minWidth).toBe('0px');
+  });
+});
+
+// ─── SB27: auto-close when active tab vanishes from `tabs` ───────────────────
+
+describe('SB27: drawer auto-closes when the active tab stops existing in tabs', () => {
+  it('uncontrolled: closes when the active tab is removed but other tabs remain', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabsAB = [makeTab('a'), makeTab('b')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabsAB} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(ref.current!.getActiveTab()).toBe('a');
+
+    act(() => {
+      root!.render(<Sidebar tabs={[makeTab('b')]} ref={ref} />);
+    });
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+
+  it('uncontrolled: closes when tabs becomes fully empty', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(ref.current!.getActiveTab()).toBe('a');
+
+    act(() => {
+      root!.render(<Sidebar tabs={[]} ref={ref} />);
+    });
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+
+  it('does NOT fall back to a different tab when the active one vanishes', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabsAB = [makeTab('a'), makeTab('b')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabsAB} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+
+    act(() => {
+      root!.render(<Sidebar tabs={[makeTab('b')]} ref={ref} />);
+    });
+    // Must be null (closed), not 'b' — never silently switch to a tab the user didn't pick.
+    expect(ref.current!.getActiveTab()).toBeNull();
+    const btn = container.querySelector('button.rdd-sidebar-tab-btn')!;
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('controlled: calls onActiveTabChange(null) when the controlled active tab vanishes', () => {
+    const onChange = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} activeTabId="a" onActiveTabChange={onChange} />);
+    });
+
+    act(() => {
+      root!.render(<Sidebar tabs={[makeTab('b')]} activeTabId="a" onActiveTabChange={onChange} />);
+    });
+    expect(onChange).toHaveBeenCalledWith(null);
   });
 });

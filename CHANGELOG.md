@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.3] — 2026-08-07
+
+### Fixed
+- **`<Sidebar>` could get stuck open and empty, with no way to collapse it.** The drawer's open state was derived only from `activeTabId != null` (`isDrawerOpen`), never checking that the active id still referred to a real entry in `tabs`. If the active tab stopped existing — most commonly because a panel contributing sidebar tabs (`usePanelContribution`) changed, closed, or stopped contributing — the drawer stayed visually open at full width with an empty strip and empty body, and the *only* built-in close control (clicking the active tab's own button again) had vanished along with that tab, leaving no way to close it. `Sidebar` now watches `tabs`/`activeTabId` and calls the same `setActiveTabId(null)` used by every other close path the moment the active id no longer matches any entry in `tabs` — closing the drawer rather than silently falling back to a different tab the user didn't choose, whether `tabs` went fully empty or just lost that one specific entry. In controlled mode (`activeTabId` prop), this surfaces as the existing `onActiveTabChange(null)` callback, same as any other close — actually closing still depends on the consumer reflecting that back into their own state, as with every other imperative close path today.
+
 ## [5.1.2] — 2026-08-07
 
 ### Fixed
@@ -223,7 +228,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.3...HEAD
+[5.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.2...v5.1.3
 [5.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.1...v5.1.2
 [5.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.0...v5.1.1
 [5.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.0.0...v5.1.0
