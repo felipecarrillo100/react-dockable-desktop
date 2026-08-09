@@ -17,7 +17,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
       {
-        text: 'v5.1.3',
+        text: 'v5.1.4',
         items: [
           { text: 'Changelog', link: 'https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md' },
           { text: 'Migration Guide', link: '/guide/migration' },

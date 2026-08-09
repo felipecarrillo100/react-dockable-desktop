@@ -5,7 +5,7 @@
 ## What it does
 
 - **Dockable splits and tabs** — drag panels to any edge of a group to split the view, or to the center to tab them together.
-- **Floating windows** — pop any panel out as a resizable, draggable window. Supports maximize, sticky right/bottom, and z-index stacking.
+- **Floating windows** — pop any panel out as a resizable, draggable window. Supports maximize, corner anchoring (drag to a workspace corner to snap/stack there), and z-index stacking.
 - **Zero-unmount DOM preservation** — by default, across docking, floating, and tab-switching alike, the layout engine moves DOM nodes (WebGL contexts, Leaflet maps, CodeMirror editors) without destroying them, with no configuration required.
 - **Layout serialization** — `saveLayout()` / `loadLayout()` round-trip your entire workspace to/from JSON. Persist to `localStorage`, IndexedDB, or a server.
 - **i18n and RTL** — all built-in strings are translatable. RTL layout (Arabic, Hebrew, Persian) is fully supported; direction is set by the app via the `dir` prop on the provider.

@@ -27,6 +27,13 @@
   --rdd-window-text: #f8f9fa;
   --rdd-window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   --rdd-window-shadow-focused: 0 24px 50px rgba(0, 0, 0, 0.55);
+  /* Modal theme variables */
+  --rdd-modal-curtain-bg: rgba(9, 11, 17, 0.65);
+  --rdd-modal-bg: rgba(20, 23, 34, 0.95);
+  --rdd-modal-border: rgba(255, 255, 255, 0.08);
+  --rdd-modal-header-bg: rgba(0, 0, 0, 0.15);
+  --rdd-modal-header-border: rgba(255, 255, 255, 0.06);
+  --rdd-modal-close-hover-color: #ffffff;
   /* Grid/Docked panel theme variables */
   --rdd-border-panel: rgba(255, 255, 255, 0.08);
   --rdd-bg-tab-inactive: #0c0d12;
@@ -1075,6 +1082,13 @@ body.rdd-dragging-active {
   --rdd-window-text: #212529;
   --rdd-window-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   --rdd-window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
+  /* Light skin modal overrides */
+  --rdd-modal-curtain-bg: rgba(0, 0, 0, 0.5);
+  --rdd-modal-bg: rgba(255, 255, 255, 0.97);
+  --rdd-modal-border: rgba(0, 0, 0, 0.1);
+  --rdd-modal-header-bg: rgba(0, 0, 0, 0.04);
+  --rdd-modal-header-border: rgba(0, 0, 0, 0.08);
+  --rdd-modal-close-hover-color: #212529;
   /* Light skin grid/docked panel overrides */
   --rdd-border-panel: rgba(0, 0, 0, 0.08);
   --rdd-bg-tab-inactive: #e9ecef;
@@ -2039,14 +2053,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-modal-curtain {
   position: absolute;
   inset: 0;
-  background-color: rgba(9, 11, 17, 0.65);
+  background-color: var(--rdd-modal-curtain-bg);
   backdrop-filter: blur(6px);
 }
 
 .rdd-modal-window {
   position: relative;
-  background: rgba(20, 23, 34, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--rdd-modal-bg);
+  border: 1px solid var(--rdd-modal-border);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   display: flex;
@@ -2062,8 +2076,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   align-items: center;
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background-color: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--rdd-modal-header-border);
+  background-color: var(--rdd-modal-header-bg);
 }
 
 .rdd-modal-icon {
@@ -2095,7 +2109,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 .rdd-modal-close-button:hover {
   background-color: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  color: var(--rdd-modal-close-hover-color);
 }
 
 .rdd-modal-body {

@@ -287,7 +287,7 @@ It's backed by the same `ResizeObserver`-driven mechanism as `onResize`/`getDime
 
 ## `ConfirmationForm` component
 
-`ConfirmationForm` is a reusable yes/no dialog you can open from any panel. For the full API reference and usage examples, see [Modals & Side Panels — ConfirmationForm](./modals-and-drawers#confirmationform).
+`ConfirmationForm` is a reusable yes/no dialog you can open from any panel. For the full API reference and usage examples, see [Modals & Side Panels — ConfirmationForm](./modals-and-drawers#confirmationform-—-built-in-yes-no-dialog).
 
 ::: info Dirty-state dialog
 When a panel is marked dirty, `react-dockable-desktop` opens a `ConfirmationForm` modal automatically. You do not need to wire this up manually — just call `container.setDirty(true)`.

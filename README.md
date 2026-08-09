@@ -1,11 +1,13 @@
     # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v5.1.3-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v5.1.4-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
 [![Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/demo/)
 [![Docs](https://img.shields.io/badge/docs-site-blue.svg)](https://felipecarrillo100.github.io/react-dockable-desktop/)
+
+[![Sponsor](https://img.shields.io/badge/Sponsor-❤️-ff69b4?style=for-the-badge&logo=github)](https://github.com/sponsors/felipecarrillo100)
 
 A premium dockable layout engine for React. Build desktop-class applications with fluid split-docking grids, tabbed panels, resizable floating windows, and **zero-unmount DOM preservation** — by default, across docking, floating, *and* tab-switching alike, so WebGL contexts, live maps, and stateful editors never lose their state no matter how a panel is moved.
 
@@ -47,7 +49,7 @@ Import styles in your app entry file:
 import 'react-dockable-desktop/styles.css';
 ```
 
-**Requirements:** React ≥ 16.8 · Node ≥ 18 · No other runtime dependencies
+**Requirements:** React ≥ 16.8 (hooks required). No other runtime dependencies.
 
 ---
 
@@ -405,58 +407,11 @@ All built-in skins include dark and light variants. Create your own skin by over
 
 ## What's New
 
-### v4.1.0
-- **`onActivate` / `onDeactivate` on `FormContainerContract`** — push-based callbacks fired when a panel gains or loses globally active status; no need to subscribe to `useWindowManagerState` and diff `activePanelId` inside each panel.
-- **`onContainerTypeChange` on `FormContainerContract`** — fires with the new `ContainerType` (`'dockable-panel'` | `'floating-window'`) whenever the panel transitions between docked and floating; does not fire during minimize/restore cycles.
-- **`getDimensions()` on `FormContainerContract`** — synchronous getter returning the current `{width, height}` of the panel (or `null` before first layout); reads from the same `ResizeObserver` that drives `onResize`.
-- **`requestMinimize()` on `FormContainerContract`** — imperative counterpart to `requestClose()`; minimizes the panel without needing `useWindowManagerActions`.
-- **`'floating-window'` ContainerType value** — `containerType` now correctly reports `'dockable-panel'` for docked panels and `'floating-window'` for panels in detached floating windows.
+Every release is documented in one place — see the
+**[CHANGELOG](https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md)**
+for the full, up-to-date history of additions, fixes, and breaking changes.
 
-### v4.0.0
-- **Built-in `<ContextMenu>`** — zero-dependency context menu, portal-rendered and styled with design tokens. No extra package or CSS import needed.
-- **`ContextMenuAdapter` interface** — swap the default menu for your own design-system implementation via `<WindowManager contextMenuAdapter={...} />`.
-- **New exports** — `ContextMenu`, `DefaultContextMenuAdapter`, `ContextMenuHandle`, `ContextMenuAdapter`, `ShowContextMenuOptions`.
-- **Panel Overlay system** — `PanelOverlayRoot`, `PanelToolbar`, `PanelFloatingWindow`, and `usePanelFloatingWindowManager` bring per-panel toolbars and dynamically-spawned corner-anchored floating info windows to any panel.
-- **`usePanelFloatingWindowManager()`** — imperative hook for opening N named floating windows from data or event handlers; all windows share z-ordering, drag, and corner-docking infrastructure.
-- **Toolbar primitives** — `ToolbarButton`, `ToolbarToggle`, `PanelToolbarSeparator`, `ToolbarSpacer`, `ToolbarCenter`, `ToolbarSearchInput` compose panel toolbar content.
-- **Toast Notifications** — zero-dependency `toast.info/success/warning/error/promise()` singleton. `<ToastContainer>` renders via `createPortal`; supports configurable position, width, max-visible queue, pause-on-hover, opt-in progress bar, and auto-dismiss. `ToastAdapter` lets you delegate to Ant Design, MUI, Sonner, or any other notification library without changing call sites.
-- **Workspace corner anchor zones** — drag any panel (floating or docked tab) to a workspace corner to pin it there. Four 80×80 px snap zones appear during drag; anchored windows stack with 8 px gaps and reposition automatically on viewport resize.
-- **`anchor` option on `openPanel` and `floatPanel`** — spawn a new floating window pre-anchored: `openPanel('id', 'comp', { initialTarget: 'floating', anchor: 'top-right' })` or `floatPanel('id', undefined, 'bottom-left')`.
-- **`defaultAnchor` in panel registry** — set `defaultAnchor: 'top-left'` in `PanelRegistryEntry.defaultOptions` so every instance of that component opens anchored.
-- **Full RTL support** — floating window drop zones, edge triggers, and corner snap zones all mirror correctly when `dir="rtl"`.
-- **Removed:** `openPanel` options `stickyRight` / `stickyBottom` (replaced by `anchor`). Saved layouts are automatically migrated.
-
-### v3.2.0
-- **Per-skin active state design language** — Sidebar tabs and Toolbar buttons now use a per-skin visual pattern (transparent bar, floating chip, pill, line, neon glow), driven by new CSS design tokens — fully overridable in custom skins. CSS-only, no API changes.
-- **Documentation overhaul** — All guides updated to cover the full v3.1.0 API surface.
-
-### v3.1.0
-- **`<Toolbar>` component** — Vertical/horizontal strip hosting `action`, `radio`, `toggle`, `group`, and `separator` items. `useToolbar()` reads/writes state from any panel. `ToolbarGroupItem` adds a collapsed tool-family flyout with controlled mode support.
-- **`<WindowManager taskbarVisibility>`** — Three modes: `'always'` (permanent bar, new default), `'compact'` (shows only with minimized panels), `'autohide'` (overlay bar with 8 px peek strip).
-- **Sidebar resizable drawer** — Drag the drawer edge to resize. Props: `defaultWidth` (px), `minWidth`, `maxWidth`, `onWidthChange`. `drawerWidth` (string) deprecated.
-- **Sidebar `visible` / `stripVisible`** — `visible` collapses the entire sidebar; `stripVisible` collapses only the activity bar. New handle methods: `showStrip()`, `hideStrip()`, `setWidth(px)`, `getWidth()`.
-- **`useSidebar()` / `useSidebarTab()` hooks** — Programmatic Sidebar control from any component in the tree.
-- **`usePanelContextMenu()` hook** — Inject dynamic right-click context menu items from inside a panel component.
-- **Touch & iPad/Android support** — Pointer Events migration; long-press (300 ms) activates tab drag; taskbar chips support hover preview and long-press context menu on touch.
-- **8-direction resize handles** — Floating windows now have N, NE, E, SE, S, SW, W, NW resize handles.
-- **Skin scope fix** — `data-workspace-skin` now applied to `document.documentElement` so Toolbar and Sidebar always inherit the correct skin.
-
-### v3.0.0
-- **`DockableDesktopProvider`** — single composite provider replaces the manual `WindowManagerProvider + PanelProvider` nesting
-- **RTL support** — `dir` prop on provider; `setDirection()` on client; full mirroring of all controls
-- **State selectors** — `useWindowManagerState(s => s.activePanelId)` for surgical re-renders
-- **Dynamic ModalStack** — clean overlay system with dirty-state close guards
-- **`usePanelId()` hook** — zero-prop-drilling panel identity
-- **Typed event bus** — `WorkspaceClient<AppEvents>` for type-safe inter-panel messaging
-
-### v2.0.0 — Breaking Changes
-
-| Removed | Replacement |
-| :--- | :--- |
-| `bringToFront(id)` | `focusPanel(id)` — works for both floating and docked panels |
-| `setActivePanel(id)` | `focusPanel(id)` |
-
-Full details in the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) and the [Changelog](https://github.com/felipecarrillo100/react-dockable-desktop/releases).
+Upgrading across a major version? See the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration).
 
 ---
 
@@ -503,3 +458,15 @@ npm run build        # build dist/
 ## License
 
 MIT — free to use, adapt, and build upon.
+
+---
+
+## Donations & Sponsoring
+
+Creating and maintaining open-source libraries is a passion of mine. If you find this library useful and it saves you time, please consider supporting its development. Your contributions help keep the project active and motivated!
+
+Every bit of support—whether it's sponsoring on GitHub, a coffee, a star, or a shout-out, is deeply appreciated. Thank you for being part of the community!
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" name="buy-me-a-coffee" alt="Buy Me A Coffee" width="180">](https://buymeacoffee.com/felipecarrillo100)
+
+[![Sponsor](https://img.shields.io/badge/Sponsor-❤️-ff69b4?style=for-the-badge&logo=github)](https://github.com/sponsors/felipecarrillo100)
