@@ -118,6 +118,17 @@ workspace.subscribe('panel:opened',    data => {
 workspace.subscribe('panel:closed',    data => console.log(data.id));
 workspace.subscribe('panel:minimized', data => console.log(data.id));
 workspace.subscribe('panel:restored',  data => console.log(data.id));
+
+// Coalesced autosave signal — fires once for any of the above, plus a dedupeKey redirect:
+workspace.subscribe('layout:changed', () => {
+  localStorage.setItem('workspace-layout', workspace.saveLayout());
+});
+
+// Fires from inside saveLayout() itself when that specific call had to drop a panel
+// because its current props aren't serializable (see isSerializable()):
+workspace.subscribe('layout:panels-excluded', data => {
+  data.panels.forEach(p => console.warn(`Panel ${p.id} (${p.component}) excluded from save`));
+});
 ```
 
 ### Built-in event payloads
@@ -128,12 +139,14 @@ workspace.subscribe('panel:restored',  data => console.log(data.id));
 | `'panel:closed'` | `{ id: string }` | A panel was closed. |
 | `'panel:minimized'` | `{ id: string }` | A panel was sent to the taskbar. |
 | `'panel:restored'` | `{ id: string }` | A minimized panel was restored. |
+| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore/dedupe-redirect into one signal for autosave-style consumers. Does **not** cover a `registerStateProvider` return value changing on its own (a pull, unobservable without the panel notifying separately), nor resize/split-ratio-drag/dock-rearrange, which have no hooks yet. |
+| `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from a `registerStateProvider`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
 
 Built-in events are available on typed clients too — they are intersected in automatically via `BuiltInPanelEvents`.
 
-## Lifecycle convenience methods (v3)
+## Lifecycle convenience methods
 
-`WorkspaceClient` exposes shorthand methods that wrap the four built-in events:
+`WorkspaceClient` exposes shorthand methods that wrap the built-in events:
 
 ```ts
 // Each returns an unsubscribe function:
@@ -151,6 +164,14 @@ const unsubMin     = workspace.onPanelMinimize(id => {
 
 const unsubRestore = workspace.onPanelRestore(id => {
   resumeWork(id);
+});
+
+const unsubLayout  = workspace.onLayoutChanged(() => {
+  localStorage.setItem('workspace-layout', workspace.saveLayout());
+});
+
+const unsubExcluded = workspace.onPanelsExcluded(panels => {
+  panels.forEach(p => console.warn(`Panel ${p.id} excluded from save`));
 });
 
 // Unsubscribe when done:

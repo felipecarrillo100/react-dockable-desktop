@@ -42,8 +42,7 @@ All fields are optional. They set the per-panel defaults; most can be overridden
 | `canClose` | `boolean` | `true` | Show or hide the × close button. |
 | `canMinimize` | `boolean` | `true` | Show or hide the minimize button. |
 | `canDrag` | `boolean` | `true` | Allow the tab to be dragged to a different leaf or position. When `false`, the panel cannot be floated via drag. |
-| `defaultStickyRight` | `boolean` | `false` | Snap to the right edge of the viewport when floating. |
-| `defaultStickyBottom` | `boolean` | `false` | Snap to the bottom edge of the viewport when floating. |
+| `defaultAnchor` | `FloatAnchor` (`'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'`) | — (unanchored) | Every instance of this component opens pre-anchored to the given workspace corner when floated — see the `anchor` option in [WorkspaceClient](./workspace-client#openpanel-options), which this is the per-component default for. |
 | `disableLivePreview` | `boolean` | `false` | Do not render a thumbnail preview when the panel is not the active tab. |
 | `renderHeaderActions` | `(panelId: string) => ReactNode` | — | Inject React nodes into the panel tab header (e.g. export buttons). |
 

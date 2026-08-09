@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.4] — 2026-08-09
+
+### Fixed
+- **`openModal`'s dialog frame ignored light mode — hardcoded dark colors made modal content unreadable against a light-themed app.** Unlike every other piece of chrome (floating windows, docked panels, sidebar, toolbars, toasts), `.rdd-modal-curtain`, `.rdd-modal-window`'s background/border, `.rdd-modal-header`'s background, and `.rdd-modal-close-button:hover`'s color were hardcoded literals with no `[data-color-scheme="light"]` override — only `.rdd-modal-window`'s text color was already a `var(--rdd-*)` reference, which is why dark mode looked correct only by coincidence (the two independently-theming systems — this library's chrome and a consumer's own UI library, e.g. MUI — happened to agree there; light mode exposed the gap once a consumer's independently light-themed text landed on a background that never stopped being dark). Introduced `--rdd-modal-curtain-bg`/`--rdd-modal-bg`/`--rdd-modal-border`/`--rdd-modal-header-bg`/`--rdd-modal-header-border`/`--rdd-modal-close-hover-color`, mirroring the exact pattern `--rdd-window-*` already uses for floating windows — dark defaults match today's literals exactly (no dark-mode visual change), with new light-mode counterparts alongside the existing `--rdd-window-*` overrides. The backdrop curtain also gets a real light-mode value (a conventional theme-neutral `rgba(0, 0, 0, 0.5)` dimming scrim) rather than staying dark-only, for full consistency with the rest of the library's chrome.
+
 ## [5.1.3] — 2026-08-07
 
 ### Fixed
@@ -228,7 +233,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.3...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.4...HEAD
+[5.1.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.3...v5.1.4
 [5.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.2...v5.1.3
 [5.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.1...v5.1.2
 [5.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.0...v5.1.1
