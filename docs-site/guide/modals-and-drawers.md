@@ -240,6 +240,7 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `tabs` | `SidebarTab[]` | — | **Required.** Tab definitions. |
+| `headerAction` | `SidebarHeaderAction` | — | A single non-toggling action button (e.g. a hamburger menu) shown above the tabs. See [`headerAction`](#headeraction) below. |
 | `position` | `'left' \| 'right'` | `'right'` | Side the tab strip and drawer appear on. |
 | `defaultWidth` | `number` | `280` | Initial drawer width in pixels. |
 | `minWidth` | `number` | `150` | Minimum drawer width in pixels during drag-resize. |
@@ -254,6 +255,53 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | `children` | `ReactNode` | — | Main content (rendered in the area beside the sidebar). |
 
 **Active tab styling** — The visual treatment of the active tab button (shape, fill, indicator) is controlled entirely by CSS design tokens and varies per skin. `vscode` uses a transparent fill with a 2 px accent bar; `macos` renders a floating glass chip; `nord` draws a short horizontal line below the icon. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) to customise this in your own skin.
+
+### `headerAction`
+
+A single, non-toggling action button — a hamburger menu, for example — shown above the tabs.
+Unlike a `SidebarTab`, it never affects `activeTabId` or the drawer: `Sidebar` only renders it and
+forwards the click. What happens next (opening a side panel, a modal, a custom menu, or nothing at
+all) is entirely up to you.
+
+```tsx
+<Sidebar
+  tabs={tabs}
+  headerAction={{
+    icon: <MenuIcon />,
+    label: 'Menu',
+    onClick: () => openLeftPanel(MainMenu, {}, { title: 'Menu' }),
+  }}
+>
+  <MainMapArea />
+</Sidebar>
+```
+
+It takes one of two forms:
+
+| Form | Shape | Description |
+|------|-------|--------------|
+| Default button | `{ icon, label, onClick, disabled? }` | Renders a button visually consistent with the regular tab buttons — same styling, current skin, `aria-label` (not `aria-pressed`, since it's never in a pressed state). |
+| Fully custom | `{ render: () => ReactNode }` | Renders exactly what you return, with no wrapping element — a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or anything else keeps its own hover/active/focus/ripple behavior and click handling completely untouched. |
+
+```tsx
+// Fully custom — a Bootstrap button, unmodified:
+<Sidebar
+  tabs={tabs}
+  headerAction={{
+    render: () => (
+      <button type="button" className="btn btn-outline-secondary" onClick={openMenu}>
+        <MenuIcon />
+      </button>
+    ),
+  }}
+/>
+```
+
+`headerAction` renders inside its own `.rdd-sidebar-header-area`, independent of the tabs' own
+inter-item spacing (owned by a separate `.rdd-sidebar-tabs-list` wrapper). Override
+`--rdd-sidebar-header-area-padding-top`/`--rdd-sidebar-header-area-padding-bottom` (both default
+`8px`) to adjust its spacing — and, by extension, its effective height, since height is just
+padding plus whatever you render.
 
 ### `SidebarHandle` imperative ref
 
