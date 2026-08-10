@@ -52,10 +52,47 @@ export interface SidebarTab {
   renderContent: (tabId: string, onClose: () => void, onOpen: () => void) => React.ReactNode;
 }
 
+/**
+ * Simple case for `SidebarProps.headerAction`: the library renders a default-styled icon
+ * button (visually consistent with the regular tab buttons) and forwards the click.
+ */
+export interface SidebarHeaderActionButton {
+  icon: React.ReactNode;
+  /** Tooltip and aria-label — same convention as `SidebarTab.label`. */
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+/**
+ * Full-control case for `SidebarProps.headerAction`: the consumer supplies their own markup
+ * (a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or anything
+ * else) wholesale. The library renders exactly what this returns, unwrapped, so the consumer's
+ * own hover/active/focus/ripple behavior and click handling are untouched.
+ */
+export interface SidebarHeaderActionCustom {
+  render: () => React.ReactNode;
+}
+
+/**
+ * A single, non-toggling action button shown above the tab strip (e.g. a hamburger menu).
+ * Unlike `SidebarTab`, it never affects `activeTabId` or the drawer — the library only renders
+ * it and forwards the click; what happens next (opening a side panel, a modal, anything else)
+ * is entirely up to the consumer.
+ */
+export type SidebarHeaderAction = SidebarHeaderActionButton | SidebarHeaderActionCustom;
+
 export interface SidebarProps {
   /** Which side the activity bar and drawer appear on. Default: 'right' */
   position?: 'left' | 'right';
   tabs: SidebarTab[];
+  /**
+   * A single non-toggling action button (e.g. a hamburger menu) shown above the tabs, in its
+   * own `.rdd-sidebar-header-area` — independent of the tabs' own inter-item gap. Override
+   * `--rdd-sidebar-header-area-padding-top`/`--rdd-sidebar-header-area-padding-bottom`
+   * (both default `8px`) to control its spacing/effective height.
+   */
+  headerAction?: SidebarHeaderAction;
   /** Initial drawer width in pixels. Default: 280 */
   defaultWidth?: number;
   /** Minimum drawer width in pixels during drag-resize. Default: 150 */
@@ -155,6 +192,7 @@ function SidebarTabProvider({ tabId, onClose, onOpen, setActiveTabId, children }
 
 interface SidebarTabStripProps {
   tabs: SidebarTab[];
+  headerAction?: SidebarHeaderAction;
   activeTabId: string | null | undefined;
   isVisible: boolean;
   position: 'left' | 'right';
@@ -163,6 +201,7 @@ interface SidebarTabStripProps {
 
 const SidebarTabStrip = memo(function SidebarTabStrip({
   tabs,
+  headerAction,
   activeTabId,
   isVisible,
   position,
@@ -181,22 +220,45 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
         flexShrink: 0,
       }}
     >
-      <div className={`rdd-sidebar-tabs-strip rdd-${position}`} style={{ width: '56px', height: '100%' }}>
-        {tabs.map(tab => {
-          const isActive = activeTabId === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onTabClick(tab.id)}
-              className={`rdd-sidebar-tab-btn${isActive ? ' rdd-active' : ''}`}
-              title={tab.label}
-              aria-pressed={isActive}
-            >
-              {tab.icon}
-            </button>
-          );
-        })}
+      <div
+        className={`rdd-sidebar-tabs-strip rdd-${position}${headerAction ? ' rdd-sidebar-tabs-strip--has-header-action' : ''}`}
+        style={{ width: '56px', height: '100%' }}
+      >
+        {headerAction && (
+          <div className="rdd-sidebar-header-area">
+            {'render' in headerAction ? (
+              headerAction.render()
+            ) : (
+              <button
+                type="button"
+                onClick={headerAction.onClick}
+                disabled={headerAction.disabled}
+                className="rdd-sidebar-tab-btn rdd-sidebar-header-action-btn"
+                title={headerAction.label}
+                aria-label={headerAction.label}
+              >
+                {headerAction.icon}
+              </button>
+            )}
+          </div>
+        )}
+        <div className="rdd-sidebar-tabs-list">
+          {tabs.map(tab => {
+            const isActive = activeTabId === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabClick(tab.id)}
+                className={`rdd-sidebar-tab-btn${isActive ? ' rdd-active' : ''}`}
+                title={tab.label}
+                aria-pressed={isActive}
+              >
+                {tab.icon}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -274,6 +336,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     {
       position = 'right',
       tabs,
+      headerAction,
       defaultWidth,
       minWidth = 150,
       maxWidth = 600,
@@ -488,6 +551,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           {position === 'left' && (
             <SidebarTabStrip
               tabs={tabs}
+              headerAction={headerAction}
               activeTabId={activeTabId}
               isVisible={isStripVisible}
               position={position}
@@ -507,6 +571,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           {position === 'right' && (
             <SidebarTabStrip
               tabs={tabs}
+              headerAction={headerAction}
               activeTabId={activeTabId}
               isVisible={isStripVisible}
               position={position}

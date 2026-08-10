@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-08-10
+
+### Added
+- **`Sidebar`'s `headerAction` prop** — a single, non-toggling action button (e.g. a hamburger menu, like Google Maps') rendered above the tab strip. Unlike `SidebarTab`, it never touches `activeTabId` or the drawer — the library only renders it and forwards the click; what happens next (opening a side panel via the existing `openLeftPanel`/`openRightPanel`, a modal, a custom overlay, or nothing) is entirely up to the consumer. Two forms: `{ icon, label, onClick, disabled? }` renders a default-styled button visually consistent with the regular tab buttons (same `.rdd-sidebar-tab-btn` class, `aria-label` instead of `aria-pressed` since it's not a toggle), or `{ render: () => ReactNode }` for full control — the returned node is inserted as a direct child of the strip with no wrapping element, so a consumer's own Material UI `IconButton`, Bootstrap `Button`, or Tailwind-styled button keeps its own hover/active/focus/ripple behavior and click handling completely untouched. New exports: `SidebarHeaderAction`, `SidebarHeaderActionButton`, `SidebarHeaderActionCustom`. Fully optional and additive — omitting it leaves `Sidebar` byte-for-byte unchanged. When present, `headerAction` renders inside its own `.rdd-sidebar-header-area`, independent of the tabs' own inter-item gap (now owned by a dedicated `.rdd-sidebar-tabs-list` wrapper) — its spacing (and by extension its effective height) is fully consumer-controllable via two new CSS variables, `--rdd-sidebar-header-area-padding-top`/`--rdd-sidebar-header-area-padding-bottom` (both default `8px`, reproducing the look of a plain tab strip), following the same `--rdd-*` override convention used throughout the rest of the library instead of adding new numeric props. The strip's own `padding-top` (`38px`, aligning the first *tab* with the drawer's header bar) drops to `0` whenever `headerAction` is present, via a `rdd-sidebar-tabs-strip--has-header-action` modifier class, since the header area now owns that spacing itself; unaffected when `headerAction` is omitted.
+
 ## [5.1.4] — 2026-08-09
 
 ### Fixed
@@ -233,7 +238,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.4...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.0...HEAD
+[5.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.4...v5.2.0
 [5.1.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.3...v5.1.4
 [5.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.2...v5.1.3
 [5.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.1...v5.1.2

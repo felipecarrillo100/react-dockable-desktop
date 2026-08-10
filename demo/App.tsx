@@ -43,12 +43,12 @@ interface AppProps {
 function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLayout }: AppProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [skin, setSkin] = useState<string>('vscode');
-  const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>('right');
+  const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>('left');
   const [windowOpacity, setWindowOpacity] = useState<number>(85);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
   const [showToolbar, setShowToolbar] = useState<boolean>(true);
-  const [toolbarPosition, setToolbarPosition] = useState<'left' | 'right' | 'top' | 'bottom'>('left');
+  const [toolbarPosition, setToolbarPosition] = useState<'left' | 'right' | 'top' | 'bottom'>('right');
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const sidebarRef = React.useRef<SidebarHandle>(null);
@@ -1097,6 +1097,32 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
           defaultWidth={280}
           visible={showSidebar}
           onVisibilityChange={setShowSidebar}
+          headerAction={{
+            // Demonstrates the fully-custom render path: a real Bootstrap button, kept
+            // exactly as-is — the library never touches this markup. The glyph is a plain
+            // inline SVG (stroke="currentColor") rather than Bootstrap's own
+            // .navbar-toggler-icon, since that class only gets a visible icon inside a real
+            // .navbar or under [data-bs-theme=dark] — neither applies to a standalone button,
+            // so it would render blank in light mode. currentColor instead tracks
+            // .btn-outline-secondary's own (already theme-aware) color for free.
+            // The action itself is entirely up to the app: here it opens the existing
+            // "Left Side Panel" demo, the same way Google Maps' own hamburger opens a
+            // detailed menu.
+            render: () => (
+              <button
+                type="button"
+                className="btn btn-outline-secondary d-flex align-items-center justify-content-center p-0"
+                style={{ width: 40, height: 40 }}
+                title="Menu"
+                aria-label="Menu"
+                onClick={spawnLeftDrawer}
+              >
+                <svg width="20" height="20" viewBox="0 0 30 30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 7h22M4 15h22M4 23h22" />
+                </svg>
+              </button>
+            ),
+          }}
         >
           <WindowManager
             skin={skin}
@@ -1164,7 +1190,7 @@ function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
   );
 }
 
-export function App() {
+export function App(): React.JSX.Element {
   const [locale, setLocale] = useState<string>('en');
 
   return (
