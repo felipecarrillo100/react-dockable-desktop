@@ -26,6 +26,7 @@
  * - SB25: resize handle renders only when drawer is open
  * - SB26: children wrapper uses flex-basis:0 (content can't inflate it and shift the drawer)
  * - SB27: drawer auto-closes when the active tab stops existing in `tabs`
+ * - SB28: headerAction renders a standalone, non-toggling button above the tabs
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
@@ -720,5 +721,132 @@ describe('SB27: drawer auto-closes when the active tab stops existing in tabs', 
       root!.render(<Sidebar tabs={[makeTab('b')]} activeTabId="a" onActiveTabChange={onChange} />);
     });
     expect(onChange).toHaveBeenCalledWith(null);
+  });
+});
+
+// ─── SB28: headerAction ───────────────────────────────────────────────────────
+
+describe('SB28: headerAction renders a standalone, non-toggling button above the tabs', () => {
+  it('renders no extra button when headerAction is omitted (backward compatible)', () => {
+    const tabs = [makeTab('a'), makeTab('b')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    const buttons = container.querySelectorAll('button.rdd-sidebar-tab-btn');
+    expect(buttons.length).toBe(tabs.length);
+  });
+
+  it('renders a button with the given icon/label, calls onClick, and never opens the drawer', () => {
+    const onClick = vi.fn();
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={tabs}
+          ref={ref}
+          headerAction={{ icon: <Icon />, label: 'Menu', onClick }}
+        />
+      );
+    });
+
+    const buttons = container.querySelectorAll('button.rdd-sidebar-tab-btn');
+    expect(buttons.length).toBe(tabs.length + 1);
+
+    const headerBtn = buttons[0] as HTMLElement;
+    expect(headerBtn.getAttribute('aria-label')).toBe('Menu');
+    expect(headerBtn.hasAttribute('aria-pressed')).toBe(false);
+
+    act(() => { headerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+
+  it('disabled: true renders a disabled button that does not fire onClick', () => {
+    const onClick = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[makeTab('a')]}
+          headerAction={{ icon: <Icon />, label: 'Menu', onClick, disabled: true }}
+        />
+      );
+    });
+
+    const headerBtn = container.querySelectorAll('button.rdd-sidebar-tab-btn')[0] as HTMLButtonElement;
+    expect(headerBtn.disabled).toBe(true);
+
+    act(() => { headerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('render: renders the custom node wholesale, with no .rdd-sidebar-tab-btn generated for it', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[makeTab('a')]}
+          headerAction={{ render: () => <div data-testid="custom-hb">Custom</div> }}
+        />
+      );
+    });
+
+    expect(container.querySelector('[data-testid="custom-hb"]')).not.toBeNull();
+    // Only the regular tab's own button should have this class — none for the custom slot.
+    expect(container.querySelectorAll('button.rdd-sidebar-tab-btn').length).toBe(1);
+  });
+
+  it('adds the reduced-top-padding modifier class to the strip only when headerAction is present', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    let strip = container.querySelector('.rdd-sidebar-tabs-strip')!;
+    expect(strip.classList.contains('rdd-sidebar-tabs-strip--has-header-action')).toBe(false);
+
+    // Same check holds for the fully-custom render form, not just the default button —
+    // the modifier is driven by headerAction's presence, not by which form it takes.
+    act(() => {
+      root!.render(<Sidebar tabs={tabs} headerAction={{ render: () => <div>Custom</div> }} />);
+    });
+    strip = container.querySelector('.rdd-sidebar-tabs-strip')!;
+    expect(strip.classList.contains('rdd-sidebar-tabs-strip--has-header-action')).toBe(true);
+  });
+
+  it('wraps headerAction in .rdd-sidebar-header-area (both forms) and tabs in .rdd-sidebar-tabs-list', () => {
+    const tabs = [makeTab('a'), makeTab('b')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    // No headerAction: no header-area wrapper, but tabs still live in their own list wrapper.
+    expect(container.querySelector('.rdd-sidebar-header-area')).toBeNull();
+    let list = container.querySelector('.rdd-sidebar-tabs-list');
+    expect(list).not.toBeNull();
+    expect(list!.querySelectorAll('button.rdd-sidebar-tab-btn').length).toBe(2);
+
+    act(() => {
+      root!.render(
+        <Sidebar tabs={tabs} headerAction={{ icon: <Icon />, label: 'Menu', onClick: vi.fn() }} />
+      );
+    });
+    const headerArea = container.querySelector('.rdd-sidebar-header-area');
+    expect(headerArea).not.toBeNull();
+    expect(headerArea!.querySelector('button.rdd-sidebar-tab-btn')).not.toBeNull();
+    list = container.querySelector('.rdd-sidebar-tabs-list');
+    expect(list!.querySelectorAll('button.rdd-sidebar-tab-btn').length).toBe(2);
+
+    act(() => {
+      root!.render(
+        <Sidebar tabs={tabs} headerAction={{ render: () => <div data-testid="custom-hb2" /> }} />
+      );
+    });
+    const headerArea2 = container.querySelector('.rdd-sidebar-header-area');
+    expect(headerArea2).not.toBeNull();
+    expect(headerArea2!.querySelector('[data-testid="custom-hb2"]')).not.toBeNull();
   });
 });

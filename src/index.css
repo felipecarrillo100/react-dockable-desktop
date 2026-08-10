@@ -1868,11 +1868,36 @@ body.rdd-dragging-active {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 38px; /* Perfectly aligned to match the 38px height of the drawer header bar */
+  padding-top: 38px; /* Perfectly aligned to match the 38px height of the drawer header bar — only
+                         relevant when a tab is the first item; see the modifier rule below. */
   padding-bottom: 12px;
-  gap: 8px;
   flex-shrink: 0;
   z-index: 5;
+}
+
+/* When a headerAction is present, it owns its own top/bottom spacing (see
+   .rdd-sidebar-header-area below) — the strip's own alignment padding no longer applies. */
+.rdd-sidebar-tabs-strip.rdd-sidebar-tabs-strip--has-header-action {
+  padding-top: 0;
+}
+
+/* Wraps `headerAction` — independent of .rdd-sidebar-tabs-list's own gap, so a consumer can
+   tune spacing/effective height around their button (default or fully custom-rendered) without
+   touching inter-tab spacing. Layout-only values, so no light/dark variant is needed. */
+.rdd-sidebar-header-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--rdd-sidebar-header-area-padding-top, 8px);
+  padding-bottom: var(--rdd-sidebar-header-area-padding-bottom, 8px);
+}
+
+/* Wraps the tabs only — owns the gap that used to live on .rdd-sidebar-tabs-strip itself. */
+.rdd-sidebar-tabs-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Position-specific tab strip border alignment */
