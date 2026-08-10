@@ -77,7 +77,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   const spawnNestedModal = (level: number = 1) => {
     const NestComponent: React.FC = () => {
       return (
-        <div className="p-3 text-white">
+        <div className="p-3">
           <p className="mb-2">This is Nested Modal Level {level}!</p>
           <p className="small text-muted mb-3">Press ESC to close only this topmost modal.</p>
           <div className="d-flex gap-2">
@@ -116,7 +116,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
       const [showLongContent, setShowLongContent] = useState(false);
 
       return (
-        <div className="p-3 text-white d-flex flex-column justify-content-between h-100" style={{ minHeight: '180px' }}>
+        <div className="p-3 d-flex flex-column justify-content-between h-100" style={{ minHeight: '180px' }}>
           <div>
             <h5 className="mb-2">{size.toUpperCase()} Modal</h5>
             <p className="mb-3">This modal has been opened with size preset <code>'{size}'</code>.</p>

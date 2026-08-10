@@ -34,6 +34,11 @@
   --rdd-modal-header-bg: rgba(0, 0, 0, 0.15);
   --rdd-modal-header-border: rgba(255, 255, 255, 0.06);
   --rdd-modal-close-hover-color: #ffffff;
+  --rdd-side-panel-bg: rgba(20, 23, 34, 0.88);
+  --rdd-side-panel-border: rgba(255, 255, 255, 0.08);
+  --rdd-side-panel-header-bg: rgba(0, 0, 0, 0.15);
+  --rdd-side-panel-header-border: rgba(255, 255, 255, 0.06);
+  --rdd-side-panel-close-hover-color: #ffffff;
   /* Grid/Docked panel theme variables */
   --rdd-border-panel: rgba(255, 255, 255, 0.08);
   --rdd-bg-tab-inactive: #0c0d12;
@@ -1089,6 +1094,12 @@ body.rdd-dragging-active {
   --rdd-modal-header-bg: rgba(0, 0, 0, 0.04);
   --rdd-modal-header-border: rgba(0, 0, 0, 0.08);
   --rdd-modal-close-hover-color: #212529;
+  /* Light skin side panel overrides */
+  --rdd-side-panel-bg: rgba(255, 255, 255, 0.97);
+  --rdd-side-panel-border: rgba(0, 0, 0, 0.1);
+  --rdd-side-panel-header-bg: rgba(0, 0, 0, 0.04);
+  --rdd-side-panel-header-border: rgba(0, 0, 0, 0.08);
+  --rdd-side-panel-close-hover-color: #212529;
   /* Light skin grid/docked panel overrides */
   --rdd-border-panel: rgba(0, 0, 0, 0.08);
   --rdd-bg-tab-inactive: #e9ecef;
@@ -2168,10 +2179,10 @@ html.rdd-no-animations [class*="rdd-"]::after {
   top: 0;
   bottom: 0;
   width: 400px;
-  background: rgba(20, 23, 34, 0.88);
+  background: var(--rdd-side-panel-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--rdd-side-panel-border);
   z-index: calc(var(--rdd-z-base, 1000) + 8000);
   box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2182,7 +2193,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-side-panel-right {
   right: 0;
   border-right: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--rdd-side-panel-border);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
 }
 
@@ -2201,8 +2212,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   align-items: center;
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background-color: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--rdd-side-panel-header-border);
+  background-color: var(--rdd-side-panel-header-bg);
   min-height: 44px;
 }
 
@@ -2236,7 +2247,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 .rdd-side-panel-close-button:hover {
   background-color: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  color: var(--rdd-side-panel-close-hover-color);
 }
 
 .rdd-side-panel-body {
