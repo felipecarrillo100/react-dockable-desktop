@@ -15,6 +15,7 @@
  * PO11: usePanelFloatingWindowManager consumer does NOT re-render on focus change (PanelManagerCtx isolation)
  * PO12: Resize handle drag toggles document.body.rdd-resizing-active (WebKit selection regression)
  * PO13: Header drag toggles document.body.rdd-dragging-active (WebKit selection regression)
+ * PO14: PanelToolbar re-measures via ResizeObserver, not just once on mount (stale-inset regression)
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React, { useState } from 'react';
@@ -494,5 +495,55 @@ describe('PO13: Header drag suppresses selection (regression: WebKit selection b
       win.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1, clientX: 80, clientY: 80, button: 0 }));
     });
     expect(document.body.classList.contains('rdd-dragging-active')).toBe(false);
+  });
+});
+
+// ─── PO14 ─────────────────────────────────────────────────────────────────────
+
+describe('PO14: PanelToolbar re-measures via ResizeObserver (regression: stale layout-restore inset)', () => {
+  it('updates a docked float\'s inset when the toolbar element resizes after mount, not just at mount', () => {
+    let capturedCallback: (() => void) | null = null;
+    const OriginalResizeObserver = global.ResizeObserver;
+    class MockResizeObserver {
+      constructor(cb: () => void) { capturedCallback = cb; }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    // @ts-expect-error - test-local override of the shared jsdom stub
+    global.ResizeObserver = MockResizeObserver;
+
+    try {
+      act(() => {
+        root = createRoot(container);
+        root.render(
+          <PanelOverlayRoot>
+            <PanelToolbar position="top"><button type="button">Tool</button></PanelToolbar>
+            <PanelFloatingWindow id="po14-float" title="Float" open defaultAnchor="top-left" onClose={() => {}}>
+              <span>content</span>
+            </PanelFloatingWindow>
+          </PanelOverlayRoot>
+        );
+      });
+
+      const toolbarEl = container.querySelector('.rdd-panel-toolbar') as HTMLElement;
+      const floatEl = container.querySelector('.rdd-panel-float') as HTMLElement;
+      expect(capturedCallback).not.toBeNull();
+
+      // jsdom reports offsetHeight as 0 by default — matches the reported bug's "0 baked in"
+      // case exactly, since nothing has told the toolbar its real size yet.
+      expect(floatEl.style.top).toBe('0px');
+
+      // Simulate the toolbar settling to its real height and the ResizeObserver firing —
+      // this re-measurement path is exactly what the fix adds; without it, insetTop would
+      // stay wrong (here, 0) for the lifetime of the component.
+      Object.defineProperty(toolbarEl, 'offsetHeight', { configurable: true, value: 48 });
+      act(() => { capturedCallback?.(); });
+
+      expect(floatEl.style.top).toBe('48px');
+    } finally {
+      // @ts-expect-error - restoring the shared jsdom stub
+      global.ResizeObserver = OriginalResizeObserver;
+    }
   });
 });
