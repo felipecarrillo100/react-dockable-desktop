@@ -321,10 +321,21 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
     const el = ref.current;
     if (!el) return;
     if (!ctx) return;
-    const size = (position === 'top' || position === 'bottom') ? el.offsetHeight : el.offsetWidth;
-    cleanupRef.current?.();
-    cleanupRef.current = ctx.registerToolbar(position, size);
+    const measure = () => {
+      const size = (position === 'top' || position === 'bottom') ? el.offsetHeight : el.offsetWidth;
+      cleanupRef.current?.();
+      cleanupRef.current = ctx.registerToolbar(position, size);
+    };
+    measure();
+    // A one-shot measurement is correct for a live mount (already at final size), but during a
+    // layout restore (loadLayout()/initialState) the panel's DOM isn't necessarily settled yet at
+    // this exact instant — without re-measuring, a wrong size (often 0) is baked in permanently,
+    // and every docked float ends up positioned at the toolbar's own y/x, covering it. This also
+    // catches any later size change (button wrapping, a buttonSize/variant change, content change).
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
     return () => {
+      ro.disconnect();
       cleanupRef.current?.();
       cleanupRef.current = null;
     };

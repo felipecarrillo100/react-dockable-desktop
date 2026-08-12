@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.1] — 2026-08-12
+
+### Fixed
+- **`PanelToolbar`'s `insetTop`/`insetBottom` could become permanently stale (often `0`) after a restored layout, causing docked `PanelFloatingWindow`/managed floats to render on top of the toolbar itself.** `PanelToolbar` measured its own `offsetHeight`/`offsetWidth` exactly once, in a `useLayoutEffect` with no `ResizeObserver` and no re-measurement path — harmless on a normal live mount (already at final size when the effect fires), but during `loadLayout()`/`initialState` restoration the panel's DOM isn't necessarily settled at that exact instant, so a wrong size got baked in for the toolbar instance's entire lifetime. Every docked float then positioned itself at `top: insetTop (≈0)`/`bottom: insetBottom (≈0)` — the same origin as the toolbar — and, using a much higher `z-index`, rendered completely over its buttons. Added a `ResizeObserver` on the toolbar's own element alongside the existing initial measurement, so `insetTop`/`insetBottom` now stay correct for the lifetime of the component — this also fixes the toolbar's height changing for any other reason post-mount (button wrapping, a `buttonSize`/`variant` change, content changes), which was never reflected before either.
+
 ## [5.2.0] — 2026-08-10
 
 ### Added
@@ -241,7 +246,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.1...HEAD
+[5.2.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.0...v5.2.1
 [5.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.4...v5.2.0
 [5.1.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.3...v5.1.4
 [5.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.2...v5.1.3
