@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.1] — 2026-08-13
+
+### Fixed
+- **A `SidebarTab` placed alone in `headerAction`/`footerAction` (e.g. a lone "Settings" entry — the exact pattern 5.3.0's own doc comment recommends) rendered narrower than 44px when active, with its accent bar visibly detached from the rail's edge.** `.rdd-sidebar-tab-btn.rdd-active`'s `width: var(--tab-btn-active-width, 100%)` resolves against its parent's own width; in the main `.rdd-sidebar-tabs-list` this is always stable because at least one inactive 44px sibling anchors the shrink-to-fit container, but `.rdd-sidebar-header-area`/`.rdd-sidebar-footer-area` (both introduced in 5.3.0) have no explicit width — when one holds only the active tab, its `100%` has nothing concrete to resolve against and collapses to the button's own icon-sized content (~30px). Added `min-width: 44px` to both areas, matching the base tab button's own intrinsic size — a no-op for every already-correct multi-entry case, purely layout-only so identical in both light and dark mode.
+
 ## [5.3.0] — 2026-08-13
 
 ### Added
@@ -257,7 +262,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.1...HEAD
+[5.3.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.0...v5.3.1
 [5.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.2...v5.3.0
 [5.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.1...v5.2.2
 [5.2.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.0...v5.2.1

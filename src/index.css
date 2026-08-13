@@ -1908,6 +1908,10 @@ body.rdd-dragging-active {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  /* Floor matching .rdd-sidebar-tab-btn's own intrinsic 44px — without it, a lone active tab
+     (width: var(--tab-btn-active-width, 100%)) has no stable sibling to size this shrink-to-fit
+     container against, so its 100% resolves against nothing and collapses to its icon's size. */
+  min-width: 44px;
   padding-top: var(--rdd-sidebar-header-area-padding-top, 8px);
   padding-bottom: var(--rdd-sidebar-header-area-padding-bottom, 8px);
 }
@@ -1919,6 +1923,7 @@ body.rdd-dragging-active {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  min-width: 44px;
   padding-top: var(--rdd-sidebar-footer-area-padding-top, 8px);
   padding-bottom: var(--rdd-sidebar-footer-area-padding-bottom, 8px);
 }
