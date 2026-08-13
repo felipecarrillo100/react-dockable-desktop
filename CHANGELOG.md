@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.0] — 2026-08-13
+
+### Added
+- **`Sidebar`'s `showCloseButton` prop** — an opt-in "X" close button in the expanded drawer's header, alongside the tab label, as an additional way to collapse the sidebar. Wired to the exact same close path every other close control already uses (`setActiveTabId(null)`) — functionally identical to clicking the active tab's own icon again. Default `false`; omitting it leaves the drawer header byte-for-byte unchanged.
+- **`Sidebar`'s `headerAction` now accepts multiple entries, and a new mirror `footerAction` prop pins entries to the bottom of the tab strip.** Both widen from a single `SidebarHeaderAction` object to `SidebarRailEntry | SidebarRailEntry[]` — an existing single-object `headerAction={{ icon, label, onClick }}` still type-checks and renders identically, since arrays are purely additive. The new `SidebarRailEntry` union also allows mixing in real `SidebarTab` entries alongside action buttons/custom renders in the same header or footer slot — a tab placed there (e.g. a "Settings" entry ending a footer's list of action buttons) behaves exactly like a main-list tab: it mounts, activates, opens the drawer, participates in `eagerMount`/`preserveState`, and is subject to the same auto-close-when-removed guard introduced in 5.1.3 — only its position in the rail differs. New exports: `SidebarRailEntry`. `SidebarHeaderActionButton`/`SidebarHeaderActionCustom` gain an optional `id` field (used for React keys when placed inside an array; unused and harmless for the existing single-object form). `footerAction` renders inside a new `.rdd-sidebar-footer-area`, pinned to the bottom via `.rdd-sidebar-tabs-list` gaining `flex: 1` — new CSS variables `--rdd-sidebar-footer-area-padding-top`/`--rdd-sidebar-footer-area-padding-bottom` (both default `8px`) mirror the existing header-area vars. `.rdd-sidebar-header-area` becomes a flex column (was center-only) so multiple header entries stack — visually identical to before for today's single-entry case.
+
 ## [5.2.2] — 2026-08-13
 
 ### Fixed
@@ -251,7 +257,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.0...HEAD
+[5.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.2...v5.3.0
 [5.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.1...v5.2.2
 [5.2.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.0...v5.2.1
 [5.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.4...v5.2.0

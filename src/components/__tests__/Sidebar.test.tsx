@@ -27,6 +27,8 @@
  * - SB26: children wrapper uses flex-basis:0 (content can't inflate it and shift the drawer)
  * - SB27: drawer auto-closes when the active tab stops existing in `tabs`
  * - SB28: headerAction renders a standalone, non-toggling button above the tabs
+ * - SB29: showCloseButton adds an extra close control to the drawer header
+ * - SB30: footerAction mirrors headerAction, pinned to the bottom, and can mix tabs and action buttons
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
@@ -848,5 +850,187 @@ describe('SB28: headerAction renders a standalone, non-toggling button above the
     const headerArea2 = container.querySelector('.rdd-sidebar-header-area');
     expect(headerArea2).not.toBeNull();
     expect(headerArea2!.querySelector('[data-testid="custom-hb2"]')).not.toBeNull();
+  });
+});
+
+// ─── SB29: showCloseButton ──────────────────────────────────────────────────
+
+describe('SB29: showCloseButton adds an extra close control to the drawer header', () => {
+  it('renders no close button when showCloseButton is omitted (backward compatible)', () => {
+    const ref = createRef<SidebarHandle>();
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-close-button')).toBeNull();
+  });
+
+  it('renders a close button in the drawer header when showCloseButton is true', () => {
+    const ref = createRef<SidebarHandle>();
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} ref={ref} showCloseButton />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    const closeBtn = container.querySelector('.rdd-sidebar-drawer-header .rdd-sidebar-drawer-close-button');
+    expect(closeBtn).not.toBeNull();
+  });
+
+  it('clicking the close button collapses the drawer via the same path as clicking the active tab icon', () => {
+    const ref = createRef<SidebarHandle>();
+    const onChange = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar tabs={[makeTab('a')]} ref={ref} showCloseButton onActiveTabChange={onChange} />
+      );
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(ref.current!.getActiveTab()).toBe('a');
+
+    const closeBtn = container.querySelector('.rdd-sidebar-drawer-close-button') as HTMLElement;
+    act(() => { closeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(ref.current!.getActiveTab()).toBeNull();
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it('does not render a close button when the drawer is closed (no active tab)', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} showCloseButton />);
+    });
+    expect(container.querySelector('.rdd-sidebar-drawer-close-button')).toBeNull();
+  });
+});
+
+// ─── SB30: footerAction ─────────────────────────────────────────────────────
+
+describe('SB30: footerAction mirrors headerAction, pinned to the bottom, and can mix tabs and action buttons', () => {
+  it('renders no footer-area when footerAction is omitted (backward compatible)', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} />);
+    });
+    expect(container.querySelector('.rdd-sidebar-footer-area')).toBeNull();
+  });
+
+  it('renders a single action button in .rdd-sidebar-footer-area, firing onClick without touching activeTabId', () => {
+    const onClick = vi.fn();
+    const ref = createRef<SidebarHandle>();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[makeTab('a')]}
+          ref={ref}
+          footerAction={{ icon: <Icon />, label: 'Settings', onClick }}
+        />
+      );
+    });
+    const footerArea = container.querySelector('.rdd-sidebar-footer-area');
+    expect(footerArea).not.toBeNull();
+    const footerBtn = footerArea!.querySelector('button.rdd-sidebar-tab-btn') as HTMLElement;
+    expect(footerBtn.getAttribute('aria-label')).toBe('Settings');
+
+    act(() => { footerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+
+  it('adds the --has-footer-action modifier class to the strip only when footerAction is present', () => {
+    const tabs = [makeTab('a')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    let strip = container.querySelector('.rdd-sidebar-tabs-strip')!;
+    expect(strip.classList.contains('rdd-sidebar-tabs-strip--has-footer-action')).toBe(false);
+
+    act(() => {
+      root!.render(
+        <Sidebar tabs={tabs} footerAction={{ icon: <Icon />, label: 'Settings', onClick: vi.fn() }} />
+      );
+    });
+    strip = container.querySelector('.rdd-sidebar-tabs-strip')!;
+    expect(strip.classList.contains('rdd-sidebar-tabs-strip--has-footer-action')).toBe(true);
+  });
+
+  it('accepts an array mixing an action button and a real SidebarTab, rendering both in the footer area', () => {
+    const onClick = vi.fn();
+    const settingsTab = makeTab('settings', { label: 'Settings' });
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[makeTab('a')]}
+          footerAction={[{ icon: <Icon />, label: 'Info', onClick }, settingsTab]}
+        />
+      );
+    });
+    const footerArea = container.querySelector('.rdd-sidebar-footer-area')!;
+    const footerButtons = footerArea.querySelectorAll('button.rdd-sidebar-tab-btn');
+    expect(footerButtons.length).toBe(2);
+  });
+
+  it('a tab entry inside footerAction behaves exactly like a main-list tab: mounts, activates, and renders its drawer content on click', () => {
+    const ref = createRef<SidebarHandle>();
+    const settingsTab = makeTab('settings', { label: 'Settings' });
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} ref={ref} footerAction={settingsTab} />);
+    });
+
+    const footerBtn = container.querySelector(
+      '.rdd-sidebar-footer-area button.rdd-sidebar-tab-btn'
+    ) as HTMLElement;
+    act(() => { footerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(ref.current!.getActiveTab()).toBe('settings');
+    expect(container.querySelector('[data-content="settings"]')).not.toBeNull();
+    expect(footerBtn.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('removing a footer tab while active closes the drawer instead of leaving stale content (SB27 for rail tabs)', () => {
+    const ref = createRef<SidebarHandle>();
+    const settingsTab = makeTab('settings', { label: 'Settings' });
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} ref={ref} footerAction={settingsTab} />);
+    });
+    act(() => { ref.current!.openTab('settings'); });
+    expect(container.querySelector('[data-content="settings"]')).not.toBeNull();
+
+    act(() => {
+      root!.render(<Sidebar tabs={[makeTab('a')]} ref={ref} />);
+    });
+    expect(ref.current!.getActiveTab()).toBeNull();
+    expect(container.querySelector('[data-content="settings"]')).toBeNull();
+  });
+
+  it('existing single-object headerAction usage continues to work unchanged alongside footerAction', () => {
+    const headerClick = vi.fn();
+    const footerClick = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[makeTab('a')]}
+          headerAction={{ icon: <Icon />, label: 'Menu', onClick: headerClick }}
+          footerAction={{ icon: <Icon />, label: 'Settings', onClick: footerClick }}
+        />
+      );
+    });
+    const headerBtn = container.querySelector(
+      '.rdd-sidebar-header-area button.rdd-sidebar-tab-btn'
+    ) as HTMLElement;
+    const footerBtn = container.querySelector(
+      '.rdd-sidebar-footer-area button.rdd-sidebar-tab-btn'
+    ) as HTMLElement;
+    act(() => { headerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    act(() => { footerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(headerClick).toHaveBeenCalledTimes(1);
+    expect(footerClick).toHaveBeenCalledTimes(1);
   });
 });

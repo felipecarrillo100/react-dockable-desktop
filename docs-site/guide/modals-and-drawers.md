@@ -240,7 +240,9 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `tabs` | `SidebarTab[]` | — | **Required.** Tab definitions. |
-| `headerAction` | `SidebarHeaderAction` | — | A single non-toggling action button (e.g. a hamburger menu) shown above the tabs. See [`headerAction`](#headeraction) below. |
+| `headerAction` | `SidebarRailEntry \| SidebarRailEntry[]` | — | One or more non-toggling action buttons and/or real tabs shown above the tabs. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
+| `footerAction` | `SidebarRailEntry \| SidebarRailEntry[]` | — | Mirror of `headerAction`, pinned to the bottom of the tab strip regardless of tab count. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
+| `showCloseButton` | `boolean` | `false` | Show an "X" close button in the expanded drawer's header — an extra way to collapse the sidebar besides clicking the active tab's own icon again. |
 | `position` | `'left' \| 'right'` | `'right'` | Side the tab strip and drawer appear on. |
 | `defaultWidth` | `number` | `280` | Initial drawer width in pixels. |
 | `minWidth` | `number` | `150` | Minimum drawer width in pixels during drag-resize. |
@@ -256,10 +258,17 @@ const sidebarRef = useRef<SidebarHandle>(null);
 
 **Active tab styling** — The visual treatment of the active tab button (shape, fill, indicator) is controlled entirely by CSS design tokens and varies per skin. `vscode` uses a transparent fill with a 2 px accent bar; `macos` renders a floating glass chip; `nord` draws a short horizontal line below the icon. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) to customise this in your own skin.
 
-### `headerAction`
+### `headerAction`/`footerAction`
 
-A single, non-toggling action button — a hamburger menu, for example — shown above the tabs.
-Unlike a `SidebarTab`, it never affects `activeTabId` or the drawer: `Sidebar` only renders it and
+One or more non-toggling action buttons — a hamburger menu, for example — shown above (`headerAction`)
+or pinned below (`footerAction`) the tabs. Pass a single object (the common case) or an array to
+show several. An array can also mix in real `SidebarTab` entries — a tab placed in `headerAction`/
+`footerAction` behaves exactly like a main-list tab (it mounts, activates, renders its drawer
+content, and closes through the same lifecycle); only its position in the rail differs. A classic
+use case: end `footerAction` with a "Settings" tab that expands like any other tab, preceded by one
+or more simple action buttons.
+
+Action button entries never affect `activeTabId` or the drawer: `Sidebar` only renders them and
 forwards the click. What happens next (opening a side panel, a modal, a custom menu, or nothing at
 all) is entirely up to you.
 
@@ -271,17 +280,27 @@ all) is entirely up to you.
     label: 'Menu',
     onClick: () => openLeftPanel(MainMenu, {}, { title: 'Menu' }),
   }}
+  footerAction={[
+    { icon: <InfoIcon />, label: 'About', onClick: () => openModal(About, {}) },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <SettingsIcon />,
+      renderContent: () => <SettingsPanel />,
+    },
+  ]}
 >
   <MainMapArea />
 </Sidebar>
 ```
 
-It takes one of two forms:
+Each entry takes one of three forms:
 
 | Form | Shape | Description |
 |------|-------|--------------|
 | Default button | `{ icon, label, onClick, disabled? }` | Renders a button visually consistent with the regular tab buttons — same styling, current skin, `aria-label` (not `aria-pressed`, since it's never in a pressed state). |
 | Fully custom | `{ render: () => ReactNode }` | Renders exactly what you return, with no wrapping element — a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or anything else keeps its own hover/active/focus/ripple behavior and click handling completely untouched. |
+| Real tab | `SidebarTab` (`{ id, label, icon, renderContent, ... }`) | Behaves exactly like an entry in `tabs` — toggles active/inactive, opens the drawer, participates in `eagerMount`/`preserveState`, and is subject to the same auto-close-when-removed guard. |
 
 ```tsx
 // Fully custom — a Bootstrap button, unmodified:
@@ -297,11 +316,12 @@ It takes one of two forms:
 />
 ```
 
-`headerAction` renders inside its own `.rdd-sidebar-header-area`, independent of the tabs' own
-inter-item spacing (owned by a separate `.rdd-sidebar-tabs-list` wrapper). Override
-`--rdd-sidebar-header-area-padding-top`/`--rdd-sidebar-header-area-padding-bottom` (both default
-`8px`) to adjust its spacing — and, by extension, its effective height, since height is just
-padding plus whatever you render.
+`headerAction` renders inside its own `.rdd-sidebar-header-area`; `footerAction` renders inside a
+mirror `.rdd-sidebar-footer-area`, pushed to the bottom of the strip regardless of tab count. Both
+are independent of the tabs' own inter-item spacing (owned by a separate `.rdd-sidebar-tabs-list`
+wrapper). Override `--rdd-sidebar-header-area-padding-top`/`-bottom` and
+`--rdd-sidebar-footer-area-padding-top`/`-bottom` (all default `8px`) to adjust their spacing —
+and, by extension, their effective height, since height is just padding plus whatever you render.
 
 ### `SidebarHandle` imperative ref
 
