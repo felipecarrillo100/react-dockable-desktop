@@ -1956,28 +1956,28 @@ body.rdd-dragging-active {
 }
 
 .rdd-sidebar-tab-btn.rdd-active {
-  width: var(--tab-btn-active-width) !important;
+  width: var(--tab-btn-active-width, 100%) !important;
   color: var(--tab-icon-active) !important;
   background-color: var(--tab-btn-active-bg) !important;
   border-top: 1px solid var(--sidebar-border) !important;
   border-bottom: 1px solid var(--sidebar-border) !important;
-  border-radius: var(--tab-btn-active-radius) !important;
-  box-shadow: var(--tab-btn-active-shadow);
-  filter: var(--tab-btn-active-glow);
+  border-radius: var(--tab-btn-active-radius, 0px) !important;
+  box-shadow: var(--tab-btn-active-shadow, none);
+  filter: var(--tab-btn-active-glow, none);
   z-index: 6;
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 /* Position-specific active button border & margin alignments */
 .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
-  border-left: var(--tab-accent-bar-width) solid var(--tab-icon-active) !important;
+  border-left: var(--tab-accent-bar-width, 3px) solid var(--tab-icon-active) !important;
   border-right: none !important;
   margin-right: -2px !important;
   margin-left: 0 !important;
 }
 .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
   border-left: none !important;
-  border-right: var(--tab-accent-bar-width) solid var(--tab-icon-active) !important;
+  border-right: var(--tab-accent-bar-width, 3px) solid var(--tab-icon-active) !important;
   margin-left: -2px !important;
   margin-right: 0 !important;
 }
@@ -2489,13 +2489,13 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 [dir="rtl"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
   border-left: none !important;
-  border-right: var(--tab-accent-bar-width) solid var(--tab-icon-active) !important;
+  border-right: var(--tab-accent-bar-width, 3px) solid var(--tab-icon-active) !important;
   margin-left: -2px !important;
   margin-right: 0 !important;
 }
 [dir="rtl"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
   border-right: none !important;
-  border-left: var(--tab-accent-bar-width) solid var(--tab-icon-active) !important;
+  border-left: var(--tab-accent-bar-width, 3px) solid var(--tab-icon-active) !important;
   margin-right: -2px !important;
   margin-left: 0 !important;
 }
@@ -3045,15 +3045,15 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-toolbar-btn-radio.rdd-active {
   color: var(--tab-icon-active);
   background-color: var(--toolbar-btn-radio-active-bg);
-  box-shadow: var(--toolbar-btn-active-shadow);
-  filter: var(--toolbar-btn-active-glow);
+  box-shadow: var(--toolbar-btn-active-shadow, none);
+  filter: var(--toolbar-btn-active-glow, none);
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-radio.rdd-active { border-left:   var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
-.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-radio.rdd-active { border-right:  var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
-.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-radio.rdd-active { border-bottom: var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
-.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active { border-top:    var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
+.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-radio.rdd-active { border-left:   var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
+.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-radio.rdd-active { border-right:  var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
+.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-radio.rdd-active { border-bottom: var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
+.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active { border-top:    var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
 
 /* Toggle active — lighter tint, no directional border */
 .rdd-toolbar-btn-toggle.rdd-active {
@@ -3083,15 +3083,15 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-toolbar-btn-group.rdd-active {
   color: var(--tab-icon-active);
   background-color: var(--toolbar-btn-radio-active-bg);
-  box-shadow: var(--toolbar-btn-active-shadow);
-  filter: var(--toolbar-btn-active-glow);
+  box-shadow: var(--toolbar-btn-active-shadow, none);
+  filter: var(--toolbar-btn-active-glow, none);
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-group.rdd-active { border-left:   var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
-.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-group.rdd-active { border-right:  var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
-.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-group.rdd-active { border-bottom: var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
-.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active { border-top:    var(--toolbar-accent-bar-width) solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
+.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-group.rdd-active { border-left:   var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 0 6px 6px 0; }
+.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-group.rdd-active { border-right:  var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 6px 0 0 6px; }
+.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-group.rdd-active { border-bottom: var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 6px 6px 0 0; }
+.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active { border-top:    var(--toolbar-accent-bar-width, 3px) solid var(--tab-icon-active); border-radius: 0 0 6px 6px; }
 
 /* Separators */
 .rdd-toolbar-strip.rdd-left .rdd-toolbar-separator,
