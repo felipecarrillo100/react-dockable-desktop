@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.2] — 2026-08-13
+
+### Fixed
+- **The active `Sidebar` rail tab shrank (and its accent border detached or, for the toolbar's active radio/group buttons, disappeared entirely) in light mode, for any skin that doesn't explicitly redefine these tokens itself — including `vscode`, the package's own default skin.** `--tab-btn-active-width` and seven sibling "active-tab"/"active-toolbar-button" design tokens (`--tab-btn-active-radius`, `--tab-btn-active-shadow`, `--tab-btn-active-glow`, `--tab-accent-bar-width`, `--toolbar-btn-active-shadow`, `--toolbar-btn-active-glow`, `--toolbar-accent-bar-width`) were only ever defined inside the base `[data-color-scheme="dark"]` block, with no `[data-color-scheme="light"]` counterpart, and used with `!important` and no fallback. `slate`/`nord`/`macos` (for the width) and `obsidian`/`tokyo` (for the rest) happen to redefine these themselves regardless of scheme, so they were unaffected — `vscode` redefines none of them, so in light mode every one of these `var()` references resolved to nothing: the width one fell back to shrink-to-fit (the originally reported symptom), and the two `-accent-bar-width` ones — used inside a `border-*` shorthand — invalidated the whole shorthand, resetting `border-style` to `none` and making the accent border fully disappear, not just misplace. Added a fallback directly to each `var()` call, using its existing dark-scheme value (`100%`/`0px`/`none`/`3px` as appropriate) — removes the "must remember to define this in every new scheme/skin" trap for all eight tokens at once, with zero behavior change for skins that already define them.
+
 ## [5.2.1] — 2026-08-12
 
 ### Fixed
@@ -246,7 +251,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.2...HEAD
+[5.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.1...v5.2.2
 [5.2.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.0...v5.2.1
 [5.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.4...v5.2.0
 [5.1.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.1.3...v5.1.4
