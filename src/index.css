@@ -1892,23 +1892,46 @@ body.rdd-dragging-active {
   padding-top: 0;
 }
 
+/* When a footerAction is present, it owns its own bottom spacing (see .rdd-sidebar-footer-area
+   below) — the strip's own bottom padding no longer applies. */
+.rdd-sidebar-tabs-strip.rdd-sidebar-tabs-strip--has-footer-action {
+  padding-bottom: 0;
+}
+
 /* Wraps `headerAction` — independent of .rdd-sidebar-tabs-list's own gap, so a consumer can
-   tune spacing/effective height around their button (default or fully custom-rendered) without
-   touching inter-tab spacing. Layout-only values, so no light/dark variant is needed. */
+   tune spacing/effective height around their button(s) (default, custom-rendered, or a mix with
+   real tabs) without touching inter-tab spacing. Layout-only values, so no light/dark variant is
+   needed. Column + gap so multiple entries stack — visually identical to before for the single-
+   entry case. */
 .rdd-sidebar-header-area {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
   padding-top: var(--rdd-sidebar-header-area-padding-top, 8px);
   padding-bottom: var(--rdd-sidebar-header-area-padding-bottom, 8px);
 }
 
-/* Wraps the tabs only — owns the gap that used to live on .rdd-sidebar-tabs-strip itself. */
+/* Mirror of .rdd-sidebar-header-area for `footerAction` — pinned to the bottom of the strip via
+   .rdd-sidebar-tabs-list's flex: 1 below. */
+.rdd-sidebar-footer-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: var(--rdd-sidebar-footer-area-padding-top, 8px);
+  padding-bottom: var(--rdd-sidebar-footer-area-padding-bottom, 8px);
+}
+
+/* Wraps the tabs only — owns the gap that used to live on .rdd-sidebar-tabs-strip itself.
+   flex: 1 absorbs remaining space so a following .rdd-sidebar-footer-area is pushed to the
+   bottom of the strip regardless of tab count. */
 .rdd-sidebar-tabs-list {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  flex: 1;
 }
 
 /* Position-specific tab strip border alignment */
@@ -2725,6 +2748,27 @@ html.rdd-no-animations [class*="rdd-"]::after {
   flex-shrink: 0;
   background: var(--sidebar-drawer-header-bg);
   min-height: 38px;
+}
+
+/* Optional close button (showCloseButton) — an extra way to collapse the sidebar besides
+   clicking the active tab's own icon again. */
+.rdd-sidebar-drawer-close-button {
+  background: transparent;
+  border: none;
+  color: var(--sidebar-text-muted, var(--rdd-text-secondary));
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.rdd-sidebar-drawer-close-button:hover {
+  background-color: var(--sidebar-btn-hover-bg);
+  color: var(--sidebar-text-title);
 }
 
 /* Sidebar drawer content body */

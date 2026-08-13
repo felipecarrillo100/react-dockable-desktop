@@ -53,10 +53,13 @@ export interface SidebarTab {
 }
 
 /**
- * Simple case for `SidebarProps.headerAction`: the library renders a default-styled icon
- * button (visually consistent with the regular tab buttons) and forwards the click.
+ * Simple case for `SidebarProps.headerAction`/`footerAction`: the library renders a
+ * default-styled icon button (visually consistent with the regular tab buttons) and forwards
+ * the click.
  */
 export interface SidebarHeaderActionButton {
+  /** Only needed when used inside a `SidebarRailEntry[]` array, for the React key. */
+  id?: string;
   icon: React.ReactNode;
   /** Tooltip and aria-label — same convention as `SidebarTab.label`. */
   label: string;
@@ -65,12 +68,14 @@ export interface SidebarHeaderActionButton {
 }
 
 /**
- * Full-control case for `SidebarProps.headerAction`: the consumer supplies their own markup
- * (a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or anything
- * else) wholesale. The library renders exactly what this returns, unwrapped, so the consumer's
- * own hover/active/focus/ripple behavior and click handling are untouched.
+ * Full-control case for `SidebarProps.headerAction`/`footerAction`: the consumer supplies their
+ * own markup (a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or
+ * anything else) wholesale. The library renders exactly what this returns, unwrapped, so the
+ * consumer's own hover/active/focus/ripple behavior and click handling are untouched.
  */
 export interface SidebarHeaderActionCustom {
+  /** Only needed when used inside a `SidebarRailEntry[]` array, for the React key. */
+  id?: string;
   render: () => React.ReactNode;
 }
 
@@ -82,17 +87,48 @@ export interface SidebarHeaderActionCustom {
  */
 export type SidebarHeaderAction = SidebarHeaderActionButton | SidebarHeaderActionCustom;
 
+/**
+ * A single entry inside `SidebarProps.headerAction`/`footerAction` when used as an array: either
+ * a non-toggling action button/custom render (see `SidebarHeaderAction`), or a real `SidebarTab`
+ * that behaves exactly like a main-list tab — it mounts, activates, and closes through the same
+ * lifecycle, so e.g. a "Settings" entry pinned to the footer can expand like any other tab.
+ */
+export type SidebarRailEntry = SidebarTab | SidebarHeaderActionButton | SidebarHeaderActionCustom;
+
+function isRailTab(entry: SidebarRailEntry): entry is SidebarTab {
+  return 'renderContent' in entry;
+}
+
+function isRailCustom(entry: SidebarRailEntry): entry is SidebarHeaderActionCustom {
+  return 'render' in entry;
+}
+
+function toRailArray(value: SidebarRailEntry | SidebarRailEntry[] | undefined): SidebarRailEntry[] {
+  if (value == null) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
 export interface SidebarProps {
   /** Which side the activity bar and drawer appear on. Default: 'right' */
   position?: 'left' | 'right';
   tabs: SidebarTab[];
   /**
-   * A single non-toggling action button (e.g. a hamburger menu) shown above the tabs, in its
-   * own `.rdd-sidebar-header-area` — independent of the tabs' own inter-item gap. Override
+   * One or more non-toggling action buttons and/or real tabs shown above the tabs, in their
+   * own `.rdd-sidebar-header-area` — independent of the tabs' own inter-item gap. Pass a single
+   * `{ icon, label, onClick }`/`{ render }` object (the common case), or an array mixing action
+   * buttons, custom renders, and `SidebarTab` entries — a tab entry here behaves exactly like a
+   * main-list tab (mounts, activates, closes through the same lifecycle). Override
    * `--rdd-sidebar-header-area-padding-top`/`--rdd-sidebar-header-area-padding-bottom`
    * (both default `8px`) to control its spacing/effective height.
    */
-  headerAction?: SidebarHeaderAction;
+  headerAction?: SidebarRailEntry | SidebarRailEntry[];
+  /**
+   * Mirror of `headerAction`, pinned to the bottom of the tab strip via its own
+   * `.rdd-sidebar-footer-area` — e.g. a "Settings" tab that should always sit at the bottom
+   * regardless of tab count. Override `--rdd-sidebar-footer-area-padding-top`/
+   * `--rdd-sidebar-footer-area-padding-bottom` (both default `8px`) to control its spacing.
+   */
+  footerAction?: SidebarRailEntry | SidebarRailEntry[];
   /** Initial drawer width in pixels. Default: 280 */
   defaultWidth?: number;
   /** Minimum drawer width in pixels during drag-resize. Default: 150 */
@@ -113,6 +149,11 @@ export interface SidebarProps {
   stripVisible?: boolean;
   /** Called when showStrip/hideStrip is invoked on the imperative handle. */
   onStripVisibilityChange?: (visible: boolean) => void;
+  /**
+   * Show an "X" close button in the expanded drawer's header, as an additional way to collapse
+   * the sidebar (equivalent to clicking the active tab's own icon again). Opt-in. Default: false
+   */
+  showCloseButton?: boolean;
   /** Main workspace content rendered alongside the sidebar. */
   children?: React.ReactNode;
 }
@@ -185,6 +226,52 @@ function SidebarTabProvider({ tabId, onClose, onOpen, setActiveTabId, children }
 }
 
 // ==========================================
+// renderRailEntry (internal helper)
+// Shared by the header/footer areas only — dispatches a SidebarRailEntry to a tab button,
+// a default-styled action button, or a fully custom render. The main tabs-list keeps its own
+// inline JSX below since it only ever renders SidebarTab entries.
+// ==========================================
+
+function renderRailEntry(
+  entry: SidebarRailEntry,
+  index: number,
+  activeTabId: string | null | undefined,
+  onTabClick: (tabId: string) => void
+): React.ReactNode {
+  if (isRailCustom(entry)) {
+    return <React.Fragment key={entry.id ?? index}>{entry.render()}</React.Fragment>;
+  }
+  if (isRailTab(entry)) {
+    const isActive = activeTabId === entry.id;
+    return (
+      <button
+        key={entry.id}
+        type="button"
+        onClick={() => onTabClick(entry.id)}
+        className={`rdd-sidebar-tab-btn${isActive ? ' rdd-active' : ''}`}
+        title={entry.label}
+        aria-pressed={isActive}
+      >
+        {entry.icon}
+      </button>
+    );
+  }
+  return (
+    <button
+      key={entry.id ?? index}
+      type="button"
+      onClick={entry.onClick}
+      disabled={entry.disabled}
+      className="rdd-sidebar-tab-btn rdd-sidebar-header-action-btn"
+      title={entry.label}
+      aria-label={entry.label}
+    >
+      {entry.icon}
+    </button>
+  );
+}
+
+// ==========================================
 // SidebarTabStrip (internal sub-component)
 // Re-renders only when tabs, selection, or strip visibility changes —
 // not on drawer width changes during drag.
@@ -192,7 +279,8 @@ function SidebarTabProvider({ tabId, onClose, onOpen, setActiveTabId, children }
 
 interface SidebarTabStripProps {
   tabs: SidebarTab[];
-  headerAction?: SidebarHeaderAction;
+  headerEntries: SidebarRailEntry[];
+  footerEntries: SidebarRailEntry[];
   activeTabId: string | null | undefined;
   isVisible: boolean;
   position: 'left' | 'right';
@@ -201,7 +289,8 @@ interface SidebarTabStripProps {
 
 const SidebarTabStrip = memo(function SidebarTabStrip({
   tabs,
-  headerAction,
+  headerEntries,
+  footerEntries,
   activeTabId,
   isVisible,
   position,
@@ -221,25 +310,12 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
       }}
     >
       <div
-        className={`rdd-sidebar-tabs-strip rdd-${position}${headerAction ? ' rdd-sidebar-tabs-strip--has-header-action' : ''}`}
+        className={`rdd-sidebar-tabs-strip rdd-${position}${headerEntries.length ? ' rdd-sidebar-tabs-strip--has-header-action' : ''}${footerEntries.length ? ' rdd-sidebar-tabs-strip--has-footer-action' : ''}`}
         style={{ width: '56px', height: '100%' }}
       >
-        {headerAction && (
+        {headerEntries.length > 0 && (
           <div className="rdd-sidebar-header-area">
-            {'render' in headerAction ? (
-              headerAction.render()
-            ) : (
-              <button
-                type="button"
-                onClick={headerAction.onClick}
-                disabled={headerAction.disabled}
-                className="rdd-sidebar-tab-btn rdd-sidebar-header-action-btn"
-                title={headerAction.label}
-                aria-label={headerAction.label}
-              >
-                {headerAction.icon}
-              </button>
-            )}
+            {headerEntries.map((entry, i) => renderRailEntry(entry, i, activeTabId, onTabClick))}
           </div>
         )}
         <div className="rdd-sidebar-tabs-list">
@@ -259,6 +335,11 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
             );
           })}
         </div>
+        {footerEntries.length > 0 && (
+          <div className="rdd-sidebar-footer-area">
+            {footerEntries.map((entry, i) => renderRailEntry(entry, i, activeTabId, onTabClick))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -337,6 +418,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       position = 'right',
       tabs,
       headerAction,
+      footerAction,
       defaultWidth,
       minWidth = 150,
       maxWidth = 600,
@@ -347,6 +429,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       onVisibilityChange,
       stripVisible,
       onStripVisibilityChange,
+      showCloseButton = false,
       children,
     },
     ref
@@ -364,6 +447,14 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     const [internalActiveTabId, setInternalActiveTabId] = useState<string | null>(null);
     const activeTabId = isControlled ? controlledActiveTabId : internalActiveTabId;
 
+    // Normalized header/footer rail entries, and the SidebarTab-shaped subset of each — a
+    // header/footer tab (e.g. "Settings") must share the exact same lifecycle as a main tab.
+    const normalizedHeaderEntries = useMemo(() => toRailArray(headerAction), [headerAction]);
+    const normalizedFooterEntries = useMemo(() => toRailArray(footerAction), [footerAction]);
+    const headerTabs = useMemo(() => normalizedHeaderEntries.filter(isRailTab), [normalizedHeaderEntries]);
+    const footerTabs = useMemo(() => normalizedFooterEntries.filter(isRailTab), [normalizedFooterEntries]);
+    const allTabs = useMemo(() => [...headerTabs, ...tabs, ...footerTabs], [headerTabs, tabs, footerTabs]);
+
     // Tracks which non-eager tabs have been mounted at least once (for lazy-mount / preserveState).
     // eagerMount tabs are folded in via effectiveMountedTabIds below, so no effect needed for them.
     const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(() => new Set<string>());
@@ -374,11 +465,11 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     const effectiveMountedTabIds = useMemo(() => {
       const result = new Set(mountedTabIds);
       if (activeTabId) result.add(activeTabId);
-      for (const tab of tabs) {
+      for (const tab of allTabs) {
         if (tab.eagerMount) result.add(tab.id);
       }
       return result;
-    }, [mountedTabIds, activeTabId, tabs]);
+    }, [mountedTabIds, activeTabId, allTabs]);
 
     // Stable refs for imperative handle
     const activeTabIdRef = useRef<string | null>(activeTabId ?? null);
@@ -407,7 +498,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
             let changed = false;
             const next = new Set(prev);
             for (const tabId of prev) {
-              const tab = tabs.find(t => t.id === tabId);
+              const tab = allTabs.find(t => t.id === tabId);
               if (tab && !tab.eagerMount && !tab.preserveState) {
                 next.delete(tabId);
                 changed = true;
@@ -423,18 +514,18 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           onActiveTabChange?.(id);
         }
       },
-      [isControlled, onActiveTabChange, tabs]
+      [isControlled, onActiveTabChange, allTabs]
     );
 
-    // If the active tab stops existing in `tabs` (its contributing panel changed/closed,
-    // or the tab was otherwise removed), close the drawer rather than leaving it open and
-    // empty with no tab button left to click closed — never silently fall back to a
-    // different tab the user didn't choose.
+    // If the active tab stops existing in `tabs`/`headerAction`/`footerAction` (its contributing
+    // panel changed/closed, or the tab was otherwise removed), close the drawer rather than
+    // leaving it open and empty with no tab button left to click closed — never silently fall
+    // back to a different tab the user didn't choose.
     useEffect(() => {
-      if (activeTabId != null && !tabs.some(t => t.id === activeTabId)) {
+      if (activeTabId != null && !allTabs.some(t => t.id === activeTabId)) {
         setActiveTabId(null);
       }
-    }, [activeTabId, tabs, setActiveTabId]);
+    }, [activeTabId, allTabs, setActiveTabId]);
 
     useImperativeHandle(ref, () => ({
       openTab: (tabId: string) => setActiveTabId(tabId),
@@ -485,7 +576,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           transition: 'flex-basis 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        {tabs.map(tab => {
+        {allTabs.map(tab => {
           const isMounted = effectiveMountedTabIds.has(tab.id);
           if (!isMounted) return null;
 
@@ -502,9 +593,23 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
                 width: '100%',
               }}
             >
-              {/* Drawer header — tab label only, no close button (click active tab icon to close) */}
+              {/* Drawer header — tab label, plus an optional close button (showCloseButton) as
+                  an extra way to collapse the sidebar; clicking the active tab icon still works too. */}
               <div className="rdd-sidebar-drawer-header">
                 <span className="rdd-sidebar-header-title">{tab.label}</span>
+                {showCloseButton && (
+                  <button
+                    type="button"
+                    className="rdd-sidebar-drawer-close-button"
+                    onClick={handleClose}
+                    title="Close"
+                    aria-label="Close"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* Drawer body — consumer-supplied content */}
@@ -551,7 +656,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           {position === 'left' && (
             <SidebarTabStrip
               tabs={tabs}
-              headerAction={headerAction}
+              headerEntries={normalizedHeaderEntries}
+              footerEntries={normalizedFooterEntries}
               activeTabId={activeTabId}
               isVisible={isStripVisible}
               position={position}
@@ -571,7 +677,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           {position === 'right' && (
             <SidebarTabStrip
               tabs={tabs}
-              headerAction={headerAction}
+              headerEntries={normalizedHeaderEntries}
+              footerEntries={normalizedFooterEntries}
               activeTabId={activeTabId}
               isVisible={isStripVisible}
               position={position}

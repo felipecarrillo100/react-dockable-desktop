@@ -1,6 +1,6 @@
     # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v5.2.2-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v5.3.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
