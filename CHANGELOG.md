@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.3] — 2026-08-25
+
+### Fixed
+- **5.3.2's `useAnimationScrollGuard` didn't actually stop the autofocus page-jump for MUI's `<TextField autoFocus />`** (or any other component that focuses via `useLayoutEffect`, which is how MUI's `InputBase` implements `autoFocus`). The guard captured its scroll baseline inside its own `useEffect` — but React always flushes every `useLayoutEffect` in a commit, tree-wide, before any `useEffect` runs, with no exception for nesting. So the focus-triggered scroll (from a layout effect) had already happened by the time the guard's passive effect read `window.scrollX`/`scrollY`, meaning it captured the post-jump position as its "correct" baseline and spent the rest of the animation window faithfully restoring the wrong value — a complete no-op disguised as a fix. The baseline is now captured in a `useState` initializer, which runs during render, strictly before any effect (layout or passive) anywhere in the subtree can fire — the only capture point actually guaranteed to predate the jump. No API change.
+
 ## [5.3.2] — 2026-08-25
 
 ### Fixed
