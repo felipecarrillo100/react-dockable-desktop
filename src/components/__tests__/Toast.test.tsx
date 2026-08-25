@@ -13,6 +13,8 @@
  * T10: maxVisible queue — 3rd toast is held in queue and promoted when one exits (fake timers)
  * T11: toast.promise() shows pending text immediately; updates to success on resolve
  * T12: Dedup by id — re-calling toast.info with the same id replaces the existing toast
+ * T13: max-height re-syncs when content grows after mount (regression: toast.promise()
+ *      pending -> error clipping — the lock must not freeze at the first-render height)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
@@ -278,5 +280,48 @@ describe('T12: Dedup by id', () => {
     expect(document.body.querySelectorAll('.rdd-toast')).toHaveLength(1);
     expect(document.body.querySelector('.rdd-toast__body')?.textContent).toContain('Updated message');
     expect(document.body.querySelector('.rdd-toast--success')).not.toBeNull();
+  });
+});
+
+// ─── T13 ──────────────────────────────────────────────────────────────────────
+
+describe('T13: max-height re-syncs when content grows after mount', () => {
+  it('updates max-height to the new, taller content height instead of staying locked at the first-render value', () => {
+    let capturedCallback: (() => void) | null = null;
+    const OriginalResizeObserver = global.ResizeObserver;
+    class MockResizeObserver {
+      constructor(cb: () => void) { capturedCallback = cb; }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    // @ts-expect-error - test-local override of the shared jsdom stub
+    global.ResizeObserver = MockResizeObserver;
+
+    try {
+      act(() => { mountContainer(); });
+      act(() => { toast.info('Working…', { id: 'grow-1', duration: 0 }); });
+
+      const card = document.body.querySelector('.rdd-toast') as HTMLElement;
+      // Simulate the short "pending" message's natural height.
+      Object.defineProperty(card, 'scrollHeight', { configurable: true, value: 60 });
+      // Mount's own synchronous measurement already ran with scrollHeight's default
+      // jsdom value (0) before this stub was installed — re-trigger it the same way
+      // a real resize would, so max-height reflects our stubbed height going forward.
+      act(() => { capturedCallback?.(); });
+      expect(card.style.maxHeight).toBe('60px');
+
+      // Content grows — the real bug: toast.promise() swapping pending -> a longer,
+      // wrapped error message. Same toast id, so this updates in place, not remounts.
+      act(() => { toast.error('This is a considerably longer error message that wraps onto more than one line.', { id: 'grow-1' }); });
+      Object.defineProperty(card, 'scrollHeight', { configurable: true, value: 140 });
+
+      // Without the fix, nothing re-measures here — max-height would stay '60px' and
+      // the wrapped error text would be clipped by `.rdd-toast`'s overflow: hidden.
+      act(() => { capturedCallback?.(); });
+      expect(card.style.maxHeight).toBe('140px');
+    } finally {
+      global.ResizeObserver = OriginalResizeObserver;
+    }
   });
 });

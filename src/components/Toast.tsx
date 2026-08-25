@@ -275,6 +275,7 @@ function ToastItem({
   showProgress, pauseOnHover, animation, onDismiss, onExited,
 }: ToastItemProps) {
   const divRef    = useRef<HTMLDivElement>(null);
+  const bodyRef   = useRef<HTMLDivElement>(null);
   const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remainRef = useRef<number>(options.duration);
   const startRef  = useRef<number>(0);
@@ -287,12 +288,29 @@ function ToastItem({
                            'rdd-toast--entering';
   const [entryClass, setEntryClass] = useState(startEntry);
 
-  // Lock max-height for exit collapse animation
+  // Keep max-height in sync with the card's true content height, so content that
+  // grows after mount (e.g. toast.promise()'s pending -> error message) never gets
+  // clipped by the overflow: hidden below. The card's own box is exactly what this
+  // effect holds at a fixed height, so it never reports a resize on its own — the
+  // ResizeObserver instead watches the unconstrained inner body (the only thing
+  // that actually grows with its content) purely as a trigger, and reads the
+  // outer card's scrollHeight (which reports the true, uncapped content height
+  // even while a stale cap is still clipping it — offsetHeight/clientHeight would
+  // just return that stale cap) to compute the new value. Frozen once exiting
+  // starts: .rdd-toast--exiting's `max-height: 0 !important` below takes over
+  // from there regardless of this inline value.
   useLayoutEffect(() => {
-    if (divRef.current) {
-      divRef.current.style.maxHeight = `${divRef.current.offsetHeight}px`;
-    }
-  }, []);
+    const el = divRef.current;
+    const body = bodyRef.current;
+    if (!el || !body || exiting) return;
+
+    const applyHeight = () => { el.style.maxHeight = `${el.scrollHeight}px`; };
+    applyHeight();
+
+    const observer = new ResizeObserver(applyHeight);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, [exiting]);
 
   // Trigger entry transition on next frame
   useEffect(() => {
@@ -370,7 +388,7 @@ function ToastItem({
       onMouseLeave={handleMouseLeave}
     >
       {icon && icon}
-      <div className="rdd-toast__body">
+      <div ref={bodyRef} className="rdd-toast__body">
         {options.content !== undefined ? options.content : message}
       </div>
       {options.closable && (
