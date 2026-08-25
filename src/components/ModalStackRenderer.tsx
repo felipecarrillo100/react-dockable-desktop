@@ -5,6 +5,7 @@ import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderCon
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
+import { useAnimationScrollGuard } from '../hooks/useAnimationScrollGuard';
 
 /**
  * Interface representing props for the internal {@link ModalRenderer} component.
@@ -37,6 +38,9 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
 
   const optionsRef = useRef(modalOptions);
   optionsRef.current = modalOptions;
+
+  // Matches the 0.18s scaleUp/fadeIn animation below — see useAnimationScrollGuard.
+  useAnimationScrollGuard(180);
 
   const baseTitle = formatLabel(modalOptions.title, formatMessage);
 

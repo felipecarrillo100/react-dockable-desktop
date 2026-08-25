@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.2] — 2026-08-25
+
+### Fixed
+- **Autofocusing a child of a side panel or modal (e.g. a MUI `<TextField autoFocus />` opened via `openRightPanel`/`openLeftPanel`/`openModal`) caused the whole document to visibly scroll/jump during the panel's enter animation**, even though the panel itself animated correctly. `SidePanelRendererItem`/`ModalRenderer` mount the consumer's `<Component>` in the same commit as the slide-in/scale-in animation, so an autofocus target is a real, focusable, laid-out DOM node while still visually off-screen (the animation is a pure `transform`, not a visibility change) — and since `.rdd-side-panel` has no positioned/scrollable ancestor, the browser's native focus-scroll-into-view walked all the way up to the document, which is what visibly jumped. Added `useAnimationScrollGuard`, an internal hook that captures the scroll position on mount and snaps back to it for the duration of the enter animation (250ms for side panels, 180ms for modals) — this catches the scroll regardless of what triggers the focus, so it fixes the library's own two internal `.focus()` calls (`ConfirmationForm`, `PanelOverlay`'s search input, both of which also now pass `{ preventScroll: true }` directly) as well as any consumer's `autoFocus` content. No API change.
+
 ## [5.3.1] — 2026-08-13
 
 ### Fixed
