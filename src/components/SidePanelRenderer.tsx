@@ -5,7 +5,7 @@ import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProvide
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
-import { useAnimationScrollGuard } from '../hooks/useAnimationScrollGuard';
+import { useContainerRect, type ContainerRect } from '../hooks/useContainerRect';
 
 /**
  * Props for the internal {@link SidePanelRendererItem} component.
@@ -17,13 +17,15 @@ interface SidePanelRendererItemProps {
   position: 'left' | 'right';
   /** Default width applied if no panel override configuration is provided. */
   defaultWidth?: number | string;
+  /** On-screen rect of the app's own container, or null to default to the full viewport. */
+  containerRect: ContainerRect | null;
 }
 
 /**
  * SidePanelRendererItem component renders an individual left or right drawer panel instance
  * wrapped inside the FormContainerProvider context. Handles dirty state verification before close.
  */
-const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, position, defaultWidth }) => {
+const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, position, defaultWidth, containerRect }) => {
   const { close, openModal, updateInstance, setDirty, registerCloseHandler, unregisterCloseHandler } = usePanelActions();
   const { modals } = usePanelState();
   const formatMessage = useFormatMessage();
@@ -38,9 +40,6 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
 
   const optionsRef = useRef(panelOptions);
   optionsRef.current = panelOptions;
-
-  // Matches the 0.25s slideInLeft/slideInRight animation below — see useAnimationScrollGuard.
-  useAnimationScrollGuard(250);
 
   const baseTitle = formatLabel(panelOptions.title, formatMessage);
 
@@ -126,9 +125,17 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
   const widthStyle = typeof width === 'number' ? `${width}px` : width;
 
   return (
-    <div 
+    <div
       className={`rdd-side-panel rdd-side-panel-${position} rdd-side-panel-visible ${sidePanelClass ?? ''}`}
-      style={{ width: widthStyle }}
+      style={{
+        width: widthStyle,
+        ...(containerRect ? {
+          top: containerRect.top,
+          height: containerRect.height,
+          bottom: 'auto',
+          ...(position === 'right' ? { right: containerRect.right } : { left: containerRect.left }),
+        } : {}),
+      }}
       dir={dir}
     >
       <div className="rdd-side-panel-window">
@@ -166,16 +173,32 @@ export interface SidePanelRendererProps {
 }
 
 /**
+ * Renders an always-present, zero-footprint anchor (`display: contents` — no box
+ * of its own, no layout/visual effect) so its parent element — the container the
+ * consuming app actually placed the workspace into — can be measured via
+ * {@link useContainerRect}, independent of whether any panel is currently open.
+ */
+const SidePanelAnchor: React.FC<{ children: (containerRect: ContainerRect | null) => React.ReactNode }> = ({ children }) => {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const containerRect = useContainerRect(anchorRef);
+  return <div ref={anchorRef} style={{ display: 'contents' }}>{children(containerRect)}</div>;
+};
+
+/**
  * SidePanelRenderer component acts as the global container rendering both
  * left and right side drawers if they are currently active.
  */
 export const SidePanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { leftPanel, rightPanel } = usePanelState();
   return (
-    <>
-      {leftPanel  && <SidePanelRendererItem key={leftPanel.id}  panel={leftPanel}  position="left"  defaultWidth={defaultWidth} />}
-      {rightPanel && <SidePanelRendererItem key={rightPanel.id} panel={rightPanel} position="right" defaultWidth={defaultWidth} />}
-    </>
+    <SidePanelAnchor>
+      {(containerRect) => (
+        <>
+          {leftPanel  && <SidePanelRendererItem key={leftPanel.id}  panel={leftPanel}  position="left"  defaultWidth={defaultWidth} containerRect={containerRect} />}
+          {rightPanel && <SidePanelRendererItem key={rightPanel.id} panel={rightPanel} position="right" defaultWidth={defaultWidth} containerRect={containerRect} />}
+        </>
+      )}
+    </SidePanelAnchor>
   );
 };
 
@@ -184,8 +207,11 @@ export const SidePanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWid
  */
 export const LeftPanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { leftPanel } = usePanelState();
-  if (!leftPanel) return null;
-  return <SidePanelRendererItem key={leftPanel.id} panel={leftPanel} position="left" defaultWidth={defaultWidth} />;
+  return (
+    <SidePanelAnchor>
+      {(containerRect) => leftPanel ? <SidePanelRendererItem key={leftPanel.id} panel={leftPanel} position="left" defaultWidth={defaultWidth} containerRect={containerRect} /> : null}
+    </SidePanelAnchor>
+  );
 };
 
 /**
@@ -193,8 +219,11 @@ export const LeftPanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWid
  */
 export const RightPanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { rightPanel } = usePanelState();
-  if (!rightPanel) return null;
-  return <SidePanelRendererItem key={rightPanel.id} panel={rightPanel} position="right" defaultWidth={defaultWidth} />;
+  return (
+    <SidePanelAnchor>
+      {(containerRect) => rightPanel ? <SidePanelRendererItem key={rightPanel.id} panel={rightPanel} position="right" defaultWidth={defaultWidth} containerRect={containerRect} /> : null}
+    </SidePanelAnchor>
+  );
 };
 
 export default SidePanelRenderer;
