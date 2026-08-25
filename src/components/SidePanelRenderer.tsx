@@ -5,6 +5,7 @@ import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProvide
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
+import { useAnimationScrollGuard } from '../hooks/useAnimationScrollGuard';
 
 /**
  * Props for the internal {@link SidePanelRendererItem} component.
@@ -37,6 +38,9 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
 
   const optionsRef = useRef(panelOptions);
   optionsRef.current = panelOptions;
+
+  // Matches the 0.25s slideInLeft/slideInRight animation below — see useAnimationScrollGuard.
+  useAnimationScrollGuard(250);
 
   const baseTitle = formatLabel(panelOptions.title, formatMessage);
 

@@ -531,7 +531,7 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
 
   const openSearch = (): void => {
     setExpanded(true);
-    setTimeout(() => inputRef.current?.focus(), 0);
+    setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 0);
   };
 
   const closeSearch = (): void => {

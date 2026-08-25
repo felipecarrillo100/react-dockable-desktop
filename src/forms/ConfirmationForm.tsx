@@ -52,7 +52,7 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
   }, [title, setTitle, setIcon, formatMessage]);
 
   useEffect(() => {
-    confirmButtonRef.current?.focus();
+    confirmButtonRef.current?.focus({ preventScroll: true });
   }, []);
 
   const resolvedMessage = typeof message === 'string' ? message : formatMessage(message);
