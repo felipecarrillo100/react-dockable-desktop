@@ -2202,8 +2202,22 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 /* Side Drawer Panels */
+/* position: fixed (not absolute) is deliberate: it anchors the panel to the
+   viewport directly, matching .rdd-modal-overlay's own position: fixed. A
+   position: absolute panel resolves its containing block against whatever
+   position: relative/absolute ancestor the consumer happens to have between
+   it and the document (per the documented "mount as a sibling of
+   WindowManager" pattern) — and while off-screen mid-slide-in (a pure
+   transform, not a visibility change), it then contributes real scrollable
+   overflow to THAT ancestor, which the browser auto-scrolls on focus and then
+   continuously re-clamps in lockstep with the animation, visibly dragging the
+   ancestor's entire content (the whole workspace) left/right and back over
+   the whole animation — not window/document, so no amount of watching
+   window.scrollX/scrollY (an earlier fix here, since reverted) can catch or
+   correct it. position: fixed removes the panel from that ancestor's overflow
+   calculation entirely, the same way it already does for modals. */
 .rdd-side-panel {
-  position: absolute;
+  position: fixed;
   top: 0;
   bottom: 0;
   width: 400px;
