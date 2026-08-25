@@ -5,9 +5,13 @@
  * - AG3: unmounting before durationMs elapses removes the listener
  * - AG4: two concurrent instances don't interfere with each other
  * - AG5: snaps back to the exact position captured at mount, not a later value
+ * - AG6: baseline is captured at render time, before any layout effect elsewhere
+ *   in the tree can move the scroll position (regression: a sibling's
+ *   useLayoutEffect — matching how MUI's autofocus fires — must not corrupt
+ *   the guard's baseline, since layout effects always flush before passive ones)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { useAnimationScrollGuard } from '../../hooks/useAnimationScrollGuard';
@@ -131,5 +135,30 @@ describe('AG5: captures position at mount time, not at scroll time', () => {
     act(() => { window.dispatchEvent(new Event('scroll')); });
 
     expect(scrollToSpy).toHaveBeenCalledWith(120, 340);
+  });
+});
+
+describe('AG6: baseline predates layout effects elsewhere in the tree', () => {
+  it('is unaffected by a sibling useLayoutEffect that moves the scroll position before the guard\'s own effect runs', () => {
+    const LayoutEffectJumper: React.FC = () => {
+      useLayoutEffect(() => {
+        // Simulates the browser having already scrolled (e.g. a MUI autoFocus
+        // firing from its own useLayoutEffect) by the time any passive effect
+        // in this commit — including the guard's — gets to run.
+        setScrollPosition(500, 500);
+      }, []);
+      return null;
+    };
+
+    setScrollPosition(0, 0);
+    act(() => {
+      root = createRoot(container);
+      root!.render(<><LayoutEffectJumper /><Probe duration={250} /></>);
+    });
+
+    scrollToSpy.mockClear();
+    act(() => { window.dispatchEvent(new Event('scroll')); });
+
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 0);
   });
 });
