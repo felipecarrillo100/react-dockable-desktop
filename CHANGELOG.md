@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.5] — 2026-08-26
+
+### Fixed
+- **A toast's content that grows after mount — most commonly `toast.promise()`'s short `pending` message being replaced by a longer, wrapped `error`/`success` message — got visually clipped instead of the card growing to fit it.** `ToastItem` locked `max-height` to `offsetHeight` once, in a `useLayoutEffect` with an empty dependency array, purely so the exit-collapse animation has a concrete pixel value to transition from (CSS can't animate `max-height` smoothly from `none`). That lock was never revisited afterward, and `.rdd-toast` has `overflow: hidden`, so any later content taller than the first render got silently cut off. Confirmed live in a browser (`toast.promise()` with a one-line `pending` message and a four-line `error` message): the error text was cut off mid-sentence. Now re-measures via a `ResizeObserver` on the toast's inner `.rdd-toast__body` (the only part of the card whose own box isn't artificially held at a fixed height, so it's the only thing that reliably reports a size change while the outer card is still clipped) and applies the outer card's `scrollHeight` — not `offsetHeight`/`clientHeight`, both of which just reflect whatever stale cap is already in effect — as the new `max-height`. Frozen once the exit animation starts, same as before. No API change.
+
 ## [5.3.4] — 2026-08-25
 
 ### Fixed
