@@ -30,12 +30,15 @@ import type { SidebarHandle, SidebarTab } from '../src/index';
  *   coexist in the same rail without conflict.
  * - The Sidebar itself sets `hideDefaultHeader` plus a single `renderHeader`
  *   — the library renders none of its own drawer header for any tab, and
- *   `CustomSidebarHeader` below (a search box plus a close button) renders instead,
- *   uniformly across every tab, not just one. A dedicated "Custom Header
- *   Demo" tab (`hidden`, no rail icon at all — reachable only via a plain
- *   "Open Custom Header" floating text button, no icon anywhere) exists
- *   only to explain this in its body text — "Saved" and "Recents" get the
- *   exact same header.
+ *   `CustomSidebarHeader` below (a search box plus a close button) renders
+ *   instead, uniformly across every tab: "Saved", "Recents", "Your data",
+ *   and "Settings" alike.
+ * - The Main Menu itself duplicates the tabs already visible in the rail
+ *   ("Saved"/"Recents") alongside the rail-less options ("Your data"/
+ *   "Settings") — opening a duplicated entry calls the exact same
+ *   `openTab()` as clicking its rail icon directly, so that icon's own
+ *   active-state highlight shows correctly, with no separate "selected"
+ *   concept needed in the Menu.
  * Run with `npm run dev:sidebar`.
  */
 
@@ -87,16 +90,62 @@ const HIDDEN_SECTIONS: Section[] = [
 // state that changes after it opened.
 const RailVisibleContext = createContext(false);
 
+interface MenuOption {
+  id: string;
+  label: string;
+}
+
+// A single clickable row shared by both lists below — calls onSelectOption(id)
+// (openTab() under the hood) then closes the menu, regardless of whether that
+// id belongs to a hidden tab or one that also has its own rail icon.
+function MenuOptionButton({ option, onSelect }: { option: MenuOption; onSelect: (id: string) => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(option.id)}
+      style={{
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        padding: '10px 12px',
+        background: 'transparent',
+        border: 'none',
+        borderRadius: 6,
+        color: 'var(--rdd-text-primary, #f8f9fa)',
+        fontSize: 14,
+        cursor: 'pointer',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+    >
+      {option.label}
+    </button>
+  );
+}
+
 interface MenuPanelProps {
   onToggleRail: () => void;
   onSelectOption: (id: string) => void;
+  // Duplicates the tabs that already have their own rail icon (e.g. "Saved",
+  // "Recents") — opening one from here calls the exact same openTab() as
+  // clicking its rail icon directly, so when the rail is visible, that icon's
+  // own .rdd-active highlight shows correctly. No separate "selected" concept
+  // needed here, because it IS that same tab.
+  visibleSections: MenuOption[];
 }
 
-// Content of the hamburger's side panel: the "Show side bar" switch, plus the
-// list of hidden-tab options that have no rail icon of their own.
-function MenuPanel({ onToggleRail, onSelectOption }: MenuPanelProps): React.ReactElement {
+// Content of the hamburger's side panel: the "Show side bar" switch, the
+// tabs also reachable from the rail (duplicated here for when the rail is
+// hidden), and — below a second divider — the options that only ever exist
+// here, with no rail icon of their own at all.
+function MenuPanel({ onToggleRail, onSelectOption, visibleSections }: MenuPanelProps): React.ReactElement {
   const { requestClose } = useFormContainer();
   const railVisible = useContext(RailVisibleContext);
+
+  const handleSelect = (id: string) => {
+    onSelectOption(id);
+    requestClose();
+  };
 
   return (
     <div style={{ padding: '8px 4px' }}>
@@ -140,31 +189,17 @@ function MenuPanel({ onToggleRail, onSelectOption }: MenuPanelProps): React.Reac
 
       <div style={{ margin: '8px 0', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }} />
 
+      {/* Duplicates the tabs already visible in the rail — opening one here
+          calls the same openTab(), so its own rail icon shows selected. */}
+      {visibleSections.map(option => (
+        <MenuOptionButton key={option.id} option={option} onSelect={handleSelect} />
+      ))}
+
+      <div style={{ margin: '8px 0', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }} />
+
+      {/* Options with no rail icon of their own, whether the rail is shown or hidden. */}
       {HIDDEN_SECTIONS.map(section => (
-        <button
-          key={section.id}
-          type="button"
-          onClick={() => {
-            onSelectOption(section.id);
-            requestClose();
-          }}
-          style={{
-            display: 'block',
-            width: '100%',
-            textAlign: 'left',
-            padding: '10px 12px',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 6,
-            color: 'var(--rdd-text-primary, #f8f9fa)',
-            fontSize: 14,
-            cursor: 'pointer',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-        >
-          {section.label}
-        </button>
+        <MenuOptionButton key={section.id} option={section} onSelect={handleSelect} />
       ))}
     </div>
   );
@@ -174,9 +209,8 @@ function MenuPanel({ onToggleRail, onSelectOption }: MenuPanelProps): React.Reac
 // <Sidebar> below): the library renders none of its own drawer header (no
 // title span, no showCloseButton close button) for ANY tab once
 // hideDefaultHeader is set — this one row, driven by whichever tab is
-// currently active, replaces it uniformly across Saved, Recents, and the
-// Custom Header Demo tab alike: a search box plus a close button. Its close
-// (×) button is wired directly to the same `onClose` every
+// currently active, replaces it uniformly across every tab: a search box
+// plus a close button. Its close (×) button is wired directly to the same `onClose` every
 // renderHeader/renderContent call already receives. When the rail (icon
 // strip) is hidden, a hamburger button also appears next to the search box
 // — with no rail, its own headerAction hamburger isn't on screen, and the
@@ -281,12 +315,17 @@ function AppContent(): React.ReactElement {
       MenuPanel,
       {
         onToggleRail: () => setRailVisible(v => !v),
-        // Selecting an option only opens the corresponding hidden tab — rail
+        // Selecting an option just opens the corresponding tab — rail
         // visibility is controlled solely by the "Show side bar" switch and
         // must never be changed as a side effect of picking a menu option.
         onSelectOption: (id: string) => {
           sidebarRef.current?.openTab(id);
         },
+        // Duplicates the rail's own tabs into the Menu — visibleTabs is a plain
+        // const in this same component body, so it's already initialized by
+        // the time this closure actually runs (on click), regardless of
+        // declaration order.
+        visibleSections: visibleTabs.map(tab => ({ id: tab.id, label: tab.label })),
       },
       { title: 'Menu' }
     );
@@ -340,29 +379,6 @@ function AppContent(): React.ReactElement {
     },
   ];
 
-  // No rail icon at all — hidden, same as the Menu-only sections above —
-  // reachable only via the external "Open Custom Header" trigger (below), by
-  // design: this tab exists purely to test opening it and rendering its
-  // content programmatically, with no icon anywhere standing in for it, in
-  // the rail or otherwise. Unrelated to the hamburger/Menu side panel above;
-  // both stay untouched. Its header comes from the Sidebar-level renderHeader
-  // below, same as every other tab — nothing tab-specific here.
-  const customHeaderTab: SidebarTab = {
-    id: 'custom-header-tab',
-    label: 'Custom Header Demo',
-    hidden: true,
-    eagerMount: true,
-    renderContent: () => (
-      <div style={{ padding: 16, color: 'var(--rdd-text-secondary, #94a3b8)', fontSize: 14 }}>
-        This <code>&lt;Sidebar&gt;</code> sets <code>hideDefaultHeader</code> plus a single{' '}
-        <code>renderHeader</code> — the library renders none of its own drawer header for any
-        tab. The row above (a search box, a close button) is the same <code>renderHeader</code>{' '}
-        output for every tab, including "Saved" and "Recents", not something this tab supplies
-        itself.
-      </div>
-    ),
-  };
-
   return (
     <RailVisibleContext.Provider value={railVisible}>
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden', position: 'relative' }}>
@@ -377,7 +393,7 @@ function AppContent(): React.ReactElement {
         stripVisible={railVisible}
         activeTabId={activeTabId}
         onActiveTabChange={setActiveTabId}
-        tabs={[...visibleTabs, ...hiddenTabs, customHeaderTab]}
+        tabs={[...visibleTabs, ...hiddenTabs]}
         headerAction={{
           icon: <HamburgerIcon />,
           label: 'Menu',
@@ -426,9 +442,8 @@ function AppContent(): React.ReactElement {
           >
             {/* The rail's own headerAction already renders this same hamburger
                 (see the Menu headerAction on <Sidebar> below) once the rail is
-                visible — no need for this floating duplicate then. Only the
-                search pill (decorative) and the custom-header-tab trigger (its
-                only entry point, rail or otherwise — that tab is `hidden`) stay. */}
+                visible — no need for this floating duplicate then. The search
+                pill below is purely decorative. */}
             {!railVisible && (
             <button
               id="external-hamburger"
@@ -465,29 +480,6 @@ function AppContent(): React.ReactElement {
             >
               Search demo map
             </div>
-            {/* The only way to reach the hideDefaultHeader demo tab — it's `hidden`,
-                so it never has a rail icon, whether the rail is visible or not. Pure
-                demo wiring around the existing openTab(), not a new library capability.
-                Text only, deliberately no icon — this tab is a test of opening and
-                rendering content with no icon standing in for it anywhere. */}
-            <button
-              id="external-custom-header-trigger"
-              type="button"
-              onClick={() => sidebarRef.current?.openTab('custom-header-tab')}
-              style={{
-                pointerEvents: 'auto',
-                padding: '10px 16px',
-                borderRadius: 24,
-                background: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#5f6368',
-                fontSize: 14,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
-              }}
-            >
-              Open Custom Header
-            </button>
           </div>
           )}
         </div>
