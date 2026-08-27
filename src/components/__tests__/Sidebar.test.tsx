@@ -29,6 +29,18 @@
  * - SB28: headerAction renders a standalone, non-toggling button above the tabs
  * - SB29: showCloseButton adds an extra close control to the drawer header
  * - SB30: footerAction mirrors headerAction, pinned to the bottom, and can mix tabs and action buttons
+ * - SB31: hidden tab renders no rail button; other tabs unaffected
+ * - SB32: hidden tab still opens via imperative openTab()
+ * - SB33: hidden tab still opens via controlled activeTabId
+ * - SB34: hidden entry inside headerAction/footerAction renders no button but still opens
+ * - SB35: every tab hidden -> zero rail buttons, all still individually openable
+ * - SB36: auto-close-if-removed guard still fires when the removed active tab was hidden
+ * - SB37: Sidebar-level hideDefaultHeader suppresses the drawer header for every tab, not per-tab
+ * - SB38: the default header still renders when hideDefaultHeader is omitted (contrast w/ SB37)
+ * - SB39: renderHeader renders in place of the default header; its onClose parameter still works
+ * - SB40: hideDefaultHeader with no renderHeader renders nothing; useSidebarTab().onClose still works
+ * - SB41: renderHeader alone, without hideDefaultHeader, is sufficient to suppress the default header
+ * - SB42: dev-only console.warn when showCloseButton has no effect (default header suppressed)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
@@ -1032,5 +1044,372 @@ describe('SB30: footerAction mirrors headerAction, pinned to the bottom, and can
     act(() => { footerBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(headerClick).toHaveBeenCalledTimes(1);
     expect(footerClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── SB31: hidden tab renders no rail button ─────────────────────────────────
+
+describe('SB31: hidden tab renders no rail button', () => {
+  it('omits the button for a hidden tab while other tabs still render theirs', () => {
+    const tabs = [makeTab('a'), makeTab('b', { hidden: true }), makeTab('c')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} />);
+    });
+    const buttons = container.querySelectorAll('button.rdd-sidebar-tab-btn');
+    expect(buttons).toHaveLength(2);
+    const titles = Array.from(buttons).map(b => b.getAttribute('title'));
+    expect(titles).toEqual(['Tab a', 'Tab c']);
+  });
+});
+
+// ─── SB32: hidden tab still opens via imperative openTab() ───────────────────
+
+describe('SB32: hidden tab still opens via imperative openTab()', () => {
+  it('mounts drawer content for a hidden tab when opened programmatically', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [makeTab('a'), makeTab('b', { hidden: true })];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('b'); });
+    expect(ref.current!.getActiveTab()).toBe('b');
+    expect(container.querySelector('[data-content="b"]')).not.toBeNull();
+  });
+});
+
+// ─── SB33: hidden tab still opens via controlled activeTabId ─────────────────
+
+describe('SB33: hidden tab still opens via controlled activeTabId', () => {
+  it('mounts drawer content for a hidden tab set as the controlled active tab', () => {
+    const tabs = [makeTab('a'), makeTab('b', { hidden: true })];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} activeTabId="b" onActiveTabChange={() => {}} />);
+    });
+    expect(container.querySelector('[data-content="b"]')).not.toBeNull();
+  });
+});
+
+// ─── SB34: hidden entry inside headerAction/footerAction ─────────────────────
+
+describe('SB34: hidden entry inside headerAction/footerAction renders no button but still opens', () => {
+  it('headerAction: a hidden tab entry renders no button but still opens via openTab()', () => {
+    const ref = createRef<SidebarHandle>();
+    const hiddenTab = makeTab('settings', { hidden: true });
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} ref={ref} headerAction={hiddenTab} />);
+    });
+    const headerArea = container.querySelector('.rdd-sidebar-header-area');
+    expect(headerArea).not.toBeNull();
+    expect(headerArea!.querySelectorAll('button.rdd-sidebar-tab-btn')).toHaveLength(0);
+
+    act(() => { ref.current!.openTab('settings'); });
+    expect(ref.current!.getActiveTab()).toBe('settings');
+    expect(container.querySelector('[data-content="settings"]')).not.toBeNull();
+  });
+
+  it('footerAction: a hidden tab entry renders no button but still opens via openTab()', () => {
+    const ref = createRef<SidebarHandle>();
+    const hiddenTab = makeTab('settings', { hidden: true });
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[makeTab('a')]} ref={ref} footerAction={hiddenTab} />);
+    });
+    const footerArea = container.querySelector('.rdd-sidebar-footer-area');
+    expect(footerArea).not.toBeNull();
+    expect(footerArea!.querySelectorAll('button.rdd-sidebar-tab-btn')).toHaveLength(0);
+
+    act(() => { ref.current!.openTab('settings'); });
+    expect(ref.current!.getActiveTab()).toBe('settings');
+  });
+});
+
+// ─── SB35: every tab hidden -> zero rail buttons ─────────────────────────────
+
+describe('SB35: every tab hidden -> zero rail buttons, all still individually openable', () => {
+  it('renders no buttons in the tabs list when every tab is hidden, but each still opens via openTab()', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabs = [
+      makeTab('a', { hidden: true }),
+      makeTab('b', { hidden: true }),
+      makeTab('c', { hidden: true }),
+    ];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabs} ref={ref} />);
+    });
+    expect(container.querySelectorAll('.rdd-sidebar-tabs-list button.rdd-sidebar-tab-btn')).toHaveLength(0);
+
+    act(() => { ref.current!.openTab('b'); });
+    expect(ref.current!.getActiveTab()).toBe('b');
+    expect(container.querySelector('[data-content="b"]')).not.toBeNull();
+
+    act(() => { ref.current!.openTab('c'); });
+    expect(ref.current!.getActiveTab()).toBe('c');
+  });
+
+  it('composes with a visible headerAction hamburger: rail shows exactly one button while all tabs stay hidden', () => {
+    const onClick = vi.fn();
+    const tabs = [makeTab('a', { hidden: true }), makeTab('b', { hidden: true })];
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar tabs={tabs} headerAction={{ icon: <Icon />, label: 'Menu', onClick }} />
+      );
+    });
+    expect(container.querySelectorAll('button.rdd-sidebar-tab-btn')).toHaveLength(1);
+    expect(container.querySelector('.rdd-sidebar-header-area button.rdd-sidebar-tab-btn')).not.toBeNull();
+  });
+});
+
+// ─── SB36: auto-close-if-removed guard with a hidden active tab ─────────────
+
+describe('SB36: auto-close-if-removed guard still fires when the removed active tab was hidden', () => {
+  it('closes when the active hidden tab is removed, mirroring SB27 for a visible tab', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabsAB = [makeTab('a', { hidden: true }), makeTab('b')];
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={tabsAB} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(ref.current!.getActiveTab()).toBe('a');
+
+    act(() => {
+      root!.render(<Sidebar tabs={[makeTab('b')]} ref={ref} />);
+    });
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+});
+
+// ─── SB37: hideDefaultHeader (Sidebar-level) suppresses the header for ALL tabs ─
+
+describe('SB37: hideDefaultHeader suppresses the drawer header for every tab, not per-tab', () => {
+  it('renders no .rdd-sidebar-drawer-header for any tab, even with showCloseButton set', () => {
+    const ref = createRef<SidebarHandle>();
+    const tabA = makeTab('a');
+    const tabB = makeTab('b');
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tabA, tabB]} ref={ref} hideDefaultHeader showCloseButton />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-header')).toBeNull();
+    act(() => { ref.current!.openTab('b'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-header')).toBeNull();
+  });
+});
+
+// ─── SB38: default header still renders when hideDefaultHeader is omitted ──
+
+describe('SB38: the default header still renders when hideDefaultHeader is omitted', () => {
+  it('renders .rdd-sidebar-drawer-header and its title as before (contrast with SB37)', () => {
+    const ref = createRef<SidebarHandle>();
+    const tab = makeTab('a', { label: 'Plain Tab' });
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tab]} ref={ref} />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    const header = container.querySelector('.rdd-sidebar-drawer-header');
+    expect(header).not.toBeNull();
+    expect(header!.querySelector('.rdd-sidebar-header-title')?.textContent).toBe('Plain Tab');
+  });
+});
+
+// ─── SB39: renderHeader supplies a shared header, its onClose still works ──
+
+describe('SB39: renderHeader renders in place of the default header and its onClose collapses the drawer', () => {
+  it("renders renderHeader's output for the active tab, and its onClose parameter closes the drawer", () => {
+    const ref = createRef<SidebarHandle>();
+    const tabA = makeTab('a', { label: 'Tab A' });
+    const tabB = makeTab('b', { label: 'Tab B' });
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[tabA, tabB]}
+          ref={ref}
+          hideDefaultHeader
+          renderHeader={(tab, onClose) => (
+            <div data-testid="custom-header">
+              <span data-testid="custom-header-label">{tab.label}</span>
+              <button data-testid="custom-close" onClick={onClose}>close</button>
+            </div>
+          )}
+        />
+      );
+    });
+    act(() => { ref.current!.openTab('b'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-header')).toBeNull();
+    expect(container.querySelector('[data-testid="custom-header-label"]')?.textContent).toBe('Tab B');
+
+    const customClose = container.querySelector('[data-testid="custom-close"]') as HTMLElement;
+    expect(customClose).not.toBeNull();
+    act(() => { customClose.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+});
+
+// ─── SB40: no renderHeader renders nothing; useSidebarTab().onClose still works ─
+
+describe('SB40: hideDefaultHeader with no renderHeader renders nothing for the header; useSidebarTab().onClose still works', () => {
+  it('renders no default header, no renderHeader output, and a nested onClose still collapses the drawer', () => {
+    const ref = createRef<SidebarHandle>();
+
+    const NestedCloseButton: React.FC = () => {
+      const { onClose } = useSidebarTab();
+      return <button data-testid="nested-close" onClick={onClose}>nested close</button>;
+    };
+
+    const tab = makeTab('a', {
+      renderContent: () => <NestedCloseButton />,
+    });
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tab]} ref={ref} hideDefaultHeader />);
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-header')).toBeNull();
+    expect(ref.current!.getActiveTab()).toBe('a');
+
+    const nestedClose = container.querySelector('[data-testid="nested-close"]') as HTMLElement;
+    expect(nestedClose).not.toBeNull();
+    act(() => { nestedClose.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(ref.current!.getActiveTab()).toBeNull();
+  });
+});
+
+// ─── SB41: renderHeader alone (no hideDefaultHeader) also suppresses the header ─
+
+describe('SB41: renderHeader alone, without hideDefaultHeader, is sufficient to suppress the default header', () => {
+  it('renders renderHeader\'s output and no default header, with hideDefaultHeader omitted entirely', () => {
+    const ref = createRef<SidebarHandle>();
+    const tab = makeTab('a', { label: 'Tab A' });
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[tab]}
+          ref={ref}
+          renderHeader={(tab, onClose) => (
+            <div data-testid="custom-header">
+              <span data-testid="custom-header-label">{tab.label}</span>
+              <button data-testid="custom-close" onClick={onClose}>close</button>
+            </div>
+          )}
+        />
+      );
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-header')).toBeNull();
+    expect(container.querySelector('[data-testid="custom-header-label"]')?.textContent).toBe('Tab A');
+  });
+
+  it('renders no .rdd-sidebar-drawer-close-button even with showCloseButton set, since the default header is fully skipped', () => {
+    const ref = createRef<SidebarHandle>();
+    const tab = makeTab('a');
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar
+          tabs={[tab]}
+          ref={ref}
+          showCloseButton
+          renderHeader={() => <div data-testid="custom-header" />}
+        />
+      );
+    });
+    act(() => { ref.current!.openTab('a'); });
+    expect(container.querySelector('.rdd-sidebar-drawer-close-button')).toBeNull();
+    expect(container.querySelector('[data-testid="custom-header"]')).not.toBeNull();
+  });
+});
+
+// ─── SB42: dev-only warning when showCloseButton is inert ───────────────────
+
+describe('SB42: dev-only console.warn when showCloseButton has no effect', () => {
+  let originalEnv: string | undefined;
+
+  beforeEach(() => {
+    originalEnv = process.env.NODE_ENV;
+    // @ts-ignore
+    process.env.NODE_ENV = 'development';
+  });
+
+  afterEach(() => {
+    // @ts-ignore
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it('warns when showCloseButton and hideDefaultHeader are both set', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const tab = makeTab('a');
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tab]} showCloseButton hideDefaultHeader />);
+    });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('showCloseButton'));
+    warnSpy.mockRestore();
+  });
+
+  it('warns when showCloseButton and renderHeader are both set, with hideDefaultHeader omitted', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const tab = makeTab('a');
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar tabs={[tab]} showCloseButton renderHeader={() => <div />} />
+      );
+    });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('showCloseButton'));
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when only showCloseButton is set', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const tab = makeTab('a');
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tab]} showCloseButton />);
+    });
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('showCloseButton'));
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when only hideDefaultHeader is set (no showCloseButton)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const tab = makeTab('a');
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tab]} hideDefaultHeader />);
+    });
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('showCloseButton'));
+    warnSpy.mockRestore();
+  });
+
+  it('warns only once even across multiple re-renders', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const tab = makeTab('a');
+    act(() => {
+      root = createRoot(container);
+      root.render(<Sidebar tabs={[tab]} showCloseButton hideDefaultHeader />);
+    });
+    act(() => {
+      root!.render(<Sidebar tabs={[tab]} showCloseButton hideDefaultHeader />);
+    });
+    act(() => {
+      root!.render(<Sidebar tabs={[tab]} showCloseButton hideDefaultHeader defaultWidth={300} />);
+    });
+    const matching = warnSpy.mock.calls.filter(call =>
+      typeof call[0] === 'string' && call[0].includes('showCloseButton')
+    );
+    expect(matching.length).toBe(1);
+    warnSpy.mockRestore();
   });
 });

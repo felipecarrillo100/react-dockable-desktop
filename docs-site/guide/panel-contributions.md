@@ -88,7 +88,7 @@ function AppShell() {
 }
 ```
 
-`useMergedToolbarItems` appends the active panel's contributed items behind a separator; returns `staticItems` unchanged when there's nothing to add. `useMergedSidebarTabs` appends contributed sections as **dynamic tabs** — present only while their panel is active, never stealing focus from whichever tab the user already has open — converting each section via `sidebarSectionToTab` under the hood. `SidebarTab.icon` is required, so pass a second `fallbackIcon` argument if your sections may omit one.
+`useMergedToolbarItems` appends the active panel's contributed items behind a separator; returns `staticItems` unchanged when there's nothing to add. `useMergedSidebarTabs` appends contributed sections as **dynamic tabs** — present only while their panel is active, never stealing focus from whichever tab the user already has open — converting each section via `sidebarSectionToTab` under the hood. `SidebarTab.icon` is optional but recommended unless the tab is `hidden`, so pass a second `fallbackIcon` argument if your sections may omit one.
 
 Both are optional — `useActivePanelContribution()` stays fully usable for manual control (a different merge position, no separator, etc.).
 

@@ -230,10 +230,11 @@ const sidebarRef = useRef<SidebarHandle>(null);
 |------|------|----------|-------------|
 | `id` | `string` | ✓ | Unique key for this tab. |
 | `label` | `string` | ✓ | Tooltip / accessible label for the tab icon button. |
-| `icon` | `ReactNode` | ✓ | Icon displayed in the tab strip. |
+| `icon` | `ReactNode` | — | Icon displayed in the tab strip. Required unless `hidden` is true. |
 | `renderContent` | `(tabId, onClose, onOpen) => ReactNode` | ✓ | Returns the drawer content. `onClose` collapses the drawer; `onOpen` expands it to this tab. |
 | `eagerMount` | `boolean` | — | Mount immediately on sidebar render (before the user clicks). Implies `preserveState: true`. Use when other parts of the app need to interact with the panel before the user opens it. |
 | `preserveState` | `boolean` | — | Keep the component alive in the DOM behind `display: none` when closed, instead of unmounting it. |
+| `hidden` | `boolean` | — | Omit this tab's rail button entirely — no icon, no click target — while it stays fully openable via `openTab()`/`useSidebar().openTab()`/a controlled `activeTabId`. Use for menu-driven panels with no persistent icon (e.g. a Google-Maps-style hamburger that opens content not otherwise pinned to the rail). Default `false`. |
 
 ### `SidebarProps`
 
@@ -242,7 +243,9 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | `tabs` | `SidebarTab[]` | — | **Required.** Tab definitions. |
 | `headerAction` | `SidebarRailEntry \| SidebarRailEntry[]` | — | One or more non-toggling action buttons and/or real tabs shown above the tabs. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
 | `footerAction` | `SidebarRailEntry \| SidebarRailEntry[]` | — | Mirror of `headerAction`, pinned to the bottom of the tab strip regardless of tab count. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
-| `showCloseButton` | `boolean` | `false` | Show an "X" close button in the expanded drawer's header — an extra way to collapse the sidebar besides clicking the active tab's own icon again. |
+| `showCloseButton` | `boolean` | `false` | Show an "X" close button in the expanded drawer's header — an extra way to collapse the sidebar besides clicking the active tab's own icon again. Has no effect once the default header is suppressed — via `hideDefaultHeader`, or simply by passing `renderHeader` (either one is sufficient) — since the entire default header, this button included, is skipped for every tab in that case. |
+| `hideDefaultHeader` | `boolean` | `false` | Suppress the library's own drawer header (title + `showCloseButton`'s close button) for **every** tab — not per-tab — so `renderHeader` (or each tab's own `renderContent`) can supply a header, border, and styling instead. Passing `renderHeader` by itself has the same suppressing effect even if this is left unset — the two props are combined with OR, so supplying `renderHeader` alone is never a silent no-op. The close mechanism works the same either way: the `onClose` parameter passed to `renderContent`/`renderHeader`, or `useSidebarTab().onClose` from anywhere in a tab's content tree. |
+| `renderHeader` | `(tab: SidebarTab, onClose, onOpen) => ReactNode` | — | Custom header renderer used in place of the library's own drawer header. Passing `renderHeader` is by itself sufficient to suppress the default header, whether or not `hideDefaultHeader` is also set. Called once for whichever tab is currently active, so one header implementation is shared uniformly across every tab instead of being repeated inside each tab's `renderContent`. Omit `renderHeader` and set `hideDefaultHeader: true` to render no header at all. |
 | `position` | `'left' \| 'right'` | `'right'` | Side the tab strip and drawer appear on. |
 | `defaultWidth` | `number` | `280` | Initial drawer width in pixels. |
 | `minWidth` | `number` | `150` | Minimum drawer width in pixels during drag-resize. |
@@ -300,7 +303,7 @@ Each entry takes one of three forms:
 |------|-------|--------------|
 | Default button | `{ icon, label, onClick, disabled? }` | Renders a button visually consistent with the regular tab buttons — same styling, current skin, `aria-label` (not `aria-pressed`, since it's never in a pressed state). |
 | Fully custom | `{ render: () => ReactNode }` | Renders exactly what you return, with no wrapping element — a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or anything else keeps its own hover/active/focus/ripple behavior and click handling completely untouched. |
-| Real tab | `SidebarTab` (`{ id, label, icon, renderContent, ... }`) | Behaves exactly like an entry in `tabs` — toggles active/inactive, opens the drawer, participates in `eagerMount`/`preserveState`, and is subject to the same auto-close-when-removed guard. |
+| Real tab | `SidebarTab` (`{ id, label, icon?, renderContent, hidden?, ... }`) | Behaves exactly like an entry in `tabs` — toggles active/inactive, opens the drawer, participates in `eagerMount`/`preserveState`, and is subject to the same auto-close-when-removed guard. `hidden: true` works here too — e.g. a menu-driven entry with no rail button, opened only via `openTab()`. |
 
 ```tsx
 // Fully custom — a Bootstrap button, unmodified:

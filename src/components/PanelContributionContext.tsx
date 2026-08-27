@@ -144,7 +144,8 @@ export function useActivePanelContribution(): PanelContribution | null {
 
 /**
  * Converts a contributed sidebar section into a `SidebarTab` for `<Sidebar tabs={...}>`.
- * `SidebarTab.icon` is required, so supply `fallbackIcon` for sections that omit one.
+ * `SidebarTab.icon` is optional but recommended unless the tab is `hidden`; supply
+ * `fallbackIcon` for sections that omit one.
  * `eagerMount`/`preserveState` have no contribution-side equivalent — a contribution
  * only exists while its owning panel is mounted and active, so both are left unset.
  */
