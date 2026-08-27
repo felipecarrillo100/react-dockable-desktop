@@ -25,5 +25,5 @@
     "noFallthroughCasesInSwitch": true,
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src", "demo", "demo-luciadria", "demo-oldria"]
+  "include": ["src", "demo", "demo-luciadria", "demo-oldria", "demo-sidebar"]
 }

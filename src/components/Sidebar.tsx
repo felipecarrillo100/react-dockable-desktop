@@ -30,7 +30,16 @@ import { startPointerDrag } from './dragResize';
 export interface SidebarTab {
   id: string;
   label: string;
-  icon: React.ReactNode;
+  /** Required unless `hidden` is true — a hidden tab never renders a rail button, so it has no icon to show. */
+  icon?: React.ReactNode;
+  /**
+   * Omit this tab's rail button entirely — no icon, no click target — while it
+   * remains fully openable via `openTab()` / `useSidebar().openTab()` / a controlled
+   * `activeTabId`. Use for menu-driven panels with no persistent icon (e.g. a
+   * Google-Maps-style hamburger that opens content not otherwise pinned to the rail).
+   * Default: false
+   */
+  hidden?: boolean;
   /**
    * Mount immediately when the Sidebar first renders, not on first user click.
    * Implies `preserveState: true`.
@@ -151,9 +160,40 @@ export interface SidebarProps {
   onStripVisibilityChange?: (visible: boolean) => void;
   /**
    * Show an "X" close button in the expanded drawer's header, as an additional way to collapse
-   * the sidebar (equivalent to clicking the active tab's own icon again). Opt-in. Default: false
+   * the sidebar (equivalent to clicking the active tab's own icon again). Opt-in. Default: false.
+   * Has no effect once the default header is suppressed — via `hideDefaultHeader`, or simply by
+   * passing `renderHeader` (either one is sufficient) — since the entire default header, this
+   * button included, is skipped for every tab in that case.
    */
   showCloseButton?: boolean;
+  /**
+   * Suppress the library's own drawer header (title + `showCloseButton`'s close
+   * button) for every tab, so `renderHeader` (or each tab's own `renderContent`)
+   * can supply a header, border, and styling instead. Applies uniformly across
+   * all tabs — there's no per-tab override. Passing `renderHeader` by itself has
+   * the same suppressing effect even if this is left unset — the two conditions
+   * are combined with OR, precisely so that supplying `renderHeader` alone is
+   * never a silent no-op. The close mechanism is unaffected either way: the
+   * `onClose` parameter passed to `renderContent`/`renderHeader`, or
+   * `useSidebarTab().onClose` from anywhere in a tab's content tree.
+   * Default: false
+   */
+  hideDefaultHeader?: boolean;
+  /**
+   * Custom header renderer used in place of the library's own drawer header.
+   * Passing `renderHeader` is by itself sufficient to suppress the default
+   * header, whether or not `hideDefaultHeader` is also set — the two props are
+   * combined with OR. Called once for whichever tab is currently active, so
+   * the same header markup (e.g. a hamburger icon, a search field, a close
+   * button) is shared uniformly across every tab instead of being repeated
+   * inside each tab's own `renderContent`. Omit `renderHeader` and set
+   * `hideDefaultHeader: true` to render no header at all and let each tab's
+   * `renderContent` supply its own instead.
+   * @param tab     - the currently active tab
+   * @param onClose - call to collapse the sidebar drawer
+   * @param onOpen  - call to (re-)select this tab
+   */
+  renderHeader?: (tab: SidebarTab, onClose: () => void, onOpen: () => void) => React.ReactNode;
   /** Main workspace content rendered alongside the sidebar. */
   children?: React.ReactNode;
 }
@@ -242,6 +282,7 @@ function renderRailEntry(
     return <React.Fragment key={entry.id ?? index}>{entry.render()}</React.Fragment>;
   }
   if (isRailTab(entry)) {
+    if (entry.hidden) return null;
     const isActive = activeTabId === entry.id;
     return (
       <button
@@ -320,6 +361,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
         )}
         <div className="rdd-sidebar-tabs-list">
           {tabs.map(tab => {
+            if (tab.hidden) return null;
             const isActive = activeTabId === tab.id;
             return (
               <button
@@ -430,6 +472,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       stripVisible,
       onStripVisibilityChange,
       showCloseButton = false,
+      hideDefaultHeader = false,
+      renderHeader,
       children,
     },
     ref
@@ -546,6 +590,32 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
     const handleClose = useCallback(() => setActiveTabId(null), [setActiveTabId]);
 
+    // `renderHeader` alone (no `hideDefaultHeader`) also suppresses the default
+    // header — see the render condition below. Derived once here so both that
+    // condition and the dev-warning effect stay in sync.
+    const hasHeaderOverride = hideDefaultHeader || renderHeader != null;
+
+    // Dev-only: showCloseButton renders nothing once the default header is
+    // suppressed, since its close button is part of that (now-skipped) header.
+    // Warns once per mounted Sidebar — closeButtonWarnedRef lives in component
+    // scope (not inside the effect) so it survives re-renders; depending on the
+    // derived boolean rather than `renderHeader` itself avoids re-running this
+    // on every render, since `renderHeader` is typically passed as a fresh
+    // inline arrow function each time.
+    const closeButtonWarnedRef = useRef(false);
+    useEffect(() => {
+      if (process.env.NODE_ENV !== 'development') return;
+      if (!showCloseButton || !hasHeaderOverride) return;
+      if (closeButtonWarnedRef.current) return;
+      closeButtonWarnedRef.current = true;
+      console.warn(
+        '[react-dockable-desktop] `showCloseButton` has no effect because the default header is ' +
+        'suppressed (`hideDefaultHeader` is set, or `renderHeader` was passed). The "X" close button ' +
+        'only renders as part of the library\'s own default header, which is skipped in this case. ' +
+        'Add your own close control inside `renderHeader` (or `renderContent`), wired to its `onClose` ' +
+        'parameter or `useSidebarTab().onClose`.'
+      );
+    }, [showCloseButton, hasHeaderOverride]);
 
     // Stable context value for useSidebar() consumers
     const sidebarContextValue = useMemo<SidebarContextValue>(() => ({
@@ -594,23 +664,31 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
               }}
             >
               {/* Drawer header — tab label, plus an optional close button (showCloseButton) as
-                  an extra way to collapse the sidebar; clicking the active tab icon still works too. */}
-              <div className="rdd-sidebar-drawer-header">
-                <span className="rdd-sidebar-header-title">{tab.label}</span>
-                {showCloseButton && (
-                  <button
-                    type="button"
-                    className="rdd-sidebar-drawer-close-button"
-                    onClick={handleClose}
-                    title="Close"
-                    aria-label="Close"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+                  an extra way to collapse the sidebar; clicking the active tab icon still works too.
+                  Suppressed for every tab when hideDefaultHeader is set, OR simply when renderHeader
+                  is passed (either alone is sufficient — see hasHeaderOverride above, which keeps
+                  this in sync with the dev-warning effect) — onClose/onOpen still flow to either
+                  one regardless. */}
+              {hasHeaderOverride ? (
+                renderHeader?.(tab, handleClose, onOpen)
+              ) : (
+                <div className="rdd-sidebar-drawer-header">
+                  <span className="rdd-sidebar-header-title">{tab.label}</span>
+                  {showCloseButton && (
+                    <button
+                      type="button"
+                      className="rdd-sidebar-drawer-close-button"
+                      onClick={handleClose}
+                      title="Close"
+                      aria-label="Close"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Drawer body — consumer-supplied content */}
               <div className="rdd-sidebar-drawer-body">

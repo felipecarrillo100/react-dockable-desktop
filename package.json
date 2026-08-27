@@ -1,6 +1,6 @@
 {
   "name": "react-dockable-desktop",
-  "version": "5.3.5",
+  "version": "5.4.0",
   "description": "A premium, state-of-the-art window manager and dockable layout engine for React. Supports fluid grid splits, tabbed groups, floating resizable windows, zero-unmount state preservation, context menus, and internationalization.",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -34,6 +34,7 @@
     "dev": "vite demo",
     "dev:ria": "vite demo-luciadria --host",
     "dev:oldria": "vite demo-oldria --host",
+    "dev:sidebar": "vite demo-sidebar --host",
     "build": "tsup && node -e \"require('fs').copyFileSync('src/index.css', 'dist/styles.css')\"",
     "demo:build": "vite build --base /react-dockable-desktop/demo/",
     "docs:dev": "vitepress dev docs-site",
