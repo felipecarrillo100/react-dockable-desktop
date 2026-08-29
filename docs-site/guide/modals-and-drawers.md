@@ -79,6 +79,7 @@ function LaunchButton() {
 | `icon` | `ReactNode` | — | Icon displayed in the title bar. |
 | `size` | `'small' \| 'medium' \| 'large' \| 'fullscreen' \| 'auto'` | `'medium'` | Controls max-width of the modal. |
 | `closable` | `boolean` | `true` | When `false`, hides the × button and disables backdrop click-to-close. |
+| `bodyPadding` | `number \| string` | `0` | CSS padding for the modal body content. Numbers are treated as pixels; strings as any CSS value/shorthand (e.g. `'10px 16px'`). Default is edge-to-edge — pass `10` to restore the pre-v6.0.0 default. |
 
 ## Opening a side drawer
 
@@ -107,6 +108,7 @@ const showDetails = async () => {
 | `title` | `string` | — | Drawer header title. |
 | `icon` | `ReactNode` | — | Icon next to the title. |
 | `width` | `number \| string` | `'320px'` | Drawer width. Numbers are treated as pixels; strings as CSS values (e.g. `'40%'`). |
+| `bodyPadding` | `number \| string` | `0` | CSS padding for the panel body content. Numbers are treated as pixels; strings as any CSS value/shorthand (e.g. `'10px 16px'`). Default is edge-to-edge — pass `10` to restore the pre-v6.0.0 default. |
 
 ## Closing panels
 

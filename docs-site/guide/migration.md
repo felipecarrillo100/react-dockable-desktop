@@ -1,5 +1,25 @@
 # Migration Guide
 
+## v5.x → v6.0.0
+
+v6.0.0 removes the library's two remaining content-styling opinions: the fixed body padding on both side panels and modals. A docking library's job is layout mechanics, not content styling — padding is a decision that belongs entirely to whoever fills the panel or modal, and the old fixed `10px` sat at the wrong layer once content needed its own internal scroll+footer layout.
+
+### Breaking changes
+
+1. **`.rdd-side-panel-body`'s default padding changed from `10px` to `0`.** Any `openLeftPanel`/`openRightPanel` content that relied on that outer spacing (rather than supplying its own) now renders edge-to-edge. Restore the old look by passing the new `bodyPadding` option: `openLeftPanel(Component, props, { bodyPadding: 10 })`.
+2. **`.rdd-modal-body`'s default padding changed from `10px` to `0`, the same way.** Restore the old look with `openModal(Component, props, { bodyPadding: 10 })`.
+
+### Not breaking
+
+- **`SidePanelOptions.bodyPadding`** and **`ModalOptions.bodyPadding`** (both `number | string`, e.g. `12` or `'10px 16px'`) are the only new fields — purely additive, and every other option (`title`, `icon`, `width`, `size`, `closable`) is unchanged.
+
+### Upgrade steps
+
+1. `npm install react-dockable-desktop@6`
+2. For any `openLeftPanel`/`openRightPanel`/`openModal` call whose content assumed the old `10px` outer spacing, add `bodyPadding: 10` to its options (or any other value that fits — this is now yours to decide).
+
+---
+
 ## v4.x → v5.0.0
 
 v5.0.0 closes gaps found in two audits: a core-API review, and a framework-agnosticism review (the library's primary users build with Material-UI, React-Bootstrap, Tailwind, and shadcn/ui). Most apps are unaffected by the two hook-related breaking changes below (see why under each), but every app importing `styles.css` is affected by the CSS renames.

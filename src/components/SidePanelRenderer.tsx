@@ -124,6 +124,11 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
   const width = panelOptions.width || defaultWidth || 400;
   const widthStyle = typeof width === 'number' ? `${width}px` : width;
 
+  const bodyPadding = panelOptions.bodyPadding;
+  const bodyPaddingStyle = bodyPadding != null
+    ? (typeof bodyPadding === 'number' ? `${bodyPadding}px` : bodyPadding)
+    : undefined;
+
   return (
     <div
       className={`rdd-side-panel rdd-side-panel-${position} rdd-side-panel-visible ${sidePanelClass ?? ''}`}
@@ -153,7 +158,10 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
             </svg>
           </button>
         </div>
-        <div className={`rdd-side-panel-body ${sidePanelBodyClass ?? ''}`}>
+        <div
+          className={`rdd-side-panel-body ${sidePanelBodyClass ?? ''}`}
+          style={bodyPaddingStyle != null ? { padding: bodyPaddingStyle } : undefined}
+        >
           <FormContainerProvider value={contract}>
             <Component {...props} panelId={id} />
           </FormContainerProvider>
