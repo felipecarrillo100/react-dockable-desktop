@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   Sidebar,
+  SecondarySidebar,
   DockableDesktopProvider,
+  ModalStackRenderer,
   SidePanelRenderer,
   usePanelActions,
   useFormContainer,
+  useSidebarTab,
 } from '../src/index';
 import type { SidebarHandle, SidebarTab } from '../src/index';
 
@@ -39,6 +42,18 @@ import type { SidebarHandle, SidebarTab } from '../src/index';
  *   `openTab()` as clicking its rail icon directly, so that icon's own
  *   active-state highlight shows correctly, with no separate "selected"
  *   concept needed in the Menu.
+ * - Dual sidebars: `<SecondarySidebar>` — nested inside the primary's own
+ *   `children`, which it must be, since it auto-detects the primary and
+ *   takes whichever edge the primary *isn't* using (never specified
+ *   directly; throws if there's no primary ancestor, or if nested inside
+ *   another `SecondarySidebar`). Same component internals as `Sidebar`
+ *   throughout — zero forked code. Its own tabs ("Layers", "Info", plus a
+ *   `hidden` one) are reachable from its own rail icons and, via a
+ *   "Secondary sidebar" section in the Main Menu, from the primary's side
+ *   too — proving the Menu can address either sidebar. Also exercises
+ *   `headerAction`, a `hidden` tab, controlled `activeTabId`, and
+ *   `useSidebarTab()` from inside its own content — the same feature set
+ *   the primary demonstrates, on the secondary too.
  * Run with `npm run dev:sidebar`.
  */
 
@@ -67,6 +82,90 @@ const CloseIcon: React.FC = () => (
   </svg>
 );
 
+// Secondary sidebar's own tab icons — deliberately distinct from the primary's,
+// so it's visually obvious which rail a given tab belongs to during testing.
+const LayersIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+    <path d="M2 17l10 5 10-5" />
+    <path d="M2 12l10 5 10-5" />
+  </svg>
+);
+
+const InfoIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <line x1="12" y1="16" x2="12" y2="11" />
+    <line x1="12" y1="8" x2="12" y2="8" />
+  </svg>
+);
+
+const GearIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+const FlaskIcon: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 2v6L4 20a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-5-12V2" />
+    <path d="M9 2h6" />
+    <path d="M7 15h10" />
+  </svg>
+);
+
+// v6.0.0 test content — shared by the left/right panel and modal actions
+// below. A dashed border filling 100% of the body's own box makes the new
+// default-0 body padding visible at a glance: the border should touch the
+// panel/modal's edges exactly, with no gap, unless bodyPadding overrides it.
+const FlushTestContent: React.FC<{ label: string }> = ({ label }) => (
+  <div
+    style={{
+      height: '100%',
+      width: '100%',
+      boxSizing: 'border-box',
+      border: '2px dashed #38bdf8',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      padding: 12,
+      color: 'var(--rdd-text-primary, #f8f9fa)',
+      fontSize: 14,
+      background:
+        'repeating-linear-gradient(45deg, #1a1d24, #1a1d24 10px, #20242c 10px, #20242c 20px)',
+    }}
+  >
+    {label}
+    <br />
+    v6.0.0: body padding defaults to 0 — this border should touch the edges exactly.
+  </div>
+);
+
+const testButtonStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 6,
+  border: '1px solid var(--rdd-text-secondary, #5f6368)',
+  background: 'transparent',
+  color: 'var(--rdd-text-primary, #f8f9fa)',
+  fontSize: 14,
+  cursor: 'pointer',
+  textAlign: 'left',
+};
+
+// Proves useSidebarTab() resolves correctly from inside the SECONDARY's own
+// content tree (two levels of context nesting deep), not just the top-level
+// onClose parameter renderContent already receives.
+function SecondaryTabCloseViaContext(): React.ReactElement {
+  const { onClose } = useSidebarTab();
+  return (
+    <button type="button" onClick={onClose} style={testButtonStyle}>
+      Close via useSidebarTab()
+    </button>
+  );
+}
+
 interface Section {
   id: string;
   label: string;
@@ -90,9 +189,56 @@ const HIDDEN_SECTIONS: Section[] = [
 // state that changes after it opened.
 const RailVisibleContext = createContext(false);
 
+// Same staleness problem, same fix, for the secondary sidebar's own rail toggle.
+const SecondaryRailVisibleContext = createContext(true);
+
 interface MenuOption {
   id: string;
   label: string;
+}
+
+// Shared by both "Show ... sidebar" switches below — avoids duplicating the
+// track/thumb markup for what both are, mechanically, the same toggle row.
+function ToggleSwitchRow({ label, checked, onClick }: { label: string; checked: boolean; onClick: () => void }): React.ReactElement {
+  return (
+    <label
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 12px',
+        cursor: 'pointer',
+        userSelect: 'none',
+      }}
+    >
+      <span style={{ flex: 1, color: 'var(--rdd-text-primary, #f8f9fa)' }}>{label}</span>
+      <span
+        style={{
+          position: 'relative',
+          width: 34,
+          height: 18,
+          borderRadius: 9,
+          background: checked ? '#1a73e8' : 'var(--rdd-text-secondary, #5f6368)',
+          transition: 'background 0.15s',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: checked ? 18 : 2,
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            background: '#fff',
+            transition: 'left 0.15s',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          }}
+        />
+      </span>
+    </label>
+  );
 }
 
 // A single clickable row shared by both lists below — calls onSelectOption(id)
@@ -125,6 +271,9 @@ function MenuOptionButton({ option, onSelect }: { option: MenuOption; onSelect: 
 
 interface MenuPanelProps {
   onToggleRail: () => void;
+  // PROOF OF CONCEPT: mirrors onToggleRail above, for the secondary sidebar's
+  // own rail visibility — same switch pattern, different target.
+  onToggleSecondaryRail: () => void;
   onSelectOption: (id: string) => void;
   // Duplicates the tabs that already have their own rail icon (e.g. "Saved",
   // "Recents") — opening one from here calls the exact same openTab() as
@@ -132,60 +281,45 @@ interface MenuPanelProps {
   // own .rdd-active highlight shows correctly. No separate "selected" concept
   // needed here, because it IS that same tab.
   visibleSections: MenuOption[];
+  // PROOF OF CONCEPT: opens a tab on the SECONDARY sidebar (nested on the
+  // opposite edge, see AppContent below) instead of the primary one — proves
+  // the Main Menu can address either sidebar, not just the one it visually
+  // belongs to.
+  onSelectSecondaryOption: (id: string) => void;
+  secondarySections: MenuOption[];
 }
 
-// Content of the hamburger's side panel: the "Show side bar" switch, the
-// tabs also reachable from the rail (duplicated here for when the rail is
-// hidden), and — below a second divider — the options that only ever exist
-// here, with no rail icon of their own at all.
-function MenuPanel({ onToggleRail, onSelectOption, visibleSections }: MenuPanelProps): React.ReactElement {
+// Content of the hamburger's side panel: the "Show side bar"/"Show secondary
+// sidebar" switches, the tabs also reachable from the rail (duplicated here
+// for when the rail is hidden), the options that only ever exist here with
+// no rail icon of their own, and — proof of concept — a third section that
+// opens tabs on the SECONDARY sidebar on the opposite edge.
+function MenuPanel({
+  onToggleRail,
+  onToggleSecondaryRail,
+  onSelectOption,
+  visibleSections,
+  onSelectSecondaryOption,
+  secondarySections,
+}: MenuPanelProps): React.ReactElement {
   const { requestClose } = useFormContainer();
   const railVisible = useContext(RailVisibleContext);
+  const secondaryRailVisible = useContext(SecondaryRailVisibleContext);
 
   const handleSelect = (id: string) => {
     onSelectOption(id);
     requestClose();
   };
 
+  const handleSelectSecondary = (id: string) => {
+    onSelectSecondaryOption(id);
+    requestClose();
+  };
+
   return (
     <div style={{ padding: '8px 4px' }}>
-      <label
-        onClick={onToggleRail}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 12px',
-          cursor: 'pointer',
-          userSelect: 'none',
-        }}
-      >
-        <span style={{ flex: 1, color: 'var(--rdd-text-primary, #f8f9fa)' }}>Show side bar</span>
-        <span
-          style={{
-            position: 'relative',
-            width: 34,
-            height: 18,
-            borderRadius: 9,
-            background: railVisible ? '#1a73e8' : 'var(--rdd-text-secondary, #5f6368)',
-            transition: 'background 0.15s',
-          }}
-        >
-          <span
-            style={{
-              position: 'absolute',
-              top: 2,
-              left: railVisible ? 18 : 2,
-              width: 14,
-              height: 14,
-              borderRadius: '50%',
-              background: '#fff',
-              transition: 'left 0.15s',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-            }}
-          />
-        </span>
-      </label>
+      <ToggleSwitchRow label="Show side bar" checked={railVisible} onClick={onToggleRail} />
+      <ToggleSwitchRow label="Show secondary sidebar" checked={secondaryRailVisible} onClick={onToggleSecondaryRail} />
 
       <div style={{ margin: '8px 0', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }} />
 
@@ -200,6 +334,17 @@ function MenuPanel({ onToggleRail, onSelectOption, visibleSections }: MenuPanelP
       {/* Options with no rail icon of their own, whether the rail is shown or hidden. */}
       {HIDDEN_SECTIONS.map(section => (
         <MenuOptionButton key={section.id} option={section} onSelect={handleSelect} />
+      ))}
+
+      <div style={{ margin: '8px 0', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }} />
+
+      {/* PROOF OF CONCEPT: these open tabs on the SECONDARY sidebar (opposite
+          edge), not the primary one every other section above controls. */}
+      <div style={{ padding: '4px 12px 4px', fontSize: 11, color: 'var(--rdd-text-secondary, #94a3b8)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        Secondary sidebar
+      </div>
+      {secondarySections.map(option => (
+        <MenuOptionButton key={option.id} option={option} onSelect={handleSelectSecondary} />
       ))}
     </div>
   );
@@ -298,13 +443,21 @@ function CustomSidebarHeader({
 
 function AppContent(): React.ReactElement {
   const sidebarRef = useRef<SidebarHandle>(null);
+  // The secondary sidebar — see the return JSX below for <SecondarySidebar>,
+  // nested inside the primary's own `children` (a hard requirement: it needs
+  // to be a real descendant to auto-detect the primary and take the opposite
+  // edge). Exercises headerAction, a hidden tab, and controlled activeTabId
+  // here too, mirroring the primary's own coverage of each.
+  const secondaryRef = useRef<SidebarHandle>(null);
   const [railVisible, setRailVisible] = useState(false);
+  const [secondaryRailVisible, setSecondaryRailVisible] = useState(true);
+  const [secondaryActiveTabId, setSecondaryActiveTabId] = useState<string | null>(null);
   // Controlled purely so this component knows when the drawer is expanded, to
   // hide the floating hamburger/search overlay below (it otherwise visually
   // overlaps the drawer's own renderHeader row) — Sidebar itself doesn't need
   // this to be controlled for anything else here.
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const { openLeftPanel } = usePanelActions();
+  const { openLeftPanel, openRightPanel, openModal } = usePanelActions();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', 'dark');
@@ -315,6 +468,7 @@ function AppContent(): React.ReactElement {
       MenuPanel,
       {
         onToggleRail: () => setRailVisible(v => !v),
+        onToggleSecondaryRail: () => setSecondaryRailVisible(v => !v),
         // Selecting an option just opens the corresponding tab — rail
         // visibility is controlled solely by the "Show side bar" switch and
         // must never be changed as a side effect of picking a menu option.
@@ -326,6 +480,13 @@ function AppContent(): React.ReactElement {
         // the time this closure actually runs (on click), regardless of
         // declaration order.
         visibleSections: visibleTabs.map(tab => ({ id: tab.id, label: tab.label })),
+        // PROOF OF CONCEPT: addresses the SECONDARY sidebar's own openTab(),
+        // not the primary's — same pattern as onSelectOption above, just a
+        // different ref/target.
+        onSelectSecondaryOption: (id: string) => {
+          secondaryRef.current?.openTab(id);
+        },
+        secondarySections: secondaryTabs.map(tab => ({ id: tab.id, label: tab.label })),
       },
       { title: 'Menu' }
     );
@@ -377,10 +538,95 @@ function AppContent(): React.ReactElement {
         </div>
       ),
     },
+    {
+      id: 'test-v6-tab',
+      label: 'Test v6.0.0',
+      icon: <FlaskIcon />,
+      renderContent: () => (
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--rdd-text-primary, #f8f9fa)' }}>Test v6.0.0</h4>
+          <p style={{ margin: '0 0 8px', color: 'var(--rdd-text-secondary, #94a3b8)', fontSize: 14 }}>
+            Opens a left panel, a right panel, and a modal — each showing the new
+            default-0 body padding from v6.0.0.
+          </p>
+          <button
+            type="button"
+            onClick={() => openLeftPanel(FlushTestContent, { label: 'Left panel' }, { title: 'Left Panel Test' })}
+            style={testButtonStyle}
+          >
+            Open Left Panel
+          </button>
+          <button
+            type="button"
+            onClick={() => openRightPanel(FlushTestContent, { label: 'Right panel' }, { title: 'Right Panel Test' })}
+            style={testButtonStyle}
+          >
+            Open Right Panel
+          </button>
+          <button
+            type="button"
+            onClick={() => openModal(FlushTestContent, { label: 'Modal' }, { title: 'Modal Test' })}
+            style={testButtonStyle}
+          >
+            Open Modal
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  // The secondary sidebar's own tabs — ordinary, icon-bearing, reachable both
+  // from their own rail icon (secondary's rail is independently toggleable,
+  // just like the primary's) and from the primary's Main Menu, plus a
+  // `hidden` tab with no rail icon at all, mirroring the primary's own
+  // "Your data"/"Settings" pattern.
+  const secondaryTabs: SidebarTab[] = [
+    {
+      id: 'layers-tab',
+      label: 'Layers',
+      icon: <LayersIcon />,
+      renderContent: () => (
+        <div style={{ padding: 16 }}>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--rdd-text-primary, #f8f9fa)' }}>Layers</h4>
+          <p style={{ margin: 0, color: 'var(--rdd-text-secondary, #94a3b8)', fontSize: 14 }}>
+            Lives on the secondary sidebar, nested on the opposite edge from the primary.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'info-tab',
+      label: 'Info',
+      icon: <InfoIcon />,
+      renderContent: () => (
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--rdd-text-primary, #f8f9fa)' }}>Info</h4>
+          <p style={{ margin: 0, color: 'var(--rdd-text-secondary, #94a3b8)', fontSize: 14 }}>
+            Another secondary-sidebar tab, reachable from the primary's Main Menu too.
+          </p>
+          <SecondaryTabCloseViaContext />
+        </div>
+      ),
+    },
+    {
+      id: 'secondary-hidden-tab',
+      label: 'Secondary Hidden',
+      hidden: true,
+      renderContent: () => (
+        <div style={{ padding: 16 }}>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--rdd-text-primary, #f8f9fa)' }}>Secondary Hidden</h4>
+          <p style={{ margin: 0, color: 'var(--rdd-text-secondary, #94a3b8)', fontSize: 14 }}>
+            A hidden tab on the secondary sidebar — no rail icon, opened only from
+            the Main Menu below, proving hidden-tab parity between primary and secondary.
+          </p>
+        </div>
+      ),
+    },
   ];
 
   return (
     <RailVisibleContext.Provider value={railVisible}>
+    <SecondaryRailVisibleContext.Provider value={secondaryRailVisible}>
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden', position: 'relative' }}>
       <Sidebar
         ref={sidebarRef}
@@ -400,6 +646,29 @@ function AppContent(): React.ReactElement {
           onClick: openMenu,
         }}
       >
+        {/* The secondary sidebar. No `position` prop — SecondarySidebar detects
+            the primary above via context and always takes the opposite edge.
+            Same underlying Sidebar implementation, zero forked code; exercises
+            headerAction/controlled activeTabId here too, mirroring the primary's
+            own coverage of both. */}
+        <SecondarySidebar
+          ref={secondaryRef}
+          defaultWidth={260}
+          showCloseButton
+          stripVisible={secondaryRailVisible}
+          activeTabId={secondaryActiveTabId}
+          onActiveTabChange={setSecondaryActiveTabId}
+          tabs={secondaryTabs}
+          headerAction={{
+            icon: <GearIcon />,
+            label: 'Secondary Menu',
+            onClick: () => openRightPanel(
+              FlushTestContent,
+              { label: 'Secondary headerAction panel' },
+              { title: 'Secondary headerAction' }
+            ),
+          }}
+        >
         <div
           style={{
             height: '100%',
@@ -483,9 +752,12 @@ function AppContent(): React.ReactElement {
           </div>
           )}
         </div>
+        </SecondarySidebar>
       </Sidebar>
       <SidePanelRenderer defaultWidth={260} />
+      <ModalStackRenderer />
     </div>
+    </SecondaryRailVisibleContext.Provider>
     </RailVisibleContext.Provider>
   );
 }

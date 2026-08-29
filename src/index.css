@@ -103,6 +103,27 @@
   --rdd-panel-float-title-color-active: var(--rdd-window-text, #f8f9fa);
 }
 
+/* Every element the library renders carries an rdd- prefixed class (see
+   CLAUDE.md's prefix convention) — this targets exactly those elements
+   directly, never their descendants, so a consumer's own content nested
+   inside (tab renderContent, panel/modal body content) is never touched.
+   Without this, several rules combining padding with a fixed/percentage
+   min-height/max-height/height (e.g. .rdd-side-panel-header,
+   .rdd-toolbar-strip) render at a size that depends on whatever box-sizing
+   the host page happens to set globally — MUI's CssBaseline and Bootstrap's
+   reboot both reset it via a bare `*` selector, but a plain page with no
+   such reset leaves the browser default (content-box) in effect, so the
+   exact same CSS renders at a visibly different size purely depending on
+   which app it's dropped into. Deliberately no !important: this selector's
+   specificity (0,1,0) already beats an accidental bare `*` reset (both
+   examples above are (0,0,0)) unconditionally, regardless of stylesheet
+   load order, while still losing — via source order at the resulting tie —
+   to a consumer's own deliberate, equally-specific override of a specific
+   rdd- class, which normally loads after this stylesheet. */
+[class*="rdd-"] {
+  box-sizing: border-box;
+}
+
 /* Sizing only — margin/overflow/height/width, no cosmetic properties. This is a
    structural requirement, not a style choice: `.full-viewport-layout` and every
    percentage-height element the workspace nests inside (including WindowManager's
@@ -1864,11 +1885,6 @@ body.rdd-dragging-active {
   background-color: var(--sidebar-bg) !important;
   color: var(--sidebar-text-title) !important;
   height: 100%;
-}
-
-/* Suppress all drawer transitions during pointer-drag resize */
-.rdd-sidebar-resizing .rdd-sidebar-content-drawer {
-  transition: none !important;
 }
 
 /* Position-specific drawer border and shadow alignment */

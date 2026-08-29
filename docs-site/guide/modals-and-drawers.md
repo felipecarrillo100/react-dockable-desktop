@@ -263,6 +263,28 @@ const sidebarRef = useRef<SidebarHandle>(null);
 
 **Active tab styling** — The visual treatment of the active tab button (shape, fill, indicator) is controlled entirely by CSS design tokens and varies per skin. `vscode` uses a transparent fill with a 2 px accent bar; `macos` renders a floating glass chip; `nord` draws a short horizontal line below the icon. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) to customise this in your own skin.
 
+### Dual sidebars
+
+`SecondarySidebar` is a second, independent `Sidebar` instance for the opposite edge of the screen — same component, same behavior, no forked implementation. It must be rendered inside a primary `Sidebar`'s `children` (this is a hard requirement, not just a recommendation — it detects the primary via context, which only flows to descendants) and automatically takes whichever side the primary *isn't* using, so you never specify a side yourself:
+
+```tsx
+import { Sidebar, SecondarySidebar } from 'react-dockable-desktop';
+
+<Sidebar position="left" tabs={primaryTabs}>
+  <SecondarySidebar tabs={secondaryTabs}>
+    {/* Your app content */}
+  </SecondarySidebar>
+</Sidebar>
+```
+
+`SecondarySidebarProps` is identical to `SidebarProps` except `position` isn't settable (it's always the opposite of the primary) — everything else (`tabs`, `headerAction`/`footerAction`, `hideDefaultHeader`/`renderHeader`, controlled `activeTabId`, `showCloseButton`, and so on) works exactly the same as on a primary `Sidebar`.
+
+::: warning
+`SecondarySidebar` throws if rendered without a primary `Sidebar` ancestor, or if nested inside another `SecondarySidebar` — this library supports exactly one primary and one secondary sidebar, nothing deeper.
+:::
+
+Reach either sidebar's actions from anywhere in its own tree via `useSidebar()` — `position`/`isSecondary` on its return value (see [`useSidebar()`](#usesidebar) below) tell you which one you're inside. Content nested inside the secondary that needs to control the *primary* (or vice versa) needs a `ref`/`SidebarHandle` passed down explicitly — `useSidebar()` always resolves to the nearest instance, not a specific one.
+
 ### `headerAction`/`footerAction`
 
 One or more non-toggling action buttons — a hamburger menu, for example — shown above (`headerAction`)
@@ -383,6 +405,8 @@ function LayerTree() {
 | `openTab(tabId)` | `(tabId: string) => void` | Expand the drawer and activate the given tab. |
 | `closeDrawer()` | `() => void` | Collapse the drawer. |
 | `getActiveTab()` | `() => string \| null` | Returns the current tab ID, or `null` if collapsed. |
+| `position` | `'left' \| 'right'` | Which side this Sidebar instance is rendering on. |
+| `isSecondary` | `boolean` | `true` if this instance is a [`SecondarySidebar`](#dual-sidebars), `false` for a primary `Sidebar`. |
 
 ::: warning
 `useSidebar()` throws if called outside a `<Sidebar>` tree. A reusable panel component that may render with or without a surrounding Sidebar should check for that possibility itself (e.g. a prop indicating whether one is present) rather than relying on this hook to degrade gracefully.
