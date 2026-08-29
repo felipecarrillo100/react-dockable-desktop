@@ -41,12 +41,21 @@
  * - SB40: hideDefaultHeader with no renderHeader renders nothing; useSidebarTab().onClose still works
  * - SB41: renderHeader alone, without hideDefaultHeader, is sufficient to suppress the default header
  * - SB42: dev-only console.warn when showCloseButton has no effect (default header suppressed)
+ * - SB43: SecondarySidebar renders on the opposite side automatically (both directions)
+ * - SB44: SecondarySidebar with no primary Sidebar ancestor throws
+ * - SB45: SecondarySidebar nested inside another SecondarySidebar throws
+ * - SB46: useSidebar() reports correct position/isSecondary at both the primary and secondary level
+ * - SB47: resizing the primary's drawer does not suppress the secondary's transition, and vice versa
+ * - SB48: a hidden tab on the secondary has no rail button but is still openable
+ * - SB49: headerAction on the secondary renders and fires onClick
+ * - SB50: controlled activeTabId/onActiveTabChange works on the secondary
+ * - SB51: useSidebarTab() inside a secondary tab's renderContent resolves to that tab's own onClose/onOpen
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
-import { Sidebar, useSidebar, useSidebarTab } from '../Sidebar';
+import { Sidebar, SecondarySidebar, useSidebar, useSidebarTab } from '../Sidebar';
 import type { SidebarHandle, SidebarTab } from '../Sidebar';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1411,5 +1420,259 @@ describe('SB42: dev-only console.warn when showCloseButton has no effect', () =>
     );
     expect(matching.length).toBe(1);
     warnSpy.mockRestore();
+  });
+});
+
+// ─── SB43: SecondarySidebar renders on the opposite side automatically ──────
+
+describe('SB43: SecondarySidebar renders on the opposite side automatically', () => {
+  it('primary position="left" -> secondary renders on the right', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="left" tabs={[makeTab('a')]}>
+          <SecondarySidebar tabs={[makeTab('b')]}>content</SecondarySidebar>
+        </Sidebar>
+      );
+    });
+    expect(container.querySelectorAll('.rdd-sidebar-tabs-strip.rdd-left').length).toBe(1);
+    expect(container.querySelectorAll('.rdd-sidebar-tabs-strip.rdd-right').length).toBe(1);
+  });
+
+  it('primary position="right" -> secondary renders on the left', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="right" tabs={[makeTab('a')]}>
+          <SecondarySidebar tabs={[makeTab('b')]}>content</SecondarySidebar>
+        </Sidebar>
+      );
+    });
+    expect(container.querySelectorAll('.rdd-sidebar-tabs-strip.rdd-left').length).toBe(1);
+    expect(container.querySelectorAll('.rdd-sidebar-tabs-strip.rdd-right').length).toBe(1);
+  });
+});
+
+// ─── SB44: SecondarySidebar with no primary throws ──────────────────────────
+
+describe('SB44: SecondarySidebar with no primary Sidebar ancestor throws', () => {
+  it('throws when rendered standalone', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => {
+      act(() => {
+        root = createRoot(container);
+        root.render(<SecondarySidebar tabs={[makeTab('a')]}>content</SecondarySidebar>);
+      });
+    }).toThrow('SecondarySidebar must be rendered inside a primary Sidebar\'s children');
+    errorSpy.mockRestore();
+  });
+});
+
+// ─── SB45: SecondarySidebar nested inside another SecondarySidebar throws ───
+
+describe('SB45: SecondarySidebar nested inside another SecondarySidebar throws', () => {
+  it('throws on triple nesting', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => {
+      act(() => {
+        root = createRoot(container);
+        root.render(
+          <Sidebar position="left" tabs={[makeTab('a')]}>
+            <SecondarySidebar tabs={[makeTab('b')]}>
+              <SecondarySidebar tabs={[makeTab('c')]}>content</SecondarySidebar>
+            </SecondarySidebar>
+          </Sidebar>
+        );
+      });
+    }).toThrow('SecondarySidebar cannot be nested inside another SecondarySidebar');
+    errorSpy.mockRestore();
+  });
+});
+
+// ─── SB46: useSidebar() position/isSecondary at both levels ────────────────
+
+describe('SB46: useSidebar() reports correct position/isSecondary at both the primary and secondary level', () => {
+  it('each level sees its own correct context value', () => {
+    const seen: Record<string, { position: string; isSecondary: boolean }> = {};
+
+    const PrimaryProbe: React.FC = () => {
+      const ctx = useSidebar();
+      seen.primary = { position: ctx.position, isSecondary: ctx.isSecondary };
+      return null;
+    };
+    const SecondaryProbe: React.FC = () => {
+      const ctx = useSidebar();
+      seen.secondary = { position: ctx.position, isSecondary: ctx.isSecondary };
+      return null;
+    };
+
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="left" tabs={[makeTab('a')]}>
+          <PrimaryProbe />
+          <SecondarySidebar tabs={[makeTab('b')]}>
+            <SecondaryProbe />
+          </SecondarySidebar>
+        </Sidebar>
+      );
+    });
+
+    expect(seen.primary).toEqual({ position: 'left', isSecondary: false });
+    expect(seen.secondary).toEqual({ position: 'right', isSecondary: true });
+  });
+});
+
+// ─── SB47: resize isolation between primary and secondary ──────────────────
+
+describe('SB47: resizing one sidebar does not suppress the other\'s transition', () => {
+  it('dragging the primary\'s resize handle leaves the secondary\'s drawer transition untouched, and vice versa', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="left" tabs={[makeTab('a')]} activeTabId="a" onActiveTabChange={() => {}}>
+          <SecondarySidebar tabs={[makeTab('b')]} activeTabId="b" onActiveTabChange={() => {}}>
+            content
+          </SecondarySidebar>
+        </Sidebar>
+      );
+    });
+
+    // DOM order: primary is position="left" (strip, drawer, resizer all emitted
+    // before its children), so index 0 is always primary's, index 1 the nested
+    // secondary's (position="right", emitted after its own children).
+    const drawers = Array.from(container.querySelectorAll('.rdd-sidebar-content-drawer')) as HTMLElement[];
+    expect(drawers.length).toBe(2);
+    const [primaryDrawer, secondaryDrawer] = drawers;
+
+    const resizers = Array.from(container.querySelectorAll('.rdd-resizer-bar')) as HTMLElement[];
+    expect(resizers.length).toBe(2);
+    const [primaryResizer, secondaryResizer] = resizers;
+
+    const secondaryTransitionBefore = secondaryDrawer.style.transition;
+    act(() => {
+      primaryResizer.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 0, clientY: 0, button: 0 }));
+    });
+    expect(primaryDrawer.style.transition).toBe('none');
+    expect(secondaryDrawer.style.transition).toBe(secondaryTransitionBefore);
+    act(() => {
+      primaryResizer.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: 0, clientY: 0, button: 0 }));
+    });
+
+    const primaryTransitionBefore = primaryDrawer.style.transition;
+    act(() => {
+      secondaryResizer.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 0, clientY: 0, button: 0 }));
+    });
+    expect(secondaryDrawer.style.transition).toBe('none');
+    expect(primaryDrawer.style.transition).toBe(primaryTransitionBefore);
+    act(() => {
+      secondaryResizer.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2, clientX: 0, clientY: 0, button: 0 }));
+    });
+  });
+});
+
+// ─── SB48: hidden tab parity on the secondary ───────────────────────────────
+
+describe('SB48: a hidden tab on the secondary has no rail button but is still openable', () => {
+  it('renders no rail button for the hidden secondary tab, but openTab() still opens it', () => {
+    const secondaryRef = createRef<SidebarHandle>();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="left" tabs={[makeTab('a')]}>
+          <SecondarySidebar ref={secondaryRef} tabs={[makeTab('hidden-b', { hidden: true, icon: undefined })]}>
+            content
+          </SecondarySidebar>
+        </Sidebar>
+      );
+    });
+    // Only the primary's tab 'a' has a rail button — the secondary's hidden tab has none.
+    expect(container.querySelectorAll('.rdd-sidebar-tab-btn').length).toBe(1);
+    act(() => { secondaryRef.current!.openTab('hidden-b'); });
+    expect(secondaryRef.current!.getActiveTab()).toBe('hidden-b');
+    expect(container.querySelector('[data-content="hidden-b"]')).not.toBeNull();
+  });
+});
+
+// ─── SB49: headerAction parity on the secondary ─────────────────────────────
+
+describe('SB49: headerAction on the secondary renders and fires onClick', () => {
+  it('renders the secondary\'s headerAction button and calls onClick', () => {
+    const onClick = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="left" tabs={[makeTab('a')]}>
+          <SecondarySidebar tabs={[makeTab('b')]} headerAction={{ icon: <Icon />, label: 'Secondary Menu', onClick }}>
+            content
+          </SecondarySidebar>
+        </Sidebar>
+      );
+    });
+    const btn = container.querySelector('button[aria-label="Secondary Menu"]') as HTMLElement;
+    expect(btn).not.toBeNull();
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── SB50: controlled activeTabId parity on the secondary ──────────────────
+
+describe('SB50: controlled activeTabId/onActiveTabChange works on the secondary', () => {
+  it('the secondary drawer reflects the controlled activeTabId, and reports changes', () => {
+    const onChange = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar position="left" tabs={[makeTab('a')]}>
+          <SecondarySidebar tabs={[makeTab('b'), makeTab('c')]} activeTabId="c" onActiveTabChange={onChange}>
+            content
+          </SecondarySidebar>
+        </Sidebar>
+      );
+    });
+    expect(container.querySelector('[data-content="c"]')).not.toBeNull();
+
+    const buttons = Array.from(container.querySelectorAll('.rdd-sidebar-tab-btn'));
+    const bBtn = buttons.find(b => b.getAttribute('title') === 'Tab b') as HTMLElement;
+    expect(bBtn).not.toBeUndefined();
+    act(() => { bBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onChange).toHaveBeenCalledWith('b');
+  });
+});
+
+// ─── SB51: useSidebarTab() two levels deep, inside the secondary ───────────
+
+describe('SB51: useSidebarTab() inside a secondary tab resolves to that tab\'s own onClose/onOpen', () => {
+  it('closing via useSidebarTab().onClose from inside the secondary tab closes the secondary, not the primary', () => {
+    const secondaryRef = createRef<SidebarHandle>();
+    const primaryRef = createRef<SidebarHandle>();
+
+    const NestedCloseButton: React.FC = () => {
+      const { onClose } = useSidebarTab();
+      return <button data-testid="nested-secondary-close" onClick={onClose}>close</button>;
+    };
+
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <Sidebar ref={primaryRef} position="left" tabs={[makeTab('a')]}>
+          <SecondarySidebar ref={secondaryRef} tabs={[makeTab('b', { renderContent: () => <NestedCloseButton /> })]}>
+            content
+          </SecondarySidebar>
+        </Sidebar>
+      );
+    });
+
+    act(() => { primaryRef.current!.openTab('a'); });
+    act(() => { secondaryRef.current!.openTab('b'); });
+    expect(primaryRef.current!.getActiveTab()).toBe('a');
+    expect(secondaryRef.current!.getActiveTab()).toBe('b');
+
+    const closeBtn = container.querySelector('[data-testid="nested-secondary-close"]') as HTMLElement;
+    act(() => { closeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+
+    expect(secondaryRef.current!.getActiveTab()).toBeNull();
+    expect(primaryRef.current!.getActiveTab()).toBe('a');
   });
 });

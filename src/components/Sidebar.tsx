@@ -194,6 +194,12 @@ export interface SidebarProps {
    * @param onOpen  - call to (re-)select this tab
    */
   renderHeader?: (tab: SidebarTab, onClose: () => void, onOpen: () => void) => React.ReactNode;
+  /**
+   * @internal Marks this instance as a secondary sidebar for context-broadcasting
+   * purposes. Set automatically by `<SecondarySidebar>` — do not pass this directly.
+   * Default: false
+   */
+  isSecondary?: boolean;
   /** Main workspace content rendered alongside the sidebar. */
   children?: React.ReactNode;
 }
@@ -222,6 +228,10 @@ export interface SidebarContextValue {
   openTab: (tabId: string) => void;
   closeDrawer: () => void;
   getActiveTab: () => string | null;
+  /** Which side this Sidebar instance is rendering on. */
+  position: 'left' | 'right';
+  /** True if this instance is a `<SecondarySidebar>`, false for a primary `<Sidebar>`. */
+  isSecondary: boolean;
 }
 
 /**
@@ -399,7 +409,8 @@ interface SidebarResizeHandleProps {
   minWidth: number;
   maxWidth: number;
   onWidthChange: (newWidth: number) => void;
-  rootRef: React.RefObject<HTMLDivElement | null>;
+  onResizeStart: () => void;
+  onResizeEnd: () => void;
 }
 
 function SidebarResizeHandle({
@@ -408,7 +419,8 @@ function SidebarResizeHandle({
   minWidth,
   maxWidth,
   onWidthChange,
-  rootRef,
+  onResizeStart,
+  onResizeEnd,
 }: SidebarResizeHandleProps) {
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -417,8 +429,11 @@ function SidebarResizeHandle({
       { el, classes: ['rdd-active'] },
       { el: document.body, classes: ['rdd-resizing-active', 'rdd-resizing-col-active'] },
     ];
-    // Suppress the drawer's CSS transition so drag feels instant.
-    if (rootRef.current) activeClasses.push({ el: rootRef.current, classes: ['rdd-sidebar-resizing'] });
+    // Suppress the drawer's CSS transition so drag feels instant — driven by this
+    // instance's own isResizing state (see the drawer's style below), not a DOM
+    // class + descendant selector, which would leak across a nested secondary
+    // Sidebar's subtree since it's a literal DOM descendant of this one.
+    onResizeStart();
 
     startPointerDrag({
       element: el,
@@ -432,6 +447,7 @@ function SidebarResizeHandle({
         const newW = position === 'right' ? startWidth - dx : startWidth + dx;
         onWidthChange(Math.max(minWidth, Math.min(maxWidth, newW)));
       },
+      onEnd: () => onResizeEnd(),
     });
   };
 
@@ -474,6 +490,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       showCloseButton = false,
       hideDefaultHeader = false,
       renderHeader,
+      isSecondary = false,
       children,
     },
     ref
@@ -486,6 +503,11 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       setWidthState(px);
       onWidthChange?.(px);
     }, [onWidthChange]);
+
+    // Suppresses the drawer's CSS transition during a resize drag — own state,
+    // not a DOM class, so it can never leak into a nested secondary Sidebar's
+    // drawer (see SidebarResizeHandle's onResizeStart/onResizeEnd below).
+    const [isResizing, setIsResizing] = useState(false);
 
     // Internal active tab state (uncontrolled mode)
     const [internalActiveTabId, setInternalActiveTabId] = useState<string | null>(null);
@@ -521,10 +543,6 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
     const widthRef = useRef<number>(width);
     useEffect(() => { widthRef.current = width; }, [width]);
-
-    // Ref to the root flex container — used by SidebarResizeHandle to toggle
-    // the rdd-sidebar-resizing class that suppresses the CSS width transition during drag
-    const rootRef = useRef<HTMLDivElement | null>(null);
 
     const setActiveTabId = useCallback(
       (id: string | null) => {
@@ -622,7 +640,9 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
       openTab: (tabId: string) => setActiveTabId(tabId),
       closeDrawer: () => setActiveTabId(null),
       getActiveTab: () => activeTabIdRef.current,
-    }), [setActiveTabId]);
+      position,
+      isSecondary,
+    }), [setActiveTabId, position, isSecondary]);
 
     // ---- Derived visibility flags ----
     const isSidebarVisible = visible !== false;
@@ -642,8 +662,10 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           minWidth: isDrawerOpen ? `${minWidth}px` : '0px',
           maxWidth: isDrawerOpen ? `${maxWidth}px` : '0px',
           overflow: 'hidden',
-          // transition is suppressed during drag via .rdd-sidebar-resizing on the root
-          transition: 'flex-basis 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          // Suppressed during a resize drag via this instance's own isResizing state.
+          transition: isResizing
+            ? 'none'
+            : 'flex-basis 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {allTabs.map(tab => {
@@ -715,14 +737,14 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
         minWidth={minWidth}
         maxWidth={maxWidth}
         onWidthChange={setWidth}
-        rootRef={rootRef}
+        onResizeStart={() => setIsResizing(true)}
+        onResizeEnd={() => setIsResizing(false)}
       />
     ) : null;
 
     return (
       <SidebarContext.Provider value={sidebarContextValue}>
         <div
-          ref={rootRef}
           style={{
             display: 'flex',
             flexDirection: 'row',
@@ -766,6 +788,40 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
         </div>
       </SidebarContext.Provider>
     );
+  });
+
+// ==========================================
+// SecondarySidebar
+// ==========================================
+
+/**
+ * Props for {@link SecondarySidebar} — identical to {@link SidebarProps} except
+ * `position` (always the opposite of whatever primary `Sidebar` it's nested inside)
+ * and `isSecondary` (always `true`) are not settable.
+ */
+export type SecondarySidebarProps = Omit<SidebarProps, 'position' | 'isSecondary'>;
+
+/**
+ * A second, independent `Sidebar` instance for the opposite edge of the screen —
+ * same component, same behavior, zero forked code. Must be rendered inside a
+ * primary `Sidebar`'s `children`; automatically takes whichever side that primary
+ * isn't using, so the side is never specified directly.
+ *
+ * @throws Error if rendered without an ancestor `Sidebar`, or nested inside another
+ * `SecondarySidebar` — this library supports exactly one primary and one secondary,
+ * nothing deeper.
+ */
+export const SecondarySidebar: React.ForwardRefExoticComponent<SecondarySidebarProps & React.RefAttributes<SidebarHandle>> =
+  forwardRef<SidebarHandle, SecondarySidebarProps>(function SecondarySidebar(props, ref) {
+    const primary = useContext(SidebarContext);
+    if (!primary) {
+      throw new Error('SecondarySidebar must be rendered inside a primary Sidebar\'s children');
+    }
+    if (primary.isSecondary) {
+      throw new Error('SecondarySidebar cannot be nested inside another SecondarySidebar');
+    }
+    const opposite = primary.position === 'left' ? 'right' : 'left';
+    return <Sidebar ref={ref} {...props} position={opposite} isSecondary />;
   });
 
 // ==========================================

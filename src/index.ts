@@ -126,8 +126,8 @@ export { default as ConfirmationForm } from './forms/ConfirmationForm';
 export type { ConfirmationFormProps } from './forms/ConfirmationForm';
 
 // Sidebar
-export { Sidebar, useSidebar, useSidebarTab } from './components/Sidebar';
-export type { SidebarTab, SidebarProps, SidebarHandle, SidebarContextValue, SidebarTabContextValue, SidebarHeaderAction, SidebarHeaderActionButton, SidebarHeaderActionCustom } from './components/Sidebar';
+export { Sidebar, SecondarySidebar, useSidebar, useSidebarTab } from './components/Sidebar';
+export type { SidebarTab, SidebarProps, SecondarySidebarProps, SidebarHandle, SidebarContextValue, SidebarTabContextValue, SidebarHeaderAction, SidebarHeaderActionButton, SidebarHeaderActionCustom } from './components/Sidebar';
 
 // Toolbar
 export { Toolbar, useToolbar, ToolbarProvider } from './components/Toolbar';
