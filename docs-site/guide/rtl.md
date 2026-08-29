@@ -11,7 +11,7 @@ You must wire two things:
 | What | Why |
 |------|-----|
 | `dir` prop on `DockableDesktopProvider` | Tells the workspace layout engine to flip splits, tabs, and window controls |
-| `document.documentElement.dir` | Needed for portals (ContextMenu, toolbar flyout, Toast) that render into `document.body` — they inherit `direction: rtl` from `html[dir="rtl"]` via CSS |
+| `document.documentElement.dir` | Needed for portals (ContextMenu, toolbar flyout, Toast) that render into `document.body`, **and for `<Sidebar>`/`<SecondarySidebar>`** — both inherit `direction: rtl` purely via the CSS `[dir="rtl"]` ancestor selector, not from any prop on `DockableDesktopProvider`. `Sidebar` mounts as a sibling of `WindowManager`, so it has no other way to learn the current direction; this is the only wiring it needs. |
 
 ## Complete wiring example
 
@@ -52,7 +52,7 @@ When `dir="rtl"` is active, the library reverses the following without any extra
 - **Split handles** — left/right drag semantics invert
 - **Floating window title bar** — close/minimize/maximize buttons move to the left; the panel icon moves to the right of the title text
 - **In-panel floating windows** (`PanelFloatingWindow`) — same title-bar mirroring as above
-- **Sidebars** — separator border, active-tab accent border, and drawer shadow all flip to the correct edge
+- **Sidebars** — separator border, active-tab accent border, and drawer shadow all flip to the correct edge; a primary `Sidebar` paired with a `SecondarySidebar` both flip correctly, swapping which visual edge each renders on
 - **Context menus** — sub-menu arrows and item text align to the right; sub-menus open to the left
 - **Toolbar flyouts** — flyout panels open on the correct side of the toolbar strip; item text right-aligns
 - **Taskbar** — minimised-window items flow right to left
