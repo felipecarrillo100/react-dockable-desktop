@@ -98,6 +98,32 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     expect(rightPanelEl.style.width).toBe('550px');
   });
 
+  it('should default the body to zero (no inline) padding, and respect a bodyPadding override', async () => {
+    mount();
+
+    // Default: no bodyPadding passed — no inline style override, CSS's own 0 governs.
+    await act(async () => {
+      await testActions.openLeftPanel(TestComponent, { message: 'Hello' }, { title: 'Left Drawer' });
+    });
+    const defaultBodyEl = container!.querySelector('.rdd-side-panel-left .rdd-side-panel-body') as HTMLElement;
+    expect(defaultBodyEl.style.padding).toBe('');
+
+    // Numeric override — treated as px.
+    await act(async () => {
+      await testActions.openRightPanel(TestComponent, { message: 'Hello' }, { title: 'Right Drawer', bodyPadding: 12 });
+    });
+    const numericBodyEl = container!.querySelector('.rdd-side-panel-right .rdd-side-panel-body') as HTMLElement;
+    expect(numericBodyEl.style.padding).toBe('12px');
+
+    // String override — shorthand passed through verbatim.
+    await act(async () => {
+      await testActions.close(testState.leftPanel!.id);
+      await testActions.openLeftPanel(TestComponent, { message: 'Hello' }, { title: 'Left Drawer', bodyPadding: '4px 8px' });
+    });
+    const shorthandBodyEl = container!.querySelector('.rdd-side-panel-left .rdd-side-panel-body') as HTMLElement;
+    expect(shorthandBodyEl.style.padding).toBe('4px 8px');
+  });
+
   it('should support nested stacked modals and track their sizes and headers', () => {
     mount();
 
@@ -117,6 +143,33 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     expect(overlays.length).toBe(2);
     expect(overlays[0].querySelector('.rdd-modal-title')?.textContent).toBe('First Modal');
     expect(overlays[1].querySelector('.rdd-modal-title')?.textContent).toBe('Second Modal');
+  });
+
+  it('should default the modal body to zero (no inline) padding, and respect a bodyPadding override', () => {
+    mount();
+
+    // Default: no bodyPadding passed — no inline style override, CSS's own 0 governs.
+    act(() => {
+      testActions.openModal(TestComponent, { message: 'Modal 1' }, { title: 'First Modal' });
+    });
+    const defaultBodyEl = container!.querySelector('.rdd-modal-body') as HTMLElement;
+    expect(defaultBodyEl.style.padding).toBe('');
+
+    // Numeric override — treated as px.
+    act(() => {
+      testActions.openModal(TestComponent, { message: 'Modal 2' }, { title: 'Second Modal', bodyPadding: 12 });
+    });
+    const overlays = container!.querySelectorAll('.rdd-modal-overlay');
+    const numericBodyEl = overlays[1].querySelector('.rdd-modal-body') as HTMLElement;
+    expect(numericBodyEl.style.padding).toBe('12px');
+
+    // String override — shorthand passed through verbatim.
+    act(() => {
+      testActions.openModal(TestComponent, { message: 'Modal 3' }, { title: 'Third Modal', bodyPadding: '4px 8px' });
+    });
+    const overlays2 = container!.querySelectorAll('.rdd-modal-overlay');
+    const shorthandBodyEl = overlays2[2].querySelector('.rdd-modal-body') as HTMLElement;
+    expect(shorthandBodyEl.style.padding).toBe('4px 8px');
   });
 
   it('should route Escape key closes to topmost modal, and to side drawers only if modals stack is empty', async () => {

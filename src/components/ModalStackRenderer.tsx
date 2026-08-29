@@ -99,6 +99,11 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
   const sizeClass = modalOptions.size ? `rdd-modal-size-${modalOptions.size}` : 'rdd-modal-size-auto';
   const showCloseButton = modalOptions.closable !== false;
 
+  const bodyPadding = modalOptions.bodyPadding;
+  const bodyPaddingStyle = bodyPadding != null
+    ? (typeof bodyPadding === 'number' ? `${bodyPadding}px` : bodyPadding)
+    : undefined;
+
   useEffect(() => {
     if (!isTopmost || !showCloseButton) return;
 
@@ -137,7 +142,10 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
             </button>
           )}
         </div>
-        <div className={`rdd-modal-body ${modalBodyClass ?? ''}`}>
+        <div
+          className={`rdd-modal-body ${modalBodyClass ?? ''}`}
+          style={bodyPaddingStyle != null ? { padding: bodyPaddingStyle } : undefined}
+        >
           <FormContainerProvider value={contract}>
             <Component {...props} panelId={id} />
           </FormContainerProvider>

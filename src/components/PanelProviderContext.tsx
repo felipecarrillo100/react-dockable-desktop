@@ -29,6 +29,12 @@ export interface SidePanelOptions {
   icon?: React.ReactNode;
   /** Specific CSS width (e.g. 300, '40%') for the panel container. */
   width?: number | string;
+  /**
+   * CSS padding for the panel body content — a number (px) or any CSS value/shorthand
+   * (e.g. `'10px 16px'`). Default: `0` (edge-to-edge) — pass `10` to restore the pre-v6.0.0
+   * default, or any value your content needs.
+   */
+  bodyPadding?: number | string;
 }
 
 /** Configuration options applied when opening a Modal. */
@@ -41,6 +47,12 @@ export interface ModalOptions {
   size?: 'small' | 'medium' | 'large' | 'fullscreen' | 'auto';
   /** If false, hides the modal backdrop exit click and header close button. */
   closable?: boolean;
+  /**
+   * CSS padding for the modal body content — a number (px) or any CSS value/shorthand
+   * (e.g. `'10px 16px'`). Default: `0` (edge-to-edge) — pass `10` to restore the pre-v6.0.0
+   * default, or any value your content needs.
+   */
+  bodyPadding?: number | string;
 }
 
 /**

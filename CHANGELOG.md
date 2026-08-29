@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] — 2026-08-29
+
+### Changed
+- **BREAKING: `.rdd-side-panel-body`'s and `.rdd-modal-body`'s default padding both changed from `10px` to `0`.** A docking library's job is layout mechanics, not content styling — padding is a decision that belongs entirely to whoever fills the panel or modal, and the old fixed value sat at the wrong layer once content needed its own internal scroll+footer layout. Any `openLeftPanel`/`openRightPanel`/`openModal` content relying on that outer spacing now renders edge-to-edge; restore the old look with the new `bodyPadding` option (below) — `{ bodyPadding: 10 }`. See the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) for the full upgrade note.
+
+### Added
+- **`SidePanelOptions.bodyPadding` and `ModalOptions.bodyPadding`** (both `number | string`) — CSS padding for the panel/modal body, e.g. `12` (pixels) or `'10px 16px'` (any CSS shorthand). Applied the same way `SidePanelOptions.width` already is: a per-instance inline-style override on `.rdd-side-panel-body`/`.rdd-modal-body`, passed to `openLeftPanel`/`openRightPanel`/`openModal`'s options. Omitting it (the new default) leaves the panel/modal edge-to-edge; every other option (`title`, `icon`, `width`, `size`, `closable`) is unchanged.
+
 ## [5.4.0] — 2026-08-27
 
 ### Added
