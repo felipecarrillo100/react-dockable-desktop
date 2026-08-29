@@ -636,25 +636,34 @@ body.rdd-resizing-col-active * {
 }
 
 /* Cross-browser scrollbar styling (Firefox standard) — scoped to the library's
-   own workspace subtree, never the consumer's page. */
-.rdd-workspace * {
+   own workspace subtree, never the consumer's page. .rdd-sidebar-drawer-body is
+   included explicitly alongside it: <Sidebar> mounts as a sibling of
+   <WindowManager>, not a descendant of .rdd-workspace, so it needs its own
+   entry here to pick up the same treatment — keep both in sync if this block
+   ever changes. */
+.rdd-workspace *,
+.rdd-sidebar-drawer-body {
   scrollbar-width: thin;
   scrollbar-color: var(--rdd-scrollbar-thumb) var(--rdd-scrollbar-track);
 }
 
 /* WebKit (Chrome, Safari, Edge) scrollbar styling */
-.rdd-workspace ::-webkit-scrollbar {
+.rdd-workspace ::-webkit-scrollbar,
+.rdd-sidebar-drawer-body::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.rdd-workspace ::-webkit-scrollbar-track {
+.rdd-workspace ::-webkit-scrollbar-track,
+.rdd-sidebar-drawer-body::-webkit-scrollbar-track {
   background: var(--rdd-scrollbar-track);
 }
-.rdd-workspace ::-webkit-scrollbar-thumb {
+.rdd-workspace ::-webkit-scrollbar-thumb,
+.rdd-sidebar-drawer-body::-webkit-scrollbar-thumb {
   background: var(--rdd-scrollbar-thumb);
   border-radius: 4px;
 }
-.rdd-workspace ::-webkit-scrollbar-thumb:hover {
+.rdd-workspace ::-webkit-scrollbar-thumb:hover,
+.rdd-sidebar-drawer-body::-webkit-scrollbar-thumb:hover {
   background: var(--rdd-scrollbar-thumb-hover);
 }
 
