@@ -21,6 +21,73 @@ export type { FloatAnchor };
 /** Edge of a panel to which a `PanelToolbar` attaches. */
 export type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
 
+/**
+ * Which of a docked widget's axes span the host panel instead of carrying a fixed size.
+ *
+ * A docked widget normally pins one end of each axis and carries an explicit size. A stretched
+ * axis pins **both** ends and carries no size at all, so the widget tracks the panel as it
+ * resizes — with no `ResizeObserver` and no JS, because CSS already does exactly this.
+ *
+ * - `'width'` — spans the panel's inline axis; height still fixed. A status or timeline strip.
+ * - `'height'` — spans the block axis; width still fixed. A full-height side column.
+ * - `'both'` — fills the panel, the inner-widget equivalent of maximizing a floating window.
+ */
+export type Stretch = 'width' | 'height' | 'both';
+
+/**
+ * Where a docked widget sits: which corner it is anchored to, plus which axes (if any) span the
+ * panel. Reported as a unit because a single gesture can change both at once — dropping a
+ * full-width bottom strip onto the left edge flips the anchor *and* the stretched axis together,
+ * and reporting those separately would expose a state that is never actually valid.
+ */
+export interface PanelFloatPlacement {
+  anchor: FloatAnchor;
+  stretch: Stretch | null;
+}
+
+const stretchesInline = (s: Stretch | null): boolean => s === 'width' || s === 'both';
+const stretchesBlock = (s: Stretch | null): boolean => s === 'height' || s === 'both';
+
+/** Adds one axis to a stretch value, keeping whatever was already stretched. */
+const addAxis = (s: Stretch | null, axis: 'inline' | 'block'): Stretch => {
+  if (axis === 'inline') return stretchesBlock(s) ? 'both' : 'width';
+  return stretchesInline(s) ? 'both' : 'height';
+};
+
+/** Drops one axis from a stretch value, keeping the other. */
+const releaseAxis = (s: Stretch | null, axis: 'inline' | 'block'): Stretch | null => {
+  if (axis === 'inline') return s === 'both' ? 'height' : stretchesInline(s) ? null : s;
+  return s === 'both' ? 'width' : stretchesBlock(s) ? null : s;
+};
+
+/**
+ * Which stack buckets a placement occupies.
+ *
+ * The four corner buckets are really a proxy for *"do these overlap on the inline axis?"* — two
+ * widgets in the same corner overlap and so stack; widgets in opposite corners sit side by side and
+ * don't. A full-width strip overlaps everything on its edge, so it belongs to **both** buckets of
+ * that edge and pushes the widgets in each. (Computing real inline overlap was rejected: widths
+ * change continuously during a resize drag, so widgets would reshuffle mid-gesture.)
+ *
+ * A block-stretched widget spans the very axis stacking uses to separate siblings, so it can't
+ * participate at all and occupies no bucket — z-order decides any overlap.
+ */
+const bucketsFor = (anchor: FloatAnchor, stretch: Stretch | null): FloatAnchor[] => {
+  if (stretchesBlock(stretch)) return [];
+  if (stretchesInline(stretch)) {
+    return anchor.startsWith('top-')
+      ? ['top-left', 'top-right']
+      : ['bottom-left', 'bottom-right'];
+  }
+  return [anchor];
+};
+
+/** Replaces one half of a corner anchor, leaving the other axis alone. */
+const withInlineHalf = (a: FloatAnchor, half: 'left' | 'right'): FloatAnchor =>
+  `${a.startsWith('top-') ? 'top' : 'bottom'}-${half}` as FloatAnchor;
+const withBlockHalf = (a: FloatAnchor, half: 'top' | 'bottom'): FloatAnchor =>
+  `${half}-${a.endsWith('-right') ? 'right' : 'left'}` as FloatAnchor;
+
 const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -42,6 +109,8 @@ export interface ManagedWindowConfig {
   width?: number;
   /** Initial height in pixels. */
   height?: number;
+  /** Which axes span the panel instead of carrying a fixed size. @see Stretch */
+  stretch?: Stretch;
 }
 
 // ─── Internal contexts ────────────────────────────────────────────────────────
@@ -68,15 +137,24 @@ interface PanelOverlayCtx {
   containerRef: React.RefObject<HTMLDivElement>;
   stacks: Record<FloatAnchor, string[]>;
   dockedSizes: Record<string, number>;
-  dockWindow(id: string, anchor: FloatAnchor): void;
+  dockWindow(id: string, anchor: FloatAnchor, stretch?: Stretch | null): void;
   undockWindow(id: string): void;
   reportDockedSize(id: string, size: number): void;
   draggingId: string | null;
   setDraggingId(id: string | null): void;
   hoveredZone: FloatAnchor | null;
   setHoveredZone(zone: FloatAnchor | null): void;
+  /** Block-axis space claimed by `PanelToolbar`s on the top/bottom edges. */
   insetTop: number;
   insetBottom: number;
+  /**
+   * Inline-axis space claimed by `PanelToolbar`s on the `left`/`right` edges. Logical, matching
+   * how `PanelToolbar` positions itself (`insetInlineStart`/`insetInlineEnd`), so `left` means
+   * inline-start regardless of direction. `registerToolbar` has always recorded these; they simply
+   * weren't surfaced, so nothing could keep clear of a side toolbar the way the block axis does.
+   */
+  insetInlineStart: number;
+  insetInlineEnd: number;
 }
 const PanelOverlayContext = createContext<PanelOverlayCtx | null>(null);
 
@@ -147,7 +225,8 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     setTopId(id);
   }, []);
 
-  const dockWindow = useCallback((id: string, anchor: FloatAnchor): void => {
+  const dockWindow = useCallback((id: string, anchor: FloatAnchor, stretch: Stretch | null = null): void => {
+    const buckets = bucketsFor(anchor, stretch);
     setStacks(prev => {
       const next: Record<FloatAnchor, string[]> = {
         'top-left': prev['top-left'].filter(x => x !== id),
@@ -155,8 +234,12 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
         'bottom-left': prev['bottom-left'].filter(x => x !== id),
         'bottom-right': prev['bottom-right'].filter(x => x !== id),
       };
-      next[anchor] = [...next[anchor], id];
-      return next;
+      for (const bucket of buckets) next[bucket] = [...next[bucket], id];
+      // Re-registering identical membership would allocate fresh arrays on every placement effect
+      // and churn every consumer of `stacks`, so bail out when nothing actually moved.
+      const unchanged = ANCHORS.every(a =>
+        next[a].length === prev[a].length && next[a].every((x, i) => x === prev[a][i]));
+      return unchanged ? prev : next;
     });
   }, []);
 
@@ -227,6 +310,8 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     setHoveredZone,
     insetTop: toolbarSizes.top ?? 0,
     insetBottom: toolbarSizes.bottom ?? 0,
+    insetInlineStart: toolbarSizes.left ?? 0,
+    insetInlineEnd: toolbarSizes.right ?? 0,
   }), [topId, zOrders, focusWindow, stacks, dockedSizes, dockWindow, undockWindow,
       reportDockedSize, draggingId, hoveredZone, toolbarSizes]);
 
@@ -252,6 +337,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
                 defaultAnchor={cfg.anchor ?? 'top-right'}
                 defaultWidth={cfg.width ?? 320}
                 defaultHeight={cfg.height ?? 240}
+                defaultStretch={cfg.stretch}
               >
                 {cfg.content}
               </PanelFloatingWindow>
@@ -679,10 +765,39 @@ export interface PanelFloatingWindowProps {
   onClose(): void;
   /** Corner of the panel to dock to on first render. @see FloatAnchor */
   defaultAnchor: FloatAnchor;
-  /** Initial width in pixels. */
+  /** Initial width in pixels. Ignored on an axis that starts stretched, and restored to when that
+   *  axis is later released. */
   defaultWidth: number;
-  /** Initial height in pixels. */
+  /** Initial height in pixels. Ignored on an axis that starts stretched, and restored to when that
+   *  axis is later released. */
   defaultHeight: number;
+  /**
+   * Which axes span the panel on first render. Uncontrolled: gestures update it from here.
+   * @see Stretch
+   */
+  defaultStretch?: Stretch;
+  /**
+   * Controlled stretch state. When provided — **including as `null`** — the caller is the single
+   * source of truth: gestures report through {@link PanelFloatingWindowProps.onPlacementChange}
+   * instead of updating internally, and the caller must echo the new value back. Omit entirely
+   * (`undefined`) for uncontrolled behaviour, matching `ToolbarToggleItem.active` and
+   * `Sidebar.activeTabId`.
+   */
+  stretch?: Stretch | null;
+  /**
+   * Called whenever a gesture changes where the widget sits — a stretched axis released, a
+   * re-dock, or a detach. Reports anchor and stretch **together**, because one gesture can change
+   * both at once and reporting them separately would surface a state that is never valid.
+   *
+   * This is also the only way to persist placement: the library serialises nothing about inner
+   * widgets, so store what you receive here and feed it back via `defaultAnchor`/`stretch`.
+   */
+  onPlacementChange?: (placement: PanelFloatPlacement) => void;
+  /**
+   * Whether this widget may span the panel at all. `false` disables resize-to-stretch snapping,
+   * for content that only makes sense at a bounded size. Default `true`.
+   */
+  stretchable?: boolean;
   children?: React.ReactNode;
 }
 
@@ -718,11 +833,27 @@ const MIN_W = 120;
 const MIN_H = 60;
 const DOCK_INSET = 8;
 const DOCK_GAP = 8;
+/**
+ * Resize-to-stretch snapping. Asymmetric on purpose: arming within `SNAP_IN` of the full extent
+ * but only disarming once the drag pulls back past the wider `SNAP_OUT`. Without that hysteresis,
+ * releasing a stretched axis by dragging a few pixels inward would immediately re-arm and snap
+ * straight back on release, which makes the gesture feel broken.
+ */
+const SNAP_IN = 16;
+const SNAP_OUT = 40;
 
-function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
+function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
   const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
   const [mode, setMode] = useState<WindowMode>('docked');
   const [currentAnchor, setCurrentAnchor] = useState<FloatAnchor>(defaultAnchor);
+  // `size` is deliberately left untouched while an axis is stretched — the render branch below
+  // simply stops reading it, exactly as a maximized workspace window keeps its x/y/w/h. Releasing
+  // the axis therefore restores the previous size with no snapshot and no bookkeeping.
+  const [internalStretch, setInternalStretch] = useState<Stretch | null>(defaultStretch ?? null);
+  // Controlled when the prop is present at all — `null` is a meaningful value ("not stretched"),
+  // so only `undefined` means "manage it yourself".
+  const isStretchControlled = stretchProp !== undefined;
+  const stretch = isStretchControlled ? (stretchProp ?? null) : internalStretch;
   const [freePos, setFreePos] = useState<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ w: defaultWidth, h: defaultHeight });
   const windowRef = useRef<HTMLDivElement>(null);
@@ -734,16 +865,70 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   freePosRef.current = freePos;
   const sizeRef = useRef(size);
   sizeRef.current = size;
+  const stretchRef = useRef(stretch);
+  stretchRef.current = stretch;
+  const currentAnchorRef = useRef(currentAnchor);
+  currentAnchorRef.current = currentAnchor;
+  const onPlacementChangeRef = useRef(onPlacementChange);
+  onPlacementChangeRef.current = onPlacementChange;
+  /** Which axes would snap to stretched if the drag were released now — drives the visual cue. */
+  const [snapArmed, setSnapArmed] = useState<{ inline: boolean; block: boolean }>({ inline: false, block: false });
+  const snapArmedRef = useRef(snapArmed);
+  snapArmedRef.current = snapArmed;
+  /** The block extent available to this widget depends on what it is stacked behind. */
+  const stackOffsetRef = useRef(0);
+
+  /**
+   * The single write path for placement. Anchor is always internal; stretch is internal only when
+   * uncontrolled. Either way the pair is reported once, so a listener never observes a half-applied
+   * transition.
+   */
+  const applyPlacement = useCallback((anchor: FloatAnchor, next: Stretch | null): void => {
+    setCurrentAnchor(anchor);
+    if (!isStretchControlled) setInternalStretch(next);
+    onPlacementChangeRef.current?.({ anchor, stretch: next });
+  }, [isStretchControlled]);
 
   const dragState = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number; hasDragged: boolean } | null>(null);
 
-  // Register in stack on mount; unregister on unmount (close).
-  // Close resets to defaultAnchor on next open (fresh mount = fresh state).
+  // Bucket membership depends on the whole placement (see bucketsFor), so this re-runs whenever
+  // the anchor or a stretched axis changes — not only on mount. Free-floating widgets are in no
+  // stack at all.
   useLayoutEffect(() => {
-    ctx?.dockWindow(id, defaultAnchor);
-    return () => { ctx?.undockWindow(id); };
+    if (mode !== 'docked') return;
+    ctx?.dockWindow(id, currentAnchor, stretch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mode, currentAnchor, stretch]);
+
+  // Leave the stack on unmount (close). Closing resets to the defaults on the next open, since a
+  // fresh mount means fresh state.
+  useLayoutEffect(() => () => { ctx?.undockWindow(id); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []);
+
+  // Dev-only: a block-stretched widget spans the whole block axis, so it cannot stack with
+  // anything — it will simply overlap siblings on its own inline side, with z-order deciding.
+  // Warns once per widget, matching the warning conventions in Sidebar/WindowManager.
+  const blockStretchWarnedRef = useRef(false);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    if (blockStretchWarnedRef.current) return;
+    if (mode !== 'docked' || !stretchesBlock(stretch) || !ctx) return;
+    const half = currentAnchor.endsWith('-right') ? 'right' : 'left';
+    const neighbours = ([`top-${half}`, `bottom-${half}`] as FloatAnchor[])
+      .flatMap(bucket => ctx.stacks[bucket] ?? [])
+      .filter(other => other !== id);
+    if (neighbours.length === 0) return;
+    blockStretchWarnedRef.current = true;
+    console.warn(
+      `[react-dockable-desktop] PanelFloatingWindow "${id}" stretches the block axis ` +
+      `(stretch: "${stretch}") while ${neighbours.length} other widget(s) are anchored to the ` +
+      `same side (${neighbours.join(', ')}). A block-stretched widget spans the axis that stacking ` +
+      `uses to separate siblings, so it cannot stack and will overlap them — z-order decides which ` +
+      `is on top. Either give it a fixed height, or move the other widgets to the opposite side.`
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, stretch, currentAnchor, ctx?.stacks, id]);
 
   // Report height whenever size changes so stack peers can compute their offset.
   useEffect(() => {
@@ -760,6 +945,30 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     return { cw: container?.clientWidth ?? 9999, ch: container?.clientHeight ?? 9999 };
   };
 
+  /**
+   * The band a docked widget is allowed to occupy, in physical pixels from the container's edges.
+   *
+   * The block axis keeps clear of top/bottom `PanelToolbar`s only; the inline axis also adds the
+   * `DOCK_INSET` gutter, matching how a docked widget is already positioned (one inline inset of
+   * `DOCK_INSET`, one block inset of the toolbar size). Growth previously stopped at the raw
+   * container edge, so a docked widget could be resized straight over the toolbar on the far side —
+   * which the library elsewhere treats as a bug (a 5.x fix stopped docked floats *positioning*
+   * themselves over a toolbar; the resize path never got the same treatment).
+   *
+   * Inline is converted from logical to physical here because handle directions and measured rects
+   * are physical, while `PanelToolbar` claims its space logically.
+   */
+  const dockedBand = (): { left: number; right: number; top: number; bottom: number } => {
+    const logicalStart = ctx?.insetInlineStart ?? 0;
+    const logicalEnd = ctx?.insetInlineEnd ?? 0;
+    return {
+      left: (isRtl ? logicalEnd : logicalStart) + DOCK_INSET,
+      right: (isRtl ? logicalStart : logicalEnd) + DOCK_INSET,
+      top: ctx?.insetTop ?? 0,
+      bottom: ctx?.insetBottom ?? 0,
+    };
+  };
+
   const handleWindowPointerDown = (): void => {
     ctx?.focusWindow(id);
   };
@@ -772,7 +981,11 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     let startY: number;
 
     if (modeRef.current === 'docked') {
-      // Snapshot rendered position before undocking so there's no visual jump
+      // Snapshot the rendered position so that *if* this becomes a real drag, switching to free
+      // positioning causes no visual jump. Undocking itself is deferred to the drag threshold
+      // below — doing it here meant a plain click on the header silently tore the widget off its
+      // anchor: it looked unchanged, but its stacked siblings reflowed to close the gap and it
+      // stopped tracking the corner on every later panel resize.
       const el = windowRef.current;
       const container = ctx?.containerRef?.current;
       if (el && container) {
@@ -784,9 +997,6 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         startX = DOCK_INSET;
         startY = ctx?.insetTop ?? 0;
       }
-      ctx?.undockWindow(id);
-      setMode('free');
-      setFreePos({ x: startX, y: startY });
     } else {
       startX = freePosRef.current?.x ?? 0;
       startY = freePosRef.current?.y ?? 0;
@@ -794,7 +1004,6 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
 
     dragState.current = { mouseX: e.clientX, mouseY: e.clientY, posX: startX, posY: startY, hasDragged: false };
     windowRef.current?.setPointerCapture(e.pointerId);
-    document.body.classList.add('rdd-dragging-active');
   };
 
   const handleResizePointerDown = (dir: ResizeDir) => (e: React.PointerEvent<HTMLDivElement>): void => {
@@ -816,7 +1025,45 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         startY = er.top - cr.top;
       }
     }
-    const startRect = { x: startX, y: startY, w: sizeRef.current.w, h: sizeRef.current.h };
+    // For a stretched axis the stored size is stale by design (the render branch stops reading it),
+    // so the drag has to start from the *measured* extent or the widget would jump.
+    const measured = windowRef.current?.getBoundingClientRect();
+    const startRect = {
+      x: startX,
+      y: startY,
+      w: stretchesInline(stretchRef.current) && measured ? measured.width : sizeRef.current.w,
+      h: stretchesBlock(stretchRef.current) && measured ? measured.height : sizeRef.current.h,
+    };
+
+    // Dragging an end of a stretched axis releases that axis: the edge under the pointer becomes
+    // the moving one and the opposite end becomes the new pin, so it reads exactly like an ordinary
+    // resize. Done once per drag; `released` guards against repeat moves before the re-render.
+    const dragsInline = dir.includes('e') || dir.includes('w');
+    const dragsBlock = dir.includes('n') || dir.includes('s');
+    let released = false;
+    let armed = { inline: false, block: false };
+    const releaseIfNeeded = (): void => {
+      if (released || modeRef.current !== 'docked') return;
+      const st = stretchRef.current;
+      const releasingInline = dragsInline && stretchesInline(st);
+      const releasingBlock = dragsBlock && stretchesBlock(st);
+      if (!releasingInline && !releasingBlock) return;
+      released = true;
+
+      let next = st;
+      let nextAnchor = currentAnchorRef.current;
+      if (releasingInline) {
+        next = releaseAxis(next, 'inline');
+        // Pin the end opposite the dragged edge. Handle dirs are physical, anchors are logical.
+        const pinsPhysicalLeft = dir.includes('e');
+        nextAnchor = withInlineHalf(nextAnchor, (pinsPhysicalLeft !== isRtl) ? 'left' : 'right');
+      }
+      if (releasingBlock) {
+        next = releaseAxis(next, 'block');
+        nextAnchor = withBlockHalf(nextAnchor, dir.includes('s') ? 'top' : 'bottom');
+      }
+      applyPlacement(nextAnchor, next);
+    };
 
     startPointerDrag({
       element: e.currentTarget,
@@ -829,15 +1076,70 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         // Re-measured every move, matching the original's live re-measurement —
         // the container can in principle change size during a drag.
         const { cw, ch } = getContainerBounds();
+        // Docked widgets stop at the toolbar band; free-floating ones stay unconstrained beyond the
+        // container itself, since "free" means free.
+        const band = modeRef.current === 'docked'
+          ? dockedBand()
+          : { left: 0, right: 0, top: 0, bottom: 0 };
         const { x: newX, y: newY, w: newW, h: newH } = computeResizedRect(dir, dx, dy, start, {
           minW: MIN_W, minH: MIN_H,
-          maxW: cw - start.x, maxH: ch - start.y,
-          minX: 0, minY: 0,
+          maxW: (cw - band.right) - start.x, maxH: (ch - band.bottom) - start.y,
+          minX: band.left, minY: band.top,
         });
-        setSize({ w: newW, h: newH });
+        releaseIfNeeded();
+
+        // ── resize-to-stretch snapping ──
+        // The clamps above already stop growth exactly where a stretched axis would sit, so an
+        // armed drag is already visually at its target; the cue is an outline rather than a ghost.
+        if (modeRef.current === 'docked' && stretchable) {
+          const fullInline = cw - band.left - band.right;
+          const fullBlock = ch - band.top - band.bottom - stackOffsetRef.current;
+          const st = stretchRef.current;
+          const nextArmed = { ...armed };
+          if (dragsInline && !stretchesInline(st)) {
+            if (newW >= fullInline - SNAP_IN) nextArmed.inline = true;
+            else if (armed.inline && newW < fullInline - SNAP_OUT) nextArmed.inline = false;
+          }
+          if (dragsBlock && !stretchesBlock(st)) {
+            if (newH >= fullBlock - SNAP_IN) nextArmed.block = true;
+            else if (armed.block && newH < fullBlock - SNAP_OUT) nextArmed.block = false;
+          }
+          if (nextArmed.inline !== armed.inline || nextArmed.block !== armed.block) {
+            armed = nextArmed;
+            setSnapArmed(nextArmed);
+          }
+        }
+        // Only write an axis that carries a size. A still-stretched axis must keep its stored
+        // value, so releasing it later restores the size it had before stretching.
+        const st = released ? releaseAxis(releaseAxis(stretchRef.current,
+          dragsInline ? 'inline' : 'block'), dragsBlock ? 'block' : 'inline') : stretchRef.current;
+        setSize(prev => ({
+          w: stretchesInline(st) ? prev.w : newW,
+          h: stretchesBlock(st) ? prev.h : newH,
+        }));
         if (modeRef.current === 'free') {
           setFreePos({ x: newX, y: newY });
         }
+      },
+      onEnd: (start) => {
+        if (!armed.inline && !armed.block) {
+          if (snapArmedRef.current.inline || snapArmedRef.current.block) {
+            setSnapArmed({ inline: false, block: false });
+          }
+          return;
+        }
+        // Restore the size the axis had *before* this drag: while an axis is stretched its stored
+        // size is what releasing it later returns to, so it should be the size the user last chose
+        // deliberately — not the full-bleed value the drag happened to pass through.
+        setSize(prev => ({
+          w: armed.inline ? start.w : prev.w,
+          h: armed.block ? start.h : prev.h,
+        }));
+        let next = stretchRef.current;
+        if (armed.inline) next = addAxis(next, 'inline');
+        if (armed.block) next = addAxis(next, 'block');
+        applyPlacement(currentAnchorRef.current, next);
+        setSnapArmed({ inline: false, block: false });
       },
     });
   };
@@ -849,6 +1151,21 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         const dist = Math.abs(e.clientX - ds.mouseX) + Math.abs(e.clientY - ds.mouseY);
         if (dist < 4) return;
         ds.hasDragged = true;
+        // This, not pointerdown, is the moment the widget leaves its anchor.
+        if (modeRef.current === 'docked') {
+          // A stretched axis carries no size, so free mode — which positions from an explicit box —
+          // would otherwise snap back to whatever the size was before stretching. Materialise what
+          // is actually on screen, then clear stretch: "free" and "spanning the panel" are
+          // mutually exclusive.
+          if (stretchRef.current) {
+            const r = windowRef.current?.getBoundingClientRect();
+            if (r) setSize({ w: Math.round(r.width), h: Math.round(r.height) });
+            applyPlacement(currentAnchorRef.current, null);
+          }
+          ctx?.undockWindow(id);
+          setMode('free');
+        }
+        document.body.classList.add('rdd-dragging-active');
         ctx?.setDraggingId(id);
       }
       const { cw, ch } = getContainerBounds();
@@ -865,13 +1182,13 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   };
 
   const handleWindowPointerUp = (): void => {
-    if (dragState.current) {
+    if (dragState.current?.hasDragged) {
       const zone = ctx?.hoveredZone;
       if (zone) {
-        ctx?.dockWindow(id, zone);
-        setCurrentAnchor(zone);
+        ctx?.dockWindow(id, zone, stretchRef.current);
         setMode('docked');
         setFreePos(null);
+        applyPlacement(zone, stretchRef.current);
       }
       ctx?.setHoveredZone(null);
       ctx?.setDraggingId(null);
@@ -881,7 +1198,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   };
 
   const handleWindowPointerCancel = (): void => {
-    if (dragState.current) {
+    if (dragState.current?.hasDragged) {
       ctx?.setHoveredZone(null);
       ctx?.setDraggingId(null);
     }
@@ -893,29 +1210,57 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   let windowStyle: React.CSSProperties;
 
   if (mode === 'docked' && ctx) {
-    const stack = ctx.stacks[currentAnchor] ?? [];
-    const idx = stack.indexOf(id);
+    // Offset is the largest offset across every bucket this widget occupies, so a strip spanning
+    // an edge clears whatever is stacked in *both* of that edge's corners.
+    const buckets = bucketsFor(currentAnchor, stretch);
     let stackOffset = 0;
-    for (let i = 0; i < idx; i++) {
-      stackOffset += (ctx.dockedSizes[stack[i]] ?? defaultHeight) + DOCK_GAP;
+    // A widget with no buckets (block-stretched) is never "in" a stack, so it must not be held
+    // invisible by the not-yet-registered guard below.
+    let registered = buckets.length === 0;
+    for (const bucket of buckets) {
+      const stack = ctx.stacks[bucket] ?? [];
+      const idx = stack.indexOf(id);
+      if (idx === -1) continue;
+      registered = true;
+      let offset = 0;
+      for (let i = 0; i < idx; i++) {
+        offset += (ctx.dockedSizes[stack[i]] ?? defaultHeight) + DOCK_GAP;
+      }
+      stackOffset = Math.max(stackOffset, offset);
     }
+    stackOffsetRef.current = stackOffset;
+
+    const band = dockedBand();
 
     windowStyle = {
-      width: size.w,
-      height: size.h,
       zIndex: zOrder,
       transition: 'top 0.2s ease, bottom 0.2s ease',
       // Hide until registered in stack (first layout effect hasn't run yet)
-      opacity: idx === -1 ? 0 : undefined,
-      pointerEvents: idx === -1 ? 'none' : undefined,
+      opacity: registered ? undefined : 0,
+      pointerEvents: registered ? undefined : 'none',
     };
 
-    windowStyle[currentAnchor.endsWith('-right') ? 'insetInlineEnd' : 'insetInlineStart'] = DOCK_INSET;
-
-    if (currentAnchor.startsWith('top-')) {
-      windowStyle.top = ctx.insetTop + stackOffset;
+    // Inline axis: one inset plus an explicit width, or both insets and no width at all. Setting
+    // both ends is the whole mechanism — CSS then keeps the widget spanning the panel for free.
+    if (stretchesInline(stretch)) {
+      windowStyle.insetInlineStart = (ctx.insetInlineStart ?? 0) + DOCK_INSET;
+      windowStyle.insetInlineEnd = (ctx.insetInlineEnd ?? 0) + DOCK_INSET;
     } else {
-      windowStyle.bottom = ctx.insetBottom + stackOffset;
+      windowStyle[currentAnchor.endsWith('-right') ? 'insetInlineEnd' : 'insetInlineStart'] = DOCK_INSET;
+      windowStyle.width = size.w;
+    }
+
+    // Block axis: same idea. Note the block insets carry no DOCK_INSET gutter, matching how a
+    // docked widget has always been positioned against a top/bottom toolbar (flush, not inset).
+    if (stretchesBlock(stretch)) {
+      windowStyle.top = band.top;
+      windowStyle.bottom = band.bottom;
+    } else if (currentAnchor.startsWith('top-')) {
+      windowStyle.top = band.top + stackOffset;
+      windowStyle.height = size.h;
+    } else {
+      windowStyle.bottom = band.bottom + stackOffset;
+      windowStyle.height = size.h;
     }
   } else {
     windowStyle = {
@@ -946,14 +1291,29 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   // edge for westward/northward growth — so no change to the resize math is needed.
   const handleDirs: ResizeDir[] = React.useMemo(() => {
     if (mode === 'free') return ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+
     // Block axis is direction-agnostic; the inline axis is not. The pin is a logical property
     // (`insetInlineEnd`) but the handle classes are physical (`.rdd-resize-e { right: -4px }`), so
     // which *physical* side is pinned depends on the window's own `dir`.
-    const freeBlock = currentAnchor.startsWith('top-') ? 's' : 'n';
+    const freeBlock: ResizeDir = currentAnchor.startsWith('top-') ? 's' : 'n';
     const pinsPhysicalRight = currentAnchor.endsWith('-right') !== isRtl;
-    const freeInline = pinsPhysicalRight ? 'w' : 'e';
-    return [freeBlock, freeInline, `${freeBlock}${freeInline}`] as ResizeDir[];
-  }, [mode, currentAnchor, isRtl]);
+    const freeInline: ResizeDir = pinsPhysicalRight ? 'w' : 'e';
+
+    const inlineStretched = stretchesInline(stretch);
+    const blockStretched = stretchesBlock(stretch);
+
+    // A stretched axis has both ends pinned, but both are *releasable*: dragging either end moves
+    // that edge and pins the opposite one, so the widget leaves stretch at the width the drag
+    // produced. Hence handles on both ends — which is also what keeps the fully-stretched state
+    // from being a dead end with nothing to grab.
+    const dirs: ResizeDir[] = [];
+    dirs.push(...(inlineStretched ? (['e', 'w'] as ResizeDir[]) : [freeInline]));
+    dirs.push(...(blockStretched ? (['n', 's'] as ResizeDir[]) : [freeBlock]));
+    // The corner belongs only to the all-pinned state; in a stretched state it would mix a resize
+    // and a release into one gesture.
+    if (!inlineStretched && !blockStretched) dirs.push(`${freeBlock}${freeInline}` as ResizeDir);
+    return dirs;
+  }, [mode, currentAnchor, isRtl, stretch]);
 
   const CloseIcon = (
     <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -966,7 +1326,11 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     <div
       ref={windowRef}
       dir={isRtl ? 'rtl' : 'ltr'}
-      className={`rdd-panel-float${isActive ? ' rdd-panel-float--active' : ''}`}
+      className={[
+        'rdd-panel-float',
+        isActive ? 'rdd-panel-float--active' : '',
+        snapArmed.inline || snapArmed.block ? 'rdd-panel-float--snapping' : '',
+      ].filter(Boolean).join(' ')}
       style={windowStyle}
       onPointerDown={handleWindowPointerDown}
       onPointerMove={handleWindowPointerMove}
