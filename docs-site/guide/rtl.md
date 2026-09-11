@@ -51,7 +51,7 @@ When `dir="rtl"` is active, the library reverses the following without any extra
 - **Tab bars** — tabs flow right to left; the active-tab accent indicator moves to the correct edge
 - **Split handles** — left/right drag semantics invert
 - **Floating window title bar** — close/minimize/maximize buttons move to the left; the panel icon moves to the right of the title text
-- **In-panel floating windows** (`PanelFloatingWindow`) — same title-bar mirroring as above
+- **In-panel floating windows** (`PanelFloatingWindow`) — same title-bar mirroring as above; corner anchors are logical, so `'top-left'` is always the start corner. Spanning an axis (`defaultStretch`) is defined per axis rather than per side, so it means the same thing in both directions, and the handles that release a spanning axis map to the correct physical edges automatically
 - **Sidebars** — separator border, active-tab accent border, and drawer shadow all flip to the correct edge; a primary `Sidebar` paired with a `SecondarySidebar` both flip correctly, swapping which visual edge each renders on
 - **Context menus** — sub-menu arrows and item text align to the right; sub-menus open to the left
 - **Toolbar flyouts** — flyout panels open on the correct side of the toolbar strip; item text right-aligns

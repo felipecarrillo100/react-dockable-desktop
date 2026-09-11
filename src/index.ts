@@ -188,6 +188,8 @@ export type {
   ManagedWindowConfig,
   PanelFloatingWindowManagerHandle,
   UsePanelFloatingWindowReturn,
+  Stretch,
+  PanelFloatPlacement,
 } from './components/PanelOverlay';
 
 // ─── Panel Contributions — optional; active-panel-driven Toolbar/Sidebar content ───
