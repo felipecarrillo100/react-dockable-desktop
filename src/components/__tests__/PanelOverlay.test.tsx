@@ -16,6 +16,10 @@
  * PO12: Resize handle drag toggles document.body.rdd-resizing-active (WebKit selection regression)
  * PO13: Header drag toggles document.body.rdd-dragging-active (WebKit selection regression)
  * PO14: PanelToolbar re-measures via ResizeObserver, not just once on mount (stale-inset regression)
+ * PO15: A docked window offers resize handles only on its free edges, per anchor
+ * PO16: ...and the inline half of that mirrors under RTL (logical pin vs physical handle classes)
+ * PO17: A free-floating window still offers all eight handles
+ * PO18: A bottom-anchored window grows upward from its `n` handle (the reported regression)
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React, { useState } from 'react';
@@ -414,8 +418,8 @@ describe('PO12: Resize handle drag suppresses selection', () => {
     const win = container.querySelector('.rdd-panel-float') as HTMLElement;
     const header = win.querySelector('.rdd-panel-float__header') as HTMLElement;
 
-    // Undock to 'free' mode first — resize handles only render once the window
-    // has left its corner-anchored 'docked' mode (see handleHeaderPointerDown).
+    // Undock to 'free' mode first. A docked window only renders handles for its free edges (see
+    // PO15), and this one is top-right anchored, so 'se' exists only once it is free-floating.
     act(() => {
       header.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
     });
@@ -544,6 +548,165 @@ describe('PO14: PanelToolbar re-measures via ResizeObserver (regression: stale l
     } finally {
       // @ts-expect-error - restoring the shared jsdom stub
       global.ResizeObserver = OriginalResizeObserver;
+    }
+  });
+});
+
+// ─── PO15-PO18: anchor-aware resize handles ───────────────────────────────────
+// A docked window has one pinned edge per axis, so a handle on a pinned side moves the *opposite*
+// edge and is bounded by that side's own inset — an inert stub wearing a resize cursor. The set
+// used to be hardcoded to the five non-northern directions regardless of anchor, which left every
+// bottom-anchored window with no working vertical resize: 'n' wasn't rendered and 's' was the stub.
+
+const ALL_DIRS = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'] as const;
+
+/** Which handles the window is currently offering, as a sorted list. */
+const handlesOn = (host: HTMLElement): string[] =>
+  ALL_DIRS.filter(d => host.querySelector(`.rdd-resize-${d}`) !== null).sort();
+
+const mountAnchored = (anchor: string, dir: 'ltr' | 'rtl' = 'ltr') => {
+  act(() => {
+    root = createRoot(container);
+    root.render(
+      <WindowManagerProvider dir={dir}>
+        <PanelOverlayRoot>
+          <PanelFloatingWindow
+            id="po-handles"
+            title="Handles"
+            open
+            defaultAnchor={anchor as any}
+            defaultWidth={300}
+            defaultHeight={200}
+            onClose={() => {}}
+          >
+            <span />
+          </PanelFloatingWindow>
+        </PanelOverlayRoot>
+      </WindowManagerProvider>
+    );
+  });
+};
+
+describe('PO15: docked resize handles follow the anchor', () => {
+  it.each([
+    ['top-left',     ['e', 's', 'se']],
+    ['top-right',    ['s', 'sw', 'w']],
+    ['bottom-left',  ['e', 'n', 'ne']],
+    ['bottom-right', ['n', 'nw', 'w']],
+  ])('%s offers exactly its free edges plus their corner', (anchor, expected) => {
+    mountAnchored(anchor as string);
+    expect(handlesOn(container)).toEqual([...(expected as string[])].sort());
+  });
+
+  it('never offers a handle on a pinned edge (bottom-right pins bottom and right)', () => {
+    mountAnchored('bottom-right');
+    // The two that used to be rendered and could not work.
+    expect(container.querySelector('.rdd-resize-s')).toBeNull();
+    expect(container.querySelector('.rdd-resize-e')).toBeNull();
+    expect(container.querySelector('.rdd-resize-se')).toBeNull();
+  });
+});
+
+describe('PO16: the inline half mirrors under RTL', () => {
+  // The pin is logical (insetInlineEnd) but the handle classes are physical
+  // (.rdd-resize-e { right: -4px }), so the physical free side flips with direction.
+  it('top-right under RTL pins the physical left, so the free inline handle is `e`', () => {
+    mountAnchored('top-right', 'rtl');
+    expect(handlesOn(container)).toEqual(['e', 's', 'se'].sort());
+  });
+
+  it('bottom-left under RTL pins the physical right, so the free inline handle is `w`', () => {
+    mountAnchored('bottom-left', 'rtl');
+    expect(handlesOn(container)).toEqual(['n', 'nw', 'w'].sort());
+  });
+
+  it('the block axis is unaffected by direction', () => {
+    mountAnchored('bottom-right', 'rtl');
+    expect(container.querySelector('.rdd-resize-n')).not.toBeNull();
+    expect(container.querySelector('.rdd-resize-s')).toBeNull();
+  });
+});
+
+describe('PO17: a free-floating window keeps all eight handles', () => {
+  it('offers every direction once undocked', () => {
+    mountAnchored('bottom-right');
+    const header = container.querySelector('.rdd-panel-float__header') as HTMLElement;
+    act(() => {
+      header.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
+    });
+    act(() => {
+      header.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: 50, clientY: 50, button: 0 }));
+    });
+    expect(handlesOn(container)).toEqual([...ALL_DIRS].sort());
+  });
+});
+
+describe('PO18: a bottom-anchored window resizes from the top', () => {
+  // jsdom does no layout: offsetParent is always null and every rect is zero, which would make
+  // getContainerBounds fall back to 9999 and clamp the drag to nothing. Stub just enough geometry
+  // for an 800x600 overlay holding a 300x200 window pinned to the bottom-right (so its top edge
+  // sits at y=400). Same spirit as V3Diagnostics.test.tsx's getComputedStyle proxy.
+  const rect = (left: number, top: number, width: number, height: number) => ({
+    left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {},
+  }) as DOMRect;
+
+  it('dragging the `n` handle upward makes it taller, leaving the pinned bottom edge alone', () => {
+    const originalGBCR = HTMLElement.prototype.getBoundingClientRect;
+    const originalOffsetParent = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
+    const originalClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
+    const originalClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+
+    const isRoot = (el: HTMLElement) => el.classList?.contains('rdd-panel-overlay-root');
+    const isFloat = (el: HTMLElement) => el.classList?.contains('rdd-panel-float');
+
+    try {
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        if (isRoot(this)) return rect(0, 0, 800, 600);
+        if (isFloat(this)) return rect(492, 400, 300, 200);
+        return originalGBCR.call(this);
+      };
+      Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+        configurable: true,
+        get() { return isFloat(this) ? this.closest('.rdd-panel-overlay-root') : null; },
+      });
+      Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+        configurable: true,
+        get() { return isRoot(this) ? 600 : 0; },
+      });
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        get() { return isRoot(this) ? 800 : 0; },
+      });
+
+      mountAnchored('bottom-right');
+
+      const win = container.querySelector('.rdd-panel-float') as HTMLElement;
+      const pinnedBefore = win.style.bottom;
+      expect(win.style.height).toBe('200px');
+
+      const nHandle = container.querySelector('.rdd-resize-n') as HTMLElement | null;
+      expect(nHandle).not.toBeNull();
+
+      // Grab the top edge (y=400) and drag it up 50px.
+      act(() => {
+        nHandle!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: 640, clientY: 400, button: 0 }));
+      });
+      act(() => {
+        nHandle!.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: 640, clientY: 350 }));
+      });
+
+      expect(win.style.height).toBe('250px');
+      // The anchored edge must not move — growth comes out of the top.
+      expect(win.style.bottom).toBe(pinnedBefore);
+
+      act(() => {
+        nHandle!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: 640, clientY: 350 }));
+      });
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalGBCR;
+      if (originalOffsetParent) Object.defineProperty(HTMLElement.prototype, 'offsetParent', originalOffsetParent);
+      if (originalClientHeight) Object.defineProperty(HTMLElement.prototype, 'clientHeight', originalClientHeight);
+      if (originalClientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', originalClientWidth);
     }
   });
 });

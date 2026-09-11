@@ -927,6 +927,34 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     };
   }
 
+  // ── Which resize handles this window offers ────────────────────────────────
+  // Free-floating: all eight, nothing is pinned.
+  //
+  // Docked: only the edges that can actually move. A docked window has one edge pinned per axis
+  // (see the positioning block above — `top-*` pins `top`, `bottom-*` pins `bottom`, `*-left`
+  // pins `insetInlineStart`, `*-right` pins `insetInlineEnd`), so dragging a handle on a pinned
+  // side moves the *opposite* edge instead of the one under the cursor, and can't move it further
+  // than that side's own inset before `computeResizedRect`'s bounds stop it — an inert stub with a
+  // resize cursor on it. The handle set used to be hardcoded to the five non-northern directions
+  // regardless of anchor, which made that harmless-looking for top anchors but left every
+  // bottom-anchored window with no working vertical resize at all: `n` wasn't rendered, and `s`
+  // was the stub.
+  //
+  // Restricting docked mode to free edges also means the existing resize bounds are already
+  // correct for every direction that remains: `maxW`/`maxH` apply only to eastward/southward
+  // growth (where the top-left origin genuinely is pinned), while `minX`/`minY` bound the moving
+  // edge for westward/northward growth — so no change to the resize math is needed.
+  const handleDirs: ResizeDir[] = React.useMemo(() => {
+    if (mode === 'free') return ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+    // Block axis is direction-agnostic; the inline axis is not. The pin is a logical property
+    // (`insetInlineEnd`) but the handle classes are physical (`.rdd-resize-e { right: -4px }`), so
+    // which *physical* side is pinned depends on the window's own `dir`.
+    const freeBlock = currentAnchor.startsWith('top-') ? 's' : 'n';
+    const pinsPhysicalRight = currentAnchor.endsWith('-right') !== isRtl;
+    const freeInline = pinsPhysicalRight ? 'w' : 'e';
+    return [freeBlock, freeInline, `${freeBlock}${freeInline}`] as ResizeDir[];
+  }, [mode, currentAnchor, isRtl]);
+
   const CloseIcon = (
     <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
       <line x1="1" y1="1" x2="9" y2="9" />
@@ -960,16 +988,13 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         </button>
       </div>
       <div className="rdd-panel-float__body">{children}</div>
-      {mode === 'free' && <>
-        <div className="rdd-resize-handle rdd-resize-n"  onPointerDown={handleResizePointerDown('n')}  />
-        <div className="rdd-resize-handle rdd-resize-ne" onPointerDown={handleResizePointerDown('ne')} />
-        <div className="rdd-resize-handle rdd-resize-nw" onPointerDown={handleResizePointerDown('nw')} />
-      </>}
-      <div className="rdd-resize-handle rdd-resize-e"  onPointerDown={handleResizePointerDown('e')}  />
-      <div className="rdd-resize-handle rdd-resize-se" onPointerDown={handleResizePointerDown('se')} />
-      <div className="rdd-resize-handle rdd-resize-s"  onPointerDown={handleResizePointerDown('s')}  />
-      <div className="rdd-resize-handle rdd-resize-sw" onPointerDown={handleResizePointerDown('sw')} />
-      <div className="rdd-resize-handle rdd-resize-w"  onPointerDown={handleResizePointerDown('w')}  />
+      {handleDirs.map(dir => (
+        <div
+          key={dir}
+          className={`rdd-resize-handle rdd-resize-${dir}`}
+          onPointerDown={handleResizePointerDown(dir)}
+        />
+      ))}
     </div>
   );
 }
