@@ -3928,6 +3928,15 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 /* ── Docking drop zones (visible while dragging a floating window) ── */
+/* Armed for resize-to-stretch: the clamps already hold the widget exactly where a stretched axis
+   would sit, so releasing now locks it there. The outline is the cue that it *will* lock — without
+   it the gesture is invisible and undiscoverable. Same dashed accent vocabulary as the drop zones
+   below. */
+.rdd-panel-float--snapping {
+  outline: 2px dashed var(--rdd-accent-color, #38bdf8);
+  outline-offset: -2px;
+}
+
 .rdd-panel-float-dropzone {
   position: absolute;
   width: 80px;
