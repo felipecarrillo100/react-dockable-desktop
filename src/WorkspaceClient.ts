@@ -55,6 +55,10 @@ export interface WorkspaceClientConfig {
   /**
    * Serialised layout produced by a previous saveLayout() call.
    * Pass null or omit to start with an empty canvas.
+   *
+   * Parsed synchronously before the first render. The restored `activePanelId` is the one the
+   * snapshot recorded, or — for layouts saved before that was persisted — the selected tab of
+   * the first leaf in the grid.
    */
   initialState?: string | null;
   /** Custom i18n formatter for all internal strings. */

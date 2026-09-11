@@ -4,6 +4,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
 import { WorkspaceClient } from '../../WorkspaceClient';
+import { PanelProvider } from '../PanelProviderContext';
+import { useFormContainer } from '../FormContainerContext';
+import WindowManager from '../WindowManager';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
 const NonDragPanel: React.FC = () => <div />;
@@ -248,5 +251,136 @@ describe('WindowManager State Transitions', () => {
       expect(lastState.gridRoot.children[1].panels).toContain(panelId);
       expect(lastState.panels[panelId].state).toBe('docked');
     });
+  });
+});
+
+// ─── activePanelId invariant on close / minimize ──────────────────────────────
+// Neither closePanel nor minimizePanel used to touch the global activePanelId. Closing the active
+// panel left it pointing at a deleted id; minimizing it left an off-screen panel globally active
+// while still mounted (the persistence port keeps every panel in state.panels mounted), so its
+// contributed controls kept working on a panel the user could no longer see — the same symptom as
+// the layout-restore bug, reachable without ever calling saveLayout.
+
+const lifecycleEvents: string[] = [];
+
+const LifecyclePanel: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const { onActivate, onDeactivate } = useFormContainer();
+  React.useEffect(() => {
+    const offActivate = onActivate?.(() => lifecycleEvents.push(`activate:${panelId}`));
+    const offDeactivate = onDeactivate?.(() => lifecycleEvents.push(`deactivate:${panelId}`));
+    return () => { offActivate?.(); offDeactivate?.(); };
+  }, [onActivate, onDeactivate, panelId]);
+  return <div />;
+};
+
+describe('activePanelId invariant (close / minimize)', () => {
+  let container: HTMLDivElement | null = null;
+  let root: Root | null = null;
+  let localClient: WorkspaceClient;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    lastState = null;
+    lastActions = null;
+    lifecycleEvents.length = 0;
+    localClient = new WorkspaceClient({
+      panels: { map: { component: MockPanel }, lifecycle: { component: LifecyclePanel } },
+    });
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); });
+    if (container) document.body.removeChild(container);
+    const preserved = document.getElementById('preserved-dom-container');
+    if (preserved?.parentNode) preserved.parentNode.removeChild(preserved);
+  });
+
+  /** State-only harness — no WindowManager, for the pure reducer assertions. */
+  const mountState = () => {
+    act(() => {
+      root = createRoot(container!);
+      root.render(
+        <WindowManagerProvider client={localClient}>
+          <StateExtractor />
+        </WindowManagerProvider>
+      );
+    });
+  };
+
+  /** Full harness — WindowManager mounts the persistence port that drives the lifecycle hooks. */
+  const mountFull = () => {
+    act(() => {
+      root = createRoot(container!);
+      root.render(
+        <WindowManagerProvider client={localClient}>
+          <PanelProvider>
+            <StateExtractor />
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+  };
+
+  const openTwo = (component = 'map') => {
+    act(() => { lastActions.openPanel('p1', component); });
+    act(() => { lastActions.openPanel('p2', component); });
+    expect(lastState.activePanelId).toBe('p2');
+  };
+
+  it('closing the active panel activates whatever becomes visible', () => {
+    mountState();
+    openTwo();
+    act(() => { lastActions.closePanel('p2'); });
+    expect(lastState.activePanelId).toBe('p1');
+  });
+
+  it('closing the last panel clears activePanelId instead of leaving a stale id', () => {
+    mountState();
+    act(() => { lastActions.openPanel('p1', 'map'); });
+    act(() => { lastActions.closePanel('p1'); });
+    expect(lastState.activePanelId).toBeNull();
+  });
+
+  it('closing a non-active panel leaves activePanelId alone', () => {
+    mountState();
+    openTwo();
+    act(() => { lastActions.closePanel('p1'); });
+    expect(lastState.activePanelId).toBe('p2');
+  });
+
+  it('minimizing the active panel moves active off the now-invisible panel', () => {
+    mountState();
+    openTwo();
+    act(() => { lastActions.minimizePanel('p2'); });
+    expect(lastState.panels.p2.state).toBe('minimized');
+    expect(lastState.activePanelId).toBe('p1');
+  });
+
+  it('minimizing the only panel clears activePanelId', () => {
+    mountState();
+    act(() => { lastActions.openPanel('p1', 'map'); });
+    act(() => { lastActions.minimizePanel('p1'); });
+    expect(lastState.activePanelId).toBeNull();
+  });
+
+  it('minimizing a non-active panel leaves activePanelId alone', () => {
+    mountState();
+    openTwo();
+    act(() => { lastActions.focusPanel('p1'); });
+    act(() => { lastActions.minimizePanel('p2'); });
+    expect(lastState.activePanelId).toBe('p1');
+  });
+
+  it('minimizing the active panel fires onDeactivate for it and onActivate for its replacement', () => {
+    mountFull();
+    openTwo('lifecycle');
+    lifecycleEvents.length = 0;
+
+    act(() => { lastActions.minimizePanel('p2'); });
+
+    expect(lifecycleEvents).toContain('deactivate:p2');
+    expect(lifecycleEvents).toContain('activate:p1');
   });
 });
