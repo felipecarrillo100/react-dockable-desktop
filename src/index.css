@@ -3776,6 +3776,9 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 .rdd-panel-toolbar-search__dropdown {
+  /* Shifts with --rdd-z-base like every other chrome overlay; above the context menu
+     (+8500/+8501) since it's opened from a toolbar that can sit under one. */
+  z-index: calc(var(--rdd-z-base, 1000) + 8502);
   background: var(--rdd-panel-float-bg, rgba(22, 24, 34, 0.95));
   border: 1px solid var(--rdd-panel-float-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--rdd-panel-float-radius, 8px);

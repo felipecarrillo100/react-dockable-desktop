@@ -1951,7 +1951,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         <div
           className={[
             'rdd-taskbar-footer-container',
-            `taskbar-mode-${taskbarVisibility}`,
+            `rdd-taskbar-mode-${taskbarVisibility}`,
             taskbarVisibility === 'autohide' && taskbarExpanded ? 'rdd-taskbar-expanded' : '',
           ].filter(Boolean).join(' ')}
           style={{ height: '48px', zIndex: 100 }}
