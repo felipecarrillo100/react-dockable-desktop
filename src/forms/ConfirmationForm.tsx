@@ -79,7 +79,7 @@ export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="rdd-confirmation-form-body">
       {alert && (
-        <div className={`rdd-confirmation-alert confirmation-alert-${alertType}`}>
+        <div className={`rdd-confirmation-alert rdd-confirmation-alert-${alertType}`}>
           <span>ℹ️</span>
           <span>{alert}</span>
         </div>

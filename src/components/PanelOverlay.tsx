@@ -634,7 +634,9 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
       {dropdownPos && results.length > 0 && createPortal(
         <div
           className="rdd-panel-toolbar-search__dropdown"
-          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9502 }}
+          // z-index from .rdd-panel-toolbar-search__dropdown (+8502), not inline, so
+          // zIndexBase shifts it too. Resolves to the same 9502 by default.
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
           onMouseDown={e => e.preventDefault()}
         >
           {Object.entries(grouped).map(([group, items]) => (

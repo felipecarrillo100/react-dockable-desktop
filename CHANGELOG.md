@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1] — 2026-09-11
+
+### Fixed
+- **Three of the library's own stylesheet rules matched nothing at runtime, because the class the component actually rendered was left unprefixed when the `rdd-` prefix convention was applied to `index.css`.** In each case the CSS was correct and present in the shipped `styles.css`; the JSX simply emitted a name no selector could match, so the rules were dead on arrival with no error anywhere. All three now emit the prefixed name the stylesheet expects. Covered by a new `StyleHookups.test.tsx`, which asserts on the rendered class names rather than computed styles — `index.css` is never loaded under jsdom, so a computed-style assertion would have passed regardless of which class was emitted, which is exactly how this went unnoticed:
+  - **`taskbarVisibility="autohide"` had no effect at all** — it rendered as an ordinary permanent taskbar. Every autohide rule is keyed off the compound selector `.rdd-taskbar-footer-container.rdd-taskbar-mode-autohide` (the absolute overlay, the collapse-to-8px transition, the peek-strip reveal, and the coarse-pointer `@media` override), but `WindowManager` emitted `taskbar-mode-autohide`, so none of them applied. The sibling `rdd-taskbar-expanded` class was always correct, yet inert on its own for the same reason — all of its rules are compounded with the missing one. `'always'` and `'compact'` are unaffected either way: neither has any mode-specific CSS.
+  - **`DirtyStateOptions.alert`'s banner never showed its severity colour.** `.rdd-confirmation-alert-danger`/`-info`/`-warning`/`-success` supply the background, border, and text colour per `alertType`, but `ConfirmationForm` emitted `confirmation-alert-${alertType}`, leaving only the base `.rdd-confirmation-alert` layout rule in effect — so every banner rendered unstyled and identical regardless of `alertType`, including in the library's own unsaved-changes dialogs, which pass `alertType: 'danger'`.
+- **`zIndexBase` silently did not move the context menu or the panel-overlay search dropdown**, despite both being listed in its own documentation as shifting together via `--rdd-z-base`. `.rdd-context-menu` and `.rdd-context-menu--submenu` already carried `calc(var(--rdd-z-base, 1000) + 8500 / + 8501)`, but `ContextMenu` also set `zIndex: 9500`/`9501` inline, which always wins over a stylesheet declaration — so the menu stayed pinned at its default stacking no matter what a consumer configured. Both inline values are removed, leaving the existing CSS in charge. `ToolbarSearchInput`'s portaled results dropdown had the same inline `9502` with no corresponding rule at all; it now gets `.rdd-panel-toolbar-search__dropdown { z-index: calc(var(--rdd-z-base, 1000) + 8502) }` instead. **This changes nothing at the default configuration** — `--rdd-z-base` defaults to `1000`, so the three now resolve to exactly the 9500/9501/9502 they were hardcoded to, including when a `ContextMenuProvider` is used standalone with no `WindowManagerProvider` mounted to write the variable (the `var(..., 1000)` fallback covers that). A caller-supplied `style={{ zIndex }}` on `ContextMenu` keeps overriding it, as before — that spread still comes last.
+
 ## [6.0.0] — 2026-08-29
 
 ### Changed
@@ -303,7 +311,14 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.1...HEAD
+[6.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.0...v6.0.1
+[6.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.4.0...v6.0.0
+[5.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.5...v5.4.0
+[5.3.5]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.4...v5.3.5
+[5.3.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.3...v5.3.4
+[5.3.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.2...v5.3.3
+[5.3.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.1...v5.3.2
 [5.3.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.3.0...v5.3.1
 [5.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.2...v5.3.0
 [5.2.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.2.1...v5.2.2
