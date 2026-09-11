@@ -320,8 +320,12 @@ const layerTree: UsePanelFloatingWindowReturn = usePanelFloatingWindow();
 | `open` | `boolean` | Mounts/unmounts the window. |
 | `onClose` | `() => void` | Called when the user clicks the × button; you must set `open` to `false` in response. |
 | `defaultAnchor` | `FloatAnchor` | Which corner to dock to on first render. One of `'top-left'`, `'top-right'`, `'bottom-left'`, `'bottom-right'`. |
-| `defaultWidth` | `number` | Initial width in pixels. |
-| `defaultHeight` | `number` | Initial height in pixels. |
+| `defaultWidth` | `number` | Initial width in pixels. Ignored while the inline axis is spanning, and returned to when it is released. |
+| `defaultHeight` | `number` | Initial height in pixels. Ignored while the block axis is spanning, and returned to when it is released. |
+| `defaultStretch?` | `Stretch` | Which axes span the panel on first render — `'width'`, `'height'` or `'both'`. Uncontrolled: gestures update it from here. See [Spanning the panel](#spanning-the-panel). |
+| `stretch?` | `Stretch \| null` | Controlled spanning state. Supplying it — including as `null` — makes you the source of truth; gestures report through `onPlacementChange` instead of applying themselves. |
+| `onPlacementChange?` | `(p: PanelFloatPlacement) => void` | Called when a gesture changes where the window sits. Reports `{ anchor, stretch }` together, as one atomic value. |
+| `stretchable?` | `boolean` | Whether the window may span the panel at all. `false` disables resize-to-span snapping. Default `true`. |
 | `children?` | `ReactNode` | Window body content. |
 
 ---
@@ -451,6 +455,7 @@ interface ManagedWindowConfig {
   anchor?: FloatAnchor;     // default: 'top-right'
   width?: number;           // default: 320
   height?: number;          // default: 240
+  stretch?: Stretch;        // axes that span the panel; default: none
 }
 ```
 
@@ -497,6 +502,134 @@ localStorage.setItem('open-feeds', JSON.stringify(floats.openIds));
 - **Re-dock** — while dragging, semi-transparent drop-zone targets appear at all four corners. Release over a target to dock the window there.
 - **Active window** — the most recently focused window gains a highlighted header. Click anywhere on a window to bring it to the front.
 
+### Which resize handles appear
+
+A docked window has one **pinned** edge per axis — the ones its anchor holds it by — and offers handles only on the edges that can actually move. Dragging a pinned edge would move the *opposite* edge instead of the one under the cursor, so no handle is offered there.
+
+| Anchor | Pinned edges | Handles offered |
+|--------|--------------|-----------------|
+| `top-left` | top, inline-start | `s`, `e`, `se` |
+| `top-right` | top, inline-end | `s`, `w`, `sw` |
+| `bottom-left` | bottom, inline-start | `n`, `e`, `ne` |
+| `bottom-right` | bottom, inline-end | `n`, `w`, `nw` |
+
+A free-floating window is pinned by nothing, so it offers all eight. Docked resizing also stops at any `PanelToolbar` on the far side rather than running underneath it.
+
+---
+
+## Spanning the panel
+
+A docked window normally carries a fixed width and height. Sometimes you want one anchored to an edge and spanning the panel's full width — a timeline, a status strip — so that it **resizes with the panel**.
+
+The mechanism is that "full width" isn't a width, it's a *second pin*. A spanning axis pins **both** ends and carries no size at all, so the browser keeps it tracking the panel. There is no `ResizeObserver` and no JavaScript involved, and nothing to keep in sync.
+
+Each axis is independent, so a placement is a corner plus zero, one, or both stretched axes:
+
+|  | inline pinned at start | inline pinned at end | **inline spanning** |
+|---|---|---|---|
+| **block pinned at top** | `top-left` | `top-right` | full-width strip at the top |
+| **block pinned at bottom** | `bottom-left` | `bottom-right` | full-width strip at the bottom |
+| **block spanning** | full-height column at the start | full-height column at the end | fills the panel |
+
+### Declaring it
+
+```tsx
+<PanelFloatingWindow
+  id="timeline"
+  title="Timeline"
+  open={timeline.isOpen}
+  onClose={timeline.close}
+  defaultAnchor="bottom-left"
+  defaultStretch="width"   // spans the panel's width; height stays 120px
+  defaultWidth={240}
+  defaultHeight={120}
+>
+  <TimelineContent />
+</PanelFloatingWindow>
+```
+
+`defaultWidth`/`defaultHeight` are still worth passing: a spanning axis ignores its size while spanning, and **returns to it** when released.
+
+Via the imperative manager, the field is simply `stretch`:
+
+```ts
+floats.open('timeline', {
+  title: 'Timeline',
+  content: <TimelineContent />,
+  anchor: 'bottom-left',
+  stretch: 'width',
+  height: 120,
+});
+```
+
+### Resize to span
+
+Drag a free edge outward. As it reaches the point where a spanning axis would sit, the window picks up a dashed accent outline — release there and the axis becomes spanning.
+
+The thresholds are deliberately asymmetric: arming happens within 16 px of the full extent, but releasing requires pulling back 40 px. Without that gap, releasing a spanning axis by dragging slightly inward would immediately re-arm and snap back.
+
+On release the axis returns to the size it had **before** that drag, not the full-bleed value the drag passed through — so the size you get back is the one you last chose on purpose.
+
+Pass `stretchable={false}` to opt a window out of snapping entirely, for content that only makes sense at a bounded size.
+
+### Releasing a spanning axis
+
+A spanning axis has both ends pinned, so it offers handles on **both** — and the rule is:
+
+> The edge you grab is the edge that moves. The opposite end becomes the new pin.
+
+Grab the right end of a full-width strip and pull left: the right edge follows your pointer, the left stays put, and the window lands anchored to the inline start at the width you dragged. Grab the left end instead and it anchors to the end.
+
+This is why a window that fills the panel is never stuck: all four of its edges are live, each releasing one axis. Dragging its header also detaches it — which materialises whatever size it was occupying and clears spanning, since a free-floating window positions from an explicit box.
+
+### Spanning and corner stacking
+
+Windows stacked in a corner offset each other along the block axis. A full-width strip overlaps **both** corners of its edge, so it clears whatever is stacked in either of them:
+
+```
+┌──────────────────────────────────────┐
+│                                      │
+│  ┌────────────┐        ┌──────────┐  │  120px card      90px card
+│  │ left card  │        │ right    │  │  (bottom-left)   (bottom-right)
+│  └────────────┘        └──────────┘  │
+│  ┌────────────────────────────────┐  │  strip sits at bottom: 128px
+│  │ full-width strip               │  │  = max(120, 90) + 8px gap
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘
+```
+
+Neither card moves; the strip positions itself clear of both. Windows that never span stack exactly as they always did.
+
+A **block**-spanning window is different: it covers the very axis stacking uses to separate siblings, so it cannot stack at all. It takes no part in stacking and will overlap anything anchored to the same side, with z-order deciding what's on top. In development the library warns once when it sees that combination — either give the window a fixed height or move the others to the opposite side.
+
+### Controlling it, and making it stick
+
+Nothing about overlay windows is written into `saveLayout()` (see [Serialization note](#serialization-note)), so a spanning axis is lost when the window unmounts — exactly as a manual resize is. To persist it, take ownership of the placement:
+
+```tsx
+const [placement, setPlacement] = useState<PanelFloatPlacement>(
+  () => loadSavedPlacement() ?? { anchor: 'bottom-left', stretch: 'width' }
+);
+
+<PanelFloatingWindow
+  id="timeline"
+  defaultAnchor={placement.anchor}
+  stretch={placement.stretch}          // controlled: you are the source of truth
+  onPlacementChange={next => { setPlacement(next); savePlacement(next); }}
+  /* ... */
+/>
+```
+
+Supplying `stretch` — **including as `null`** — switches the window to controlled mode: gestures report through `onPlacementChange` instead of applying themselves, and you must echo the value back for anything to change. Omit the prop entirely for uncontrolled behaviour. This mirrors `ToolbarToggle`'s `active` and `Sidebar`'s `activeTabId`.
+
+`onPlacementChange` reports the anchor and the stretch **together**, as one value, because a single gesture can change both: dragging a strip's left end pins its right end and stops it spanning in the same motion. Two separate callbacks would expose an intermediate state that never actually exists.
+
+Window *size* is not controllable — it changes on every pointer move during a resize, so routing it through your state would cost a round trip per frame.
+
+### RTL
+
+Spanning is defined per axis, not per side, so `'width'` and `'height'` mean the same thing in both directions. The handles that release a spanning axis are mapped to the correct physical edges automatically.
+
 ---
 
 ## TypeScript exports
@@ -526,6 +659,8 @@ All exported from `'react-dockable-desktop'`:
 | `usePanelFloatingWindowManager` | Hook | Imperative multi-window manager |
 | `ToolbarPosition` | Type | `'top' \| 'bottom' \| 'left' \| 'right'` |
 | `FloatAnchor` | Type | `'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'` |
+| `Stretch` | Type | `'width' \| 'height' \| 'both'` — which axes span the panel |
+| `PanelFloatPlacement` | Interface | `{ anchor, stretch }` — reported by `onPlacementChange` |
 | `ManagedWindowConfig` | Interface | Config for `manager.open(id, config)` |
 | `PanelFloatingWindowManagerHandle` | Interface | Return type of `usePanelFloatingWindowManager` |
 | `UsePanelFloatingWindowReturn` | Interface | Return type of `usePanelFloatingWindow` |

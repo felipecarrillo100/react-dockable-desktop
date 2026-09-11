@@ -109,7 +109,11 @@ export interface ManagedWindowConfig {
   width?: number;
   /** Initial height in pixels. */
   height?: number;
-  /** Which axes span the panel instead of carrying a fixed size. @see Stretch */
+  /**
+   * Which axes span the panel instead of carrying a fixed size. `width`/`height` above still apply
+   * to any axis that isn't spanning, and are what a spanning axis returns to when released.
+   * @see Stretch
+   */
   stretch?: Stretch;
 }
 
@@ -803,8 +807,16 @@ export interface PanelFloatingWindowProps {
 
 /**
  * Declarative floating window anchored inside a `PanelOverlayRoot`.
- * Supports 8-direction resize, drag-to-free, and drag-to-dock at any corner.
- * Multiple windows docked to the same corner stack vertically with animated offsets.
+ *
+ * Docks to any corner, drags free of it, and drops back onto one. Windows sharing a corner stack
+ * along the block axis with animated offsets. An axis can also **span the panel** instead of
+ * carrying a fixed size, so the window tracks the panel as it resizes — see
+ * {@link PanelFloatingWindowProps.defaultStretch} and {@link Stretch}.
+ *
+ * Resize handles follow what is actually movable: a free-floating window is pinned by nothing and
+ * offers all eight, while a docked one offers only its free edges — plus both ends of any spanning
+ * axis, either of which releases it.
+ *
  * @example
  * const info = usePanelFloatingWindow();
  * <PanelFloatingWindow
@@ -813,6 +825,18 @@ export interface PanelFloatingWindowProps {
  *   defaultAnchor="top-right" defaultWidth={300} defaultHeight={200}
  * >
  *   <LayerInfoContent />
+ * </PanelFloatingWindow>
+ *
+ * @example
+ * // A full-width status strip along the bottom, tracking the panel's width.
+ * // defaultHeight still applies; defaultWidth is what the inline axis returns to if released.
+ * <PanelFloatingWindow
+ *   id="timeline" title="Timeline"
+ *   open onClose={close}
+ *   defaultAnchor="bottom-left" defaultStretch="width"
+ *   defaultWidth={240} defaultHeight={120}
+ * >
+ *   <TimelineContent />
  * </PanelFloatingWindow>
  */
 export function PanelFloatingWindow(props: PanelFloatingWindowProps): React.ReactElement | null {
@@ -1413,13 +1437,18 @@ export interface PanelFloatingWindowManagerHandle {
 
 /**
  * Imperative hook for spawning N named floating windows at runtime from data or event handlers.
- * All windows share z-ordering, drag, and corner-docking infrastructure of the `PanelOverlayRoot`.
+ * All windows share z-ordering, drag, and corner-docking infrastructure of the `PanelOverlayRoot`,
+ * and accept the same placement options — including {@link ManagedWindowConfig.stretch} to span an
+ * axis of the panel.
  *
  * Must be called inside a **descendant** of `PanelOverlayRoot`, not in the component that renders the root.
  * @returns A stable `PanelFloatingWindowManagerHandle`.
  * @example
  * const manager = usePanelFloatingWindowManager();
  * manager.open('feature-42', { title: 'Feature 42', content: <FeatureDetail id={42} />, anchor: 'top-right' });
+ *
+ * // A full-width strip along the bottom edge:
+ * manager.open('timeline', { title: 'Timeline', content: <Timeline />, anchor: 'bottom-left', stretch: 'width', height: 120 });
  */
 export function usePanelFloatingWindowManager(): PanelFloatingWindowManagerHandle {
   const ctx = useContext(PanelManagerContext);
