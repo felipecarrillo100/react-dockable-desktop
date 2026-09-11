@@ -192,7 +192,15 @@ export interface WindowState {
   panels: Record<string, PanelInfo>;
   /** The ID of the panel tab currently being dragged. */
   draggedPanelId: string | null;
-  /** The ID of the active/focused panel. */
+  /**
+   * The ID of the active/focused panel — the one contributions are read from
+   * (see `useActivePanelContribution`) and the one drawn with focused chrome.
+   *
+   * Always a panel the user can actually see: the selected tab of its leaf, or a floating
+   * window. Never a minimized panel, except when an app explicitly calls `focusPanel()` on
+   * one. Restored layouts resolve it from the saved snapshot's own `activePanelId`, falling
+   * back to the first leaf's selected tab — never to an arbitrary entry in `panels`.
+   */
   activePanelId: string | null;
   /** Current layout direction ('ltr' or 'rtl') */
   dir: 'ltr' | 'rtl';
@@ -340,7 +348,8 @@ export interface WindowActions {
   findPanelId: (component: string, dedupeKey: string) => string | null;
   /**
    * Serializes the entire workspace state to a JSON string.
-   * Includes grid layout, floating window positions, minimized panels, and panel metadata.
+   * Includes grid layout, floating window positions, minimized panels, panel metadata, and the
+   * globally active panel (see {@link SerializedLayout.activePanelId}).
    * @returns JSON string suitable for storage and later restoration via {@link loadLayout}.
    * @example
    * ```ts
@@ -351,6 +360,12 @@ export interface WindowActions {
   /**
    * Restores a previously serialized workspace from a JSON string.
    * Replaces the entire current layout — all panels not in the snapshot are closed.
+   *
+   * `state.activePanelId` is resolved from the snapshot's own `activePanelId` when that panel is
+   * still visible in it, and otherwise from the first leaf's selected tab (which is also the path
+   * layouts saved before that field existed take). It is never seeded from an arbitrary entry in
+   * `panels`.
+   *
    * @param layoutJson - JSON string produced by {@link saveLayout}.
    * @returns `true` if the layout was successfully parsed and applied, `false` otherwise.
    */
@@ -557,13 +572,97 @@ const EMPTY_LEAF: LayoutLeafNode = {
 export interface SerializedLayout {
   /** Schema version — absent on layouts saved before this field was introduced (treated as 0). */
   version?: number;
+  /**
+   * The globally active panel at save time — the one the user was actually looking at.
+   *
+   * Omitted when nothing was active, and when the active panel didn't survive this snapshot's
+   * serializability pruning (see {@link WindowActions.saveLayout}) — so it never names a panel
+   * absent from this payload's own `panels`. Absent on every layout saved before this field
+   * existed, in which case the restore derives it from `gridRoot`'s own per-leaf selection
+   * instead; a present-but-no-longer-valid value falls back to the same derivation. `version`
+   * is deliberately not bumped for this: the field is optional and its absence is a supported,
+   * fully-handled case rather than a schema a migration has to branch on.
+   */
+  activePanelId?: string | null;
   gridRoot: LayoutNode;
   floating: FloatingWindow[];
   minimized: { id: string; title: string | ContextMenuPredefinedMessage; component: string }[];
   panels: Record<string, PanelInfo>;
 }
 
-type ParsedLayoutPayload = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'minimized' | 'panels'>;
+type ParsedLayoutPayload = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'minimized' | 'panels'> & {
+  /** Resolved by `parseLayoutPayload` — the persisted value when still valid, else derived. */
+  activePanelId: string | null;
+};
+
+/** The subset of a layout needed to reason about which panel is visibly active. */
+type ActiveTargetScope = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'panels'>;
+
+/**
+ * Whether `id` names a panel the user can actually see, and which may therefore be the globally
+ * active one: the selected tab of some leaf, or a floating window. A minimized panel never
+ * qualifies — it stays mounted (see the persistence port in `WindowManager.tsx`), so leaving it
+ * active would keep routing `useActivePanelContribution()` to a panel that isn't on screen.
+ *
+ * Used both to validate a persisted `activePanelId` on load and to guard the one written by
+ * `saveLayout`, so the two directions can't disagree about what "active" is allowed to mean.
+ */
+function isVisibleActiveTarget(id: string, scope: ActiveTargetScope): boolean {
+  const info = scope.panels[id];
+  if (!info || info.state === 'minimized') return false;
+  if (scope.floating.some(w => w.id === id)) return true;
+  const isLeafSelection = (node: LayoutNode): boolean =>
+    node.type === 'leaf'
+      ? node.activePanelId === id
+      : node.children.some(isLeafSelection);
+  return scope.gridRoot ? isLeafSelection(scope.gridRoot) : false;
+}
+
+/**
+ * Derives the globally active panel for a restored layout.
+ *
+ * Replaces the original `Object.keys(panels)[0]` seed, which picked the first key of a flat,
+ * insertion-ordered record that knows nothing about tab order or docked/floating/minimized — so
+ * unless the user happened to have the first-opened panel selected when they saved, the workspace
+ * came back with one panel visible and a *different*, invisible one marked active. Every
+ * `LayoutLeafNode` already persists its own `activePanelId`, so the answer was on disk all along.
+ *
+ * Order:
+ *   1. The first leaf in document order whose own selected tab is a valid target.
+ *   2. Otherwise the frontmost (highest `z`) floating window — matching `focusPanel`'s own
+ *      "highest z is on top" rule, and keeping float-only layouts from restoring with nothing
+ *      active at all.
+ *   3. Otherwise `null`.
+ *
+ * Depth-first, not breadth-first: for a grid whose first child is itself a split, a level-by-level
+ * walk reaches the *second* child's leaf before the first child's leaves and picks the wrong tab.
+ * Mirrors `findFirstLeafId`'s traversal shape for exactly that reason.
+ */
+function deriveActivePanelId(scope: ActiveTargetScope): string | null {
+  const isCandidate = (id: string | null): boolean =>
+    id !== null && !!scope.panels[id] && scope.panels[id].state !== 'minimized';
+
+  const fromLeaves = (node: LayoutNode): string | null => {
+    if (node.type === 'leaf') {
+      return isCandidate(node.activePanelId) ? node.activePanelId : null;
+    }
+    for (const child of node.children) {
+      const found = fromLeaves(child);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const selected = scope.gridRoot ? fromLeaves(scope.gridRoot) : null;
+  if (selected) return selected;
+
+  let frontmost: FloatingWindow | null = null;
+  for (const w of scope.floating) {
+    if (!isCandidate(w.id)) continue;
+    if (!frontmost || w.z > frontmost.z) frontmost = w;
+  }
+  return frontmost?.id ?? null;
+}
 
 /**
  * Shared shape-check + migration for a parsed (but not yet validated) layout payload,
@@ -573,6 +672,9 @@ type ParsedLayoutPayload = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'min
  * through `initialState` silently skipped it. `version` is read but not yet branched on
  * — it's read here so a future migration has a version to gate on without needing
  * another ad hoc field-presence sniff like this one.
+ *
+ * Also resolves `activePanelId`, for the same reason the shape-check lives here: both entry
+ * points need it and previously seeded it themselves, identically wrongly, in two places.
  */
 function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   if (!parsed || !parsed.gridRoot || !Array.isArray(parsed.floating) || !Array.isArray(parsed.minimized) || !parsed.panels) {
@@ -590,19 +692,35 @@ function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
     }
     return fw;
   });
-  return { gridRoot: parsed.gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels };
+  const scope: ActiveTargetScope = { gridRoot: parsed.gridRoot, floating, panels: parsed.panels };
+
+  // A persisted value wins when it still names a visible panel; anything stale (the panel was
+  // closed, minimized, or pruned from this snapshot) falls back to deriving from the grid, which
+  // is also the path every pre-`activePanelId` layout takes.
+  const persisted = typeof parsed.activePanelId === 'string' ? parsed.activePanelId : null;
+  let activePanelId: string | null = null;
+  if (persisted !== null) {
+    if (isVisibleActiveTarget(persisted, scope)) {
+      activePanelId = persisted;
+    } else if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        `[react-dockable-desktop] Ignoring the saved layout's activePanelId ("${persisted}") — ` +
+        `it doesn't name a currently visible panel (it may have been closed, minimized, or ` +
+        `excluded from the snapshot as non-serializable). Falling back to the selected tab of ` +
+        `the first leaf in the grid.`
+      );
+    }
+  }
+  if (activePanelId === null) activePanelId = deriveActivePanelId(scope);
+
+  return { gridRoot: parsed.gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels, activePanelId };
 }
 
 function parseInitialState(json: string | null): Pick<WindowState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
   if (json) {
     try {
       const payload = parseLayoutPayload(JSON.parse(json));
-      if (payload) {
-        return {
-          ...payload,
-          activePanelId: Object.keys(payload.panels)[0] ?? null,
-        };
-      }
+      if (payload) return payload;
     } catch {
       // fall through to empty canvas
     }
@@ -1002,13 +1120,24 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const nextPanels = { ...prev.panels };
       delete nextPanels[id];
 
-      const cleanRoot = removePanelFromTree(prev.gridRoot, id);
+      const nextRoot = removePanelFromTree(prev.gridRoot, id)
+        || { type: 'leaf' as const, id: 'group-default', panels: [], activePanelId: null };
+      const nextFloating = prev.floating.filter(w => w.id !== id);
+
+      // Closing the active panel used to leave `activePanelId` pointing at the panel just deleted.
+      // `removePanelFromTree` has already promoted the next tab in its leaf, so re-deriving picks
+      // whatever the user can now actually see.
+      const nextActivePanelId = prev.activePanelId === id
+        ? deriveActivePanelId({ gridRoot: nextRoot, floating: nextFloating, panels: nextPanels })
+        : prev.activePanelId;
+
       return {
         ...prev,
-        gridRoot: cleanRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null },
-        floating: prev.floating.filter(w => w.id !== id),
+        gridRoot: nextRoot,
+        floating: nextFloating,
         minimized: prev.minimized.filter(m => m.id !== id),
-        panels: nextPanels
+        panels: nextPanels,
+        activePanelId: nextActivePanelId
       };
     });
     if (exists) {
@@ -1128,22 +1257,35 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         lastLeafId = findLeafForPanel(prev.gridRoot) ?? undefined;
       }
 
-      const cleanRoot = removePanelFromTree(prev.gridRoot, id);
+      const nextRoot = removePanelFromTree(prev.gridRoot, id)
+        || { type: 'leaf' as const, id: 'group-default', panels: [], activePanelId: null };
+      const nextFloating = prev.floating.filter(w => w.id !== id);
+      const nextPanels: Record<string, PanelInfo> = {
+        ...prev.panels,
+        [id]: {
+          ...panel,
+          state: 'minimized',
+          previousState: panel.state,
+          lastFloatingRect,
+          lastLeafId
+        }
+      };
+
+      // A minimized panel is off screen but still mounted (see the persistence port in
+      // WindowManager.tsx), so leaving it active kept `useActivePanelContribution()` — and every
+      // contributed control — wired to a panel the user can't see. `deriveActivePanelId` skips
+      // minimized panels, so this lands on whatever became visible in its place.
+      const nextActivePanelId = prev.activePanelId === id
+        ? deriveActivePanelId({ gridRoot: nextRoot, floating: nextFloating, panels: nextPanels })
+        : prev.activePanelId;
+
       return {
         ...prev,
-        gridRoot: cleanRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null },
-        floating: prev.floating.filter(w => w.id !== id),
+        gridRoot: nextRoot,
+        floating: nextFloating,
         minimized: [...prev.minimized, { id, title: panel.title, component: panel.component }],
-        panels: {
-          ...prev.panels,
-          [id]: {
-            ...panel,
-            state: 'minimized',
-            previousState: panel.state,
-            lastFloatingRect,
-            lastLeafId
-          }
-        }
+        panels: nextPanels,
+        activePanelId: nextActivePanelId
       };
     });
     if (wasActive) {
@@ -1551,9 +1693,19 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       });
     }
 
+    // Validated against the *pruned* snapshot, not the live state: if the active panel was itself
+    // excluded above, or is minimized, the field is omitted entirely rather than persisted as an id
+    // this payload's own `panels` doesn't contain. A restore then derives it — see
+    // `deriveActivePanelId`.
+    const liveActive = stateRef.current.activePanelId;
+    const activePanelId = liveActive !== null && isVisibleActiveTarget(liveActive, { gridRoot, floating, panels: includedPanels })
+      ? liveActive
+      : null;
+
     const payload: SerializedLayout = {
       version: 2, // v2: panels may carry `props`/`dedupeKey`; the payload may omit panels the
                   // live workspace still has open (see the exclusion pass above).
+      ...(activePanelId !== null ? { activePanelId } : {}),
       gridRoot,
       floating,
       minimized,
@@ -1566,7 +1718,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     try {
       const payload = parseLayoutPayload(JSON.parse(layoutJson));
       if (!payload) return false;
-      const firstActive = Object.keys(payload.panels)[0] || null;
       setState(prev => ({
         ...prev,
         gridRoot: payload.gridRoot,
@@ -1574,7 +1725,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         minimized: payload.minimized,
         panels: payload.panels,
         draggedPanelId: null,
-        activePanelId: firstActive
+        activePanelId: payload.activePanelId
       }));
       return true;
     } catch (e) {

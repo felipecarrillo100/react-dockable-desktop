@@ -12,6 +12,9 @@
  * - PC9: sidebarSectionToTab() converts, using fallbackIcon when section.icon is omitted
  * - PC10: useMergedToolbarItems() appends contributed items behind a separator, unchanged when empty
  * - PC11: useMergedSidebarTabs() appends contributed sections as tabs, unchanged when empty
+ * - PC12: after a layout restore, the active contribution is the *visible* panel's
+ * - PC13: after a layout restore, the visible tab renders focused (same activePanelId, no
+ *         contribution involved)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { useState } from 'react';
@@ -20,6 +23,7 @@ import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerActions } from '../WindowManagerContext';
 import { PanelProvider } from '../PanelProviderContext';
 import { PanelRegistry } from '../PanelRegistry';
+import { WorkspaceClient } from '../../WorkspaceClient';
 import WindowManager from '../WindowManager';
 import {
   PanelContributionProvider,
@@ -334,5 +338,88 @@ describe('PanelContribution', () => {
     expect(merged).toHaveLength(3); // 1 static + 2 contributed
     expect(merged.map(t => t.id)).toEqual(['settings', 'layers', 'legend']);
     expect(merged[1].renderContent('layers', () => {}, () => {})).not.toBeNull();
+  });
+});
+
+// ─── PC12-PC13: contributions after a layout restore ──────────────────────────
+// The end-to-end shape of the reported bug: restoring a layout whose selected tab was not the
+// first key of `panels` left activePanelId on a hidden panel, so the contributed sidebar tab that
+// rendered belonged to a panel the user couldn't see — controls responded, but acted on the wrong
+// instance. Nothing about the panel's own contribution was broken, which is why it was so quiet.
+
+// Contributes a section labelled with its own panelId, so the assertion can tell *which* instance
+// the active contribution came from — MapPanel's own contribution is identical across instances.
+const IdentifiablePanel: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const contribution = React.useMemo<PanelContribution>(() => ({
+    sidebarSections: [{ id: 'sec', label: `sec-${panelId}`, content: <div /> }],
+  }), [panelId]);
+  usePanelContribution(contribution);
+  return <div />;
+};
+PanelRegistry.register('identifiablePanel', IdentifiablePanel);
+
+describe('PanelContribution after a layout restore', () => {
+  let container: HTMLDivElement | null = null;
+  let root: Root | null = null;
+
+  // Two panels in one tab group with the SECOND selected; `panels` key order puts p1 first, so
+  // the old Object.keys(panels)[0] seed resolved to the hidden panel.
+  const RESTORED = JSON.stringify({
+    gridRoot: { type: 'leaf', id: 'g1', panels: ['p1', 'p2'], activePanelId: 'p2' },
+    floating: [],
+    minimized: [],
+    panels: {
+      p1: { id: 'p1', title: 'P1', component: 'identifiablePanel', state: 'docked', serializable: true },
+      p2: { id: 'p2', title: 'P2', component: 'identifiablePanel', state: 'docked', serializable: true },
+    },
+  });
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    lastContribution = null;
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); });
+    if (container) document.body.removeChild(container);
+    const preserved = document.getElementById('preserved-dom-container');
+    if (preserved?.parentNode) preserved.parentNode.removeChild(preserved);
+  });
+
+  const mountRestored = () => {
+    const client = new WorkspaceClient({
+      panels: { identifiablePanel: { component: IdentifiablePanel } },
+      initialState: RESTORED,
+    });
+    act(() => {
+      root = createRoot(container!);
+      root.render(
+        <WindowManagerProvider client={client}>
+          <PanelContributionProvider>
+            <PanelProvider>
+              <ContributionProbe />
+              <WindowManager />
+            </PanelProvider>
+          </PanelContributionProvider>
+        </WindowManagerProvider>
+      );
+    });
+  };
+
+  it('PC12: surfaces the contribution of the panel that is actually visible', () => {
+    mountRestored();
+    expect(lastContribution).not.toBeNull();
+    expect(lastContribution!.sidebarSections![0].label).toBe('sec-p2');
+  });
+
+  it('PC13: renders the visible tab as focused, not unfocused', () => {
+    mountRestored();
+    // Drives the same activePanelId, with no contribution plumbing involved: under the old seed no
+    // tab carried the focused class at all — the selected tab rendered "active-unfocused" while a
+    // hidden sibling held global focus.
+    const focused = container!.querySelector('.rdd-workspace-tab-active-focused');
+    expect(focused).not.toBeNull();
+    expect(focused!.getAttribute('data-tab-id')).toBe('p2');
   });
 });
