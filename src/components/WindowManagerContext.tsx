@@ -272,8 +272,9 @@ export interface WindowActions {
   /**
    * Restores a minimized panel back to its last docked or floating position.
    * @param id - Panel instance ID.
+   * @param options.focus - Set `state.activePanelId` to the restored panel. @default true
    */
-  restorePanel: (id: string) => void;
+  restorePanel: (id: string, options?: { focus?: boolean }) => void;
   /**
    * Detaches a docked panel, converting it to a resizable floating window.
    * @param id - Panel instance ID.
@@ -1294,14 +1295,20 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }
   }, []);
 
-  const restorePanel = useCallback((id: string) => {
+  const restorePanel = useCallback((id: string, options?: { focus?: boolean }) => {
     const wasMinimized = stateRef.current.panels[id]?.state === 'minimized';
+    const shouldFocus = options?.focus !== false;
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel || panel.state !== 'minimized') return prev;
 
       const nextMinimized = prev.minimized.filter(m => m.id !== id);
       const prevState = panel.previousState || 'docked';
+      // A restored panel is, by definition, visible again — so unlike the minimize path there is
+      // nothing to derive: it is itself the only correct candidate. Leaving activePanelId behind
+      // reproduced the 6de3381 defect class in reverse (visible tab rendered unfocused, and every
+      // contributed control stayed bound to whatever replaced this panel while it was minimized).
+      const nextActive = shouldFocus ? id : prev.activePanelId;
 
       if (prevState === 'floating') {
         maxZRef.current += 1;
@@ -1320,7 +1327,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
               anchor: panel.lastFloatingRect?.anchor ?? null
             }
           ],
-          panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } }
+          panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } },
+          activePanelId: nextActive
         };
       } else {
         const leafExists = (node: LayoutNode, targetId: string): boolean => {
@@ -1337,7 +1345,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             ...prev,
             minimized: nextMinimized,
             gridRoot: addPanelToLeaf(prev.gridRoot, panel.lastLeafId!, id),
-            panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } }
+            panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } },
+            activePanelId: nextActive
           };
         } else if (canDrag) {
           // Leaf group ceased to exist: float it instead if floatable!
@@ -1356,7 +1365,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
                 anchor: panel.lastFloatingRect?.anchor ?? null
               }
             ],
-            panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } }
+            panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } },
+            activePanelId: nextActive
           };
         } else {
           // Leaf group ceased to exist but not floatable: dock into fallback leaf group
@@ -1365,7 +1375,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             ...prev,
             minimized: nextMinimized,
             gridRoot: addPanelToLeaf(prev.gridRoot, targetLeafId, id),
-            panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } }
+            panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } },
+            activePanelId: nextActive
           };
         }
       }

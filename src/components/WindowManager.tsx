@@ -833,7 +833,7 @@ export interface WindowManagerProps {
   animations?: boolean;
 }
 
-export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'always', contextMenuAdapter = DefaultContextMenuAdapter, animations = true }) => {
+export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', contextMenuAdapter = DefaultContextMenuAdapter, animations = true }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn } = useWindowManagerActionsInternal();
