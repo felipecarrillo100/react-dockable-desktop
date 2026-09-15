@@ -258,7 +258,9 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
 
   minimizePanel(id: string): void { this._dispatch(a => a.minimizePanel(id)); }
 
-  restorePanel(id: string): void { this._dispatch(a => a.restorePanel(id)); }
+  restorePanel(...args: Parameters<WindowActions['restorePanel']>): void {
+    this._dispatch(a => a.restorePanel(...args));
+  }
 
   floatPanel(...args: Parameters<WindowActions['floatPanel']>): void {
     this._dispatch(a => a.floatPanel(...args));
