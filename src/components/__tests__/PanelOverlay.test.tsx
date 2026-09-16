@@ -29,9 +29,13 @@
  * PO25: A full-width strip stacks against both corners of its edge
  * PO26: Detaching a stretched widget materialises its measured size and clears stretch
  * PO27: Resizing an edge out to the far extent snaps the axis to stretched, with hysteresis
+ * PO28: A descriptor title resolves through the formatter — managed and declarative alike
+ * PO29: ...and re-resolves when the formatter changes, with no reopen (the reported bug)
+ * PO30: A plain string title still renders unchanged
+ * PO31: The close button's tooltip comes from the message catalogue, not hardcoded English
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import React, { useState } from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import React, { useState, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import {
@@ -41,7 +45,9 @@ import {
   usePanelFloatingWindow,
   usePanelFloatingWindowManager,
 } from '../PanelOverlay';
+import type { ManagedWindowConfig } from '../PanelOverlay';
 import { WindowManagerProvider } from '../WindowManagerContext';
+import type { MessageFormatter } from '../WindowManagerContext';
 
 let container: HTMLDivElement;
 let root: Root | null = null;
@@ -1345,5 +1351,112 @@ describe('PO27: resize-to-stretch snapping', () => {
       expect(win.style.height).toBe('600px');   // clamped, still explicit
       expect(win.style.bottom).toBe('');
     } finally { restore(); }
+  });
+});
+
+// ─── PO28–PO31 ────────────────────────────────────────────────────────────────
+
+/**
+ * Localisable float titles.
+ *
+ * The bug these cover: `ManagedWindowConfig.title` was `string`, so a host that localises its UI
+ * could not make a float's header follow a language change — the title stayed in whatever language
+ * was active when the window opened. Every other title surface already accepted a descriptor.
+ *
+ * PO29 is the one that would have caught it. PO28 only proves a descriptor resolves *once*, which a
+ * fix that resolved at `open()` time would also satisfy; re-resolving without a reopen is the
+ * property that matters, because the config is stored by the overlay rather than re-read from the
+ * host's own render.
+ */
+describe('PO28–PO31: localisable float titles', () => {
+  const es: MessageFormatter = msg => ({
+    'legend.title': 'Leyenda SLD',
+    'dockable-desktop-closeTooltip': 'Cerrar',
+  }[msg.id] ?? msg.defaultMessage ?? msg.id);
+
+  const ru: MessageFormatter = msg => ({
+    'legend.title': 'Легенда SLD',
+    'dockable-desktop-closeTooltip': 'Закрыть',
+  }[msg.id] ?? msg.defaultMessage ?? msg.id);
+
+  const DESCRIPTOR = { id: 'legend.title', defaultMessage: 'SLD Legend' };
+
+  /**
+   * The imperative path: the overlay stores the config, which is where the bug lived.
+   *
+   * The `isOpen` guard is load-bearing, not defensive. Opening changes the overlay's state, which
+   * gives `usePanelFloatingWindowManager()` a new handle, which re-runs this effect — and since
+   * `content` is a fresh element each time, re-opening would change the state again, forever —
+   * and it spins rather than erroring, so the only symptom is a run that never finishes
+   * (measured: >13 minutes without the guard, against 4 for the whole file with it).
+   * Opening once is also what the assertions need: PO29 must observe a window that was never
+   * reopened.
+   */
+  const Managed: React.FC<{ title: ManagedWindowConfig['title'] }> = ({ title }) => {
+    const manager = usePanelFloatingWindowManager();
+    useEffect(() => {
+      if (!manager.isOpen('legend')) manager.open('legend', { title, content: <span /> });
+    }, [manager, title]);
+    return null;
+  };
+
+  const mountManaged = (fmt: MessageFormatter, title: ManagedWindowConfig['title'] = DESCRIPTOR) => {
+    const App: React.FC<{ fmt: MessageFormatter }> = ({ fmt }) => (
+      <WindowManagerProvider formatMessage={fmt}>
+        <PanelOverlayRoot><Managed title={title} /></PanelOverlayRoot>
+      </WindowManagerProvider>
+    );
+    act(() => { root = createRoot(container); root.render(<App fmt={fmt} />); });
+    return (next: MessageFormatter) => act(() => { root!.render(<App fmt={next} />); });
+  };
+
+  const headerText = () => container.querySelector('.rdd-panel-float__title')?.textContent;
+
+  it('PO28: a managed window resolves a descriptor title through the formatter', () => {
+    mountManaged(es);
+    expect(headerText()).toBe('Leyenda SLD');
+  });
+
+  it('PO28: a declarative window resolves one too', () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <WindowManagerProvider formatMessage={es}>
+          <PanelOverlayRoot>
+            <PanelFloatingWindow
+              id="legend" title={DESCRIPTOR} open={true} onClose={() => {}}
+              defaultAnchor="top-right" defaultWidth={300} defaultHeight={200}
+            >
+              <span />
+            </PanelFloatingWindow>
+          </PanelOverlayRoot>
+        </WindowManagerProvider>
+      );
+    });
+    expect(headerText()).toBe('Leyenda SLD');
+  });
+
+  it('PO29: the title re-resolves when the formatter changes, without a reopen', () => {
+    const rerenderWith = mountManaged(es);
+    expect(headerText()).toBe('Leyenda SLD');
+    rerenderWith(ru);
+    expect(headerText()).toBe('Легенда SLD');
+  });
+
+  it('PO30: a plain string title renders unchanged, and the formatter is never consulted', () => {
+    const fmt = vi.fn(((msg: { id: string; defaultMessage?: string }) => 'TRANSLATED') as MessageFormatter);
+    mountManaged(fmt, 'SLD Legend');
+    expect(headerText()).toBe('SLD Legend');
+    // Only the close tooltip may have gone through the formatter; the title must not have.
+    expect(fmt.mock.calls.map(([msg]) => msg.id)).not.toContain('legend.title');
+  });
+
+  it('PO31: the close button tooltip comes from the catalogue and follows the formatter', () => {
+    const rerenderWith = mountManaged(es);
+    const close = () => container.querySelector('.rdd-panel-float__close') as HTMLElement;
+    expect(close().getAttribute('title')).toBe('Cerrar');
+    expect(close().getAttribute('aria-label')).toBe('Cerrar');
+    rerenderWith(ru);
+    expect(close().getAttribute('title')).toBe('Закрыть');
   });
 });

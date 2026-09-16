@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.0] — 2026-09-16
+
+### Added
+- **An inner floating widget's title can now be an i18n message descriptor, so a float's header follows a language change.** `ManagedWindowConfig.title` and `PanelFloatingWindowProps.title` were declared `string`, while every other title surface in the library — `OpenPanelOptions.title`, `ModalOptions.title`, `SidePanelOptions.title`, panel tabs, context menus — already accepted `PanelTitle` (`string | PanelTitleDescriptor`) and already re-resolved it. Both float surfaces now take `PanelTitle` too, resolved at the header's render site with the library's own `formatLabel(title, useFormatMessage())`.
+
+  The managed path is where this was a real defect rather than an inconsistency: `usePanelFloatingWindowManager().open(id, config)` **stores** the config, so a plain string is frozen at whatever language was active when the widget opened, and the only way to change it was to re-call `open()` for every open ID from a locale effect. A descriptor needs none of that. The declarative `PanelFloatingWindow` is a prop in the host's own JSX and so already updated on re-render; it is widened here so the two paths agree.
+
+  Nothing breaks: `PanelTitle` includes `string`, and `formatLabel` passes a plain string through untouched, so every existing `title: "…"` compiles and behaves exactly as before. Reported against 6.2.0 with the mechanism already correctly located — the capability was reachable everywhere except here.
+
+  One limit worth knowing, unchanged by this release: `ManagedWindowConfig.content` is a React element captured when `open()` was called, and its props never change afterwards. A body that must follow the language has to read the locale itself rather than receive already-translated text from the call site. Documented in the [Panel Overlay guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay#localised-titles).
+
+### Fixed
+- **An inner floating widget's close button had a hardcoded English tooltip.** Its `title` and `aria-label` were the literal string `"Close"`, ignoring the `closeTooltip` entry that has been in `defaultPredefinedMessages` all along — so a fully localised workspace still exposed one English string, to screen readers included. It now resolves through the catalogue like every other control. No new message keys, and no change for anyone who has not overridden `closeTooltip`. `PanelOverlay.tsx` was the only file in the library that never called `formatLabel`/`useFormatMessage`; it isn't any more.
+
 ## [6.1.0] — 2026-09-11
 
 ### Added
@@ -333,7 +347,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.1.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.0...HEAD
+[6.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.2.0...v6.3.0
 [6.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.1...v6.1.0
 [6.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.0...v6.0.1
 [6.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v5.4.0...v6.0.0

@@ -9,8 +9,10 @@ import React, {
   useEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { WindowStateContext } from './WindowManagerContext';
+import { WindowStateContext, formatLabel, useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
 import type { FloatAnchor } from './WindowManagerContext';
+// Type-only, so this stays a one-way dependency: PanelProviderContext imports nothing from here.
+import type { PanelTitle } from './PanelProviderContext';
 import { flipZoneHorizontal } from './anchorGeometry';
 import { startPointerDrag, computeResizedRect } from './dragResize';
 import type { ResizeDir } from './dragResize';
@@ -97,8 +99,14 @@ const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left',
  * @see usePanelFloatingWindowManager
  */
 export interface ManagedWindowConfig {
-  /** Text shown in the window's header bar. */
-  title: string;
+  /**
+   * Text shown in the window's header bar. Accepts a plain string or an i18n message descriptor.
+   *
+   * A descriptor is re-resolved on every render, so the header follows a language change without
+   * the window being closed and reopened — which a plain string cannot do here, because this
+   * config is stored by the overlay rather than re-read from your own render.
+   */
+  title: PanelTitle;
   /** Optional icon shown to the left of the title in the header. */
   icon?: React.ReactNode;
   /** Window body content. */
@@ -759,8 +767,8 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
 export interface PanelFloatingWindowProps {
   /** Unique identifier within the panel overlay. Used for z-order and stack tracking. */
   id: string;
-  /** Text shown in the window's header bar. */
-  title: string;
+  /** Text shown in the window's header bar. Accepts a plain string or an i18n message descriptor. */
+  title: PanelTitle;
   /** Optional icon shown to the left of the title in the header. */
   icon?: React.ReactNode;
   /** Whether the window is mounted and visible. Set to `false` to close/unmount it. */
@@ -868,6 +876,11 @@ const SNAP_OUT = 40;
 
 function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
   const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
+  // Resolved here rather than at the call site, so a descriptor title re-resolves whenever the
+  // formatter changes. Both hooks fall back to the message's own `defaultMessage` when there is no
+  // provider, so an overlay used outside a WindowManager keeps working.
+  const formatMessage = useFormatMessage();
+  const messages = usePredefinedMessages();
   const [mode, setMode] = useState<WindowMode>('docked');
   const [currentAnchor, setCurrentAnchor] = useState<FloatAnchor>(defaultAnchor);
   // `size` is deliberately left untouched while an axis is stretched — the render branch below
@@ -1363,14 +1376,14 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     >
       <div className="rdd-panel-float__header" onPointerDown={handleHeaderPointerDown}>
         {icon && <span className="rdd-panel-float__icon">{icon}</span>}
-        <span className="rdd-panel-float__title">{title}</span>
+        <span className="rdd-panel-float__title">{formatLabel(title, formatMessage)}</span>
         <button
           type="button"
           className="rdd-panel-float__close"
           onClick={onClose}
           onPointerDown={e => e.stopPropagation()}
-          title="Close"
-          aria-label="Close"
+          title={formatLabel(messages.closeTooltip, formatMessage)}
+          aria-label={formatLabel(messages.closeTooltip, formatMessage)}
         >
           {CloseIcon}
         </button>

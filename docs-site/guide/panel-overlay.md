@@ -315,7 +315,7 @@ const layerTree: UsePanelFloatingWindowReturn = usePanelFloatingWindow();
 | Prop | Type | Description |
 |------|------|-------------|
 | `id` | `string` | Unique identifier. Used as the key in z-order and stack tracking. |
-| `title` | `string` | Text shown in the window header bar. |
+| `title` | `PanelTitle` | Text shown in the window header bar. A plain string, or an i18n message descriptor — see [Localised titles](#localised-titles). |
 | `icon?` | `ReactNode` | Optional icon shown to the left of the title in the header. Recommended: 12–14 px SVG with `stroke="currentColor"`. |
 | `open` | `boolean` | Mounts/unmounts the window. |
 | `onClose` | `() => void` | Called when the user clicks the × button; you must set `open` to `false` in response. |
@@ -449,7 +449,7 @@ function SurveillanceMapInner() {
 
 ```typescript
 interface ManagedWindowConfig {
-  title: string;            // header text
+  title: PanelTitle;        // header text — string or i18n descriptor
   icon?: React.ReactNode;   // optional icon left of the title
   content: React.ReactNode; // window body
   anchor?: FloatAnchor;     // default: 'top-right'
@@ -458,6 +458,31 @@ interface ManagedWindowConfig {
   stretch?: Stretch;        // axes that span the panel; default: none
 }
 ```
+
+### Localised titles
+
+`title` is a `PanelTitle` — `string | PanelTitleDescriptor` — the same type
+[`openPanel()`](./workspace-client) and [modals](./modals-and-drawers) accept. Pass a descriptor and
+the header is re-resolved on every render, so it follows a language change with no reopen:
+
+```tsx
+manager.open('legend', {
+  title: { id: 'legend.title', defaultMessage: 'SLD Legend' },
+  content: <Legend />,
+});
+```
+
+This matters most on the managed path, because the overlay *stores* your config: a plain string
+handed to `open()` is frozen at the language that was active at the time, and the only way to change
+it is to call `open()` again with the same ID. A descriptor has no such problem. Plain strings keep
+working exactly as before — `formatLabel` passes them straight through — so nothing needs migrating.
+
+::: warning `content` is captured, not re-created
+A descriptor fixes the *title*. `config.content` is a React element built when you called `open()`,
+and its props never change afterwards, so text you resolved yourself and passed in as a prop stays
+in the original language. Let the body read the locale itself — `useFormatMessage()`, or your own
+`useIntl()` — rather than receiving already-translated strings from the call site.
+:::
 
 ### The `floatsRef` pattern for event handlers
 
