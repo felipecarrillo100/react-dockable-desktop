@@ -677,6 +677,75 @@ function deriveActivePanelId(scope: ActiveTargetScope): string | null {
  * Also resolves `activePanelId`, for the same reason the shape-check lives here: both entry
  * points need it and previously seeded it themselves, identically wrongly, in two places.
  */
+/**
+ * Heal a saved layout that names the same panel twice, or names none of them.
+ *
+ * Until 6.3.1, dropping a lone docked panel onto its own group put that panel in two leaves,
+ * and `saveLayout()` wrote the result out — so the duplicate came back on every reload, for
+ * good. Repairing on read means a layout stored by an affected version loads clean with
+ * nothing asked of the application. It changes only what is *read*: `saveLayout()`'s output
+ * format is untouched.
+ *
+ * Four repairs, in order: a panel id that appears in more than one leaf is kept in the first
+ * one only; a leaf emptied by that keeps existing only if it asked to (`keepOnEmpty`); a
+ * branch left with one child collapses into it, with sizes re-normalised; and a panel the
+ * layout says is docked but that no leaf lists is appended to the first leaf, since "open but
+ * in no group" renders nothing and cannot be reached.
+ */
+function repairLayoutTree(
+  gridRoot: LayoutNode,
+  panels: Record<string, PanelInfo>
+): { gridRoot: LayoutNode; repairs: string[] } {
+  const repairs: string[] = [];
+  const seen = new Set<string>();
+
+  const walk = (node: LayoutNode): LayoutNode | null => {
+    if (node.type === 'leaf') {
+      const kept = node.panels.filter(panelId => {
+        if (seen.has(panelId)) {
+          repairs.push(`panel "${panelId}" was listed in more than one group`);
+          return false;
+        }
+        seen.add(panelId);
+        return true;
+      });
+      if (kept.length === node.panels.length) return node;
+      if (kept.length === 0 && !node.keepOnEmpty) return null;
+      const activePanelId = node.activePanelId && kept.includes(node.activePanelId)
+        ? node.activePanelId
+        : (kept[0] ?? null);
+      return { ...node, panels: kept, activePanelId };
+    }
+
+    const children = node.children.map(walk).filter((c): c is LayoutNode => c !== null);
+    if (children.length === node.children.length) return node;
+    if (children.length === 0) return null;
+    if (children.length === 1) return children[0];
+    const sizes = node.sizes.slice(0, children.length);
+    const sum = sizes.reduce((a, b) => a + b, 0) || 1;
+    return { ...node, children, sizes: sizes.map(s => s / sum) };
+  };
+
+  let root = walk(gridRoot) || EMPTY_LEAF;
+
+  const orphans = Object.values(panels).filter(p => p.state === 'docked' && !seen.has(p.id));
+  if (orphans.length > 0) {
+    const attach = (node: LayoutNode): LayoutNode => {
+      if (node.type === 'leaf') {
+        const ids = orphans.map(p => p.id);
+        return { ...node, panels: [...node.panels, ...ids], activePanelId: node.activePanelId ?? ids[0] };
+      }
+      return { ...node, children: [attach(node.children[0]), ...node.children.slice(1)] };
+    };
+    for (const orphan of orphans) {
+      repairs.push(`panel "${orphan.id}" is docked but was in no group`);
+    }
+    root = attach(root);
+  }
+
+  return { gridRoot: root, repairs };
+}
+
 function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   if (!parsed || !parsed.gridRoot || !Array.isArray(parsed.floating) || !Array.isArray(parsed.minimized) || !parsed.panels) {
     return null;
@@ -693,7 +762,19 @@ function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
     }
     return fw;
   });
-  const scope: ActiveTargetScope = { gridRoot: parsed.gridRoot, floating, panels: parsed.panels };
+  // Repair before anything reads the tree: activePanelId resolution below asks which panels
+  // are visible, and a duplicated or orphaned panel would make that answer meaningless.
+  const repaired = repairLayoutTree(parsed.gridRoot as LayoutNode, parsed.panels as Record<string, PanelInfo>);
+  if (repaired.repairs.length > 0 && process.env.NODE_ENV === 'development') {
+    console.warn(
+      `[react-dockable-desktop] Repaired the saved layout on load: ${repaired.repairs.join('; ')}. ` +
+      `Layouts saved by versions before 6.3.1 can contain this — dropping a lone docked panel ` +
+      `onto its own group duplicated it — and the repair is applied every time it is read, so ` +
+      `saving again from this session stores the corrected layout.`
+    );
+  }
+  const gridRoot = repaired.gridRoot;
+  const scope: ActiveTargetScope = { gridRoot, floating, panels: parsed.panels };
 
   // A persisted value wins when it still names a visible panel; anything stale (the panel was
   // closed, minimized, or pruned from this snapshot) falls back to deriving from the grid, which
@@ -714,7 +795,7 @@ function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   }
   if (activePanelId === null) activePanelId = deriveActivePanelId(scope);
 
-  return { gridRoot: parsed.gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels, activePanelId };
+  return { gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels, activePanelId };
 }
 
 function parseInitialState(json: string | null): Pick<WindowState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
@@ -982,6 +1063,26 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       };
     }
   };
+
+  /**
+   * Is `panelId` the only panel in `leafId`?
+   *
+   * The question every dock reducer has to ask *before* it removes anything. Removing a
+   * panel deletes an emptied leaf, so a drop onto the dragged panel's own leaf destroys the
+   * very target it names — and the placement that follows has nowhere to go. Dropping a lone
+   * panel onto itself is a no-op by definition: the result would be the layout it already
+   * has.
+   */
+  const isLoneOccupant = (node: LayoutNode, leafId: string, panelId: string): boolean => {
+    if (node.type === 'leaf') {
+      return node.id === leafId && node.panels.length === 1 && node.panels[0] === panelId;
+    }
+    return node.children.some(c => isLoneOccupant(c, leafId, panelId));
+  };
+
+  /** Does `leafId` name a leaf that is actually in the tree? */
+  const hasLeaf = (node: LayoutNode, leafId: string): boolean =>
+    node.type === 'leaf' ? node.id === leafId : node.children.some(c => hasLeaf(c, leafId));
 
   const findFirstLeafId = (node: LayoutNode): string | null => {
     if (node.type === 'leaf') return node.id;
@@ -1422,12 +1523,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       if (!panel) return prev;
 
       const nextFloating = prev.floating.filter(w => w.id !== id);
-      const cleanRoot = removePanelFromTree(prev.gridRoot, id);
-      const leafId = targetLeafId || findFirstLeafId(cleanRoot || prev.gridRoot) || 'group-default';
+      const cleanRoot = removePanelFromTree(prev.gridRoot, id) || EMPTY_LEAF;
+      // The caller asked for this panel to be docked, so an id that no longer names a group
+      // falls back to the first one rather than docking it nowhere. Removing the panel can
+      // itself delete the requested group, which is why this is checked against `cleanRoot`.
+      const requested = targetLeafId && hasLeaf(cleanRoot, targetLeafId) ? targetLeafId : undefined;
+      const leafId = requested || findFirstLeafId(cleanRoot) || EMPTY_LEAF.id;
 
       return {
         ...prev,
-        gridRoot: addPanelToLeaf(cleanRoot || prev.gridRoot, leafId, id),
+        gridRoot: addPanelToLeaf(cleanRoot, leafId, id),
         floating: nextFloating,
         panels: {
           ...prev.panels,
@@ -1483,14 +1588,36 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const panel = prev.panels[id];
       if (!panel) return prev;
 
+      // Dropping a lone panel onto its own group asks for the layout it already has. Taking
+      // it literally deletes the target leaf on the way in, and the split then ran against
+      // the pre-removal tree, leaving the same panel in two leaves — one of them showing
+      // nothing, since a panel's DOM can only live in one slot.
+      if (isLoneOccupant(prev.gridRoot, targetLeafId, id)) return prev;
+
+      // A group that is not in the tree cannot receive anything. Placing into it would strip
+      // the panel from the layout and leave it "open" but in no group — visible nowhere, and
+      // recoverable only by minimizing and restoring it.
+      if (!hasLeaf(prev.gridRoot, targetLeafId)) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            `[react-dockable-desktop] dockPanelToGroup("${id}", "${targetLeafId}") was ignored: ` +
+            `no group with that id is in the layout. Emptying a group removes it, so an id held ` +
+            `across a layout change can name a group that no longer exists.`
+          );
+        }
+        return prev;
+      }
+
       const nextFloating = prev.floating.filter(w => w.id !== id);
-      const cleanRoot = removePanelFromTree(prev.gridRoot, id);
+      // `null` from removePanelFromTree means the tree is now empty — not "nothing was
+      // removed". Falling back to `prev.gridRoot` here is what put the panel in two leaves.
+      const cleanRoot = removePanelFromTree(prev.gridRoot, id) || EMPTY_LEAF;
 
       let newRoot: LayoutNode;
       if (position === 'center') {
-        newRoot = addPanelToLeaf(cleanRoot || prev.gridRoot, targetLeafId, id);
+        newRoot = addPanelToLeaf(cleanRoot, targetLeafId, id);
       } else {
-        newRoot = splitLeafInTree(cleanRoot || prev.gridRoot, targetLeafId, id, position, prev.splitRatio);
+        newRoot = splitLeafInTree(cleanRoot, targetLeafId, id, position, prev.splitRatio);
       }
 
       return {
@@ -1514,6 +1641,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const nextFloating = prev.floating.filter(w => w.id !== id);
       const cleanRoot = removePanelFromTree(prev.gridRoot, id);
 
+      // The sole docked panel already fills the workspace, so docking it to an edge asks for
+      // the layout it has. Acting on it duplicated the panel into the new edge leaf while the
+      // old one still listed it, exactly as a drop on its own group did.
+      if (cleanRoot === null) return prev;
+
       const newLeaf: LayoutLeafNode = {
         type: 'leaf',
         id: `group-edge-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -1523,8 +1655,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
       const orientation: SplitOrientation = (position === 'left' || position === 'right') ? 'horizontal' : 'vertical';
       const children = (position === 'left' || position === 'top')
-        ? [newLeaf, cleanRoot || prev.gridRoot]
-        : [cleanRoot || prev.gridRoot, newLeaf];
+        ? [newLeaf, cleanRoot]
+        : [cleanRoot, newLeaf];
 
       const r = prev.edgeSplitRatio;
       const newRoot: LayoutNode = {
@@ -1552,6 +1684,21 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const panel = prev.panels[panelId];
       if (!panel) return prev;
 
+      // A lone panel dropped on its own tab strip is already where it is being sent. Today
+      // the reinsertion happens to cancel out; guarded so that stays true rather than
+      // depending on it.
+      if (isLoneOccupant(prev.gridRoot, targetLeafId, panelId)) return prev;
+
+      if (!hasLeaf(prev.gridRoot, targetLeafId)) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            `[react-dockable-desktop] movePanelOrder("${panelId}", "${targetLeafId}") was ignored: ` +
+            `no group with that id is in the layout.`
+          );
+        }
+        return prev;
+      }
+
       // 1. Remove panel from its current group in the layout tree
       const cleanRoot = removePanelFromTree(prev.gridRoot, panelId);
 
@@ -1578,7 +1725,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         }
       };
 
-      const newRoot = insertInLeaf(cleanRoot || prev.gridRoot);
+      const newRoot = insertInLeaf(cleanRoot || EMPTY_LEAF);
       const nextFloating = prev.floating.filter(w => w.id !== panelId);
 
       return {
