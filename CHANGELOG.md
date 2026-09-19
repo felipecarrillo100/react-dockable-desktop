@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.1] — 2026-09-19
+
+### Fixed
+- **Dragging the only docked panel onto its own group duplicated it.** With one panel in the workspace, dropping it on its own drop cross — any direction — left the same panel in *two* groups: two tabs with the same title, one of which showed nothing at all, since a panel's DOM can only live in one slot. Dropping it on the workspace edge did the same. Reported against 6.2.0 and reproduced in 6.3.0.
+
+  The cause is one `||`. `removePanelFromTree` returns `null` to mean *"this node should disappear"*, which at the root means the workspace is now empty; `cleanRoot || prev.gridRoot` read that `null` as *"nothing was removed"* and ran the split against the tree that still contained the panel. The idiom appeared in four reducers — `dockPanel`, `dockPanelToGroup`, `dockPanelToWorkspaceEdge`, `movePanelOrder` — and each now falls back to an empty grid, which is what `null` actually means. `movePanelOrder` and the centre zone were harmless only by accident: their re-insertion happened to cancel the duplicate out.
+
+  Above that fix sits the rule the gesture was asking for all along: **dropping a lone panel onto its own group is a no-op**, because the result would be the layout it already has. Removing the panel first deletes the emptied group, so the drop destroyed the very target it named — the shape of the whole defect. Guarded in the reducers rather than in the drag layer, so `WorkspaceClient` and the actions API are covered too, not just the mouse.
+
+- **A dock into a group that no longer exists lost the panel.** Emptying a group removes it, so an id an application held across a layout change can name a group that is gone; placing into it stripped the panel from the layout and left it "open" but in no group — rendered nowhere, and recoverable only by minimizing and restoring it. `dockPanelToGroup` and `movePanelOrder` now ignore such a call (with a development warning), and `dockPanel` falls back to the first real group, since its caller asked for the panel to be docked *somewhere*.
+
+- **Layouts already saved with the duplicate are repaired when read.** `saveLayout()` wrote the duplicated tree out, so the fault came back on every reload — a stored layout stayed broken for good. `loadLayout()` and `initialState` now share a repair pass: a panel id listed in more than one group is kept in the first, a group emptied by that is dropped unless it set `keepOnEmpty`, a branch left with one child collapses, and a panel the layout calls docked but that no group lists is put back into the first group. One development warning names what was repaired. This changes only what is *read* — `saveLayout()`'s format is untouched — so saving again from a repaired session simply stores the corrected layout.
+
+Covered by a new `SelfDrop.test.tsx`: 20 tests over the five drop positions, the workspace edge, the tab strip, the stale-target cases, the two-panel cases that must still split and reorder, and both repairs. Each was mutation-checked, and the whole gesture set was re-run in Chrome against the fixed build.
+
 ## [6.3.0] — 2026-09-16
 
 ### Added
@@ -347,7 +362,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.1...HEAD
+[6.3.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.0...v6.3.1
 [6.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.2.0...v6.3.0
 [6.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.1...v6.1.0
 [6.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.0...v6.0.1
