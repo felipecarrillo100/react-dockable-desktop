@@ -15,6 +15,10 @@ A premium dockable layout engine for React. Build desktop-class applications wit
 **[Full Documentation](https://felipecarrillo100.github.io/react-dockable-desktop/)** &nbsp;|&nbsp;
 **[API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/)**
 
+**Using Vue?** [`vue-dockable-desktop`](https://github.com/felipecarrillo100/vue-dockable-desktop)
+is the Vue 3 port — a native Vue library, not a wrapper, and it reads and writes the **same
+serialised layout format**, so a layout saved by either library loads in the other.
+
 ---
 
 ## Features
