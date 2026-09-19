@@ -20,6 +20,17 @@
   "files": [
     "dist"
   ],
+  "keywords": [
+    "react",
+    "dockable",
+    "layout",
+    "window-manager",
+    "docking",
+    "panels",
+    "workspace",
+    "ide",
+    "vue-dockable-desktop"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/felipecarrillo100/react-dockable-desktop.git"
