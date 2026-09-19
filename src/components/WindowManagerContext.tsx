@@ -718,7 +718,11 @@ function repairLayoutTree(
     }
 
     const children = node.children.map(walk).filter((c): c is LayoutNode => c !== null);
-    if (children.length === node.children.length) return node;
+    // Identity, not count: a child can survive the walk and still have been repaired inside.
+    // Comparing lengths alone returned the original branch and discarded those repairs.
+    if (children.length === node.children.length && children.every((c, i) => c === node.children[i])) {
+      return node;
+    }
     if (children.length === 0) return null;
     if (children.length === 1) return children[0];
     const sizes = node.sizes.slice(0, children.length);

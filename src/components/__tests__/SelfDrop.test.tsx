@@ -260,6 +260,32 @@ describe('Dropping a panel onto its own group', () => {
       expectSoundLayout(lastState);
     });
 
+    it('repairs a duplicate inside a group that itself survives', () => {
+      // Both groups survive this repair, so a walk that compares only the *number* of
+      // children returns the original branch and throws the repair away.
+      mount(JSON.stringify({
+        version: 2,
+        gridRoot: {
+          type: 'branch', orientation: 'horizontal', sizes: [0.5, 0.5],
+          children: [
+            { type: 'leaf', id: 'group-first', panels: ['alpha'], activePanelId: 'alpha' },
+            { type: 'leaf', id: 'group-second', panels: ['alpha', 'beta'], activePanelId: 'alpha' },
+          ],
+        },
+        floating: [],
+        minimized: [],
+        panels: {
+          alpha: { id: 'alpha', title: 'Alpha', component: 'panel', state: 'docked' },
+          beta:  { id: 'beta',  title: 'Beta',  component: 'panel', state: 'docked' },
+        },
+        activePanelId: 'alpha',
+      }));
+      const second = leaves(lastState.gridRoot).find(l => l.id === 'group-second')!;
+      expect(second.panels).toEqual(['beta']);
+      expect(second.activePanelId).toBe('beta');
+      expectSoundLayout(lastState);
+    });
+
     it('repairs it through loadLayout too, not only initialState', () => {
       mount(LONE_PANEL);
       act(() => { lastActions.loadLayout(POISONED); });
