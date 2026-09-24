@@ -1,10 +1,11 @@
-import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useRef, useState, useMemo } from 'react';
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
 import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderContext';
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
+import { useEscapeLayer } from '../utils/escapeStack';
 
 /**
  * Interface representing props for the internal {@link ModalRenderer} component.
@@ -15,14 +16,13 @@ interface ModalRendererProps {
   /** The 0-based depth index of the modal within the active stack. */
   index: number;
   /** True if this modal is currently at the top of the stack. */
-  isTopmost: boolean;
 }
 
 /**
  * ModalRenderer component renders a single modal window wrapped inside
  * the FormContainerProvider context, enabling subcomponents to request closes and set dirty states.
  */
-const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }) => {
+const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
   const { close, openModal, updateInstance, setDirty } = usePanelActions();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
@@ -104,18 +104,12 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index, isTopmost }
     ? (typeof bodyPadding === 'number' ? `${bodyPadding}px` : bodyPadding)
     : undefined;
 
-  useEffect(() => {
-    if (!isTopmost || !showCloseButton) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        handleClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleClose, showCloseButton, isTopmost]);
+  // Every mounted modal takes its place on the shared Escape stack, where the most recently
+  // opened one is on top. One that can't be closed still consumes the key, so Escape never
+  // reaches a drawer behind it.
+  useEscapeLayer(true, 'modal', () => {
+    if (showCloseButton) handleClose();
+  });
 
   // Reads the same --rdd-z-base a WindowManagerProvider's zIndexBase config mirrors
   // onto documentElement (falls back to 1000 so this also works standalone, with
@@ -171,7 +165,6 @@ export const ModalStackRenderer: React.FC = () => {
           key={modal.id}
           modal={modal}
           index={index}
-          isTopmost={index === modals.length - 1}
         />
       ))}
     </>

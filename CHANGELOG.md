@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.2] — 2026-09-25
+
+Fixes from defect reports filed by the Vue and Angular ports of this library, each reproduced against 6.3.1 before it was fixed. No API is removed or renamed.
+
+### Fixed
+- **Dark mode left the Toolbar and Sidebar unstyled.** Their colours come from `--sidebar-*` / `--tab-*` / `--toolbar-*`, which were defined only under `[data-color-scheme="dark"]`. `<Toolbar>` and `<Sidebar>` sit outside the workspace element, and `WindowManager` mirrors only a *light* scheme onto `<html>` — so unless the app set `data-color-scheme="dark"` on `<html>` itself, both rendered with no background, border or text colour in the default scheme. The dark tokens are now also defined on `:root`. (The demo apps set the attribute themselves, which is why this went unseen.)
+
+- **The active panel went stale after placement actions.** `floatPanel`, `dockPanel`, `dockPanelToGroup`, `dockPanelToWorkspaceEdge` and `movePanelOrder` changed which tab a group showed without updating `activePanelId` — often leaving it on a tab the move had just hidden. The visible tab then rendered unfocused, and `useActivePanelContribution()` kept serving the hidden panel's toolbar controls. Reachable from the UI: drag-reordering a tab that wasn't selected did it. The moved panel now becomes the active one.
+
+- **"Maximize Panel" on a minimized panel did nothing.** The taskbar menu offers it, but `maximizePanel` only knew about floating windows. It now restores the panel and maximizes it — floating a panel that was minimized from a group first. For a `canDrag: false` panel minimized from a group, which can't float, the menu no longer offers the item.
+
+- **`openPanel` on a minimized panel restored it to the wrong place, silently.** It re-placed the panel from the registry's initial target — the first group, or the default floating position — rather than where it was minimized from, and published no events, so an autosave keyed on `layout:changed` missed the change. It now does exactly what `restorePanel` does (same place, `panel:restored` + `layout:changed`); an explicit `initialTarget` still wins.
+
+- **`closeLeafGroup` on a group with panels left them open in no group.** The panels stayed "open" but rendered nowhere. Closing a group now closes each of its panels through the same guarded path as the tab's own × — a close guard can refuse, and a dirty panel stays unless the new `onConfirm` option approves — then removes the group once it is empty. A panel that refuses keeps its group.
+
+- **One Escape could close several overlays at once.** Each overlay listened on `document` separately, and `stopPropagation()` doesn't stop other listeners on the same node: one Escape closed both side drawers, or a context menu *and* the modal under it, or the panel search box *and* the drawer holding it. Escape now closes exactly one overlay — the one on top: context menus and toolbar flyouts above modals, modals above drawers, and the most recently opened within each. A control that handles Escape itself can keep its overlay open by calling `preventDefault()`.
+
+- **A maximized floating window kept its rounded corners, border and shadow.** The rule targeted `.maximized`; the component emits `rdd-maximized`.
+
+- **A hidden toolbar left a 1px line and stayed in the Tab order.** `visible={false}` collapsed the strip to 0 but its edge border still painted, and keyboard focus landed on buttons nobody could see. A hidden strip now has no border or padding, and is `inert` and `aria-hidden`.
+
+- **The documented `interface AppEvents` event map failed to compile** (`TS2344`) with `new WorkspaceClient<AppEvents>()`: the type parameter was constrained to `Record<string, unknown>`, which an interface doesn't satisfy. It is now constrained to `object`; payloads are still checked.
+
+- **The context menu's outside-click check threw** for a click dispatched on `window` itself (not a DOM node). It now closes the menu.
+
+### Changed
+- **`closeLeafGroup(leafId, options?)` returns a `Promise<void>`** that settles once every close request has, and accepts `{ onConfirm }` for dirty panels (see above). Source-compatible: code that ignored the old `void` return is unaffected.
+- **Placement actions publish `layout:changed`.** `floatPanel`, `dockPanel`, `dockPanelToGroup`, `dockPanelToWorkspaceEdge`, `movePanelOrder`, `closeLeafGroup`, and maximizing a minimized panel now each publish it once. The event is documented as "the layout changed", and autosave depends on it — expect autosave handlers to run on these actions from now on.
+- **Six `@keyframes` are now `rdd-` prefixed** (`rdd-fade-in`, `rdd-scale-up`, `rdd-slide-in-left`, `rdd-slide-in-right`, `rdd-tooltip-fade-in`, `rdd-toolbar-flyout-in`). Keyframe names are global to the page, so a host stylesheet defining its own `fadeIn` (Animate.css and many themes do) silently replaced the library's animation.
+- **Demo-only CSS no longer ships in `styles.css`.** The `.sb-*` sidebar-builder rules, `.full-viewport-layout` and `.hover-bg` belong to the demo apps (the docs already said they are not library API) and moved to `demo/demo-shared.css`. Unused rules were deleted (`.desktop-workspace`, `.window-manager-workspace`, `.sidebar-window-card`, `.btn-pill-outline`, `.badge-pill-dark`, `.sidebar-card-title`, `.rdd-scrollbar-hidden`, `.rdd-panel-float__resize`). If an app used any of these classes from `styles.css`, copy the rule from `demo/demo-shared.css`.
+
+### Tests
+- `StylesheetContract.test.ts` reads `index.css` as text and fails on an unprefixed class, keyframe or custom property, an `animation` naming no defined keyframes, or a rule for a class no component emits — the three kinds of stylesheet defect above, none of which a jsdom rendering test can see.
+
 ## [6.3.1] — 2026-09-19
 
 ### Fixed
@@ -362,7 +396,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.2...HEAD
+[6.3.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.1...v6.3.2
 [6.3.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.0...v6.3.1
 [6.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.2.0...v6.3.0
 [6.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.0.1...v6.1.0

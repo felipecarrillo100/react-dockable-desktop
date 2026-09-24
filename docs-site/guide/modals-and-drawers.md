@@ -156,6 +156,8 @@ function EditModal() {
 
 Multiple `openModal` calls stack visually. The topmost modal is active; pressing ESC or clicking the backdrop closes only the topmost.
 
+One ESC closes one overlay — the one on top. Context menus and toolbar flyouts come first, then modals (topmost first), then side drawers (the one opened last first). A modal with `closable: false` swallows ESC rather than letting it close the drawer behind it. A control inside an overlay that handles ESC itself — a search box clearing its query, say — can keep the overlay open by calling `event.preventDefault()` in its own `onKeyDown`.
+
 ```ts
 const id1 = openModal(StepOneModal, {});
 // User action opens a second modal on top:

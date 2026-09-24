@@ -9,6 +9,7 @@
 import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useToolbar } from './ToolbarContext';
+import { useEscapeLayer } from '../utils/escapeStack';
 import type { ToolbarContextValue } from './ToolbarContext';
 
 // ==========================================
@@ -259,13 +260,8 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [isOpen]);
 
-  // Close flyout on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsOpen(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen]);
+  // Close flyout on Escape — a popup, so above any modal or drawer on the shared Escape stack.
+  useEscapeLayer(isOpen, 'popup', () => setIsOpen(false));
 
   return (
     <>
@@ -431,17 +427,32 @@ export const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAt
 
   // CSS owns the open-state dimensions (including the touch @media 56px override).
   // Inline style only forces 0px when collapsed so the transition animates correctly.
-  const collapseStyle: React.CSSProperties = visible !== false
+  const collapsed = visible === false;
+  const collapseStyle: React.CSSProperties = !collapsed
     ? {}
     : isVertical
       ? { width: '0px' }
       : { height: '0px' };
 
+  // A collapsed strip is still in the DOM, so its buttons stayed in the Tab order — keyboard focus
+  // landed on controls nobody could see. `inert` takes the whole subtree out of focus and the
+  // accessibility tree. Set through the DOM rather than as a JSX prop: only React 19 knows `inert`,
+  // and this library supports React from 16.8.
+  const stripRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    if (collapsed) strip.setAttribute('inert', '');
+    else strip.removeAttribute('inert');
+  }, [collapsed]);
+
   return (
     <div
-      className={`rdd-toolbar-strip rdd-${position}${className ? ` ${className}` : ''}`}
+      ref={stripRef}
+      className={`rdd-toolbar-strip rdd-${position}${collapsed ? ' rdd-collapsed' : ''}${className ? ` ${className}` : ''}`}
       role="toolbar"
       aria-orientation={isVertical ? 'vertical' : 'horizontal'}
+      aria-hidden={collapsed || undefined}
       style={{ ...collapseStyle, ...style }}
     >
       {items.map((item, i) => renderItem(item, i, toolbar, position))}

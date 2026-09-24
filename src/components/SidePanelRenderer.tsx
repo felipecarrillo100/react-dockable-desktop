@@ -5,6 +5,7 @@ import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProvide
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
+import { useEscapeLayer } from '../utils/escapeStack';
 import { useContainerRect, type ContainerRect } from '../hooks/useContainerRect';
 
 /**
@@ -27,7 +28,6 @@ interface SidePanelRendererItemProps {
  */
 const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, position, defaultWidth, containerRect }) => {
   const { close, openModal, updateInstance, setDirty, registerCloseHandler, unregisterCloseHandler } = usePanelActions();
-  const { modals } = usePanelState();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
   const { dir } = useWindowManagerState();
@@ -111,15 +111,9 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
 
   const displayTitle = dirty ? `${baseTitle} *` : baseTitle;
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && modals.length === 0) {
-        handleClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleClose, modals.length]);
+  // Modals sit above drawers on the shared Escape stack, so an open modal answers first; of
+  // two open drawers, the one opened last does.
+  useEscapeLayer(true, 'drawer', handleClose);
 
   const width = panelOptions.width || defaultWidth || 400;
   const widthStyle = typeof width === 'number' ? `${width}px` : width;

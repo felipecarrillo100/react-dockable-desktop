@@ -20,11 +20,12 @@ export interface BuiltInPanelEvents {
   'panel:restored':  { id: string };
   /**
    * Fires whenever something `saveLayout()` would capture changes — open/close/minimize/restore,
-   * and an `openPanel` `dedupeKey` redirect. Coalesces those into one signal for autosave-style
-   * consumers, so they don't need to subscribe to four separate events. Does **not** cover a
+   * float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and an
+   * `openPanel` `dedupeKey` redirect. Coalesces those into one signal for autosave-style
+   * consumers, so they don't need to subscribe to separate events. Does **not** cover a
    * `registerStateProvider` callback's return value changing on its own — that's a pull, there's
    * no way to observe it changing without the panel separately notifying — nor resize/split-ratio
-   * drag/dock-rearrange, which have no hooks yet.
+   * drag, which has no hook yet.
    */
   'layout:changed': Record<string, never>;
   /**
@@ -118,7 +119,9 @@ export interface WorkspaceClientConfig {
  * workspace.openPanel('map-1', 'map');
  * workspace.focusPanel('map-1');
  */
-export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Record<string, unknown>> {
+// `object`, not `Record<string, unknown>`: an event map declared as an `interface` (the form the
+// docs use) has no index signature and so never satisfied the Record constraint (TS2344).
+export class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
   /** Scoped panel registry — fully independent from the global singleton. */
   readonly registry: PanelRegistryClass;
 
@@ -324,8 +327,20 @@ export class WorkspaceClient<TUserEvents extends Record<string, unknown> = Recor
     this._dispatch(a => a.movePanelOrder(panelId, targetLeafId, targetIndex));
   }
 
-  /** Closes an entire leaf group (all of its tabs) at once. */
-  closeLeafGroup(leafId: string): void { this._dispatch(a => a.closeLeafGroup(leafId)); }
+  /**
+   * Closes a leaf group: each of its tabs is closed through the guarded close path, then the
+   * group is removed once empty. A tab whose close guard refuses — or a dirty tab that
+   * `onConfirm` doesn't approve — stays open, and so does its group.
+   * Resolves once every close request has been settled.
+   *
+   * @remarks If called before the provider mounts, the request is queued and this returns an
+   * already-resolved promise, as `requestClosePanel` does.
+   */
+  closeLeafGroup(leafId: string, options?: { onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }): Promise<void> {
+    if (this._actions) return this._actions.closeLeafGroup(leafId, options);
+    this._pendingCalls.push(a => { void a.closeLeafGroup(leafId, options); });
+    return Promise.resolve();
+  }
 
   /** Registers a guard that can veto closing the given panel. */
   registerCloseGuard(id: string, guard: () => boolean | Promise<boolean>): void {

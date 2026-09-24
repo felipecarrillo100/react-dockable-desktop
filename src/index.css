@@ -149,30 +149,6 @@ body,
   -webkit-font-smoothing: antialiased;
 }
 
-/* Premium full viewport layout */
-.full-viewport-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background-color: var(--rdd-bg-primary);
-}
-
-/* Subtle, high-tech grid styling for the window manager workspace */
-.desktop-workspace,
-.window-manager-workspace {
-  background-color: var(--rdd-bg-workspace);
-  background-size: 32px 32px;
-  position: relative;
-}
-
-.show-grid .desktop-workspace,
-.show-grid .window-manager-workspace {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-}
-
 /* Workspace Panel Container */
 .rdd-workspace-panel {
   background-color: var(--rdd-bg-panel);
@@ -558,7 +534,7 @@ body.rdd-resizing-col-active * {
   display: block;
 }
 
-@keyframes tooltipFadeIn {
+@keyframes rdd-tooltip-fade-in {
   from {
     opacity: 0;
     transform: translateX(-50%) translateY(-90%);
@@ -578,7 +554,7 @@ body.rdd-resizing-col-active * {
   font-family: 'Outfit', 'Inter', system-ui, sans-serif;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.1)) !important;
-  animation: tooltipFadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: rdd-tooltip-fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -652,9 +628,6 @@ body.rdd-resizing-col-active * {
   color: var(--rdd-close-btn-hover-color) !important;
   opacity: 1 !important;
 }
-.rdd-scrollbar-hidden::-webkit-scrollbar {
-  display: none;
-}
 
 /* Cross-browser scrollbar styling (Firefox standard) — scoped to the library's
    own workspace subtree, never the consumer's page. .rdd-sidebar-drawer-body is
@@ -688,12 +661,6 @@ body.rdd-resizing-col-active * {
   background: var(--rdd-scrollbar-thumb-hover);
 }
 
-/* Premium Hover Highlight Effects */
-.hover-bg:hover {
-  background-color: rgba(56, 189, 248, 0.08) !important;
-  border-color: rgba(56, 189, 248, 0.25) !important;
-}
-
 .rdd-floating-window {
   display: flex;
   flex-direction: column;
@@ -718,7 +685,7 @@ body.rdd-resizing-col-active * {
   transition: opacity 0.2s ease;
 }
 
-.rdd-floating-window.maximized {
+.rdd-floating-window.rdd-maximized {
   border-radius: 0;
   border: none;
   box-shadow: none;
@@ -1033,6 +1000,11 @@ body.rdd-dragging-active {
 }
 
 /* --- Theme Variables for Sidebar and Tabs --- */
+/* Dark is the default scheme, so its tokens are defined on :root as well. <Toolbar> and <Sidebar>
+   sit outside the workspace element, and WindowManager mirrors only a *light* scheme onto <html>
+   — so with these under [data-color-scheme="dark"] alone, the toolbar and sidebar rendered with
+   no background, border or text colour in dark mode unless the app set the attribute itself. */
+:root,
 [data-color-scheme="dark"] {
   --sidebar-bg: #1e2024;
   --sidebar-tabs-bg: #141619;
@@ -2035,71 +2007,6 @@ body.rdd-dragging-active {
   margin-right: 0 !important;
 }
 
-/* Sidebar Window Cards */
-.sidebar-window-card {
-  background-color: var(--sidebar-card-bg) !important;
-  border: 1px solid var(--sidebar-card-border) !important;
-  border-radius: 6px;
-  padding: 10px;
-  transition: all 0.15s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sidebar-window-card:hover {
-  border-color: var(--sidebar-card-hover-border) !important;
-  background-color: var(--sidebar-card-hover-bg) !important;
-}
-
-.sidebar-window-card.rdd-active {
-  background-color: var(--sidebar-card-active-bg) !important;
-  border-color: var(--sidebar-card-active-border) !important;
-  box-shadow: 0 0 10px var(--sidebar-card-active-shadow);
-}
-
-/* Custom Outlined Front Button */
-.btn-pill-outline {
-  border: 1px solid var(--sidebar-btn-front-border) !important;
-  color: var(--sidebar-btn-front-text) !important;
-  background: var(--sidebar-btn-front-bg) !important;
-  font-size: 0.68rem !important;
-  font-weight: 500 !important;
-  border-radius: 12px !important;
-  padding: 2px 10px !important;
-  transition: all 0.15s ease !important;
-  line-height: 1 !important;
-  text-decoration: none !important;
-}
-
-.btn-pill-outline:hover {
-  background: var(--sidebar-btn-front-hover-bg) !important;
-  transform: scale(1.03);
-}
-
-/* Badge (Grid / Float) */
-.badge-pill-dark {
-  background-color: var(--sidebar-badge-bg) !important;
-  color: var(--sidebar-badge-text) !important;
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-
-/* Title text */
-.sidebar-card-title {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--sidebar-text-title);
-  max-width: 130px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-
 /* Animations are on by default. `animations={false}` on <WindowManager /> adds
    `rdd-no-animations` to the workspace root and mirrors it onto <html> (so
    portaled elements — ContextMenu, Toast, Toolbar's flyout — are covered too).
@@ -2118,12 +2025,12 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 
 
-@keyframes fadeIn {
+@keyframes rdd-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes scaleUp {
+@keyframes rdd-scale-up {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
@@ -2136,7 +2043,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   align-items: center;
   justify-content: center;
   z-index: calc(var(--rdd-z-base, 1000) + 9000);
-  animation: fadeIn 0.18s ease-out;
+  animation: rdd-fade-in 0.18s ease-out;
 }
 
 .rdd-modal-curtain {
@@ -2157,7 +2064,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   color: var(--rdd-text-primary);
   max-width: 90%;
   max-height: 90vh;
-  animation: scaleUp 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: rdd-scale-up 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
 
@@ -2324,19 +2231,19 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 .rdd-side-panel-left.rdd-side-panel-visible {
-  animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: rdd-slide-in-left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .rdd-side-panel-right.rdd-side-panel-visible {
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: rdd-slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes slideInLeft {
+@keyframes rdd-slide-in-left {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
 
-@keyframes slideInRight {
+@keyframes rdd-slide-in-right {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
@@ -2387,7 +2294,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   background-color: rgba(0, 123, 255, 0.2);
   border: 2px dashed #007bff;
   pointer-events: none;
-  animation: fadeIn 0.15s ease-out;
+  animation: rdd-fade-in 0.15s ease-out;
 }
 
 /* Workspace corner anchor drop zones */
@@ -2822,242 +2729,6 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 /* ==========================================================================
-   SIDEBAR CONTENT PRIMITIVES (.sb-*)
-   Library-native classes for building sidebar tab content.
-   All values reference CSS variables — override via theme or custom CSS.
-   ========================================================================== */
-
-/* Section wrapper — use to group related controls */
-.sb-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-}
-
-/* Section heading — UPPERCASE monospace label */
-.sb-section-title {
-  font-family: monospace;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--sidebar-text-muted, var(--rdd-text-secondary));
-  margin: 0 0 4px 0;
-}
-
-/* Horizontal rule between sections */
-.sb-separator {
-  border: none;
-  border-top: 1px solid var(--sidebar-border);
-  margin: 4px 0;
-}
-
-/* Empty state placeholder */
-.sb-empty-state {
-  font-size: 0.8rem;
-  color: var(--sidebar-text-muted, var(--rdd-text-secondary));
-  text-align: center;
-  padding: 16px 12px;
-}
-
-/* Item card */
-.sb-card {
-  background-color: var(--sidebar-card-bg);
-  border: 1px solid var(--sidebar-card-border);
-  border-radius: 6px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-.sb-card:hover {
-  border-color: var(--sidebar-card-hover-border);
-  background-color: var(--sidebar-card-hover-bg);
-}
-.sb-card.rdd-active {
-  background-color: var(--sidebar-card-active-bg);
-  border-color: var(--sidebar-card-active-border);
-  box-shadow: 0 0 10px var(--sidebar-card-active-shadow);
-}
-
-/* Card title — truncated single line */
-.sb-card-title {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--sidebar-text-title);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-/* Card metadata row — secondary info, badges, action buttons */
-.sb-card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-/* Status badge */
-.sb-badge {
-  background-color: var(--sidebar-badge-bg);
-  color: var(--sidebar-badge-text);
-  font-family: monospace;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-/* Primary filled button */
-.sb-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  background: var(--rdd-accent-color);
-  color: var(--rdd-bg-primary);
-  border: none;
-  border-radius: 5px;
-  padding: 5px 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.1s ease;
-}
-.sb-btn:hover { opacity: 0.88; transform: scale(1.02); }
-.sb-btn:active { transform: scale(0.98); }
-
-/* Outlined accent button */
-.sb-btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  background: transparent;
-  color: var(--sidebar-btn-front-text);
-  border: 1px solid var(--sidebar-btn-front-border);
-  border-radius: 12px;
-  padding: 2px 10px;
-  font-size: 0.68rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-  line-height: 1;
-}
-.sb-btn-outline:hover {
-  background-color: var(--sidebar-btn-front-hover-bg);
-  transform: scale(1.03);
-}
-
-/* Icon-only ghost button — for card action rows */
-.sb-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--rdd-text-secondary);
-  border: none;
-  border-radius: 4px;
-  padding: 3px 5px;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-.sb-btn-ghost:hover {
-  color: var(--rdd-text-primary);
-  background-color: var(--sidebar-btn-hover-bg);
-}
-.sb-btn-ghost.danger:hover { color: #f87171; }
-
-/* Field: label + control */
-.sb-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-/* Field label */
-.sb-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--sidebar-text-title);
-}
-
-/* Text input */
-.sb-input {
-  background: var(--rdd-bg-panel);
-  color: var(--rdd-text-primary);
-  border: 1px solid var(--sidebar-border);
-  border-radius: 5px;
-  padding: 5px 8px;
-  font-size: 0.8rem;
-  width: 100%;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease;
-  outline: none;
-}
-.sb-input:focus { border-color: var(--rdd-accent-color); }
-.sb-input::placeholder { color: var(--rdd-text-secondary); }
-
-/* Select control */
-.sb-select {
-  background: var(--rdd-bg-panel);
-  color: var(--rdd-text-primary);
-  border: 1px solid var(--sidebar-border);
-  border-radius: 5px;
-  padding: 5px 8px;
-  font-size: 0.8rem;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-  outline: none;
-}
-.sb-select:focus { border-color: var(--rdd-accent-color); }
-
-/* Range slider */
-.sb-range {
-  width: 100%;
-  accent-color: var(--rdd-accent-color);
-  cursor: pointer;
-}
-
-/* Inline row of controls (e.g. range + value label) */
-.sb-field-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Monospace value readout next to a range */
-.sb-field-value {
-  font-family: monospace;
-  font-size: 0.78rem;
-  color: var(--rdd-text-primary);
-  white-space: nowrap;
-  min-width: 36px;
-  text-align: right;
-}
-
-/* Toggle switch row: label on left, switch on right */
-.sb-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.sb-toggle-label {
-  font-size: 0.8rem;
-  color: var(--rdd-text-primary);
-}
-
-/* ==========================================================================
    TOOLBAR STRIP
    ========================================================================== */
 
@@ -3067,6 +2738,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
   align-items: center;
   flex-shrink: 0;
   z-index: 5;
+}
+
+/* A hidden strip (visible={false}) is collapsed to 0 on its cross axis. Its edge border and
+   padding would otherwise still paint a 1px line; the strip is also made inert in Toolbar.tsx so
+   its buttons leave the Tab order. */
+.rdd-toolbar-strip.rdd-collapsed {
+  border-width: 0 !important;
+  padding: 0 !important;
 }
 
 .rdd-toolbar-strip.rdd-left,
@@ -3223,10 +2902,10 @@ html.rdd-no-animations [class*="rdd-"]::after {
   flex-direction: column;
   gap: 1px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
-  animation: toolbar-flyout-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: rdd-toolbar-flyout-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes toolbar-flyout-in {
+@keyframes rdd-toolbar-flyout-in {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }
 }
@@ -3917,15 +3596,6 @@ html.rdd-no-animations [class*="rdd-"]::after {
   min-height: 0;
 }
 
-/* Resize grip — bottom-right corner */
-.rdd-panel-float__resize {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 12px;
-  height: 12px;
-  cursor: nwse-resize;
-}
 
 /* ── Docking drop zones (visible while dragging a floating window) ── */
 /* Armed for resize-to-stretch: the clamps already hold the widget exactly where a stretched axis

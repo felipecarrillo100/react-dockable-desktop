@@ -197,3 +197,46 @@ describe('ContextMenu stacking', () => {
     expect(menu.style.zIndex).toBe('12345');
   });
 });
+
+// ─── Maximized floating window ────────────────────────────────────────────────
+// index.css drops the radius, border and shadow of a maximized window with
+// `.rdd-floating-window.rdd-maximized`. The rule used to target `.maximized`,
+// which nothing emits, so a maximized window kept its rounded frame.
+// (StylesheetContract.test.ts checks the selector side; this checks the emitted side.)
+
+describe('maximized floating window class', () => {
+  let container: HTMLDivElement;
+  let root: Root | null = null;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); });
+    root = null;
+    document.body.removeChild(container);
+  });
+
+  it('a maximized window carries rdd-maximized, and loses it when restored', () => {
+    const client = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+    act(() => { client.openPanel('map-1', 'map', { initialTarget: 'floating' }); });
+    const win = () => container.querySelector('.rdd-floating-window') as HTMLElement;
+    expect(win().classList.contains('rdd-maximized')).toBe(false);
+    act(() => { client.maximizePanel('map-1'); });
+    expect(win().classList.contains('rdd-maximized')).toBe(true);
+    act(() => { client.maximizePanel('map-1'); });
+    expect(win().classList.contains('rdd-maximized')).toBe(false);
+  });
+});
