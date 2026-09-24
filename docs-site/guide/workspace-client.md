@@ -30,7 +30,7 @@ Once the provider mounts and calls `_connect()`, all client methods forward dire
 ### Panel lifecycle
 
 ```ts
-client.openPanel(id, componentKey, options?)  // open / focus a panel
+client.openPanel(id, componentKey, options?)  // open / focus a panel; a minimized one is restored where it was
 client.closePanel(id)                          // close immediately (no guard)
 client.minimizePanel(id)                       // send to taskbar
 client.restorePanel(id)                        // restore from taskbar
@@ -108,8 +108,16 @@ client.findPanelId('markdownDocument', '/notes.md')  // → the matching panel's
 ```ts
 client.floatPanel(id, rect?)                   // detach to floating window
 client.dockPanel(id, targetLeafId?)            // dock back to grid
-client.maximizePanel(id)                       // maximize floating window
+client.maximizePanel(id)                       // maximize floating window (restores + floats a minimized one)
+client.dockPanelToGroup(id, leafId, position)  // dock into a group, or split it ('center' | 'left' | 'right' | 'top' | 'bottom')
+client.dockPanelToWorkspaceEdge(id, side)      // dock along an outer edge of the workspace
+client.movePanelOrder(id, leafId, index)       // re-order a tab (or move it into another group)
+await client.closeLeafGroup(leafId, { onConfirm? }) // close every tab in a group, then the group
 ```
+
+The panel that was moved becomes the active one, and each of these publishes `layout:changed`.
+
+`closeLeafGroup` closes each tab the way its own × does: a close guard can refuse, and a dirty tab stays open unless `onConfirm` resolves `true`. A tab that stays open keeps its group. The returned promise settles once every tab has been dealt with.
 
 ### Layout serialization
 

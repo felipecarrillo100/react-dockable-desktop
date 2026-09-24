@@ -37,6 +37,9 @@ Fixes from defect reports filed by the Vue and Angular ports of this library, ea
 - **Six `@keyframes` are now `rdd-` prefixed** (`rdd-fade-in`, `rdd-scale-up`, `rdd-slide-in-left`, `rdd-slide-in-right`, `rdd-tooltip-fade-in`, `rdd-toolbar-flyout-in`). Keyframe names are global to the page, so a host stylesheet defining its own `fadeIn` (Animate.css and many themes do) silently replaced the library's animation.
 - **Demo-only CSS no longer ships in `styles.css`.** The `.sb-*` sidebar-builder rules, `.full-viewport-layout` and `.hover-bg` belong to the demo apps (the docs already said they are not library API) and moved to `demo/demo-shared.css`. Unused rules were deleted (`.desktop-workspace`, `.window-manager-workspace`, `.sidebar-window-card`, `.btn-pill-outline`, `.badge-pill-dark`, `.sidebar-card-title`, `.rdd-scrollbar-hidden`, `.rdd-panel-float__resize`). If an app used any of these classes from `styles.css`, copy the rule from `demo/demo-shared.css`.
 
+### Added
+- **A `LICENSE` file (MIT) and a `license` field in `package.json`.** The README always said MIT, but the published package carried no license text and npm showed no license for it.
+
 ### Tests
 - `StylesheetContract.test.ts` reads `index.css` as text and fails on an unprefixed class, keyframe or custom property, an `animation` naming no defined keyframes, or a rule for a class no component emits — the three kinds of stylesheet defect above, none of which a jsdom rendering test can see.
 

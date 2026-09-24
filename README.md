@@ -236,7 +236,8 @@ workspace.floatPanel(id, rect?, anchor?)       // detach to a floating window; o
 workspace.dockPanel(id)                        // return floating to the grid
 workspace.minimizePanel(id)
 workspace.restorePanel(id)
-workspace.maximizePanel(id)
+workspace.maximizePanel(id)                    // a minimized panel is restored and maximized
+workspace.closeLeafGroup(leafId, opts?)        // closes each tab (guards apply), then the group; returns a Promise
 
 // Synchronous state queries (no hook needed)
 workspace.isOpen(id)                           // → boolean
@@ -461,7 +462,7 @@ npm run build        # build dist/
 
 ## License
 
-MIT — free to use, adapt, and build upon.
+MIT — free to use, adapt, and build upon. See [LICENSE](./LICENSE).
 
 ---
 
