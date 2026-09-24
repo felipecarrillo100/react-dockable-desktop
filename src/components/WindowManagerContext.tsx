@@ -405,10 +405,15 @@ export interface WindowActions {
    */
   movePanelOrder: (panelId: string, targetLeafId: string, targetIndex: number) => void;
   /**
-   * Closes an empty leaf group (removes it from the grid tree).
-   * @param leafId - Leaf node ID to remove.
+   * Closes a leaf group: each of its panels is closed through the guarded close path (as if by
+   * its own tab ×), then the group is removed once empty. A close guard that refuses, or a dirty
+   * panel that `onConfirm` doesn't approve, keeps that panel — and therefore the group.
+   * A group with `canClose: false` is left alone.
+   * @param leafId - Leaf node ID to close.
+   * @param options.onConfirm - Asked for each dirty panel; resolve `true` to discard its changes.
+   * @returns Resolves once every close request has been settled.
    */
-  closeLeafGroup: (leafId: string) => void;
+  closeLeafGroup: (leafId: string, options?: { onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => Promise<void>;
   /**
    * Registers a close guard that can intercept and cancel panel close requests.
    * @param id - Panel instance ID to guard.
@@ -663,6 +668,24 @@ function deriveActivePanelId(scope: ActiveTargetScope): string | null {
     if (!frontmost || w.z > frontmost.z) frontmost = w;
   }
   return frontmost?.id ?? null;
+}
+
+/**
+ * The globally active panel after a placement action (float / dock / move / close-group).
+ *
+ * Those actions change which tab a leaf shows without going through `focusPanel`, and each one
+ * used to leave `activePanelId` wherever it was — often on a tab the move had just hidden, so the
+ * visible tab rendered unfocused and `useActivePanelContribution()` kept serving the hidden
+ * panel's controls. The moved panel is what the user just acted on, so it wins when it is
+ * visible; otherwise the previous active panel is kept if it still is; otherwise it is derived.
+ */
+function resolveActivePanelId(
+  next: ActiveTargetScope & { activePanelId: string | null },
+  preferId: string | null,
+): string | null {
+  if (preferId && isVisibleActiveTarget(preferId, next)) return preferId;
+  if (next.activePanelId && isVisibleActiveTarget(next.activePanelId, next)) return next.activePanelId;
+  return deriveActivePanelId(next);
 }
 
 /**
@@ -1097,6 +1120,127 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return null;
   };
 
+  // State transitions shared by more than one action. Each takes the previous state and returns
+  // the next one (or `prev` itself when there is nothing to do), so an action can chain them
+  // inside a single `setState` — maximizing a minimized panel is restore, then float, then
+  // maximize, and must not render the intermediate states.
+
+  /** Brings a minimized panel back where it was: its old floating rect, or its old group. */
+  const applyRestore = (prev: WindowState, id: string, activate: boolean): WindowState => {
+    const panel = prev.panels[id];
+    if (!panel || panel.state !== 'minimized') return prev;
+
+    const nextMinimized = prev.minimized.filter(m => m.id !== id);
+    const prevState = panel.previousState || 'docked';
+    // A restored panel is, by definition, visible again — so unlike the minimize path there is
+    // nothing to derive: it is itself the only correct candidate. Leaving activePanelId behind
+    // reproduced the 6de3381 defect class in reverse (visible tab rendered unfocused, and every
+    // contributed control stayed bound to whatever replaced this panel while it was minimized).
+    const nextActive = activate ? id : prev.activePanelId;
+    const entry = registry.get(panel.component);
+
+    const floatBack = (): WindowState => {
+      maxZRef.current += 1;
+      const favPos = panel.lastFloatingRect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
+      const cascaded = getCascadedPosition(favPos, prev.floating);
+      return {
+        ...prev,
+        minimized: nextMinimized,
+        floating: [
+          ...prev.floating,
+          {
+            ...cascaded,
+            id,
+            z: maxZRef.current,
+            anchor: panel.lastFloatingRect?.anchor ?? null
+          }
+        ],
+        panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } },
+        activePanelId: nextActive
+      };
+    };
+
+    if (prevState === 'floating') return floatBack();
+
+    if (panel.lastLeafId && hasLeaf(prev.gridRoot, panel.lastLeafId)) {
+      return {
+        ...prev,
+        minimized: nextMinimized,
+        gridRoot: addPanelToLeaf(prev.gridRoot, panel.lastLeafId, id),
+        panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } },
+        activePanelId: nextActive
+      };
+    }
+    // Leaf group ceased to exist: float it instead if floatable!
+    if (entry?.defaultOptions?.canDrag !== false) return floatBack();
+
+    // Leaf group ceased to exist but not floatable: dock into fallback leaf group
+    const targetLeafId = findFirstLeafId(prev.gridRoot) || 'group-default';
+    return {
+      ...prev,
+      minimized: nextMinimized,
+      gridRoot: addPanelToLeaf(prev.gridRoot, targetLeafId, id),
+      panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } },
+      activePanelId: nextActive
+    };
+  };
+
+  /** Turns a docked panel into a floating window. Refused for `canDrag: false` panels. */
+  const applyFloat = (
+    prev: WindowState,
+    id: string,
+    { rect, anchor, activate = true }: { rect?: { x: number; y: number; width: number; height: number }; anchor?: FloatAnchor | null; activate?: boolean } = {},
+  ): WindowState => {
+    const panel = prev.panels[id];
+    if (!panel) return prev;
+
+    const entry = registry.get(panel.component);
+    if (entry?.defaultOptions?.canDrag === false) return prev;
+
+    const favPos = rect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
+    const cleanRoot = removePanelFromTree(prev.gridRoot, id);
+    // Floating an already-floating panel re-places it rather than adding a second window.
+    const otherWindows = prev.floating.filter(w => w.id !== id);
+    maxZRef.current += 1;
+    const cascaded = getCascadedPosition(favPos, otherWindows);
+
+    const next: WindowState = {
+      ...prev,
+      gridRoot: cleanRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null },
+      floating: [...otherWindows, { ...cascaded, id, z: maxZRef.current, anchor: anchor ?? null }],
+      panels: {
+        ...prev.panels,
+        [id]: { ...panel, state: 'floating' }
+      }
+    };
+    return { ...next, activePanelId: resolveActivePanelId(next, activate ? id : null) };
+  };
+
+  /** Docks a panel into `targetLeafId`, or the first group when that id is missing. */
+  const applyDock = (prev: WindowState, id: string, targetLeafId?: string, activate = true): WindowState => {
+    const panel = prev.panels[id];
+    if (!panel) return prev;
+
+    const nextFloating = prev.floating.filter(w => w.id !== id);
+    const cleanRoot = removePanelFromTree(prev.gridRoot, id) || EMPTY_LEAF;
+    // The caller asked for this panel to be docked, so an id that no longer names a group
+    // falls back to the first one rather than docking it nowhere. Removing the panel can
+    // itself delete the requested group, which is why this is checked against `cleanRoot`.
+    const requested = targetLeafId && hasLeaf(cleanRoot, targetLeafId) ? targetLeafId : undefined;
+    const leafId = requested || findFirstLeafId(cleanRoot) || EMPTY_LEAF.id;
+
+    const next: WindowState = {
+      ...prev,
+      gridRoot: addPanelToLeaf(cleanRoot, leafId, id),
+      floating: nextFloating,
+      panels: {
+        ...prev.panels,
+        [id]: { ...panel, state: 'docked' }
+      }
+    };
+    return { ...next, activePanelId: resolveActivePanelId(next, activate ? id : null) };
+  };
+
   const openPanel = useCallback(<P extends object = Record<string, unknown>>(id: string, component: string, options?: OpenPanelOptions<P>) => {
     // Dedup redirect: resolve to an already-open panel of the same component/dedupeKey, if any,
     // before anything else runs — the caller's own `id`/`props` are ignored for this call in
@@ -1114,6 +1258,29 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     const shouldFocus = options?.focus !== false;
     const propsProvided = options?.props !== undefined;
     const serializable = propsProvided ? isSerializable(options.props) : true;
+
+    // Re-opening a minimized panel is a restore, and must land where `restorePanel` would: its
+    // old group or floating rect. This used to re-place it from the registry's initial target
+    // (the first group, or the default floating position) and publish nothing, so an autosave
+    // keyed on `layout:changed` missed it. An explicit `initialTarget` still wins.
+    if (stateRef.current.panels[resolvedId]?.state === 'minimized') {
+      const explicitTarget = options?.initialTarget;
+      setState(prev => {
+        const restored = applyRestore(prev, resolvedId, shouldFocus);
+        const state = restored.panels[resolvedId]?.state;
+        if (explicitTarget === 'floating' && state === 'docked') {
+          return applyFloat(restored, resolvedId, { activate: shouldFocus });
+        }
+        if (explicitTarget && explicitTarget !== 'floating' && state === 'floating') {
+          return applyDock(restored, resolvedId, undefined, shouldFocus);
+        }
+        return restored;
+      });
+      eventBusRef.current.publish('panel:restored', { id: resolvedId });
+      eventBusRef.current.publish('layout:changed', {});
+      return;
+    }
+
     setState(prev => {
       const exists = prev.panels[resolvedId];
       const entry = registry.get(component);
@@ -1122,31 +1289,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const favPos = entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
       const activePanelId = shouldFocus ? resolvedId : prev.activePanelId;
 
-      // Case 1: Already exists
+      // Case 1: Already exists (a minimized one was handled above, before this update)
       if (exists) {
         if (exists.state === 'minimized') {
-          // Restore
-          const nextMinimized = prev.minimized.filter(m => m.id !== resolvedId);
-          if (target === 'floating' || !prev.gridRoot) {
-            maxZRef.current += 1;
-            const cascaded = getCascadedPosition(favPos, prev.floating);
-            return {
-              ...prev,
-              minimized: nextMinimized,
-              floating: [...prev.floating, { ...cascaded, id: resolvedId, z: maxZRef.current }],
-              panels: { ...prev.panels, [resolvedId]: { ...exists, state: 'floating' } },
-              activePanelId
-            };
-          } else {
-            const firstLeaf = findFirstLeafId(prev.gridRoot) || 'group-default';
-            return {
-              ...prev,
-              minimized: nextMinimized,
-              gridRoot: addPanelToLeaf(prev.gridRoot, firstLeaf, resolvedId),
-              panels: { ...prev.panels, [resolvedId]: { ...exists, state: 'docked' } },
-              activePanelId
-            };
-          }
+          return applyRestore(prev, resolvedId, shouldFocus);
         } else if (exists.state === 'floating') {
           if (shouldFocus) focusPanel(resolvedId);
           return prev;
@@ -1403,89 +1549,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   const restorePanel = useCallback((id: string, options?: { focus?: boolean }) => {
     const wasMinimized = stateRef.current.panels[id]?.state === 'minimized';
     const shouldFocus = options?.focus !== false;
-    setState(prev => {
-      const panel = prev.panels[id];
-      if (!panel || panel.state !== 'minimized') return prev;
-
-      const nextMinimized = prev.minimized.filter(m => m.id !== id);
-      const prevState = panel.previousState || 'docked';
-      // A restored panel is, by definition, visible again — so unlike the minimize path there is
-      // nothing to derive: it is itself the only correct candidate. Leaving activePanelId behind
-      // reproduced the 6de3381 defect class in reverse (visible tab rendered unfocused, and every
-      // contributed control stayed bound to whatever replaced this panel while it was minimized).
-      const nextActive = shouldFocus ? id : prev.activePanelId;
-
-      if (prevState === 'floating') {
-        maxZRef.current += 1;
-        const entry = registry.get(panel.component);
-        const favPos = panel.lastFloatingRect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
-        const cascaded = getCascadedPosition(favPos, prev.floating);
-        return {
-          ...prev,
-          minimized: nextMinimized,
-          floating: [
-            ...prev.floating, 
-            {
-              ...cascaded,
-              id,
-              z: maxZRef.current,
-              anchor: panel.lastFloatingRect?.anchor ?? null
-            }
-          ],
-          panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } },
-          activePanelId: nextActive
-        };
-      } else {
-        const leafExists = (node: LayoutNode, targetId: string): boolean => {
-          if (node.type === 'leaf') return node.id === targetId;
-          return node.children.some(c => leafExists(c, targetId));
-        };
-
-        const parentLeafExists = panel.lastLeafId && leafExists(prev.gridRoot, panel.lastLeafId);
-        const entry = registry.get(panel.component);
-        const canDrag = entry?.defaultOptions?.canDrag !== false;
-
-        if (parentLeafExists) {
-          return {
-            ...prev,
-            minimized: nextMinimized,
-            gridRoot: addPanelToLeaf(prev.gridRoot, panel.lastLeafId!, id),
-            panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } },
-            activePanelId: nextActive
-          };
-        } else if (canDrag) {
-          // Leaf group ceased to exist: float it instead if floatable!
-          maxZRef.current += 1;
-          const favPos = panel.lastFloatingRect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
-          const cascaded = getCascadedPosition(favPos, prev.floating);
-          return {
-            ...prev,
-            minimized: nextMinimized,
-            floating: [
-              ...prev.floating, 
-              {
-                ...cascaded,
-                id,
-                z: maxZRef.current,
-                anchor: panel.lastFloatingRect?.anchor ?? null
-              }
-            ],
-            panels: { ...prev.panels, [id]: { ...panel, state: 'floating' } },
-            activePanelId: nextActive
-          };
-        } else {
-          // Leaf group ceased to exist but not floatable: dock into fallback leaf group
-          const targetLeafId = findFirstLeafId(prev.gridRoot) || 'group-default';
-          return {
-            ...prev,
-            minimized: nextMinimized,
-            gridRoot: addPanelToLeaf(prev.gridRoot, targetLeafId, id),
-            panels: { ...prev.panels, [id]: { ...panel, state: 'docked' } },
-            activePanelId: nextActive
-          };
-        }
-      }
-    });
+    setState(prev => applyRestore(prev, id, shouldFocus));
     if (wasMinimized) {
       eventBusRef.current.publish('panel:restored', { id });
       eventBusRef.current.publish('layout:changed', {});
@@ -1493,57 +1557,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, [getCascadedPosition]);
 
   const floatPanel = useCallback((id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
-    setState(prev => {
-      const panel = prev.panels[id];
-      if (!panel) return prev;
-
-      const registryEntry = registry.get(panel.component);
-      if (registryEntry?.defaultOptions?.canDrag === false) {
-        return prev;
-      }
-
-      const entry = registry.get(panel.component);
-      const favPos = rect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
-
-      const cleanRoot = removePanelFromTree(prev.gridRoot, id);
-      maxZRef.current += 1;
-      const cascaded = getCascadedPosition(favPos, prev.floating);
-
-      return {
-        ...prev,
-        gridRoot: cleanRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null },
-        floating: [...prev.floating, { ...cascaded, id, z: maxZRef.current, anchor: anchor ?? null }],
-        panels: {
-          ...prev.panels,
-          [id]: { ...panel, state: 'floating' }
-        }
-      };
-    });
+    const panel = stateRef.current.panels[id];
+    const willFloat = !!panel && registry.get(panel.component)?.defaultOptions?.canDrag !== false;
+    setState(prev => applyFloat(prev, id, { rect, anchor }));
+    if (willFloat) eventBusRef.current.publish('layout:changed', {});
   }, [getCascadedPosition]);
 
   const dockPanel = useCallback((id: string, targetLeafId?: string) => {
-    setState(prev => {
-      const panel = prev.panels[id];
-      if (!panel) return prev;
-
-      const nextFloating = prev.floating.filter(w => w.id !== id);
-      const cleanRoot = removePanelFromTree(prev.gridRoot, id) || EMPTY_LEAF;
-      // The caller asked for this panel to be docked, so an id that no longer names a group
-      // falls back to the first one rather than docking it nowhere. Removing the panel can
-      // itself delete the requested group, which is why this is checked against `cleanRoot`.
-      const requested = targetLeafId && hasLeaf(cleanRoot, targetLeafId) ? targetLeafId : undefined;
-      const leafId = requested || findFirstLeafId(cleanRoot) || EMPTY_LEAF.id;
-
-      return {
-        ...prev,
-        gridRoot: addPanelToLeaf(cleanRoot, leafId, id),
-        floating: nextFloating,
-        panels: {
-          ...prev.panels,
-          [id]: { ...panel, state: 'docked' }
-        }
-      };
-    });
+    const exists = id in stateRef.current.panels;
+    setState(prev => applyDock(prev, id, targetLeafId));
+    if (exists) eventBusRef.current.publish('layout:changed', {});
   }, []);
 
   // Helper to split a layout leaf node into a branch (for drag split targets)
@@ -1588,6 +1611,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, []);
 
   const dockPanelToGroup = useCallback((id: string, targetLeafId: string, position: DropPosition) => {
+    const before = stateRef.current;
+    const willMove = id in before.panels
+      && hasLeaf(before.gridRoot, targetLeafId)
+      && !isLoneOccupant(before.gridRoot, targetLeafId, id);
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1624,7 +1651,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         newRoot = splitLeafInTree(cleanRoot, targetLeafId, id, position, prev.splitRatio);
       }
 
-      return {
+      const next: WindowState = {
         ...prev,
         gridRoot: newRoot,
         floating: nextFloating,
@@ -1634,10 +1661,14 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         },
         draggedPanelId: null
       };
+      return { ...next, activePanelId: resolveActivePanelId(next, id) };
     });
+    if (willMove) eventBusRef.current.publish('layout:changed', {});
   }, []);
 
   const dockPanelToWorkspaceEdge = useCallback((id: string, position: SplitDirection) => {
+    const before = stateRef.current;
+    const willMove = id in before.panels && removePanelFromTree(before.gridRoot, id) !== null;
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1670,7 +1701,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         children
       };
 
-      return {
+      const next: WindowState = {
         ...prev,
         gridRoot: newRoot,
         floating: nextFloating,
@@ -1680,10 +1711,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         },
         draggedPanelId: null
       };
+      return { ...next, activePanelId: resolveActivePanelId(next, id) };
     });
+    if (willMove) eventBusRef.current.publish('layout:changed', {});
   }, []);
 
   const movePanelOrder = useCallback((panelId: string, targetLeafId: string, targetIndex: number) => {
+    const before = stateRef.current;
+    const willMove = panelId in before.panels
+      && hasLeaf(before.gridRoot, targetLeafId)
+      && !isLoneOccupant(before.gridRoot, targetLeafId, panelId);
     setState(prev => {
       const panel = prev.panels[panelId];
       if (!panel) return prev;
@@ -1732,7 +1769,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const newRoot = insertInLeaf(cleanRoot || EMPTY_LEAF);
       const nextFloating = prev.floating.filter(w => w.id !== panelId);
 
-      return {
+      const next: WindowState = {
         ...prev,
         gridRoot: newRoot,
         floating: nextFloating,
@@ -1742,50 +1779,109 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         },
         draggedPanelId: null
       };
+      return { ...next, activePanelId: resolveActivePanelId(next, panelId) };
     });
+    if (willMove) eventBusRef.current.publish('layout:changed', {});
   }, []);
 
-  const closeLeafGroup = useCallback((leafId: string) => {
-    setState(prev => {
-      const removeLeafFromTree = (node: LayoutNode): LayoutNode | null => {
-        if (node.type === 'leaf') {
-          if (node.id === leafId && node.canClose !== false) {
-            return null;
-          }
-          return node;
-        } else {
-          const children = node.children
-            .map(c => removeLeafFromTree(c))
-            .filter((c): c is LayoutNode => c !== null);
+  const closeLeafGroup = useCallback(async (leafId: string, options?: { onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
+    const findLeaf = (node: LayoutNode): LayoutLeafNode | null => {
+      if (node.type === 'leaf') return node.id === leafId ? node : null;
+      for (const child of node.children) {
+        const found = findLeaf(child);
+        if (found) return found;
+      }
+      return null;
+    };
 
-          if (children.length === 0) return null;
-          if (children.length === 1) return children[0];
+    const leaf = findLeaf(stateRef.current.gridRoot);
+    if (!leaf || leaf.canClose === false) return;
 
-          // Re-normalize sizes
-          const sizes = node.sizes.slice(0, children.length);
-          const sum = sizes.reduce((a, b) => a + b, 0);
-          return {
-            ...node,
-            children,
-            sizes: sizes.map(s => s / sum)
-          };
-        }
-      };
+    // Closing a group closes its tabs, each through the same guarded path as the tab's own ×:
+    // a close guard can refuse, and a dirty panel is kept unless `onConfirm` agrees. Removing
+    // the leaf outright used to leave its panels "open" but in no group — rendered nowhere.
+    for (const panelId of [...leaf.panels]) {
+      await requestClosePanel(panelId, { onConfirm: options?.onConfirm });
+    }
 
-      const newRoot = removeLeafFromTree(prev.gridRoot);
+    const removeLeafFromTree = (node: LayoutNode): LayoutNode | null => {
+      if (node.type === 'leaf') {
+        return node.id === leafId ? null : node;
+      }
+      const children = node.children
+        .map(c => removeLeafFromTree(c))
+        .filter((c): c is LayoutNode => c !== null);
+
+      if (children.length === 0) return null;
+      if (children.length === 1) return children[0];
+
+      // Re-normalize sizes
+      const sizes = node.sizes.slice(0, children.length);
+      const sum = sizes.reduce((a, b) => a + b, 0);
       return {
-        ...prev,
-        gridRoot: newRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null }
+        ...node,
+        children,
+        sizes: sizes.map(s => s / sum)
       };
+    };
+
+    // A panel that refused to close keeps its group. An emptied `keepOnEmpty` group is still in
+    // the tree at this point, and is the one case left to remove here.
+    setState(prev => {
+      const current = findLeaf(prev.gridRoot);
+      if (!current || current.panels.length > 0) return prev;
+      const next: WindowState = {
+        ...prev,
+        gridRoot: removeLeafFromTree(prev.gridRoot) || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null }
+      };
+      return { ...next, activePanelId: resolveActivePanelId(next, null) };
     });
-  }, []);
+    eventBusRef.current.publish('layout:changed', {});
+  }, [requestClosePanel]);
 
   const maximizePanel = useCallback((id: string) => {
+    const panel = stateRef.current.panels[id];
+    if (!panel) return;
+
+    if (panel.state === 'minimized') {
+      // "Maximize" on a minimized panel (the taskbar menu offers it) is restore + maximize.
+      // Only floating windows maximize, so a panel that comes back docked is floated first —
+      // unless it can't be dragged, in which case it is just restored to its group. The
+      // taskbar menu hides the item for that case.
+      setState(prev => {
+        const restored = applyRestore(prev, id, true);
+        if (restored === prev) return prev;
+        let next = restored;
+        if (restored.panels[id]?.state === 'docked') {
+          next = applyFloat(restored, id);
+          if (next === restored) return restored;
+        }
+        return {
+          ...next,
+          floating: next.floating.map(w => w.id === id ? { ...w, maximized: true } : w),
+          activePanelId: id
+        };
+      });
+      eventBusRef.current.publish('panel:restored', { id });
+      eventBusRef.current.publish('layout:changed', {});
+      return;
+    }
+
+    if (panel.state === 'docked') {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          `[react-dockable-desktop] maximizePanel("${id}") was ignored: only floating windows can ` +
+          `be maximized. Float the panel first with floatPanel("${id}").`
+        );
+      }
+      return;
+    }
+
     setState(prev => ({
       ...prev,
       floating: prev.floating.map(w => w.id === id ? { ...w, maximized: !w.maximized } : w)
     }));
-  }, []);
+  }, [getCascadedPosition]);
 
   const updateSplitSizes = useCallback((path: number[], sizes: number[]) => {
     const updateInTree = (node: LayoutNode, depth: number): LayoutNode => {

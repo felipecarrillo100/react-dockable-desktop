@@ -313,6 +313,27 @@ describe('TB18-TB19: Toolbar visibility', () => {
     expect(strip.style.width).toBe('0px');
   });
 
+  it('TB18c: a hidden strip is marked collapsed and inert, and leaves the Tab order', () => {
+    const items: ToolbarItem[] = [
+      { type: 'action', id: 'a', label: 'A', icon: <Icon />, onClick: () => {} },
+    ];
+    const render = (visible: boolean) => act(() => {
+      root!.render(wrapInProvider(<Toolbar items={items} position="left" visible={visible} />));
+    });
+    act(() => { root = createRoot(container); });
+    render(false);
+    const strip = container.querySelector('.rdd-toolbar-strip') as HTMLElement;
+    expect(strip.classList.contains('rdd-collapsed')).toBe(true);
+    expect(strip.hasAttribute('inert')).toBe(true);
+    expect(strip.getAttribute('aria-hidden')).toBe('true');
+
+    // Shown again: back in the Tab order and the accessibility tree.
+    render(true);
+    expect(strip.classList.contains('rdd-collapsed')).toBe(false);
+    expect(strip.hasAttribute('inert')).toBe(false);
+    expect(strip.hasAttribute('aria-hidden')).toBe(false);
+  });
+
   it('TB18b: visible=true leaves width to CSS (no inline collapse override)', () => {
     const items: ToolbarItem[] = [];
     act(() => {

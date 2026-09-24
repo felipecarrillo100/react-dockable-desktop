@@ -139,7 +139,7 @@ workspace.subscribe('layout:panels-excluded', data => {
 | `'panel:closed'` | `{ id: string }` | A panel was closed. |
 | `'panel:minimized'` | `{ id: string }` | A panel was sent to the taskbar. |
 | `'panel:restored'` | `{ id: string }` | A minimized panel was restored. |
-| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore/dedupe-redirect into one signal for autosave-style consumers. Does **not** cover a `registerStateProvider` return value changing on its own (a pull, unobservable without the panel notifying separately), nor resize/split-ratio-drag/dock-rearrange, which have no hooks yet. |
+| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and a dedupe redirect into one signal for autosave-style consumers. Does **not** cover a `registerStateProvider` return value changing on its own (a pull, unobservable without the panel notifying separately), nor resize/split-ratio drag, which has no hook yet. |
 | `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from a `registerStateProvider`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
 
 Built-in events are available on typed clients too — they are intersected in automatically via `BuiltInPanelEvents`.

@@ -697,7 +697,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         {/* Empty group close button — only visible when keepOnEmpty keeps the group alive */}
         {leaf.panels.length === 0 && leaf.keepOnEmpty && leaf.canClose !== false && (
           <span
-            onClick={() => closeLeafGroup(leaf.id)}
+            onClick={() => { void closeLeafGroup(leaf.id); }}
             className="rdd-close-tab-x rdd-header-close-empty-group"
             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             title={formatLabel(messages.closeEmptyGroup, formatMessage)}
@@ -1222,6 +1222,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   const handleMinimizedRightClick = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     setHoveredMinimized(null);
+    // Maximizing needs a floating window. A panel minimized from a group is floated on the way
+    // back, which a `canDrag: false` panel refuses — so for it the item would do nothing.
+    const panel = state.panels[id];
+    const canMaximize = panel?.previousState === 'floating'
+      || registry.get(panel?.component ?? '')?.defaultOptions?.canDrag !== false;
     showContextMenu({
       event: e,
       items: [
@@ -1230,11 +1235,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           icon: ContextMenuIcons.restore,
           action: () => restorePanel(id)
         },
-        {
+        ...(canMaximize ? [{
           label: formatLabel(messages.maximizePanel, formatMessage),
           icon: ContextMenuIcons.maximize,
           action: () => maximizePanel(id)
-        },
+        }] : []),
         { separator: true },
         {
           label: formatLabel(messages.closePanel, formatMessage),

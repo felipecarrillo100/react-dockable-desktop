@@ -7,6 +7,7 @@ import React, {
   useLayoutEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useEscapeLayer } from '../utils/escapeStack';
 import type { ContextMenuLabel, MessageFormatter, MenuItemAction } from './contextMenuTypes';
 
 // ─── Re-export shared primitives so callers don't need contextMenuTypes.ts ───
@@ -248,6 +249,9 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     useEffect(() => {
       if (!menuState.visible) return;
       const dismiss = (e: Event) => {
+        // A click dispatched on `window` itself has no Node target, and `contains()` throws
+        // for one. It is outside the menu by definition.
+        if (!(e.target instanceof Node)) { close(); return; }
         if (menuRef.current?.contains(e.target as Node)) return;
         if (submenuPanelRef.current?.contains(e.target as Node)) return;
         close();
@@ -260,13 +264,8 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       };
     }, [menuState.visible, close]);
 
-    // Escape dismiss
-    useEffect(() => {
-      if (!menuState.visible) return;
-      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-      document.addEventListener('keydown', onKey);
-      return () => document.removeEventListener('keydown', onKey);
-    }, [menuState.visible, close]);
+    // Escape dismiss — a popup, so above any modal or drawer on the shared Escape stack.
+    useEscapeLayer(menuState.visible, 'popup', close);
 
     // Viewport clamping for main menu
     useLayoutEffect(() => {

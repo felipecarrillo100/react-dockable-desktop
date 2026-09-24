@@ -684,7 +684,11 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
   };
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'Escape') closeSearch();
+    if (e.key === 'Escape') {
+      // Claim the key so the drawer or modal holding this panel stays open (see escapeStack).
+      e.preventDefault();
+      closeSearch();
+    }
   };
 
   const grouped = useMemo((): Record<string, SearchResult[]> => {
