@@ -996,8 +996,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     }
 
     // Capture safe viewport boundaries (min 1024x768 fallback if not measured or in headless environments)
-    const viewW = Math.max(100, window.innerWidth || 1024);
-    const viewH = Math.max(100, window.innerHeight || 768);
+    // (and on the server, where a workspace can already be opened into before anything mounts)
+    const viewW = Math.max(100, (typeof window !== 'undefined' && window.innerWidth) || 1024);
+    const viewH = Math.max(100, (typeof window !== 'undefined' && window.innerHeight) || 768);
 
     if (x + width > viewW || y + height > viewH) {
       x = 100 + (attempts % 5) * 30;
@@ -1847,16 +1848,20 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
 
     // A panel that refused to close keeps its group. An emptied `keepOnEmpty` group is still in
     // the tree at this point, and is the one case left to remove here.
+    // Each closed tab already published its own layout:changed; publish here only if this step
+    // changed the layout too.
+    let removed = false;
     setState(prev => {
       const current = findLeaf(prev.gridRoot);
       if (!current || current.panels.length > 0) return prev;
+      removed = true;
       const next: WorkspaceState = {
         ...prev,
         gridRoot: removeLeafFromTree(prev.gridRoot) || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null }
       };
       return { ...next, activePanelId: resolveActivePanelId(next, null) };
     });
-    eventBusRef.current.publish('layout:changed', {});
+    if (removed) eventBusRef.current.publish('layout:changed', {});
   };
 
   const maximizePanel = (id: string) => {
@@ -2055,8 +2060,10 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     showContextMenuFnRef.current = fn;
     return () => { showContextMenuFnRef.current = null; };
   };
+  // The menu is portaled out of the workspace: tell it the workspace's direction, for a menu opened
+  // without an event to take it from (the menu prefers the event's target when there is one).
   const showContextMenu = (options: ShowContextMenuOptions) => {
-    showContextMenuFnRef.current?.(options);
+    showContextMenuFnRef.current?.({ dir: stateRef.current.dir, ...options });
   };
 
   const registerPanelContextMenu = (panelId: string, getItems: () => ContextMenuItem[]) => {

@@ -8,6 +8,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { isComputedRtl } from '../utils/rtl';
+import { useIsClient } from '../utils/useIsClient';
 import { trackPanelDom, restorePanelDom, forgetPanelDom } from './domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo, MessageDescriptor, MessageFormatter } from './WindowManagerContext';
@@ -57,6 +58,24 @@ const isMenuKey = (e: React.KeyboardEvent): boolean => e.key === 'ContextMenu' |
 const menuEventAt = (el: Element): React.MouseEvent => {
   const r = el.getBoundingClientRect();
   return new MouseEvent('contextmenu', { clientX: r.left, clientY: r.bottom, cancelable: true }) as unknown as React.MouseEvent;
+};
+
+/**
+ * After a tab closed from the keyboard, keep focus in the workspace instead of letting it drop to
+ * <body>: the tab selected in its place, else the workspace's active tab, else the workspace.
+ * Leaves focus alone if the close was refused, or if something else (a dialog) already moved it.
+ */
+const refocusAfterTabClose = (id: string, strip: HTMLElement | null, workspaceEl: HTMLElement | null): void => {
+  if (!workspaceEl?.isConnected) return;
+  const esc = id.replace(/["\\]/g, '\\$&');
+  if (workspaceEl.querySelector(`[data-tab-id="${esc}"]`)) return;
+  const active = document.activeElement;
+  if (active && active !== document.body) return;
+  const target = (strip?.isConnected ? strip.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') : null)
+    ?? workspaceEl.querySelector<HTMLElement>('.rdd-workspace-tab-active-focused')
+    ?? workspaceEl.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+    ?? workspaceEl;
+  target.focus();
 };
 
 /** A panel or group id made safe for an HTML `id` (used to link tabs to their tab panel). */
@@ -122,8 +141,7 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
   let el = domCache.get(id);
   if (!el) {
     el = document.createElement('div');
-    el.style.width = '100%';
-    el.style.height = '100%';
+    el.className = 'rdd-panel-dom';
     domCache.set(id, el);
     trackPanelDom(id, el);
   }
@@ -237,7 +255,7 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
     };
   }, [panelId]);
 
-  return <div ref={hostRef} style={{ width: '100%', height: '100%' }} />;
+  return <div ref={hostRef} className="rdd-panel-dom-host" />;
 };
 
 const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
@@ -491,7 +509,7 @@ interface WorkspaceGridProps {
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
-  onRequestClosePanel: (id: string) => void;
+  onRequestClosePanel: (id: string) => Promise<void> | void;
 }
 
 const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
@@ -568,7 +586,7 @@ interface LeafGroupProps {
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
-  onRequestClosePanel: (id: string) => void;
+  onRequestClosePanel: (id: string) => Promise<void> | void;
 }
 
 const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
@@ -643,11 +661,15 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         e.preventDefault();
         selectTab(id);
         return;
-      case 'Delete':
+      case 'Delete': {
         if (!closable) return;
         e.preventDefault();
-        onRequestClosePanel(id);
+        const workspaceEl = e.currentTarget.closest<HTMLElement>('.rdd-workspace');
+        void Promise.resolve(onRequestClosePanel(id)).then(() => requestAnimationFrame(() => {
+          refocusAfterTabClose(id, tabContainerRef.current, workspaceEl);
+        }));
         return;
+      }
       default:
         return;
     }
@@ -668,7 +690,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
       style={{ overflow: 'hidden', position: 'relative' }}
     >
       {/* Tab Headers */}
-      <div className="rdd-workspace-tab-bar" style={{ minHeight: '38px' }}>
+      <div className="rdd-workspace-tab-bar">
         {tabScroll.start && (
           <button
             className={`rdd-tab-scroll-btn rdd-tab-scroll-btn-${startSide}`}
@@ -819,8 +841,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
         role="tabpanel"
         aria-labelledby={leaf.activePanelId ? tabIdFor(leaf.activePanelId) : undefined}
         className={`rdd-panel-body ${windowBodyClass ?? ''}`}
-        style={{ position: 'relative', overflow: 'hidden' }}
-      >
+              >
         {leaf.activePanelId && state.panels[leaf.activePanelId] ? (
           <PreservedDOMWrapper key={leaf.activePanelId} panelId={leaf.activePanelId} />
         ) : (
@@ -954,7 +975,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
   const handleRequestClose = React.useCallback((id: string) => {
     const panel = state.panels[id];
-    requestClosePanel(id, {
+    return requestClosePanel(id, {
       onConfirm: (customOpts) => new Promise<boolean>((resolve) => {
         const opts = customOpts || panel?.dirtyOptions;
         const baseTitle = formatLabel(panel ? panel.title : messages.untitledPanel, formatMessage);
@@ -1420,7 +1441,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         const id  = culprit.id ? ` id="${culprit.id}"` : '';
         const cls = culprit.className ? ` class="${culprit.className}"` : '';
         const who = culprit === el
-          ? 'the WindowManager container itself'
+          ? 'the RddDesktop container itself'
           : `a wrapper element: <${tag}${id}${cls}>`;
 
         console.warn(
@@ -1432,7 +1453,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           `Fix options:\n` +
           `  1. Use height: 100vh directly on the workspace wrapper:\n` +
           `       <div style={{ height: '100vh', overflow: 'hidden' }}>\n` +
-          `         <WindowManager />\n` +
+          `         <RddDesktop />\n` +
           `       </div>\n\n` +
           `  2. Use CSS Grid/Flex and let the workspace fill remaining space:\n` +
           `       .layout { display: flex; flex-direction: column; height: 100vh; }\n` +
@@ -1775,6 +1796,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
   // Fetch the active color-scheme from documentElement to make sure nested variables resolve correctly
   const currentColorScheme = useColorScheme();
+  const isClient = useIsClient();
 
   // Mirror skin onto documentElement so components rendered outside the WindowManager div
   // (Toolbar, Sidebar) also inherit per-skin CSS variable overrides — same pattern as data-color-scheme.
@@ -1787,21 +1809,6 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     return () => { document.documentElement.removeAttribute('data-rdd-skin'); };
   }, [skin]);
 
-  // Mirror color-scheme onto documentElement too — Toolbar/Sidebar are siblings (or,
-  // for Sidebar, an ancestor) of this div, not descendants, so without this they never
-  // actually receive the [data-color-scheme]-scoped tokens (e.g. --sidebar-*) despite
-  // the comment above claiming parity with the skin mirroring. Only mirror 'light' —
-  // 'dark' is the unscoped :root default, so leaving the attribute absent for it avoids
-  // writing back the exact value useColorScheme() just read from this same attribute,
-  // which would otherwise re-trigger its own MutationObserver on every mount.
-  useEffect(() => {
-    if (currentColorScheme === 'light') {
-      document.documentElement.setAttribute('data-color-scheme', 'light');
-    } else {
-      document.documentElement.removeAttribute('data-color-scheme');
-    }
-    return () => { document.documentElement.removeAttribute('data-color-scheme'); };
-  }, [currentColorScheme]);
 
   // Mirror the animations opt-out the same way — covers portaled chrome (ContextMenu,
   // Toast, Toolbar's flyout) that renders outside this div via createPortal.
@@ -1819,15 +1826,15 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       className={`rdd-workspace${animations ? '' : ' rdd-no-animations'}`}
       data-rdd-skin={skin}
       data-color-scheme={currentColorScheme}
-      style={{ display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
       dir={state.dir}
+      // Focusable from script only: where keyboard focus goes when the last tab it was on closes.
+      tabIndex={-1}
     >
 
       {/* 1. Main Workspace Viewport (Grids & Floating Panels) */}
       <div
         ref={workspaceRef}
-        className={state.draggedPanelId ? 'rdd-dragging-active' : undefined}
-        style={{ flexGrow: 1, width: '100%', position: 'relative', overflow: 'hidden' }}
+        className={`rdd-workspace-viewport${state.draggedPanelId ? ' rdd-dragging-active' : ''}`}
       >
         {/* Workspace outer edge drop zone targets */}
         {state.draggedPanelId !== null && (
@@ -1887,7 +1894,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         )}
 
         {/* 1.1 Viewport Split Grid Layout */}
-        <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+        <div className="rdd-workspace-grid-host">
           {state.gridRoot ? (
             <WorkspaceGrid
               node={state.gridRoot}
@@ -2061,7 +2068,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                 </div>
 
                 {/* Window Content */}
-                <div className={windowBodyClass ?? undefined} style={{ flexGrow: 1, width: '100%', overflow: 'hidden', position: 'relative', isolation: 'isolate' }}>
+                <div className={`rdd-floating-window-body${windowBodyClass ? ` ${windowBodyClass}` : ''}`}>
                   <PreservedDOMWrapper key={w.id} panelId={w.id} />
                 </div>
                 </div>
@@ -2204,16 +2211,6 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                     }, 150);
                   }}
                   className="rdd-taskbar-glassmorphic-item"
-                  style={{
-                    backdropFilter: 'blur(6px)',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                    scrollSnapAlign: 'start',
-                    width: '38px',
-                    height: '38px',
-                    position: 'relative',
-                    padding: 0
-                  }}
                 >
                   <span className="rdd-taskbar-item-icon" aria-hidden="true">
                     {icon}
@@ -2325,14 +2322,15 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         </div>
       )}
 
-      {/* 3. Persistence Port: Portals rendering panels into off-screen elements */}
-      {Object.keys(state.panels).map((id) => {
+      {/* 3. Persistence Port: Portals rendering panels into off-screen elements. Client only:
+          the server has no DOM to create them in, and panel bodies fill in after hydration. */}
+      {isClient && Object.keys(state.panels).map((id) => {
         const panel = state.panels[id];
         if (!panel) return null;
         const targetEl = getOrCreateDomCacheElement(id);
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
-            <div style={{ width: '100%', height: '100%' }} dir={state.dir}>
+            <div className="rdd-panel-content" dir={state.dir}>
               {renderPanelContent(id, panel, registry, messages, formatMessage)}
             </div>
           </FormContainerProviderWrapper>,

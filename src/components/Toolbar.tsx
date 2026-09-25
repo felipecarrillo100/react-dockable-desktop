@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import { useToolbar } from './ToolbarContext';
 import { useEscapeLayer } from '../utils/escapeStack';
 import { isComputedRtl } from '../utils/rtl';
+import { enabledItems, moveMenuFocus } from '../utils/menuKeyboard';
 import type { ToolbarContextValue } from './ToolbarContext';
 
 // ==========================================
@@ -265,8 +266,27 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [isOpen]);
 
+  // Closing from inside the flyout (Escape, Tab, choosing an item) hands focus back to the
+  // trigger, as the context menu does; a click elsewhere leaves focus where the click put it.
+  const closeFlyout = () => {
+    if (flyoutRef.current?.contains(document.activeElement)) btnRef.current?.focus();
+    setIsOpen(false);
+  };
+
+  // Open: focus the chosen item, else the first (WAI-ARIA menu pattern).
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const items = enabledItems(flyoutRef.current);
+    (items.find(el => el.getAttribute('aria-checked') === 'true') ?? items[0])?.focus();
+  }, [isOpen]);
+
+  const handleFlyoutKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') { e.preventDefault(); closeFlyout(); return; }
+    if (moveMenuFocus(e.currentTarget, e.key)) e.preventDefault();
+  };
+
   // Close flyout on Escape — a popup, so above any modal or drawer on the shared Escape stack.
-  useEscapeLayer(isOpen, 'popup', () => setIsOpen(false));
+  useEscapeLayer(isOpen, 'popup', closeFlyout);
 
   return (
     <>
@@ -290,6 +310,9 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
           className={`rdd-toolbar-group-flyout rdd-${position}`}
           style={flyoutPosition(btnRect, position, btnRtl)}
           role="menu"
+          // Portaled to <body>: carry the strip's direction, which it can't inherit there.
+          dir={btnRtl ? 'rtl' : 'ltr'}
+          onKeyDown={handleFlyoutKeyDown}
         >
           {item.items.map((entry, i) => {
             if ('type' in entry) {
@@ -313,7 +336,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
                     toolbar.setActiveInGroup(item.id, entry.id);
                   }
                   entry.onActivate?.(entry.id);
-                  setIsOpen(false);
+                  closeFlyout();
                 }}
               >
                 <span className="rdd-toolbar-group-flyout-icon">{entry.icon}</span>

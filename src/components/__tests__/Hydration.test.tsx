@@ -7,7 +7,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { act } from 'react';
-import { useColorScheme, RddToasts } from '../../index';
+import { renderToString } from 'react-dom/server';
+import { useColorScheme, RddToasts, createWorkspace, DockableDesktopProvider, RddDesktop } from '../../index';
 
 afterEach(() => { document.documentElement.removeAttribute('data-color-scheme'); document.body.innerHTML = ''; });
 
@@ -31,6 +32,23 @@ describe('hydration', () => {
     const { container, recoverable, unmount } = await hydrate('<span>dark</span>', <Probe />);
     expect(recoverable).toEqual([]);
     expect(container.textContent).toBe('light');
+    unmount();
+  });
+
+  it('a workspace with open panels hydrates without a mismatch, then mounts the panel bodies', async () => {
+    const Body = () => <div className="ssr-panel-body">body</div>;
+    const make = () => {
+      const ws = createWorkspace({ panels: { b: { component: Body } } });
+      ws.openPanel('docked', 'b', { title: 'Docked' });
+      ws.openPanel('float', 'b', { title: 'Float', initialTarget: 'floating' });
+      return ws;
+    };
+    const tree = (ws: ReturnType<typeof make>) => <DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>;
+    const serverHtml = renderToString(tree(make()));
+    expect(serverHtml).not.toContain('ssr-panel-body');
+    const { container, recoverable, unmount } = await hydrate(serverHtml, tree(make()));
+    expect(recoverable).toEqual([]);
+    expect(container.querySelectorAll('.ssr-panel-body').length).toBe(2);
     unmount();
   });
 

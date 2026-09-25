@@ -11,7 +11,9 @@ You must wire two things:
 | What | Why |
 |------|-----|
 | `dir` prop on `DockableDesktopProvider` | Tells the workspace layout engine to flip splits, tabs, and window controls |
-| `document.documentElement.dir` | Needed for portals (context menu, toolbar flyout, toasts) that render into `document.body`, **and for `<RddSidebar>`/`<RddSecondarySidebar>`** — both inherit `direction: rtl` purely via the CSS `[dir="rtl"]` ancestor selector, not from any prop on `DockableDesktopProvider`. `RddSidebar` wraps `RddDesktop` rather than living inside it, so it has no other way to learn the current direction; this is the only wiring it needs. |
+| `document.documentElement.dir` | Needed for **`<RddSidebar>`/`<RddSecondarySidebar>`** and toasts. `RddSidebar` wraps `RddDesktop` rather than living inside it, so it takes its direction from the page, like any element outside the workspace. Context menus and the toolbar flyout don't need it: they take the direction of where they were opened (since 7.1.1). |
+
+The mirrored styles follow each element's **own** direction (CSS `:dir(rtl)`, since 7.1.1), the same answer the layout code gets. So the workspace's `dir` wins over the page's: an LTR workspace inside an RTL page stays LTR, and an RTL workspace (`dir="rtl"` on the provider, or `setDirection('rtl')`) inside an LTR page is mirrored — including the menus opened from it.
 
 ## Complete wiring example
 

@@ -171,3 +171,57 @@ describe('RTL: tab-strip scroll buttons (R6)', () => {
     });
   }
 });
+
+// The mirrored rules follow the element's own direction, not any right-to-left ancestor: an LTR
+// workspace inside an RTL page stays LTR, and an RTL workspace inside an LTR page is mirrored.
+describe('RTL styles follow the workspace\'s own direction', () => {
+  const look = (page: Page) => page.evaluate(() => {
+    const ws = document.querySelector('.rdd-workspace')!;
+    const zone = document.createElement('div');
+    zone.className = 'rdd-corner-zone rdd-corner-zone--top-left';
+    ws.appendChild(zone);
+    const tab = getComputedStyle(document.querySelector('.rdd-workspace-tab')!);
+    const z = zone.getBoundingClientRect(), w = ws.getBoundingClientRect();
+    const res = { wsDir: getComputedStyle(ws).direction, tabPadding: tab.padding, borderRight: tab.borderRightWidth, zoneOnLeft: Math.abs(z.left - w.left) < 2 };
+    zone.remove();
+    return res;
+  });
+  it('an LTR workspace inside an RTL page is not mirrored (dir=html)', async () => {
+    const { page, close } = await openHarness('dir=html');
+    expect(await look(page)).toEqual({ wsDir: 'ltr', tabPadding: '0px 6px 0px 14px', borderRight: '1px', zoneOnLeft: true });
+    await close();
+  });
+  it('an RTL workspace inside an LTR page is mirrored (dir=ws)', async () => {
+    const { page, close } = await openHarness('dir=ws');
+    expect(await look(page)).toEqual({ wsDir: 'rtl', tabPadding: '0px 14px 0px 6px', borderRight: '0px', zoneOnLeft: false });
+    await close();
+  });
+});
+
+// Menus are portaled to <body>, outside the workspace; they carry the direction of where they
+// were opened from, so a workspace-level RTL reaches them.
+describe('RTL: context menus of an RTL workspace in an LTR page (dir=ws)', () => {
+  it('a tab\'s menu is right-to-left', async () => {
+    const { page, close } = await openHarness('dir=ws');
+    await page.click('[data-tab-id="p1"]', { button: 'right' });
+    await page.waitForSelector('.rdd-context-menu');
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('.rdd-context-menu')!).direction)).toBe('rtl');
+    await close();
+  });
+  it('a menu opened from code has a submenu that opens to the left', async () => {
+    const { page, close } = await openHarness('dir=ws');
+    await page.evaluate(() => {
+      (window as unknown as { __wm: { actions: { showContextMenu: (o: unknown) => void } } }).__wm.actions.showContextMenu({
+        x: 640, y: 300, items: [{ label: 'Sub', items: [{ label: 'Leaf', action: () => {} }] }, { label: 'Other', action: () => {} }],
+      });
+    });
+    await page.waitForSelector('.rdd-context-menu');
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('.rdd-context-menu')!).direction)).toBe('rtl');
+    await page.locator('.rdd-context-menu [role^="menuitem"]', { hasText: 'Sub' }).hover();
+    await page.waitForTimeout(400);
+    const [main, sub] = await page.evaluate(() => Array.from(document.querySelectorAll('.rdd-context-menu')).map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right }; }));
+    expect(sub, 'submenu did not open').toBeDefined();
+    expect(sub.right).toBeLessThanOrEqual(main.x + 4);
+    await close();
+  });
+});

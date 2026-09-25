@@ -41,3 +41,15 @@ describe('the host page is the host page’s business', () => {
     await browser.close();
   });
 });
+
+// Layout the library depends on is in its stylesheet, not inline styles, so a host rule wins.
+describe('host CSS can override the library\'s structural layout', () => {
+  it('the tab bar height and the sidebar strip width', async () => {
+    const { page, close } = await openHarness();
+    await page.addStyleTag({ content: '.rdd-workspace-tab-bar { min-height: 50px; } .rdd-sidebar-strip-wrap { width: 64px; } .rdd-sidebar-tabs-strip { width: 64px; }' });
+    await page.waitForTimeout(400); // the strip wrap animates width changes over 0.25s
+    expect(Math.round((await rectOf(page, '.rdd-workspace-tab-bar')).height)).toBeGreaterThanOrEqual(50);
+    expect(Math.round((await rectOf(page, '.rdd-sidebar-strip-wrap')).width)).toBe(64);
+    await close();
+  });
+});

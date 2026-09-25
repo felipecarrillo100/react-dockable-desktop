@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.1] — 2026-09-25
+
+Fixes from two consumer issue lists (13 reports, 11 distinct issues).
+
+### Fixed
+- **A click on a minimized panel's taskbar icon was lost** when made within about 150ms of the pointer arriving — even in the icon's centre. The preview fades in over the icon, so the press landed on the preview and the release on the icon. It now fades in from above its resting place, and its hover bridge ends at the icon's top edge instead of covering 4px of it.
+- **Server rendering threw `document is not defined` with any panel open**, and `window is not defined` when a floating panel had been opened before mount. The chrome (tabs, window title bars, taskbar) now renders on the server and panel bodies render on the client after hydration, without a mismatch.
+- **Structural layout is in the stylesheet instead of inline styles**, so host CSS can override it: the workspace root, viewport and grid host, panel and floating-window bodies, the preserved-DOM hosts, the tab bar's height, taskbar items, and the sidebar strip's width (new classes `rdd-workspace-viewport`, `rdd-workspace-grid-host`, `rdd-floating-window-body`, `rdd-panel-dom-host`, `rdd-panel-dom`, `rdd-panel-content`, `rdd-sidebar-strip-wrap--collapsed`). The look is unchanged — verified by comparing the computed styles of every element before and after.
+- **RTL styles follow each element's own direction** (`:dir(rtl)` instead of `[dir="rtl"]` ancestor selectors), so an LTR workspace inside an RTL page is no longer partly mirrored (tab borders, the drop line, the corner snap zones).
+- **Context menus of an RTL workspace inside an LTR page were left-to-right**, so submenus opened on the wrong side. A menu now takes the direction of where it was opened, or the workspace's; the toolbar flyout likewise. `ShowContextMenuOptions` gains an optional `dir`, which a workspace fills in for a menu opened without an event.
+- **Delete on a focused tab dropped keyboard focus to `<body>`.** Focus now moves to the tab selected in its place, or to the workspace's active tab when its group closed too.
+- **The toolbar group flyout had no menu keyboard behaviour.** It now opens with focus on the chosen item; ↑/↓/Home/End move; Esc, Tab or choosing an item closes it and returns focus to the group button.
+- **rdd removed a `data-color-scheme` attribute the page set on `<html>`**, in dark mode and on unmount. It no longer writes that attribute at all: it only ever read it.
+- **Runtime messages used 6.x names** (`<WindowManager />`, `PanelFloatingWindow`); they now say `<RddDesktop />` and `RddFloatingWidget`, and a test keeps removed names out of every message.
+- **`closeLeafGroup` published `layout:changed` when nothing changed** (a tab refused to close). It now publishes only when the group was removed; each closed tab still publishes its own.
+
+### Docs
+- `--rdd-font-family`: to use the page's font, set `inherit` on `:root` or `initial` on any ancestor — `inherit` below `:root` only copies the default stack down (theming guide and the stylesheet comment).
+- RTL guide: direction rules for mixed-direction pages. Advanced guide: server rendering with open panels; the flyout and Delete keys.
+
 ## [7.1.0] — 2026-09-25
 
 ### Added
@@ -490,7 +510,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.1...HEAD
+[7.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.0...v7.1.1
 [7.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.1...v7.1.0
 [7.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.0...v7.0.1
 [7.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.4.0...v7.0.0

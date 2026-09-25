@@ -299,6 +299,29 @@ describe('structural layout is in the stylesheet, not inline', () => {
     expect(inlineProps(container.querySelector('.rdd-taskbar-footer-container'))).toEqual([]);
   });
 
+  it('workspace root, viewport, grid host, panel bodies, preserved-DOM hosts, tab bar and taskbar items', () => {
+    const client = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+    act(() => { client.openPanel('a', 'map'); client.openPanel('b', 'map', { initialTarget: 'floating' }); client.openPanel('c', 'map'); });
+    act(() => { client.minimizePanel('c'); });
+    for (const sel of ['.rdd-workspace', '.rdd-workspace-viewport', '.rdd-workspace-grid-host', '.rdd-panel-body',
+      '.rdd-floating-window-body', '.rdd-panel-dom-host', '.rdd-panel-dom', '.rdd-panel-content',
+      '.rdd-workspace-tab-bar', '.rdd-taskbar-glassmorphic-item']) {
+      const els = Array.from(document.querySelectorAll(sel));
+      expect(els.length, sel).toBeGreaterThan(0);
+      for (const el of els) expect(inlineProps(el), sel).toEqual([]);
+    }
+  });
+
   it('sidebar layout, content, strip wrapper, pane and resizer', async () => {
     const { Sidebar } = await import('../Sidebar');
     root = createRoot(container);
@@ -311,7 +334,8 @@ describe('structural layout is in the stylesheet, not inline', () => {
     });
     expect(inlineProps(container.querySelector('.rdd-sidebar-layout'))).toEqual([]);
     expect(inlineProps(container.querySelector('.rdd-sidebar-content'))).toEqual([]);
-    expect(inlineProps(container.querySelector('.rdd-sidebar-strip-wrap'))).toEqual(['width']);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-strip-wrap'))).toEqual([]);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-tabs-strip'))).toEqual([]);
     expect(inlineProps(container.querySelector('.rdd-sidebar-pane'))).toEqual(['display']);
     expect(inlineProps(container.querySelector('.rdd-sidebar-layout > .rdd-resizer-bar'))).toEqual([]);
     expect(inlineProps(container.querySelector('.rdd-sidebar-content-drawer'))).toEqual(['flex-basis', 'max-width', 'min-width', 'transition']);

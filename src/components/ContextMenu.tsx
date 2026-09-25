@@ -9,6 +9,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import { useEscapeLayer } from '../utils/escapeStack';
 import { isComputedRtl } from '../utils/rtl';
+import { enabledItems, moveMenuFocus } from '../utils/menuKeyboard';
 import type { ContextMenuLabel, MessageFormatter, MenuItemAction } from './contextMenuTypes';
 
 // ─── Re-export shared primitives so callers don't need contextMenuTypes.ts ───
@@ -54,6 +55,12 @@ export interface ShowContextMenuOptions {
   x?: number;
   y?: number;
   items: ContextMenuItem[];
+  /**
+   * The menu's direction. By default it is the direction of the element the menu was opened from
+   * (the event's target); a workspace's `showContextMenu` passes its own direction for a menu
+   * opened without an event. The menu is portaled to `<body>`, so it can't inherit either.
+   */
+  dir?: 'ltr' | 'rtl';
 }
 
 export interface ContextMenuHandle {
@@ -114,28 +121,6 @@ function isSubMenu(item: ContextMenuItem): item is ContextMenuSubMenu {
   return !isSeparator(item) && 'items' in item;
 }
 
-/** The enabled items of a menu element, in order. */
-const enabledItems = (menu: HTMLElement | null): HTMLElement[] =>
-  menu ? Array.from(menu.querySelectorAll<HTMLElement>(':scope > [role^="menuitem"]:not(:disabled)')) : [];
-
-/**
- * Up/Down/Home/End focus movement within one menu (WAI-ARIA menu pattern). Returns true when the
- * key was handled. Wraps around at either end; disabled items are skipped.
- */
-function moveMenuFocus(menu: HTMLElement | null, key: string): boolean {
-  const items = enabledItems(menu);
-  if (items.length === 0) return false;
-  const i = items.indexOf(document.activeElement as HTMLElement);
-  let next: HTMLElement | undefined;
-  if (key === 'ArrowDown') next = items[(i + 1) % items.length];
-  else if (key === 'ArrowUp') next = items[(i - 1 + items.length) % items.length];
-  else if (key === 'Home') next = items[0];
-  else if (key === 'End') next = items[items.length - 1];
-  if (!next) return false;
-  next.focus();
-  return true;
-}
-
 // ─── Sub-menu panel (one-level deep) ─────────────────────────────────────────
 
 /** Where a submenu hangs from: the parent menu's physical edges, and the top of the item. */
@@ -156,6 +141,8 @@ interface SubMenuPanelProps {
   /** The key that returns to the parent item (ArrowLeft, or ArrowRight under RTL). */
   onBack: () => void;
   theme: string;
+  /** The parent menu's direction: the submenu is portaled too, so it can't inherit it. */
+  dir: 'ltr' | 'rtl';
   fmt?: MessageFormatter;
   onClose: () => void;
   onMouseEnter: () => void;
@@ -163,7 +150,7 @@ interface SubMenuPanelProps {
 }
 
 const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
-  ({ items, getAnchor, autoFocus, onBack, theme, fmt, onClose, onMouseEnter, onMouseLeave }, ref) => {
+  ({ items, getAnchor, autoFocus, onBack, theme, dir, fmt, onClose, onMouseEnter, onMouseLeave }, ref) => {
     // Placed after layout, once the panel's own width is known. It hangs off the parent menu's
     // reading-end edge (right in LTR, left in RTL) and flips to the other edge when that side
     // has no room — clamping it into the viewport instead is what laid it over the parent menu.
@@ -205,6 +192,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
       <div
         ref={ref}
         className={`rdd-context-menu rdd-context-menu--${theme} rdd-context-menu--submenu`}
+        dir={dir}
         // z-index from .rdd-context-menu--submenu (+8501) — see the main menu's note below.
         // Placed by the layout effect above before paint; these are only its starting values.
         style={{ position: 'fixed', left: 0, top: 0 }}
@@ -269,9 +257,21 @@ interface MenuState {
   x: number;
   y: number;
   items: ContextMenuItem[];
+  dir: 'ltr' | 'rtl';
 }
 
-const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [] };
+const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [], dir: 'ltr' };
+
+/**
+ * The menu is portaled to <body>, so it takes its direction from where it was opened: the event's
+ * target, else the direction the caller passed (a workspace passes its own), else the page's.
+ */
+function menuDirection(event: ShowContextMenuOptions['event'], dir: ShowContextMenuOptions['dir']): 'ltr' | 'rtl' {
+  const target = event?.target;
+  if (target instanceof Element) return isComputedRtl(target) ? 'rtl' : 'ltr';
+  if (dir) return dir;
+  return isComputedRtl(document.documentElement) ? 'rtl' : 'ltr';
+}
 
 export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & React.RefAttributes<ContextMenuHandle>> = forwardRef<ContextMenuHandle, ContextMenuProps>(
   ({ theme = 'dark', formatMessageProvider, onShow, onHide, onOpenChange, className, style }, ref) => {
@@ -308,13 +308,13 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     }, [onHide, onOpenChange]);
 
     useImperativeHandle(ref, () => ({
-      show({ event, x, y, items }) {
+      show({ event, x, y, items, dir }) {
         const coords = event ? getCoords(event) : { x: x ?? 0, y: y ?? 0 };
         openerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
           ? document.activeElement
           : null;
         itemRefs.current.clear();
-        setMenuState({ visible: true, x: coords.x, y: coords.y, items });
+        setMenuState({ visible: true, x: coords.x, y: coords.y, items, dir: menuDirection(event, dir) });
         setSubmenuIndex(null);
         onShow?.();
         onOpenChange?.(true);
@@ -466,6 +466,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
         <div
           ref={menuRef}
           className={`rdd-context-menu rdd-context-menu--${theme}${className ? ` ${className}` : ''}`}
+          dir={menuState.dir}
           // No inline z-index: .rdd-context-menu's own `calc(var(--rdd-z-base, 1000) + 8500)`
           // owns it, so a WindowManagerProvider's zIndexBase actually shifts this menu (an
           // inline value here silently overrode it). Resolves to the same 9500 by default.
@@ -563,6 +564,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
               autoFocus={submenuFocus}
               onBack={backToParentItem}
               theme={theme}
+              dir={menuState.dir}
               fmt={fmt}
               onClose={close}
               onMouseEnter={() => cancelCloseTimer()}

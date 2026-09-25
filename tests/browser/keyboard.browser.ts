@@ -88,3 +88,73 @@ describe('context menu from the keyboard', () => {
     await close();
   });
 });
+
+describe('Delete on a focused tab keeps keyboard focus in the workspace', () => {
+  const activeTab = (page: Page) => page.evaluate(() => {
+    const a = document.activeElement as HTMLElement;
+    return a === document.body ? 'BODY' : (a.getAttribute('data-tab-id') ?? (a.closest('.rdd-workspace') ? 'workspace' : a.tagName));
+  });
+  it('closing a tab focuses the tab selected in its place', async () => {
+    const { page, close } = await openHarness();
+    await page.focus('[data-tab-id="p1"]');
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+    expect(await activeTab(page)).toBe('p2');
+    await close();
+  });
+  it('closing the last tab of a group keeps focus inside the workspace', async () => {
+    const { page, close } = await openHarness();
+    await page.focus('[data-tab-id="p3"]');
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+    const where = await activeTab(page);
+    expect(where).not.toBe('BODY');
+    expect(['p1', 'p2', 'workspace']).toContain(where);
+    await close();
+  });
+  it('a tab whose close is refused keeps focus', async () => {
+    const { page, close } = await openHarness();
+    await page.evaluate(() => (window as unknown as { __wm: { actions: { registerCloseGuard: (id: string, g: () => boolean) => void } } }).__wm.actions.registerCloseGuard('p1', () => false));
+    await page.focus('[data-tab-id="p1"]');
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+    expect(await activeTab(page)).toBe('p1');
+    await close();
+  });
+});
+
+describe('toolbar group flyout from the keyboard', () => {
+  const focused = (page: Page) => page.evaluate(() => {
+    const a = document.activeElement as HTMLElement;
+    return { role: a.getAttribute('role'), label: a.textContent?.trim() ?? '', trigger: a.classList.contains('rdd-toolbar-btn-group') };
+  });
+  it('opens with focus on an item, moves with the arrow keys, and Escape returns focus to the trigger', async () => {
+    const { page, close } = await openHarness();
+    await page.focus('.rdd-toolbar-btn-group');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.rdd-toolbar-group-flyout');
+    const first = await focused(page);
+    expect(first.role).toBe('menuitemradio');
+    await page.keyboard.press('ArrowDown');
+    const second = await focused(page);
+    expect(second.role).toBe('menuitemradio');
+    expect(second.label).not.toBe(first.label);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+    expect(await page.$('.rdd-toolbar-group-flyout')).toBeNull();
+    expect((await focused(page)).trigger).toBe(true);
+    await close();
+  });
+  it('choosing an item with Enter closes the flyout and returns focus to the trigger', async () => {
+    const { page, close } = await openHarness();
+    await page.focus('.rdd-toolbar-btn-group');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.rdd-toolbar-group-flyout');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(100);
+    expect(await page.$('.rdd-toolbar-group-flyout')).toBeNull();
+    expect((await focused(page)).trigger).toBe(true);
+    await close();
+  });
+});

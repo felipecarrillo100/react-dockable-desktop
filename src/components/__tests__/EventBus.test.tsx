@@ -185,3 +185,41 @@ describe('Inter-Panel Event Bus', () => {
     expect(received[0]).toEqual(payload);
   });
 });
+
+describe('closeLeafGroup and layout:changed', () => {
+  const Plain = () => <div />;
+  async function setup() {
+    const { createWorkspace, DockableDesktopProvider, RddDesktop } = await import('../../index');
+    const ws = createWorkspace({ panels: { p: { component: Plain } } });
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const r = createRoot(el);
+    act(() => { r.render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>); });
+    act(() => { ws.openPanel('a', 'p'); ws.openPanel('b', 'p'); });
+    act(() => { ws.dockPanelToWorkspaceEdge('b', 'right'); });
+    const root = ws._core.getSnapshot().gridRoot;
+    const leafOfB = root.type === 'branch'
+      ? root.children.find((c): c is Extract<typeof c, { type: 'leaf' }> => c.type === 'leaf' && c.panels.includes('b'))!.id
+      : '';
+    let count = 0;
+    ws.onLayoutChanged(() => { count++; });
+    return { ws, leafOfB, count: () => count, cleanup: () => { act(() => r.unmount()); el.remove(); } };
+  }
+
+  it('publishes nothing when the only tab refuses to close', async () => {
+    const { ws, leafOfB, count, cleanup } = await setup();
+    ws.registerCloseGuard('b', () => false);
+    await act(async () => { await ws.closeLeafGroup(leafOfB); });
+    expect(ws.isOpen('b')).toBe(true);
+    expect(count()).toBe(0);
+    cleanup();
+  });
+
+  it('publishes exactly once when the group closes', async () => {
+    const { ws, leafOfB, count, cleanup } = await setup();
+    await act(async () => { await ws.closeLeafGroup(leafOfB); });
+    expect(ws.isOpen('b')).toBe(false);
+    expect(count()).toBe(1);
+    cleanup();
+  });
+});
