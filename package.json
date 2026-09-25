@@ -1,6 +1,6 @@
 {
   "name": "react-dockable-desktop",
-  "version": "6.3.2",
+  "version": "6.4.0",
   "license": "MIT",
   "description": "A premium, state-of-the-art window manager and dockable layout engine for React. Supports fluid grid splits, tabbed groups, floating resizable windows, zero-unmount state preservation, context menus, and internationalization.",
   "main": "dist/index.cjs",
@@ -54,6 +54,7 @@
     "docs:build": "vitepress build docs-site",
     "docs:preview": "vitepress preview docs-site",
     "test": "vitest run",
+    "test:browser": "vitest run -c vitest.browser.config.ts",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "version:sync": "node scripts/sync-version.js",
@@ -79,6 +80,7 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "leaflet": "^1.9.4",
+    "playwright-core": "^1.63.0",
     "react": "^19.2.6",
     "react-bootstrap": "^2.10.10",
     "react-bootstrap-submenu": "^4.0.0",

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -166,10 +168,15 @@ describe('WindowManager Core Layout Operations', () => {
     // this guards: a docked panel resizing based on which internal tab/content it shows).
     const wrappers = container!.querySelectorAll('.rdd-workspace-panel');
     expect(wrappers.length).toBeGreaterThan(0);
+    // Since 6.4.0 the min-size reset is the `.rdd-split-child` rule rather than an inline style
+    // (so consumer CSS can see and override it). jsdom doesn't load the stylesheet, so check both.
     wrappers.forEach(leaf => {
       const wrapper = leaf.parentElement as HTMLElement;
-      expect(wrapper.style.minWidth).toBe('0px');
-      expect(wrapper.style.minHeight).toBe('0px');
+      expect(wrapper.classList.contains('rdd-split-child')).toBe(true);
     });
+    const css = readFileSync(join(__dirname, '..', '..', 'index.css'), 'utf8');
+    const rule = /\.rdd-split-child\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(rule).toMatch(/min-width:\s*0/);
+    expect(rule).toMatch(/min-height:\s*0/);
   });
 });

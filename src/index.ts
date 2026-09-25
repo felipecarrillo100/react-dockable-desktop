@@ -210,3 +210,6 @@ export type { PointerDragConfig, ResizeDir, ResizeRect, ResizeConstraints } from
 // ─── Color scheme — reactive read of the workspace's current data-color-scheme ───
 export { useColorScheme } from './hooks/useColorScheme';
 
+// Direction helpers — for app code that turns pointer positions into logical sides (see the RTL guide)
+export { isComputedRtl, isElementRtl } from './utils/rtl';
+

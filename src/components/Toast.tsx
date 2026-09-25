@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
+import { formatLabel, useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -266,13 +267,14 @@ interface ToastItemProps {
   showProgress: boolean;
   pauseOnHover: boolean;
   animation:    'slide' | 'fade' | 'none';
+  closeLabel:   string;
   onDismiss:    (id: string) => void;
   onExited:     (id: string) => void;
 }
 
 function ToastItem({
   id, message, options, exiting, isLeft,
-  showProgress, pauseOnHover, animation, onDismiss, onExited,
+  showProgress, pauseOnHover, animation, closeLabel, onDismiss, onExited,
 }: ToastItemProps) {
   const divRef    = useRef<HTMLDivElement>(null);
   const bodyRef   = useRef<HTMLDivElement>(null);
@@ -396,7 +398,7 @@ function ToastItem({
           type="button"
           className="rdd-toast__close"
           onClick={() => onDismiss(id)}
-          aria-label="Close notification"
+          aria-label={closeLabel}
         >
           <CloseIcon />
         </button>
@@ -412,6 +414,10 @@ function ToastItem({
 }
 
 // ─── ToastContainer ───────────────────────────────────────────────────────────
+
+const subscribeNever = () => () => {};
+const isClient = () => true;
+const isServer = () => false;
 
 function resolveOpts(
   raw: ToastOptions & { id: string },
@@ -448,6 +454,16 @@ export function ToastContainer({
   adapter,
 }: ToastContainerProps): React.ReactElement | null {
   const [toasts, setToasts] = useState<ActiveToast[]>([]);
+  // Both hooks work without a provider (English defaults), so a ToastContainer mounted outside
+  // the workspace still renders.
+  const formatMessage = useFormatMessage();
+  const messages = usePredefinedMessages();
+  const regionLabel = formatLabel(messages.notifications, formatMessage);
+  // Portals need `document.body`, which doesn't exist on the server. Render nothing there, and
+  // during hydration (the server snapshot); portal on the client after that. The server's output
+  // and the hydrating render then agree — both empty — so there is nothing to reconcile.
+  const mounted = useSyncExternalStore(subscribeNever, isClient, isServer);
+  const closeLabel = formatLabel(messages.closeNotification, formatMessage);
   const queueRef  = useRef<Array<{ id: string; message: React.ReactNode; rawOpts: ToastOptions & { id: string } }>>([]);
   const toastsRef = useRef<ActiveToast[]>(toasts);
   toastsRef.current = toasts;
@@ -542,6 +558,8 @@ export function ToastContainer({
     return () => emitter.unsubscribe(handle);
   }, [adapter, defaultDuration, defaultClosable]);
 
+  if (!mounted) return null;
+
   if (adapter) {
     if (!adapter.Container) return null;
     const AdapterContainer = adapter.Container;
@@ -557,7 +575,9 @@ export function ToastContainer({
     .filter(Boolean).join(' ');
 
   return createPortal(
-    <div className={cls} style={{ width }} aria-label="Notifications" aria-live="polite">
+    // A named landmark. Each toast is its own role="status" live region, so the container is not
+    // one as well — nested live regions get announced twice.
+    <div className={cls} style={{ width }} role="region" aria-label={regionLabel}>
       {toasts.map(t => (
         <ToastItem
           key={t.id}
@@ -569,6 +589,7 @@ export function ToastContainer({
           showProgress={progressBar}
           pauseOnHover={pauseOnHover}
           animation={animation}
+          closeLabel={closeLabel}
           onDismiss={handleDismiss}
           onExited={handleExited}
         />

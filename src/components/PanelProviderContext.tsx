@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import type { DirtyStateOptions } from './dirtyOptions';
+import { usePredefinedMessages } from './WindowManagerContext';
 export type { DirtyStateOptions };
 
 /** Unique string identifier for panel/modal instances. */
@@ -131,6 +132,9 @@ const PanelActionsContext = createContext<PanelActions | null>(null);
  */
 export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<PanelState>(initialState);
+  // A message descriptor, not a string: titles are formatted when rendered, so the default title
+  // follows the app's formatter and `predefinedMessages` like every other label.
+  const defaultModalTitle = usePredefinedMessages().modalTitle;
 
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -212,7 +216,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       const modalOptions: ModalOptions = {
         ...options,
-        title: options.title || formTitle || 'Confirmation',
+        title: options.title || formTitle || defaultModalTitle,
       };
 
       const instance: PanelInstance = {
@@ -225,7 +229,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setState(s => ({ ...s, modals: [...s.modals, instance] }));
       return id;
     },
-    []
+    [defaultModalTitle]
   );
 
   const close = useCallback((id: PanelInstanceId) => {

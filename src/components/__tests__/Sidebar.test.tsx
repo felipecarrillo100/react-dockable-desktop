@@ -51,6 +51,8 @@
  * - SB50: controlled activeTabId/onActiveTabChange works on the secondary
  * - SB51: useSidebarTab() inside a secondary tab's renderContent resolves to that tab's own onClose/onOpen
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { createRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -675,8 +677,13 @@ describe('SB26: children wrapper uses flex-basis:0 (content can\'t inflate it an
       (el) => el.textContent === 'workspace content'
     ) as HTMLElement | undefined;
     expect(wrapper).toBeDefined();
-    expect(wrapper!.style.flexBasis).toBe('0%');
-    expect(wrapper!.style.minWidth).toBe('0px');
+    // Since 6.4.0 this is the `.rdd-sidebar-content` rule rather than an inline style (so consumer
+    // CSS can see and override it). jsdom doesn't load the stylesheet, so check both halves.
+    expect(wrapper!.classList.contains('rdd-sidebar-content')).toBe(true);
+    const css = readFileSync(join(__dirname, '..', '..', 'index.css'), 'utf8');
+    const rule = /\.rdd-sidebar-content\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(rule).toMatch(/flex:\s*1 1 0%/);
+    expect(rule).toMatch(/min-width:\s*0/);
   });
 });
 

@@ -21,18 +21,22 @@ if (typeof globalThis.MutationObserver === 'undefined') {
   };
 }
 
+// The rest stubs browser APIs jsdom lacks. A test that opts into `// @vitest-environment node`
+// (the server-rendering suite) has no DOM at all, so there is nothing to stub.
+const hasDom = typeof Element !== 'undefined';
+
 // jsdom does not implement Pointer Events capture APIs — stub them out
-if (typeof Element.prototype.setPointerCapture === 'undefined') {
+if (hasDom && typeof Element.prototype.setPointerCapture === 'undefined') {
   Element.prototype.setPointerCapture = function(_pointerId: number) {};
 }
-if (typeof Element.prototype.releasePointerCapture === 'undefined') {
+if (hasDom && typeof Element.prototype.releasePointerCapture === 'undefined') {
   Element.prototype.releasePointerCapture = function(_pointerId: number) {};
 }
-if (typeof Element.prototype.hasPointerCapture === 'undefined') {
+if (hasDom && typeof Element.prototype.hasPointerCapture === 'undefined') {
   Element.prototype.hasPointerCapture = function(_pointerId: number) { return false; };
 }
 
 // jsdom does not implement navigator.vibrate — stub it out
-if (typeof navigator.vibrate === 'undefined') {
+if (hasDom && typeof navigator.vibrate === 'undefined') {
   Object.defineProperty(navigator, 'vibrate', { value: () => true, configurable: true });
 }

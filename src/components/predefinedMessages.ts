@@ -32,6 +32,23 @@ export const defaultPredefinedMessages = {
   ok: { id: 'dockable-desktop-ok', defaultMessage: 'OK' },
   closePanelTooltip: { id: 'dockable-desktop-closePanelTooltip', defaultMessage: 'Close panel' },
   closeTooltip: { id: 'dockable-desktop-closeTooltip', defaultMessage: 'Close' },
+  // Accessible names and placeholders (6.4.0) — previously hard-coded in English.
+  notifications: { id: 'dockable-desktop-notifications', defaultMessage: 'Notifications' },
+  closeNotification: { id: 'dockable-desktop-closeNotification', defaultMessage: 'Close notification' },
+  scrollTabsLeft: { id: 'dockable-desktop-scrollTabsLeft', defaultMessage: 'Scroll tabs left' },
+  scrollTabsRight: { id: 'dockable-desktop-scrollTabsRight', defaultMessage: 'Scroll tabs right' },
+  scrollTaskbarLeft: { id: 'dockable-desktop-scrollTaskbarLeft', defaultMessage: 'Scroll taskbar left' },
+  scrollTaskbarRight: { id: 'dockable-desktop-scrollTaskbarRight', defaultMessage: 'Scroll taskbar right' },
+  moreActions: { id: 'dockable-desktop-moreActions', defaultMessage: 'More actions' },
+  search: { id: 'dockable-desktop-search', defaultMessage: 'Search' },
+  closeSearch: { id: 'dockable-desktop-closeSearch', defaultMessage: 'Close search' },
+  searchPlaceholder: { id: 'dockable-desktop-searchPlaceholder', defaultMessage: 'Search…' },
+  modalTitle: { id: 'dockable-desktop-modalTitle', defaultMessage: 'Confirmation' },
+  emptyGroup: { id: 'dockable-desktop-emptyGroup', defaultMessage: 'Empty Workspace Section' },
+  emptyGrid: { id: 'dockable-desktop-emptyGrid', defaultMessage: 'Grid Empty' },
+  componentUnregistered: { id: 'dockable-desktop-componentUnregistered', defaultMessage: 'Component Unregistered' },
+  componentKey: { id: 'dockable-desktop-componentKey', defaultMessage: 'Key: {key}' },
+  untitledPanel: { id: 'dockable-desktop-untitledPanel', defaultMessage: 'Panel' },
 } as const;
 
 /**

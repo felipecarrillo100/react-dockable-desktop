@@ -432,6 +432,16 @@ You don't need to define all variables. A skin that only sets `--rdd-accent-colo
 |----------|-------------|-------------|
 | `--rdd-accent-color` | `#38bdf8` | Primary interactive color — tab indicators, active borders. |
 | `--rdd-accent-glow` | `rgba(56,189,248,0.15)` | Translucent version used for focus halos. |
+| `--rdd-focus-ring` | `2px solid var(--rdd-accent-color)` | Outline drawn on a library control reached from the keyboard (`:focus-visible`). |
+
+### Fonts
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--rdd-font-family` | `'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif` | Every piece of chrome: tabs, title bars, toolbar, sidebar, menus, flyouts, toasts, drawers, modals. |
+| `--rdd-font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | Placeholders, the drag ghost and the other monospaced labels. |
+
+The library doesn't load Outfit or Inter — load one yourself, or change the stack. To use your page's own font everywhere, set `--rdd-font-family: inherit` on `:root`. Panel content inherits the workspace font; your own form controls inside a panel keep the browser's default font, as they would anywhere else.
 
 ### Tabs
 

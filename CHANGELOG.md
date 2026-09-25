@@ -6,6 +6,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.4.0] — 2026-09-25
+
+Keyboard and screen-reader access, right-to-left layouts that follow the pointer, and the browser state a panel used to lose when it moved — the remaining defects from the Vue and Angular ports' reports. No API is removed or renamed; a few things are visible and listed under **Upgrade notes**.
+
+### Fixed
+- **Panels lost their scroll position and focus on every move.** A panel's DOM is moved rather than remounted (tab switch, float, dock, minimize/restore), and a detached subtree loses its scroll offsets and its focused element. Both are now recorded while the panel is on screen and put back when it reappears. Focus comes back only for the active panel, and only if it wasn't moved elsewhere in the meantime — a panel restored in the background never takes it.
+- **Right-to-left** — each of these went the wrong way, and each now reads the direction the browser computes, so it works whether `dir="rtl"` is on `<html>`, `<body>`, a wrapper, or set with `setDirection`:
+  - a split divider moved away from the pointer;
+  - dragging the sidebar drawer's resizer away from its edge shrank it;
+  - a toolbar flyout opened on top of its own strip when `dir` wasn't on `<html>`;
+  - a context sub-menu landed far from its menu (and, in LTR near the right edge, on top of it — it now flips side when there is no room);
+  - a dragged tab landed on the opposite side of the tab under the pointer;
+  - the tab-strip scroll buttons showed on the wrong side and scrolled the wrong way.
+- **Resize handles were half clipped.** A floating window's (and an inner floating widget's) `overflow: hidden` cut off the outer half of every edge handle and the corners, so a drag starting just outside the edge did nothing. Clipping moved to an inner frame; the handles straddle the edge in full.
+- **The auto-hide taskbar could disappear under a floating window** parked at the bottom of the workspace. It now stacks above floating windows (and below every popup and overlay).
+- **Stacking ignored `zIndexBase`** for the taskbar preview (a fixed `999999`) and the dragged-tab ghost (`100000`). Both now shift with it, like the rest of the chrome.
+- **Server rendering threw `document is not defined`** from `<WindowManager>` (its colour-scheme reader) and `<ToastContainer>` (its portal). The chrome now renders on the server and hydrates without a mismatch; `useColorScheme()` reports `'dark'` there.
+- **Keyboard access.** Tabs are a WAI-ARIA tab list (←/→, Home/End, Delete to close, one tab stop per group); the context menu is a WAI-ARIA menu (focus on open, ↑/↓/Home/End, sub-menus by key and by click or tap, focus returned on close); taskbar items are buttons; ContextMenu and Shift+F10 open a tab's or taskbar item's menu. Library controls show a focus ring when reached from the keyboard — the toolbar and sidebar buttons suppressed it.
+- **ARIA roles.** Toolbar flyout items are `menuitemradio` (not `menuitem` + `aria-pressed`); checkbox menu items are `menuitemcheckbox`; the toast container is a labelled `region` instead of a live region wrapping live regions.
+- **English leaked into localised apps.** Accessible names and placeholders that bypassed the message table — the toast region and close button, the sidebar drawer close, the panel search box, the tab and taskbar scroll buttons, "More actions", the default modal title, the empty-group and unregistered-component placeholders — now go through it.
+- **Three font stacks, and the host page's font in the toolbar and sidebar.** All chrome now uses one token (below).
+
+### Added
+- `--rdd-font-family` and `--rdd-font-family-mono` — set the chrome's fonts in one place; `--rdd-font-family: inherit` uses the page's font.
+- `--rdd-focus-ring` — the keyboard focus ring (`2px solid var(--rdd-accent-color)`).
+- `data-rdd-preview-unscale` — put it on the container of a canvas-rendered view (a WebGL map) so it renders at full resolution in the taskbar preview.
+- `isComputedRtl(el)` and `isElementRtl(el)` exports. (`isElementRtl` was documented but not exported.)
+- Message keys: `notifications`, `closeNotification`, `scrollTabsLeft`, `scrollTabsRight`, `scrollTaskbarLeft`, `scrollTaskbarRight`, `moreActions`, `search`, `closeSearch`, `searchPlaceholder`, `modalTitle`, `emptyGroup`, `emptyGrid`, `componentUnregistered`, `componentKey`, `untitledPanel`.
+
+### Upgrade notes
+- **`.luciad` is no longer in the stylesheet.** A product-specific class never belonged in the library; it was only used by the LuciadRIA demo apps. If your panel content used `class="… luciad"` for the taskbar-preview counter-scale, use `data-rdd-preview-unscale` instead.
+- **A typed message table gains keys.** A table declared as `Record<PredefinedMessageKey, string>` must add the new keys above (a compile error until it does). Partial overrides are unaffected.
+- **The floating window has an inner frame.** Title bar and body are now inside `.rdd-floating-window-frame` (and an inner widget's inside `.rdd-panel-float__frame`). CSS that relied on them being *direct* children of `.rdd-floating-window` / `.rdd-panel-float` needs a descendant selector.
+- **Layout moved from inline styles into classes** — the split grid (`.rdd-split`, `.rdd-split--row`/`--column`, `.rdd-split-child`), resizer bars (`.rdd-resizer-bar--vertical`/`--horizontal`) and the sidebar (`.rdd-sidebar-layout`, `.rdd-sidebar-content`, `.rdd-sidebar-strip-wrap`, `.rdd-sidebar-pane`). Rendering is unchanged, but your CSS can now override these where inline styles used to win. Rules matching resizer bars by their inline style (`[style*="cursor: col-resize"]`) no longer match; use the orientation classes.
+- **Tabs, taskbar items and context-menu items now take keyboard focus**, and a context menu moves focus into itself when it opens.
+- **`<ToastContainer>` renders on the first client render after mount** rather than immediately (nothing is rendered on the server).
+
+### Tests
+- A real-browser suite: `npm run test:browser` drives Google Chrome (through the new `playwright-core` dev dependency) against a harness page, for everything jsdom can't see — layout, stacking, focus, scrolling, RTL geometry and the Tab order.
+
 ## [6.3.2] — 2026-09-25
 
 Fixes from defect reports filed by the Vue and Angular ports of this library, each reproduced against 6.3.1 before it was fixed. No API is removed or renamed.
@@ -399,7 +439,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.4.0...HEAD
+[6.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.2...v6.4.0
 [6.3.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.1...v6.3.2
 [6.3.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.0...v6.3.1
 [6.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.2.0...v6.3.0
