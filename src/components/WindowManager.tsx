@@ -922,7 +922,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 /** Controls when the minimized-panel taskbar is visible. */
 export type TaskbarVisibility = 'always' | 'compact' | 'autohide';
 
-/** Props for `<WindowManager>`. */
+/** Props for `<RddDesktop>`. */
 export interface RddDesktopProps {
   /** Built-in skin name or a custom skin key registered via CSS. @default 'vscode' */
   skin?: string;

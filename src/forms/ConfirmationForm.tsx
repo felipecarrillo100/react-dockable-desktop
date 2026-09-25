@@ -3,7 +3,7 @@ import { useFormContainer } from '../components/FormContainerContext';
 import { useFormatMessage, usePredefinedMessages } from '../components/WindowManagerContext';
 
 /**
- * Props for the {@link ConfirmationForm} component.
+ * Props for the {@link RddConfirm} component.
  */
 export interface RddConfirmProps {
   /** Optional custom title text or localizable descriptor for the dialog container. */
@@ -23,7 +23,7 @@ export interface RddConfirmProps {
 }
 
 /**
- * ConfirmationForm component renders a standard dialog content layout,
+ * RddConfirm component renders a standard dialog content layout,
  * allowing users to confirm actions or abort them. Exposes action callbacks.
  */
 export const ConfirmationForm: React.FC<RddConfirmProps> = ({

@@ -116,7 +116,7 @@ export interface PanelInfo {
   id: string;
   /** Plain text label or localizable message descriptor. */
   title: string | MessageDescriptor;
-  /** String matching the component registration ID in the {@link globalPanelRegistry}. */
+  /** String matching the component registration ID in the workspace's {@link PanelRegistry}. */
   component: string;
   /** Current workspace placement mode. */
   state: 'docked' | 'floating' | 'minimized';
@@ -194,7 +194,7 @@ export interface WorkspaceState {
   draggedPanelId: string | null;
   /**
    * The ID of the active/focused panel — the one contributions are read from
-   * (see `useActivePanelContribution`) and the one drawn with focused chrome.
+   * (see `useActiveContribution`) and the one drawn with focused chrome.
    *
    * Always a panel the user can actually see: the selected tab of its leaf, or a floating
    * window. Never a minimized panel, except when an app explicitly calls `focusPanel()` on
@@ -529,7 +529,7 @@ const RegistryContext = createContext<PanelRegistry>(globalPanelRegistry);
 
 /**
  * React hook to read the scoped {@link PanelRegistry} for the current provider.
- * When the provider was created with a {@link WorkspaceClient}, this returns the client's
+ * When the provider was given a workspace from {@link createWorkspace}, this returns that workspace's
  * private registry. Otherwise it returns the global `globalPanelRegistry` singleton.
  *
  * @group Hooks
@@ -607,7 +607,7 @@ type ActiveTargetScope = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'panel
  * Whether `id` names a panel the user can actually see, and which may therefore be the globally
  * active one: the selected tab of some leaf, or a floating window. A minimized panel never
  * qualifies — it stays mounted (see the persistence port in `WindowManager.tsx`), so leaving it
- * active would keep routing `useActivePanelContribution()` to a panel that isn't on screen.
+ * active would keep routing `useActiveContribution()` to a panel that isn't on screen.
  *
  * Used both to validate a persisted `activePanelId` on load and to guard the one written by
  * `saveLayout`, so the two directions can't disagree about what "active" is allowed to mean.
@@ -674,7 +674,7 @@ function deriveActivePanelId(scope: ActiveTargetScope): string | null {
  *
  * Those actions change which tab a leaf shows without going through `focusPanel`, and each one
  * used to leave `activePanelId` wherever it was — often on a tab the move had just hidden, so the
- * visible tab rendered unfocused and `useActivePanelContribution()` kept serving the hidden
+ * visible tab rendered unfocused and `useActiveContribution()` kept serving the hidden
  * panel's controls. The moved panel is what the user just acted on, so it wins when it is
  * visible; otherwise the previous active panel is kept if it still is; otherwise it is derived.
  */
@@ -689,7 +689,7 @@ function resolveActivePanelId(
 
 /**
  * Shared shape-check + migration for a parsed (but not yet validated) layout payload,
- * used by both `parseInitialState` (the `initialState`/`WorkspaceClient.initialState`
+ * used by both `parseInitialState` (the `initialState`/`createWorkspace({ initialState })`
  * entry point) and `loadLayout` — previously these duplicated the check independently
  * and only one of them ran the stickyRight/stickyBottom migration, so a layout fed
  * through `initialState` silently skipped it. `version` is read but not yet branched on
@@ -837,24 +837,24 @@ function parseInitialState(json: string | null): Pick<WorkspaceState, 'gridRoot'
 }
 
 /**
- * Props for `<DockableDesktopProvider>` and `<WindowManagerProvider>`.
+ * Props for `<DockableDesktopProvider>`.
  * Also exported as `DockableDesktopProviderProps` for consumers who use
  * the composite provider.
  * @see DockableDesktopProviderProps
  */
 export interface WindowManagerProviderProps {
   children: React.ReactNode;
-  /** `WorkspaceClient` instance created outside the React tree. When provided, its panel
+  /** Workspace created with `createWorkspace()` outside the React tree. When provided, its panel
    *  registry and config take precedence over the individual props below. */
   client?: WorkspaceClient;
   /** Custom i18n formatter. Receives a `{ id, defaultMessage }` descriptor and returns
    *  the translated string. When omitted, `defaultMessage` is used as-is. */
   formatMessage?: MessageFormatter;
   /** Override the built-in predefined UI strings (confirm button labels, close tooltips, etc.).
-   *  Merge with or replace `defaultPredefinedMessages` to localise system strings. */
+   *  Merge with or replace `defaultMessages` to localise system strings. */
   predefinedMessages?: Record<string, MessageDescriptor>;
   /** Layout direction. `'rtl'` mirrors all controls, tab order, and drop zones.
-   *  Can also be changed at runtime via `WorkspaceClient.setDirection()`. @default 'ltr' */
+   *  Can also be changed at runtime via `workspace.setDirection()`. @default 'ltr' */
   dir?: 'ltr' | 'rtl';
   /** CSS class applied to the outer wrapper element of every modal overlay. */
   modalClass?: string;
@@ -899,7 +899,7 @@ export interface WorkspaceCore {
 /**
  * @internal Builds a workspace store: the layout state, every action on it, and the event bus.
  * It has no React dependency — it exists (and accepts calls) before any provider mounts, and a
- * provider only subscribes to it. See {@link WorkspaceClient} for the public face.
+ * provider only subscribes to it. See {@link createWorkspace} for the public face.
  */
 export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore {
   const registry = config.registry;
@@ -2243,7 +2243,7 @@ export function useWindowManagerState<T>(selector?: (state: WorkspaceState) => T
  *
  * @group Hooks
  * @returns The full set of workspace mutation methods.
- * @throws Error if used outside of a {@link WindowManagerProvider}.
+ * @throws Error if used outside of a {@link DockableDesktopProvider}.
  * @example
  * ```tsx
  * function Toolbar() {

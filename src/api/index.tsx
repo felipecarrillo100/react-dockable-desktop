@@ -19,17 +19,18 @@ import { ContextMenu, ContextMenuProvider, type ContextMenuAdapter, type Context
 // ─── Workspace ──────────────────────────────────────────────────────────────────
 
 /** Configuration for {@link createWorkspace}. */
-export type WorkspaceConfig = Omit<WorkspaceClientConfig, 'predefinedMessages'> & {
+export interface WorkspaceConfig extends Omit<WorkspaceClientConfig, 'predefinedMessages'> {
   /** Overrides any subset of the built-in message table. */
   messages?: Record<string, MessageDescriptor>;
-};
+}
 
 /**
  * A workspace: the layout, every action on it, the panel registry and the event bus. It is live
  * from the moment it is created — calls made before any `<DockableDesktopProvider>` mounts apply
  * immediately.
  */
-export type Workspace<TEvents extends object = Record<string, unknown>> = WorkspaceClient<TEvents>;
+// An interface rather than an alias, so the API reference lists the members under this name.
+export interface Workspace<TEvents extends object = Record<string, unknown>> extends WorkspaceClient<TEvents> {}
 
 /**
  * Creates a workspace. Pass it to `<DockableDesktopProvider workspace={…}>`.

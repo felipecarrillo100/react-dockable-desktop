@@ -3,8 +3,8 @@
  * @description Lets any panel publish toolbar items and/or sidebar sections that
  * should only be surfaced while it is the globally active panel (`state.activePanelId`).
  * Optional, additive module — `DockableDesktopProvider` wires it up automatically.
- * Neither `<Toolbar>` nor `<Sidebar>` reads from this automatically; the app shell
- * merges `useActivePanelContribution()`'s result into its own `items`/`tabs` calls.
+ * Neither `<RddToolbar>` nor `<RddSidebar>` reads from this automatically; the app shell
+ * merges `useActiveContribution()`'s result into its own `items`/`tabs` calls.
  */
 
 import React, { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
@@ -69,9 +69,9 @@ function createPanelContributionStore(): PanelContributionStore {
 const PanelContributionContext = createContext<PanelContributionStore | null>(null);
 
 /**
- * Provider enabling `usePanelContribution()` / `useActivePanelContribution()`.
+ * Provider enabling `usePanelContribution()` / `useActiveContribution()`.
  * Mounted automatically by `DockableDesktopProvider` — only needed manually when
- * composing `WindowManagerProvider` directly without it.
+ * composing the internal provider directly without it.
  */
 export const PanelContributionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const store = useMemo(() => createPanelContributionStore(), []);
@@ -85,9 +85,9 @@ export const PanelContributionProvider: React.FC<{ children: React.ReactNode }> 
  * `useMemo`/`useCallback`) to avoid republishing on every unrelated re-render.
  *
  * Contributions are only ever surfaced while this panel is `state.activePanelId` —
- * see `useActivePanelContribution()`.
+ * see `useActiveContribution()`.
  *
- * @throws Error if used outside of a {@link PanelContributionProvider}.
+ * @throws Error if used outside of a {@link DockableDesktopProvider}.
  * @example
  * function MapPanel() {
  *   const [controller, setController] = useState<'pan' | 'draw' | 'measure'>('pan');
@@ -123,9 +123,9 @@ export function usePanelContribution(contribution: PanelContribution): void {
  * Returns whatever the currently active panel (`state.activePanelId`) has published
  * via `usePanelContribution()`, or `null` if no panel is active or the active panel
  * hasn't contributed anything. Intended for the app shell to merge into its own
- * `<Toolbar items={...}>` / `<Sidebar tabs={...}>` calls.
+ * `<RddToolbar items={...}>` / `<RddSidebar tabs={...}>` calls.
  *
- * @throws Error if used outside of a {@link PanelContributionProvider}.
+ * @throws Error if used outside of a {@link DockableDesktopProvider}.
  */
 export function useActivePanelContribution(): PanelContribution | null {
   const activePanelId = useWindowManagerState(s => s.activePanelId);
@@ -143,7 +143,7 @@ export function useActivePanelContribution(): PanelContribution | null {
 }
 
 /**
- * Converts a contributed sidebar section into a `SidebarTab` for `<Sidebar tabs={...}>`.
+ * Converts a contributed sidebar section into a `SidebarTab` for `<RddSidebar tabs={...}>`.
  * `SidebarTab.icon` is optional but recommended unless the tab is `hidden`; supply
  * `fallbackIcon` for sections that omit one.
  * `eagerMount`/`preserveState` have no contribution-side equivalent — a contribution
@@ -159,11 +159,11 @@ export function sidebarSectionToTab(section: PanelSidebarSection, fallbackIcon: 
 }
 
 /**
- * Convenience wrapper around `useActivePanelContribution()` for the common case:
+ * Convenience wrapper around `useActiveContribution()` for the common case:
  * append the active panel's contributed toolbar items (behind a separator) to a
  * static list. Returns `staticItems` unchanged when there's nothing to add.
  * For manual control (a different merge position, no separator, etc.), call
- * `useActivePanelContribution()` directly instead.
+ * `useActiveContribution()` directly instead.
  */
 export function useMergedToolbarItems(staticItems: ToolbarItem[]): ToolbarItem[] {
   const active = useActivePanelContribution();
@@ -173,8 +173,8 @@ export function useMergedToolbarItems(staticItems: ToolbarItem[]): ToolbarItem[]
 }
 
 /**
- * Convenience wrapper around `useActivePanelContribution()` for the common case:
- * append the active panel's contributed sidebar sections (via `sidebarSectionToTab`)
+ * Convenience wrapper around `useActiveContribution()` for the common case:
+ * append the active panel's contributed sidebar sections (via `sectionToTab`)
  * to a static tab list, as dynamic tabs that appear only while their panel is active.
  * Returns `staticTabs` unchanged when there's nothing to add.
  */

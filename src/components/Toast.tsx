@@ -7,12 +7,12 @@ import { formatLabel, useFormatMessage, usePredefinedMessages } from './WindowMa
 /** Visual type of a toast notification. Determines the icon and accent color. */
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 
-/** Corner position of the `<ToastContainer>` relative to the viewport. */
+/** Corner position of the `<RddToasts>` relative to the viewport. */
 export type ToastPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 /**
  * Per-notification options passed to `toast()`, `toast.info()`, etc.
- * All fields are optional and fall back to `<ToastContainer>` defaults when unset.
+ * All fields are optional and fall back to `<RddToasts>` defaults when unset.
  */
 export interface ToastOptions {
   /** Visual type. Overridden by the `toast.info/success/warning/error` shorthands. @default 'info' */
@@ -89,7 +89,7 @@ export interface ToastPromiseMessages<T> {
 
 /**
  * Strategy interface for replacing the built-in toast renderer with an external library.
- * Pass an instance via `<ToastContainer adapter={...} />` to redirect all `toast.*` calls
+ * Pass an instance via `<RddToasts adapter={...} />` to redirect all `toast.*` calls
  * without changing any call sites in your application.
  * @see RddToastsProps.adapter
  */
@@ -101,8 +101,8 @@ export interface ToastAdapter {
   /** Called to dismiss one notification (`id` provided) or all active notifications (no `id`). */
   dismiss(id?: string): void;
   /**
-   * `null` means the adapter manages its own DOM and `<ToastContainer>` renders nothing.
-   * A component causes `<ToastContainer>` to portal-render it with a `position` prop.
+   * `null` means the adapter manages its own DOM and `<RddToasts>` renders nothing.
+   * A component causes `<RddToasts>` to portal-render it with a `position` prop.
    */
   Container: React.ComponentType<{ position: ToastPosition }> | null;
 }
@@ -178,7 +178,7 @@ export interface ToastFunction {
 
 /**
  * Imperative notification singleton. Call from anywhere — inside or outside React.
- * Mount `<ToastContainer>` once at your app root to activate the renderer.
+ * Mount `<RddToasts>` once at your app root to activate the renderer.
  * @example
  * toast.success('File saved.');
  * toast.error('Upload failed.', { duration: 0 }); // sticky
@@ -439,7 +439,7 @@ function resolveOpts(
  * Portal-rendered notification host. Mount once at your app root, outside the workspace
  * container. All `toast.*` calls are routed here automatically via the internal event emitter.
  * @example
- * <ToastContainer position="top-right" progressBar />
+ * <RddToasts position="top-right" progressBar />
  */
 export function ToastContainer({
   position        = 'top-right',

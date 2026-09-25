@@ -186,7 +186,7 @@ function getHoveredZone(container: HTMLElement, clientX: number, clientY: number
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
 
-/** Props for `<PanelOverlayRoot>`. */
+/** Props for `<RddPanelOverlay>`. */
 export interface RddPanelOverlayProps {
   children: React.ReactNode;
   className?: string;
@@ -384,7 +384,7 @@ export type ToolbarVariant = 'transparent' | 'frosted' | 'solid';
 /** Visual style applied to `ToolbarButton` and `ToolbarToggle` components. */
 export type ButtonVariant = 'ghost' | 'soft' | 'outlined' | 'filled';
 
-/** Props for `<PanelToolbar>`. */
+/** Props for `<RddPanelToolbar>`. */
 export interface RddPanelToolbarProps {
   /** Edge of the panel overlay to attach to. @see ToolbarPosition */
   position: ToolbarPosition;
@@ -482,7 +482,7 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
 
 // ─── ToolbarButton ────────────────────────────────────────────────────────────
 
-/** Props for `<ToolbarButton>`. */
+/** Props for `<RddToolbarButton>`. */
 export interface RddToolbarButtonProps {
   /** Button icon — typically a small SVG component. */
   icon: React.ReactNode;
@@ -514,7 +514,7 @@ export function ToolbarButton({ icon, onClick, disabled, title, variant }: RddTo
 
 // ─── ToolbarToggle ────────────────────────────────────────────────────────────
 
-/** Props for `<ToolbarToggle>`. */
+/** Props for `<RddToolbarToggle>`. */
 export interface RddToolbarToggleProps {
   /** Button icon — typically a small SVG component. */
   icon: React.ReactNode;
@@ -591,7 +591,7 @@ export interface SearchResult {
   icon?: React.ReactNode;
 }
 
-/** Props for `<ToolbarSearchInput>`. */
+/** Props for `<RddToolbarSearch>`. */
 export interface RddToolbarSearchProps {
   /** Placeholder text shown in the expanded input field. @default the `searchPlaceholder` message ('Search…') */
   placeholder?: string;
@@ -772,7 +772,7 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolb
 
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
-/** Props for `<PanelFloatingWindow>`. */
+/** Props for `<RddFloatingWidget>`. */
 export interface RddFloatingWidgetProps {
   /** Unique identifier within the panel overlay. Used for z-order and stack tracking. */
   id: string;
@@ -1426,12 +1426,12 @@ export interface UsePanelFloatingWindowReturn {
 }
 
 /**
- * Manages the open/close boolean state for a single `PanelFloatingWindow`.
+ * Manages the open/close boolean state for a single `RddFloatingWidget`.
  * Pass `isOpen` to `open`, `close` to `onClose` on the component directly.
  * @returns A stable `UsePanelFloatingWindowReturn` object.
  * @example
  * const info = usePanelFloatingWindow();
- * <PanelFloatingWindow id="info" open={info.isOpen} onClose={info.close} ... />
+ * <RddFloatingWidget id="info" open={info.isOpen} onClose={info.close} ... />
  */
 export function usePanelFloatingWindow(): UsePanelFloatingWindowReturn {
   const [isOpen, setIsOpen] = useState(false);
