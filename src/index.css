@@ -11,8 +11,9 @@
   --rdd-z-base: 1000; /* base for floating windows + all chrome overlays; override via WindowManagerProvider's zIndexBase */
   /* Fonts for the library's own chrome — tabs, title bars, toolbar, sidebar, menus, toasts, drawers,
      modals. Neither Outfit nor Inter is loaded by the library: load one yourself, or override this
-     (on any ancestor of the workspace). To use the host page's font: `inherit` here on :root, or
-     `initial` on any ancestor — `inherit` below :root only copies this stack down. */
+     (on :root or <body> to reach everything: menus, flyouts and toasts render into <body>). To use
+     the host page's font everywhere: `inherit` here on :root, or `initial` on <body>. `initial` on
+     a wrapper reaches only the chrome inside it; `inherit` below :root only copies this stack down. */
   --rdd-font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --rdd-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Errors the library itself shows (the unregistered-panel placeholder). */
@@ -290,7 +291,7 @@
   background-color: var(--rdd-bg-tab-inactive) !important; /* VS Code dark background for inactive tabs */
   color: var(--rdd-text-tab-inactive) !important; /* Clear readable gray */
   border: none !important;
-  border-right: 1px solid var(--rdd-border-panel) !important; /* crisp separator */
+  border-inline-end: 1px solid var(--rdd-border-panel) !important; /* crisp separator, on the reading-end side */
   padding: 0 6px 0 14px !important;
   font-size: 0.75rem;
   display: flex;
@@ -326,7 +327,7 @@
   background-color: var(--rdd-tab-bg-active-focused) !important;
   color: var(--rdd-tab-text-active-focused) !important;
   font-weight: 500;
-  border-right: 1px solid var(--rdd-border-panel) !important;
+  border-inline-end: 1px solid var(--rdd-border-panel) !important;
   z-index: 2;
 }
 
@@ -347,7 +348,7 @@
   background-color: var(--rdd-tab-bg-active-unfocused) !important;
   color: var(--rdd-tab-text-active-unfocused) !important;
   font-weight: 500;
-  border-right: 1px solid var(--rdd-border-panel) !important;
+  border-inline-end: 1px solid var(--rdd-border-panel) !important;
   z-index: 2;
 }
 
@@ -1538,7 +1539,7 @@ body.rdd-dragging-active {
   clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 100%, 0% 100%);
   padding: 0 18px !important;
   margin-right: -4px !important;
-  border-right: none !important;
+  border-inline-end: none !important;
 }
 [data-rdd-skin="chrome"] .rdd-workspace-tab.rdd-active {
   z-index: 5;
@@ -2528,9 +2529,9 @@ html.rdd-no-animations [class*="rdd-"]::after {
    RTL (Right-to-Left) Support
    ========================================== */
 
+/* The separator is a logical border-inline-end (it follows direction by itself); only the
+   physical padding is mirrored here. */
 .rdd-workspace-tab:dir(rtl) {
-  border-right: none !important;
-  border-left: 1px solid var(--rdd-border-panel) !important;
   padding: 0 14px 0 6px !important;
 }
 

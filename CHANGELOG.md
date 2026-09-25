@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.3] — 2026-09-25
+
+### Fixed
+- **The autohide taskbar could slide away while the pointer was on it**, so a press there was lost: when a panel was minimized while the pointer was already on the taskbar, and after a quick leave and re-enter (the leave's timer overwrote the pending one without clearing it). Every collapse now replaces the pending timer, and none happens while the pointer is on the taskbar.
+- **RTL: snapping a window to a workspace corner landed on the opposite side.** The corner zones are mirrored by the stylesheet and a window's anchor is drawn mirrored, but the code mirrored the anchor a third time. Floating widgets inside a panel were not affected.
+- **RTL: the active tab had a separator on both sides.** Tab separators are now a logical `border-inline-end`, so every tab state follows the direction by itself.
+
+### Docs
+- `--rdd-font-family`: set it on `:root` or `<body>` to reach everything — menus, the flyout and toasts render into `<body>`, so `initial` (or a stack) on a wrapper reaches only the chrome inside it. The 7.1.1 wording said "any ancestor". Theming guide and the stylesheet comment.
+- `useColorScheme`: its description said the attribute is set by `<RddDesktop />`; it is the page's.
+
 ## [7.1.2] — 2026-09-25
 
 ### Fixed
@@ -519,7 +530,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.3...HEAD
+[7.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.2...v7.1.3
 [7.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.1...v7.1.2
 [7.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.0...v7.1.1
 [7.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.1...v7.1.0

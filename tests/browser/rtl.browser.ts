@@ -225,3 +225,72 @@ describe('RTL: context menus of an RTL workspace in an LTR page (dir=ws)', () =>
     await close();
   });
 });
+
+// Corner zones are mirrored by the CSS under RTL, and a floating window's anchor is drawn mirrored
+// too, so the hovered zone's name is already the anchor. Flipping it again in code sent the window
+// to the opposite corner.
+describe('RTL: snapping to a workspace corner lands where the pointer is', () => {
+  const side = (win: Rect, ws: Rect) => ((win.x - ws.x) < (ws.right - win.right) ? 'left' : 'right');
+  for (const q of ['', 'dir=ws']) {
+    for (const corner of ['left', 'right'] as const) {
+      it(`a floating window dragged to the physical top-${corner} corner${q ? ' (RTL)' : ' (LTR control)'}`, async () => {
+        const { page, close } = await openHarness(q);
+        const ws = await rectOf(page, '.rdd-workspace-viewport');
+        const t = await rectOf(page, '[data-window-id="p4"] .rdd-floating-window-title');
+        await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(t.x + t.width / 2 + 10, t.y + t.height / 2 + 10, { steps: 3 });
+        await page.mouse.move(corner === 'left' ? ws.x + 20 : ws.right - 20, ws.y + 20, { steps: 20 });
+        await page.waitForTimeout(150);
+        const lit = await rectOf(page, '.rdd-corner-zone--hovered');
+        await page.mouse.up();
+        await page.waitForTimeout(400);
+        expect(side(lit, ws)).toBe(corner);
+        expect(side(await rectOf(page, '[data-window-id="p4"]'), ws)).toBe(corner);
+        await close();
+      });
+    }
+  }
+  it('a tab dragged out to the physical top-left corner floats there (RTL)', async () => {
+    const { page, close } = await openHarness('dir=ws');
+    const ws = await rectOf(page, '.rdd-workspace-viewport');
+    const tab = await rectOf(page, '[data-tab-id="p1"]');
+    await page.mouse.move(tab.x + tab.width / 2, tab.y + tab.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(tab.x + tab.width / 2 + 15, tab.y + 40, { steps: 4 });
+    await page.mouse.move(ws.x + 20, ws.y + 20, { steps: 20 });
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    expect(side(await rectOf(page, '[data-window-id="p1"]'), ws)).toBe('left');
+    await close();
+  });
+});
+
+// Tab separators are a logical border-inline-end, so the active state (a more specific rule) can't
+// leave a physical right border behind under RTL.
+describe('RTL: tab separators', () => {
+  // Every tab, after clicking p1: group 1's selected tab is then the focused active variant and
+  // group 2's the unfocused one, so both active-state rules are covered.
+  const borders = async (page: Page) => {
+    await page.click('[data-tab-id="p1"]');
+    await page.waitForTimeout(100);
+    return page.evaluate(() => [...document.querySelectorAll('.rdd-workspace-tab')].map(t => {
+      const cs = getComputedStyle(t);
+      return { cls: t.className, left: cs.borderLeftWidth, right: cs.borderRightWidth };
+    }));
+  };
+  it('LTR: every tab, active or not, has only a right border', async () => {
+    const { page, close } = await openHarness();
+    for (const b of await borders(page)) expect([b.left, b.right]).toEqual(['0px', '1px']);
+    await close();
+  });
+  it('RTL: every tab, active or not, has only a left border', async () => {
+    const { page, close } = await openHarness('dir=ws');
+    const bs = await borders(page);
+    expect(bs.some(b => b.cls.includes('rdd-workspace-tab-active-focused'))).toBe(true);
+    expect(bs.some(b => b.cls.includes('rdd-workspace-tab-active-unfocused'))).toBe(true);
+    for (const b of bs) expect([b.left, b.right], b.cls).toEqual(['1px', '0px']);
+    await close();
+  });
+});

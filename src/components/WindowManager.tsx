@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom';
 import { isComputedRtl } from '../utils/rtl';
 import { useIsClient } from '../utils/useIsClient';
 import { trackPanelDom, restorePanelDom, forgetPanelDom } from './domPreservation';
-import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
+import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo, MessageDescriptor, MessageFormatter } from './WindowManagerContext';
 import type { MessageKey } from './predefinedMessages';
 import type { PanelRegistry } from './PanelRegistry';
@@ -20,7 +20,6 @@ import { FormContainerProvider } from './FormContainerContext';
 import type { FormContainerContract, ContainerType } from './FormContainerContext';
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
-import { flipZoneHorizontal } from './anchorGeometry';
 import { startPointerDrag, computeResizedRect } from './dragResize';
 import type { ResizeDir } from './dragResize';
 import { useColorScheme } from '../hooks/useColorScheme';
@@ -992,6 +991,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   const taskbarRef = useRef<HTMLDivElement | null>(null);
   const [taskbarExpanded, setTaskbarExpanded] = useState(false);
   const taskbarCollapseTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  // The pointer is on the taskbar: it must not slide away under it (a press there would be lost).
+  const taskbarHoveredRef = useRef(false);
   const prevMinimizedLengthRef = useRef(state.minimized.length);
 
   const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string; fromTouch?: boolean } | null>(null);
@@ -1046,8 +1047,6 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     setActiveCornerAnchorState(val);
     activeCornerAnchorRef.current = val;
   };
-
-  const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
 
   const [hoveredTab, setHoveredTab] = useState<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
   const hoveredTabRef = useRef<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
@@ -1158,7 +1157,9 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     } else if (dropZone) {
       dockPanelToGroup(id, dropZone.leafId, flipRtl(dropZone.position));
     } else if (cornerAnchor) {
-      floatPanel(id, undefined, isRtl ? flipZoneHorizontal(cornerAnchor) : cornerAnchor);
+      // The zone's name is already the anchor: the CSS mirrors the zones under RTL, and an anchor is
+      // drawn mirrored too. Flipping it here as well sent the window to the opposite corner.
+      floatPanel(id, undefined, cornerAnchor);
     } else {
       floatPanel(id, { x: me.clientX - 150, y: me.clientY - 15, width: 450, height: 350 });
     }
@@ -1577,7 +1578,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       const edgeDrop = activeEdgeDropRef.current;
       const cornerAnchor = activeCornerAnchorRef.current;
       if (cornerAnchor) {
-        updateFloatingPosition(id, { anchor: isRtl ? flipZoneHorizontal(cornerAnchor) : cornerAnchor });
+        updateFloatingPosition(id, { anchor: cornerAnchor }); // already the anchor — see the tab drop above
       } else if (edgeDrop) {
         dockPanelToWorkspaceEdge(id, flipRtl(edgeDrop) as SplitDirection);
       } else if (targetTab) {
@@ -1753,23 +1754,39 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     }
   };
 
+  // Every collapse goes through here: it replaces any pending timer (never leaves one behind to
+  // fire later), and does nothing while the pointer is on the taskbar.
+  const scheduleCollapseTaskbar = useCallback((delayMs: number) => {
+    if (taskbarCollapseTimerRef.current) clearTimeout(taskbarCollapseTimerRef.current);
+    taskbarCollapseTimerRef.current = setTimeout(() => {
+      taskbarCollapseTimerRef.current = null;
+      if (!taskbarHoveredRef.current) setTaskbarExpanded(false);
+    }, delayMs);
+  }, []);
+
   const expandTaskbar = useCallback(() => {
+    taskbarHoveredRef.current = true;
     if (taskbarCollapseTimerRef.current) clearTimeout(taskbarCollapseTimerRef.current);
     setTaskbarExpanded(true);
   }, []);
 
-  const scheduleCollapseTaskbar = useCallback(() => {
-    taskbarCollapseTimerRef.current = setTimeout(() => setTaskbarExpanded(false), 400);
-  }, []);
+  const leaveTaskbar = useCallback(() => {
+    taskbarHoveredRef.current = false;
+    scheduleCollapseTaskbar(400);
+  }, [scheduleCollapseTaskbar]);
+
+  useEffect(() => () => { if (taskbarCollapseTimerRef.current) clearTimeout(taskbarCollapseTimerRef.current); }, []);
 
   useEffect(() => {
     if (taskbarVisibility === 'autohide' && state.minimized.length > prevMinimizedLengthRef.current) {
-      if (taskbarCollapseTimerRef.current) clearTimeout(taskbarCollapseTimerRef.current);
       setTaskbarExpanded(true);
-      taskbarCollapseTimerRef.current = setTimeout(() => setTaskbarExpanded(false), 2000);
+      scheduleCollapseTaskbar(2000);
     }
+    // The autohide taskbar unmounts when nothing is minimized; a pointer that was on it then gets
+    // no pointerleave, so forget it here.
+    if (state.minimized.length === 0) taskbarHoveredRef.current = false;
     prevMinimizedLengthRef.current = state.minimized.length;
-  }, [state.minimized.length, taskbarVisibility]);
+  }, [state.minimized.length, taskbarVisibility, scheduleCollapseTaskbar]);
 
   // Fetch the active color-scheme from documentElement to make sure nested variables resolve correctly
   const currentColorScheme = useColorScheme();
@@ -2078,7 +2095,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
             taskbarVisibility === 'autohide' && taskbarExpanded ? 'rdd-taskbar-expanded' : '',
           ].filter(Boolean).join(' ')}
           onPointerEnter={taskbarVisibility === 'autohide' ? expandTaskbar : undefined}
-          onPointerLeave={taskbarVisibility === 'autohide' ? scheduleCollapseTaskbar : undefined}
+          onPointerLeave={taskbarVisibility === 'autohide' ? leaveTaskbar : undefined}
         >
           {taskbarVisibility === 'autohide' && <div className="rdd-taskbar-peek-handle" />}
           <button

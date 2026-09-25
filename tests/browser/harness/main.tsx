@@ -32,7 +32,7 @@ import '../../../src/index.css';
 import {
   createWorkspace, DockableDesktopProvider, RddDesktop, RddSidebar, RddToolbar,
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
-  RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, useModals, useSidePanels, RddConfirm,
+  RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, RddToasts, useModals, useSidePanels, RddConfirm, toast,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
 } from '../../../src/index';
 
@@ -116,7 +116,7 @@ function Inner() {
   const showCtx = useContextMenu();
   // Exposed to the specs, which drive the workspace from outside the page.
   // eslint-disable-next-line react-hooks/immutability
-  (window as unknown as { __wm: unknown }).__wm = { state, actions, overlays, Plain, RddConfirm };
+  (window as unknown as { __wm: unknown }).__wm = { state, actions, overlays, Plain, RddConfirm, toast };
   useEffect(() => {
     applyScheme(); // after WindowManager's own mirroring effect, as demo/App.tsx does
     if (DIR === 'ws') actions.setDirection('rtl');
@@ -164,6 +164,7 @@ function Inner() {
       </div>
       <RddSidePanels />
       <RddModals />
+      <RddToasts />
       <button id="after">after</button>
     </div>
   );
