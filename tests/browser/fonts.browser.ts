@@ -98,3 +98,37 @@ describe('where --rdd-font-family can be set', () => {
     await close();
   });
 });
+
+// The forms that reach every piece of chrome, including what is portaled to <body> (context menu,
+// toolbar flyout, toasts): inherit on :root, or initial on <body>.
+describe('--rdd-font-family forms that reach portaled chrome', () => {
+  const PORTALED = ['.rdd-workspace-tab', '.rdd-context-menu', '.rdd-toolbar-group-flyout', '.rdd-toast'];
+  const openPortaled = async (page: Page) => {
+    await page.click('.rdd-toolbar-btn-group');
+    await page.evaluate(() => (window as unknown as { __wm: { toast: (m: string) => void } }).__wm.toast('hello'));
+    await page.locator('#ctx').dispatchEvent('contextmenu', { clientX: 40, clientY: 40, bubbles: true });
+    await page.waitForTimeout(300);
+  };
+  for (const [label, apply] of [
+    ['inherit on :root', () => document.documentElement.style.setProperty('--rdd-font-family', 'inherit')],
+    ['initial on <body>', () => document.body.style.setProperty('--rdd-font-family', 'initial')],
+  ] as const) {
+    it(`${label}: tab, context menu, flyout and toast all use the page font`, async () => {
+      const { page, close } = await openHarness('font=1');
+      await page.evaluate(apply);
+      await openPortaled(page);
+      const fonts = await fontsOf(page, PORTALED);
+      expect(Object.entries(fonts).filter(([, f]) => !/Courier New/.test(f))).toEqual([]);
+      await close();
+    });
+  }
+  it('initial on a wrapper reaches only the chrome inside it (the menu keeps the library stack)', async () => {
+    const { page, close } = await openHarness('font=1');
+    await page.evaluate(() => (document.querySelector('.rdd-fill-viewport') as HTMLElement).style.setProperty('--rdd-font-family', 'initial'));
+    await openPortaled(page);
+    const fonts = await fontsOf(page, ['.rdd-workspace-tab', '.rdd-context-menu']);
+    expect(fonts['.rdd-workspace-tab']).toMatch(/Courier New/);
+    expect(fonts['.rdd-context-menu']).toMatch(/Outfit/);
+    await close();
+  });
+});
