@@ -1,39 +1,39 @@
 # Panel Lifecycle & Forms
 
-This guide covers the `useFormContainer()` hook — the primary API for panels that need to track unsaved state, guard against accidental closes, and respond to their own lifecycle events.
+This guide covers `usePanel()` and its companion hooks — `useBeforeClose()`, `useSaveState()` and `usePanelEvents()` — the API for panels that need to track unsaved state, guard against accidental closes, and respond to their own lifecycle events.
 
-## Accessing the container
+## Accessing the panel
 
-Any component rendered inside a dockable panel (docked, floating, modal, or side drawer) can call `useFormContainer()` to get a handle to its own container:
+Any component rendered inside a dockable panel (docked, floating, modal, or side drawer) can call `usePanel()` to get a handle to its own container:
 
 ```ts
-import { useFormContainer } from 'react-dockable-desktop';
+import { usePanel } from 'react-dockable-desktop';
 
 function MyPanel() {
-  const container = useFormContainer();
+  const panel = usePanel();
   // ...
 }
 ```
 
-The returned `FormContainerContract` object is stable — the same reference for the lifetime of the panel instance. It is safe to destructure inside hooks with an empty dependency array.
+The returned `PanelHandle` carries the panel's `id`, its live `containerType`, the flags `isActive`, `isMinimized` and `isFloating`, and the actions `close`, `minimize`, `setDirty`, `setTitle` and `setIcon`. The component re-renders when one of those values changes.
 
 ## Marking unsaved changes (dirty state)
 
-Call `container.setDirty(true)` whenever the panel has unsaved changes. When the user tries to close a dirty panel, a **ConfirmationForm** modal fires automatically. The panel closes only if the user confirms.
+Call `panel.setDirty(true)` whenever the panel has unsaved changes. When the user tries to close a dirty panel, an **`RddConfirm`** modal fires automatically. The panel closes only if the user confirms.
 
 ```tsx
 function MyPanel() {
-  const container = useFormContainer();
+  const panel = usePanel();
   const [value, setValue] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value);
-    container.setDirty(true);   // panel is now dirty
+    panel.setDirty(true);   // panel is now dirty
   };
 
   const handleSave = () => {
     save(value);
-    container.setDirty(false);  // all changes saved — no longer dirty
+    panel.setDirty(false);  // all changes saved — no longer dirty
   };
 
   return (
@@ -50,7 +50,7 @@ function MyPanel() {
 Pass a `DirtyStateOptions` object as the second argument to `setDirty` to override any part of the default confirmation UI:
 
 ```ts
-container.setDirty(true, {
+panel.setDirty(true, {
   title:     'Unsaved changes',
   message:   'You have unsaved edits. Discard them?',
   alert:     'This action cannot be undone.',
@@ -65,119 +65,113 @@ container.setDirty(true, {
 | `alert` | `string` | Optional banner shown above the message. |
 | `alertType` | `'info' \| 'warning' \| 'success' \| 'danger'` | Color scheme for the alert banner. Default: `'info'`. |
 
-All fields also accept localizable message descriptors (`{ id, defaultMessage, values }`) when using `formatMessage`.
+`title` and `message` also accept localizable message descriptors (`{ id, defaultMessage, values }`) when using `formatMessage`.
 
 ## Blocking close programmatically
 
-For async validation or complex multi-step guards, use `onCloseRequested`:
+For async validation or complex multi-step guards, use `useBeforeClose`:
 
 ```ts
-useEffect(() => {
-  const unsubscribe = container.onCloseRequested(async () => {
-    const ok = await validateBeforeClose();  // your async check
-    return ok;  // return false to block, true to allow
-  });
-  return unsubscribe;
-}, [container]);
+import { useBeforeClose } from 'react-dockable-desktop';
+
+useBeforeClose(async () => {
+  const ok = await validateBeforeClose();  // your async check
+  return ok;  // return false to block, true to allow
+});
 ```
 
-The handler is called before the dirty-state dialog. If it returns (or resolves to) `false`, the close is blocked and **no dialog is shown**. Return `true` to proceed (the dirty-state dialog fires next if the panel is dirty).
+The guard is called before the dirty-state dialog. If it returns (or resolves to) `false`, the close is blocked and **no dialog is shown**. Return `true` to proceed (the dirty-state dialog fires next if the panel is dirty).
+
+Call it at the top level of the component, like any hook. It always calls the latest function you pass — no dependency array — and cleans up on unmount. To register a guard only some of the time, pass `null` otherwise:
+
+```ts
+useBeforeClose(isDirty ? () => confirmDiscard() : null);
+```
 
 ## Force-closing
 
 Bypass all guards with `{ force: true }`:
 
 ```ts
-container.requestClose({ force: true });
+panel.close({ force: true });
 ```
 
-This skips both the `onCloseRequested` handler and the dirty-state dialog. Use it for explicit "Discard and close" actions where the user has already confirmed intent in your own UI.
+This skips both the `useBeforeClose` guard and the dirty-state dialog. Use it for explicit "Discard and close" actions where the user has already confirmed intent in your own UI.
 
 ## Reporting state to be saved
 
-For a **docked or floating** panel opened with `openPanel(id, key, { props })`, static `props` are frozen at open time — fine for identity/config, but they can't capture state the panel accumulates afterward (scroll position, an in-progress edit, a view-mode toggle). Register a callback instead, and `saveLayout()` pulls it fresh every time it's called:
+For a **docked or floating** panel opened with `openPanel(id, key, { props })`, static `props` are frozen at open time — fine for identity/config, but they can't capture state the panel accumulates afterward (scroll position, an in-progress edit, a view-mode toggle). Report it with `useSaveState()` instead, and `saveLayout()` pulls it fresh every time it's called:
 
 ```tsx
+import { useRef } from 'react';
+import { useSaveState } from 'react-dockable-desktop';
+
 function MyDocumentPanel() {
-  const container = useFormContainer();
   const scrollLineRef = useRef(0);
 
-  useEffect(() => {
-    return container.registerStateProvider?.(() => ({ scrollLine: scrollLineRef.current }));
-  }, [container]);
+  useSaveState(() => ({ scrollLine: scrollLineRef.current }));
 
   // ...
 }
 ```
 
-Return `undefined` to fall back to the panel's static `props` for that particular save. Only meaningful for docked/floating panels — `registerStateProvider` is `undefined` on left/right side panels and modals, which already have a complete, different answer to per-instance data (their own `props` argument on `openLeftPanel`/`openRightPanel`/`openModal`, plus `updateInstance`).
+Return `undefined` (or pass `null` instead of a function) to fall back to the panel's static `props` for that particular save. Only meaningful for docked/floating panels — left/right side panels and modals already have a complete, different answer to per-instance data (their own `props` argument on `useSidePanels().openLeft`/`openRight` and `useModals().open`, plus `update(id, …)`).
 
-See [WorkspaceClient → Per-panel props](./workspace-client#per-panel-props) for the full picture, including what makes a value "serializable enough" to survive `saveLayout()`, and the `'layout:panels-excluded'` event that fires when it doesn't.
+See [Workspace → Per-panel props](./workspace-client#per-panel-props) for the full picture, including what makes a value "serializable enough" to survive `saveLayout()`, and the `'layout:panels-excluded'` event that fires when it doesn't.
 
 ## Dynamic panel title
 
 Update the tab or window title at runtime:
 
 ```ts
-container.setTitle('My Panel — Unsaved');
+panel.setTitle('My Panel — Unsaved');
 
 // Reset to the registered default:
-container.setTitle('My Panel');
+panel.setTitle('My Panel');
 ```
 
 This also accepts a localizable descriptor:
 
 ```ts
-container.setTitle({ id: 'panel.title.editing', defaultMessage: 'Editing...' });
+panel.setTitle({ id: 'panel.title.editing', defaultMessage: 'Editing...' });
 ```
 
 ## Reading the panel ID
 
-Two equivalent ways to get the current panel instance ID from inside a component:
-
 ```ts
-// Option 1 — useFormContainer (also gives you the full container API)
-const container = useFormContainer();
-const panelId = container.instanceId;
-
-// Option 2 — usePanelId (zero-boilerplate when only the ID is needed)
-import { usePanelId } from 'react-dockable-desktop';
-const panelId = usePanelId();
+const { id } = usePanel();
 ```
 
-Use `usePanelId()` when you only need the ID. Use `useFormContainer()` when you also need dirty state, close guards, or lifecycle hooks.
+The panel component also receives it as the `panelId` prop.
 
 ## Responding to lifecycle events
 
-The container exposes lifecycle callbacks for every meaningful panel state change. Each returns an unsubscribe function — clean them up in a `useEffect` return.
+`usePanelEvents()` subscribes to every meaningful panel state change. Pass only the callbacks you need; like `useBeforeClose`, it always calls the latest ones and cleans up on unmount.
 
 ### Close, minimize, restore, resize
 
 ```tsx
-function MyPanel() {
-  const container = useFormContainer();
+import { usePanelEvents } from 'react-dockable-desktop';
 
-  useEffect(() => {
-    const unsubs = [
-      container.onClose?.(() => {
-        // Panel is about to be removed from the DOM
-        pauseAnimation();
-      }),
-      container.onMinimize?.(() => {
-        // Panel was sent to the taskbar
-        pauseAudio();
-      }),
-      container.onRestore?.(() => {
-        // Panel came back from the taskbar
-        resumeAudio();
-      }),
-      container.onResize?.((width, height) => {
-        // Container was resized (split resize, float resize)
-        myChart.resize(width, height);
-      }),
-    ];
-    return () => unsubs.filter(Boolean).forEach(u => u!());
-  }, [container]);
+function MyPanel() {
+  usePanelEvents({
+    onClose: () => {
+      // Panel is about to be removed from the DOM
+      pauseAnimation();
+    },
+    onMinimize: () => {
+      // Panel was sent to the taskbar
+      pauseAudio();
+    },
+    onRestore: () => {
+      // Panel came back from the taskbar
+      resumeAudio();
+    },
+    onResize: (width, height) => {
+      // Container was resized (split resize, float resize)
+      myChart.resize(width, height);
+    },
+  });
 }
 ```
 
@@ -190,20 +184,19 @@ Panel components are **never unmounted** when hidden, minimized, or covered by a
 `onActivate` fires when this panel becomes the globally active panel (the one highlighted in the taskbar and tab strip). `onDeactivate` fires when focus moves to another panel, **and also** when the panel is destroyed while active — so it always fires before `onClose` in that case.
 
 ```tsx
-useEffect(() => {
-  const unsubs = [
-    container.onActivate?.(() => {
-      // e.g. reload live data, resume polling
-      startDataStream();
-    }),
-    container.onDeactivate?.(() => {
-      // e.g. pause background work when not visible
-      stopDataStream();
-    }),
-  ];
-  return () => unsubs.filter(Boolean).forEach(u => u!());
-}, [container]);
+usePanelEvents({
+  onActivate: () => {
+    // e.g. reload live data, resume polling
+    startDataStream();
+  },
+  onDeactivate: () => {
+    // e.g. pause background work when not visible
+    stopDataStream();
+  },
+});
 ```
+
+To render from it instead, read `usePanel().isActive`.
 
 ::: info What "active" means
 The active panel is determined by `focusPanel()` / user tab clicks, not by visibility. A minimized panel cannot be active. Calling `openPanel()` alone does **not** make the panel globally active — call `focusPanel(id)` if you need that.
@@ -216,8 +209,8 @@ The active panel is determined by `focusPanel()` / user tab clicks, not by visib
 The handler receives the new `ContainerType` value: `'dockable-panel'` or `'floating-window'`.
 
 ```tsx
-useEffect(() => {
-  const unsub = container.onContainerTypeChange?.((type) => {
+usePanelEvents({
+  onContainerTypeChange: (type) => {
     if (type === 'floating-window') {
       // Panel is now free-floating — map may need a resize
       mapInstance.resize();
@@ -225,39 +218,21 @@ useEffect(() => {
       // Panel docked back into the grid
       mapInstance.resize();
     }
-  });
-  return unsub;
-}, [container]);
+  },
+});
 ```
 
-::: tip Reading the type at mount
-`container.containerType` reflects the state **at mount time** and does not update. Combine it with `onContainerTypeChange` to track the current type throughout the panel's lifetime:
+::: tip Reading the current type
+`usePanel().containerType` is always the current type — the component re-renders when it changes, so you don't need to mirror it into state:
 
 ```ts
-const [currentType, setCurrentType] = useState(container.containerType);
-
-useEffect(() => {
-  return container.onContainerTypeChange?.(setCurrentType);
-}, [container]);
+const { containerType } = usePanel();
 ```
 :::
 
-### Querying current dimensions
-
-`getDimensions()` is a synchronous getter that returns the panel's current rendered size, or `null` if the panel has not yet been laid out. It reads from the same source as `onResize` — no extra observer setup needed.
-
-```ts
-const dims = container.getDimensions?.();
-if (dims) {
-  console.log(`${dims.width} × ${dims.height}`);
-}
-```
-
-Typical use: read the initial size inside `onActivate` instead of waiting for a resize event.
-
 ### Reactive dimensions with `usePanelSize()`
 
-`usePanelSize()` is the reactive alternative to calling `getDimensions()` yourself — instead of manually subscribing to `onResize` and mirroring it into state, it returns the panel's current `{ width, height }` (or `null` before layout) and re-renders your component whenever it changes:
+`usePanelSize()` returns the panel's current `{ width, height }` (or `null` before layout) and re-renders your component whenever it changes — no manual `onResize` subscription mirrored into state:
 
 ```tsx
 import { usePanelSize } from 'react-dockable-desktop';
@@ -273,27 +248,27 @@ function MyMapPanel() {
 }
 ```
 
-It's backed by the same `ResizeObserver`-driven mechanism as `onResize`/`getDimensions()` — this correctly follows the panel's actual rendered box across docking, floating, and tab-activation changes, so there's no need for panel content to set up its own second `ResizeObserver` on its own container element to detect the same thing.
+It's backed by the same `ResizeObserver`-driven mechanism as `onResize` — this correctly follows the panel's actual rendered box across docking, floating, and tab-activation changes, so there's no need for panel content to set up its own second `ResizeObserver` on its own container element to detect the same thing.
 
 ### Minimizing imperatively
 
-`requestMinimize()` sends the panel to the taskbar without requiring access to `useWindowManagerActions`. It is a no-op if the container type does not support minimize (e.g. modals and side drawers).
+`panel.minimize()` sends the panel to the taskbar without requiring access to `useWorkspace()`. It is a no-op in modals and side drawers.
 
-```ts
-<button onClick={() => container.requestMinimize?.()}>
+```tsx
+<button onClick={() => panel.minimize()}>
   Minimize
 </button>
 ```
 
-## `ConfirmationForm` component
+## `RddConfirm` component
 
-`ConfirmationForm` is a reusable yes/no dialog you can open from any panel. For the full API reference and usage examples, see [Modals & Side Panels — ConfirmationForm](./modals-and-drawers#confirmationform-—-built-in-yes-no-dialog).
+`RddConfirm` is a reusable yes/no dialog you can open from any panel. For the full API reference and usage examples, see [Modals & Side Panels — RddConfirm](./modals-and-drawers#rddconfirm-—-built-in-yes-no-dialog).
 
 ::: info Dirty-state dialog
-When a panel is marked dirty, `react-dockable-desktop` opens a `ConfirmationForm` modal automatically. You do not need to wire this up manually — just call `container.setDirty(true)`.
+When a panel is marked dirty, `react-dockable-desktop` opens an `RddConfirm` modal automatically. You do not need to wire this up manually — just call `panel.setDirty(true)`.
 :::
 
-## `FormContainerContract` reference
+## Reference
 
 ```ts
 type ContainerType =
@@ -302,38 +277,44 @@ type ContainerType =
   | 'left-panel'       // rendered inside the left side drawer
   | 'right-panel'      // rendered inside the right side drawer
   | 'modal'            // rendered inside a modal overlay
-  | 'standalone';      // rendered outside the Window Manager (default / no context)
+  | 'standalone';      // rendered outside the desktop (default / no context)
 
-interface FormContainerContract {
-  // ── Identity ──────────────────────────────────────────────────────────────
-  instanceId:    string;
-  containerType?: ContainerType;         // type at mount — use onContainerTypeChange for live updates
+interface PanelHandle {
+  // ── Identity and state ────────────────────────────────────────────────────
+  id:            string;
+  containerType: ContainerType;         // updates live
+  isActive:      boolean;               // the globally active panel; always false in a modal or drawer
+  isMinimized:   boolean;
+  isFloating:    boolean;
 
-  // ── Imperative actions ────────────────────────────────────────────────────
-  requestClose:    (options?: { force?: boolean }) => void;
-  requestMinimize?: () => void;          // minimize to taskbar; no-op for modals/drawers
-  setDirty:        (dirty: boolean, options?: DirtyStateOptions) => void;
-  setTitle:        (title: string | MessageDescriptor) => void;
-  setIcon?:        (icon: React.ReactNode) => void;
+  // ── Actions ───────────────────────────────────────────────────────────────
+  close:    (options?: CloseOptions) => void;  // { force?: boolean }
+  minimize: () => void;                         // no-op for modals/drawers
+  setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
+  setTitle: (title: string | MessageDescriptor) => void;
+  setIcon:  (icon: React.ReactNode) => void;
+}
 
-  // ── Synchronous queries ───────────────────────────────────────────────────
-  getDimensions?: () => { width: number; height: number } | null;  // null before first layout
+// Hooks — call at the top level of the panel component; each cleans up on unmount
+function usePanel(): PanelHandle;
+function useBeforeClose(guard: (() => boolean | Promise<boolean>) | null): void;
+function useSaveState(getState: (() => unknown) | null): void;  // docked/floating only
+function usePanelEvents(events: PanelEvents): void;
+function usePanelSize(): { width: number; height: number } | null;  // null before first layout
 
-  // ── Subscriptions (each returns an unsubscribe function) ─────────────────
-  onCloseRequested:      (handler: () => boolean | Promise<boolean>) => () => void;
-  registerStateProvider?: (getState: () => unknown) => () => void; // docked/floating only — see below
-  onClose?:              (handler: () => void) => () => void;
-  onMinimize?:           (handler: () => void) => () => void;
-  onRestore?:            (handler: () => void) => () => void;
-  onResize?:             (handler: (w: number, h: number) => void) => () => void;
-  onActivate?:           (handler: () => void) => () => void;
-  onDeactivate?:         (handler: () => void) => () => void;
-  onContainerTypeChange?: (handler: (type: ContainerType) => void) => () => void;
+interface PanelEvents {
+  onActivate?:            () => void;
+  onDeactivate?:          () => void;
+  onMinimize?:            () => void;
+  onRestore?:             () => void;
+  onClose?:               () => void;
+  onResize?:              (width: number, height: number) => void;
+  onContainerTypeChange?: (type: ContainerType) => void;
 }
 ```
 
 ## See also
 
-- [Modals & Side Panels →](./modals-and-drawers) — open a `ConfirmationForm` as a modal from outside a panel
+- [Modals & Side Panels →](./modals-and-drawers) — open an `RddConfirm` as a modal from outside a panel
 - [Event Bus & Communication →](./event-bus) — communicate between panels without prop drilling
 - [Advanced Topics →](./advanced) — zero-unmount DOM preservation details

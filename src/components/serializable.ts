@@ -16,7 +16,7 @@ import { isValidElement } from 'react';
  * than treated as a disqualifying case.
  *
  * Used to decide whether a docked/floating panel's `props` can be included in
- * `WorkspaceClient.saveLayout()`'s output — see {@link PanelInfo.serializable}.
+ * the workspace's `saveLayout()` output — see {@link PanelInfo.serializable}.
  */
 export function isSerializable(value: unknown): boolean {
   if (value === null) return true;

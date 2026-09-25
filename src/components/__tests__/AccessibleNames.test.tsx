@@ -42,7 +42,7 @@ const mount = (children: React.ReactNode, initialState: string | null = null) =>
   });
   act(() => {
     root = createRoot(container);
-    root.render(<DockableDesktopProvider client={client} formatMessage={ES}><Probe />{children}</DockableDesktopProvider>);
+    root.render(<DockableDesktopProvider workspace={client} formatMessage={ES}><Probe />{children}</DockableDesktopProvider>);
   });
 };
 beforeEach(() => { container = document.createElement('div'); document.body.appendChild(container); });

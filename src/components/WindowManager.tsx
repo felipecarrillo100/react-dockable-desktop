@@ -10,9 +10,9 @@ import { createPortal } from 'react-dom';
 import { isComputedRtl } from '../utils/rtl';
 import { trackPanelDom, restorePanelDom, forgetPanelDom } from './domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
-import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo, ContextMenuPredefinedMessage, MessageFormatter } from './WindowManagerContext';
-import type { PredefinedMessageKey } from './predefinedMessages';
-import type { PanelRegistryClass } from './PanelRegistry';
+import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo, MessageDescriptor, MessageFormatter } from './WindowManagerContext';
+import type { MessageKey } from './predefinedMessages';
+import type { PanelRegistry } from './PanelRegistry';
 import { DefaultContextMenuAdapter, ContextMenuContext } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { FormContainerProvider } from './FormContainerContext';
@@ -138,8 +138,8 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
 const renderPanelContent = (
   id: string,
   panel: PanelInfo,
-  registry: PanelRegistryClass,
-  messages: Record<PredefinedMessageKey, ContextMenuPredefinedMessage>,
+  registry: PanelRegistry,
+  messages: Record<MessageKey, MessageDescriptor>,
   formatMessage: MessageFormatter,
 ) => {
   const componentKey = panel.component;
@@ -147,8 +147,8 @@ const renderPanelContent = (
   if (!registryEntry) {
     console.warn(
       `[react-dockable-desktop] Panel "${id}" references component key "${componentKey}" ` +
-      `which is not registered. Add it to the WorkspaceClient panels config:\n` +
-      `  new WorkspaceClient({ panels: { "${componentKey}": { component: YourComponent } } })`
+      `which is not registered. Add it to the workspace's panels:\n` +
+      `  createWorkspace({ panels: { "${componentKey}": { component: YourComponent } } })`
     );
     return (
       <div className="rdd-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
@@ -923,26 +923,27 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
 export type TaskbarVisibility = 'always' | 'compact' | 'autohide';
 
 /** Props for `<WindowManager>`. */
-export interface WindowManagerProps {
+export interface RddDesktopProps {
   /** Built-in skin name or a custom skin key registered via CSS. @default 'vscode' */
   skin?: string;
   /** Fallback icon shown in panel tabs when no panel-specific icon is provided. */
   defaultPanelIcon?: React.ReactNode;
   /**
    * Controls taskbar visibility.
-   * - `'always'` — permanent bar at the bottom (default)
+   * - `'always'` — permanent bar at the bottom
    * - `'compact'` — only visible when minimized panels exist
-   * - `'autohide'` — overlay bar with 8 px peek strip
-   * @default 'always'
+   * - `'autohide'` — overlay bar with 8 px peek strip (default)
+   * @default 'autohide'
    */
   taskbarVisibility?: TaskbarVisibility;
-  /** Custom context menu renderer. Defaults to the built-in `DefaultContextMenuAdapter`. */
-  contextMenuAdapter?: ContextMenuAdapter;
   /** Enables the library's own transitions/animations (tab hover, dock preview, etc.). Never affects the consumer's own page. @default true */
   animations?: boolean;
 }
 
-export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', contextMenuAdapter = DefaultContextMenuAdapter, animations = true }) => {
+export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', animations = true }) => {
+  // The context menu comes from <DockableDesktopProvider contextMenuAdapter={…}>. This built-in
+  // fallback only renders when no provider supplies one (the library's own tests).
+  const contextMenuAdapter: ContextMenuAdapter = DefaultContextMenuAdapter;
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn } = useWindowManagerActionsInternal();
@@ -1393,6 +1394,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     if (!el) return;
 
     let heightWarnShown = false;
+    let tallWarnShown = false;
 
     const observer = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
@@ -1434,7 +1436,23 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           `  2. Use CSS Grid/Flex and let the workspace fill remaining space:\n` +
           `       .layout { display: flex; flex-direction: column; height: 100vh; }\n` +
           `       .workspace { flex: 1; min-height: 0; }\n\n` +
-          `  3. Verify styles.css is imported — it anchors html, body, #root to 100% height.`
+          `  3. For a workspace that fills the window, put className="rdd-fill-viewport" on its wrapper.`
+        );
+      }
+
+      // Without a height of its own, a workspace in a full-window app grows with its content and the
+      // *page* scrolls instead of the panels. Until 7.0 the stylesheet hid that by fixing
+      // html, body and #root to the viewport; it no longer styles the host page.
+      if (process.env.NODE_ENV === 'development' && !tallWarnShown
+        && rect.height > window.innerHeight + 1
+        && document.documentElement.scrollHeight > window.innerHeight + 1) {
+        tallWarnShown = true;
+        console.warn(
+          `[react-dockable-desktop] The workspace is taller than the window (${Math.round(rect.height)}px > ` +
+          `${window.innerHeight}px), so the page scrolls instead of the panels.\n\n` +
+          `For a workspace that fills the window, give its wrapper the rdd-fill-viewport class:\n` +
+          `  <div className="rdd-fill-viewport"> … <RddDesktop /> … </div>\n\n` +
+          `(Before 7.0 the stylesheet fixed html, body and #root to 100% height; it no longer styles the host page.)`
         );
       }
 
@@ -1761,11 +1779,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   // (Toolbar, Sidebar) also inherit per-skin CSS variable overrides — same pattern as data-color-scheme.
   useEffect(() => {
     if (skin) {
-      document.documentElement.setAttribute('data-workspace-skin', skin);
+      document.documentElement.setAttribute('data-rdd-skin', skin);
     } else {
-      document.documentElement.removeAttribute('data-workspace-skin');
+      document.documentElement.removeAttribute('data-rdd-skin');
     }
-    return () => { document.documentElement.removeAttribute('data-workspace-skin'); };
+    return () => { document.documentElement.removeAttribute('data-rdd-skin'); };
   }, [skin]);
 
   // Mirror color-scheme onto documentElement too — Toolbar/Sidebar are siblings (or,
@@ -1798,7 +1816,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
   return (
     <div
       className={`rdd-workspace${animations ? '' : ' rdd-no-animations'}`}
-      data-workspace-skin={skin}
+      data-rdd-skin={skin}
       data-color-scheme={currentColorScheme}
       style={{ display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100%', overflow: 'hidden', userSelect: 'none' }}
       dir={state.dir}

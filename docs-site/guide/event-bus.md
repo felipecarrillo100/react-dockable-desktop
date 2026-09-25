@@ -7,18 +7,18 @@ Panels communicate with each other — and with code outside React — through `
 In a multi-panel application, panels don't share a common parent (each may live in a different split leaf or floating window). The event bus gives any panel a way to tell any other panel that something happened, without the usual React tradeoffs:
 
 - No re-renders on the common ancestor (the bus sits outside React state)
-- No prop tunnel through `WindowManager` → leaf → panel
+- No prop tunnel through `RddDesktop` → leaf → panel
 - Works from outside React (keyboard shortcuts, WebSocket handlers, analytics)
 
-## `usePanelContext()`
+## `useWorkspace()`
 
 The simplest entry point — call it inside any panel component to get `publish` and `subscribe`:
 
 ```tsx
-import { usePanelContext } from 'react-dockable-desktop';
+import { useWorkspace } from 'react-dockable-desktop';
 
 function LayerTreePanel() {
-  const { publish, subscribe } = usePanelContext();
+  const { publish, subscribe } = useWorkspace();
 
   const handleLayerClick = (layerId: string) => {
     publish('layer:select', { layerId });
@@ -30,7 +30,7 @@ function LayerTreePanel() {
 
 ```tsx
 function MapPanel() {
-  const { subscribe } = usePanelContext();
+  const { subscribe } = useWorkspace();
 
   useEffect(() => {
     const unsubscribe = subscribe('layer:select', ({ layerId }) => {
@@ -52,7 +52,7 @@ Two panels, one publishes a counter, the other listens:
 ```tsx
 // CounterPanel.tsx
 function CounterPanel() {
-  const { publish } = usePanelContext();
+  const { publish } = useWorkspace();
   const [count, setCount] = useState(0);
 
   const increment = () => {
@@ -66,7 +66,7 @@ function CounterPanel() {
 
 // DisplayPanel.tsx
 function DisplayPanel() {
-  const { subscribe } = usePanelContext();
+  const { subscribe } = useWorkspace();
   const [value, setValue] = useState(0);
 
   useEffect(() => {
@@ -77,9 +77,9 @@ function DisplayPanel() {
 }
 ```
 
-## WorkspaceClient typed event bus
+## Typed event bus
 
-When working outside a panel component — or when you want TypeScript to verify every event name and payload — use the `WorkspaceClient` generic:
+When working outside a panel component — or when you want TypeScript to verify every event name and payload — pass an event map to `createWorkspace()`:
 
 ```ts
 // workspace.ts
@@ -89,7 +89,7 @@ interface AppEvents {
   'selection:set': { ids: string[] };
 }
 
-export const workspace = new WorkspaceClient<AppEvents>({
+export const workspace = createWorkspace<AppEvents>({
   panels: { ... },
 });
 ```
@@ -105,9 +105,9 @@ workspace.subscribe('layer:toggle', data => {
 });
 ```
 
-Without a type parameter, `WorkspaceClient` accepts any string key with `unknown` data — fully backward-compatible.
+Without a type parameter, the workspace accepts any string key with `unknown` data. Inside React, `useWorkspace<AppEvents>()` gives the same typed `publish` and `subscribe`.
 
-## Built-in lifecycle events (`BuiltInPanelEvents`)
+## Built-in lifecycle events (`BuiltInEvents`)
 
 The bus also carries internal lifecycle events emitted by the workspace engine. Subscribe to them from outside React for analytics, routing, or auto-save:
 
@@ -139,14 +139,14 @@ workspace.subscribe('layout:panels-excluded', data => {
 | `'panel:closed'` | `{ id: string }` | A panel was closed. |
 | `'panel:minimized'` | `{ id: string }` | A panel was sent to the taskbar. |
 | `'panel:restored'` | `{ id: string }` | A minimized panel was restored. |
-| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and a dedupe redirect into one signal for autosave-style consumers. Does **not** cover a `registerStateProvider` return value changing on its own (a pull, unobservable without the panel notifying separately), nor resize/split-ratio drag, which has no hook yet. |
-| `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from a `registerStateProvider`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
+| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and a dedupe redirect into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), nor resize/split-ratio drag, which has no hook yet. |
+| `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from `useSaveState`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
 
-Built-in events are available on typed clients too — they are intersected in automatically via `BuiltInPanelEvents`.
+Built-in events are available on typed workspaces too — they are intersected in automatically via `BuiltInEvents`.
 
 ## Lifecycle convenience methods
 
-`WorkspaceClient` exposes shorthand methods that wrap the built-in events:
+The workspace exposes shorthand methods that wrap the built-in events:
 
 ```ts
 // Each returns an unsubscribe function:
@@ -180,13 +180,13 @@ unsubOpen();
 
 Use these at module level for application-wide side effects (analytics, auto-save, routing). The unsubscribe functions are safe to call multiple times.
 
-## Pre-mount subscriptions
+## Subscribing before mount
 
-Subscriptions registered **before the provider mounts** are buffered and replayed once the workspace connects. This means you can subscribe at module level safely:
+The workspace is live from the moment `createWorkspace()` returns, so you can subscribe at module level, before React renders:
 
 ```ts
 // workspace.ts — runs before React renders
-const workspace = new WorkspaceClient({ panels: { ... } });
+const workspace = createWorkspace({ panels: { ... } });
 
 workspace.onPanelOpen((id, component) => {
   console.log(`Panel ${id} (${component}) opened`);
@@ -195,8 +195,6 @@ workspace.onPanelOpen((id, component) => {
 export { workspace };
 ```
 
-The same buffering applies to `workspace.subscribe(...)` calls.
-
 ## Combining typed events with built-in events
 
 ```ts
@@ -204,12 +202,12 @@ interface AppEvents {
   'layer:select': { layerId: string };
 }
 
-const workspace = new WorkspaceClient<AppEvents>({ panels: { ... } });
+const workspace = createWorkspace<AppEvents>({ panels: { ... } });
 
 // App event — fully typed:
 workspace.publish('layer:select', { layerId: 'roads' });
 
-// Built-in lifecycle event — also typed via BuiltInPanelEvents intersection:
+// Built-in lifecycle event — also typed via BuiltInEvents intersection:
 workspace.subscribe('panel:opened', data => {
   data.id;         // string ✓
   data.component;  // string ✓
@@ -220,13 +218,13 @@ workspace.subscribe('panel:opened', data => {
 
 | API | Where to use | Notes |
 |-----|-------------|-------|
-| `usePanelContext().publish/subscribe` | Inside a panel component | Easiest for panel-to-panel communication |
+| `useWorkspace().publish/subscribe` | Inside a panel component | Easiest for panel-to-panel communication |
 | `workspace.publish/subscribe` | Outside React (module level, event handlers) | Use the generic for type safety |
 | `workspace.onPanelOpen/Close/Minimize/Restore` | Module level, analytics, routing | Convenience wrappers; return unsubscribe |
-| `BuiltInPanelEvents` | TypeScript event maps | Type the four built-in lifecycle events |
+| `BuiltInEvents` | TypeScript event maps | Type the four built-in lifecycle events |
 
 ## See also
 
-- [Panel Lifecycle & Forms →](./forms-and-panels) — lifecycle hooks inside a panel (`onClose`, `onMinimize`, `onRestore`)
-- [WorkspaceClient →](./workspace-client) — full `WorkspaceClient` API including typed event bus
+- [Panel Lifecycle & Forms →](./forms-and-panels) — lifecycle hooks inside a panel (`usePanelEvents`: `onClose`, `onMinimize`, `onRestore`)
+- [Workspace →](./workspace-client) — the full workspace API including typed event bus
 - [Advanced Topics →](./advanced) — state selectors that complement the event bus

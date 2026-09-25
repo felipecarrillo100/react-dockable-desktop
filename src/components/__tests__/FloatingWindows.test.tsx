@@ -4,12 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
 import { PanelProvider } from '../PanelProviderContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { globalPanelRegistry } from '../PanelRegistry';
 import WindowManager from '../WindowManager';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
-PanelRegistry.register('map', MockPanel);
-PanelRegistry.register('editor', MockPanel);
+globalPanelRegistry.register('map', MockPanel);
+globalPanelRegistry.register('editor', MockPanel);
 
 let lastState: any = null;
 let lastActions: any = null;

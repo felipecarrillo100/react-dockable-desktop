@@ -4,7 +4,7 @@ A complete, runnable minimal application. Every file shown is copy-paste ready �
 
 ## Step 0 — Import the CSS
 
-The library stylesheet **must be imported in your entry point**. It provides the critical layout rules (`height: 100%`, `overflow: hidden`, CSS custom properties for all skins). Without it the workspace renders as a **black screen with no errors**.
+The library stylesheet **must be imported in your entry point**. It provides the layout rules and the CSS custom properties for all skins. Without it the workspace renders as a **black screen with no errors**.
 
 ```ts
 // main.tsx  (or index.tsx — wherever you call createRoot)
@@ -24,15 +24,15 @@ createRoot(document.getElementById('root')!).render(
 
 ## Step 1 — Register panels
 
-Create a `WorkspaceClient` **outside the React tree**. It holds your panel catalog and the imperative API. Think of it like a TanStack `QueryClient` — one instance, referenced from anywhere.
+Create a workspace with `createWorkspace()` **outside the React tree**. It holds your panel catalog and the imperative API. Think of it like a TanStack `QueryClient` — one instance, referenced from anywhere.
 
 ```ts
 // workspace.ts
-import { WorkspaceClient } from 'react-dockable-desktop';
+import { createWorkspace } from 'react-dockable-desktop';
 import { MapPanel }    from './panels/MapPanel';
 import { EditorPanel } from './panels/EditorPanel';
 
-export const workspace = new WorkspaceClient({
+export const workspace = createWorkspace({
   panels: {
     map:    { component: MapPanel,    defaultOptions: { title: 'Map' } },
     editor: { component: EditorPanel, defaultOptions: { title: 'Editor' } },
@@ -45,43 +45,43 @@ export const workspace = new WorkspaceClient({
 
 ## Step 2 — Mount the provider
 
-`DockableDesktopProvider` wraps `WindowManagerProvider` and `PanelProvider` in the correct order. Open your initial panels in a `useEffect` — calls made before the provider mounts are queued and replayed automatically.
+`DockableDesktopProvider` is the only provider you need. Open your initial panels in a `useEffect`, or anywhere else — the workspace is live from the moment `createWorkspace()` returns, so calls apply immediately even before the provider mounts.
 
 ```tsx
 // App.tsx
 import { useEffect } from 'react';
 import {
   DockableDesktopProvider,
-  WindowManager,
-  ModalStackRenderer,
-  SidePanelRenderer,
+  RddDesktop,
+  RddModals,
+  RddSidePanels,
 } from 'react-dockable-desktop';
 import { workspace } from './workspace';
 
 export default function App() {
   useEffect(() => {
     // Open panels on first load.
-    // These calls are safe even if they run before the provider mounts —
-    // they are queued and replayed once the workspace is ready.
     workspace.openPanel('main-map',    'map');
     workspace.openPanel('main-editor', 'editor');
   }, []);
 
   return (
-    <DockableDesktopProvider client={workspace}>
-      {/* The workspace must have an explicit height — 100vh is the simplest choice. */}
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-        <WindowManager />
-        <SidePanelRenderer />   {/* must be a sibling of WindowManager, inside the sized container */}
+    <DockableDesktopProvider workspace={workspace}>
+      {/* The workspace must have an explicit height — rdd-fill-viewport makes it fill the window. */}
+      <div className="rdd-fill-viewport" style={{ position: 'relative' }}>
+        <RddDesktop />
+        <RddSidePanels />   {/* must be a sibling of RddDesktop, inside the sized container */}
       </div>
-      <ModalStackRenderer />    {/* full-screen overlay — lives outside the workspace div */}
+      <RddModals />         {/* full-screen overlay — lives outside the workspace div */}
     </DockableDesktopProvider>
   );
 }
 ```
 
+The stylesheet styles nothing outside the library's own elements, so the browser's default `8px` body margin is still there. Remove it in your app CSS (`body { margin: 0 }`), or skip the class and add `html, body, #root { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }` instead.
+
 ::: tip Why `useEffect` and not a top-level call?
-Both work. A top-level `workspace.openPanel(...)` before the component tree mounts is queued and replayed; a `useEffect` is queued and replayed too. The `useEffect` form makes React StrictMode behaviour explicit (the effect runs once in production). If you have a saved layout in `initialState`, you can skip `openPanel` entirely — the layout is restored automatically.
+Both work: the workspace is live before the provider mounts, so a top-level `workspace.openPanel(...)` applies immediately. The `useEffect` form makes React StrictMode behaviour explicit (the effect runs once in production). If you have a saved layout in `initialState`, you can skip `openPanel` entirely — the layout is restored automatically.
 :::
 
 **What you'll see:** A dark VS Code–style workspace with two side-by-side tabs labelled "Map" and "Editor". Each shows its panel ID. You can drag tabs to create splits, pop them out as floating windows, and minimize them to the taskbar at the bottom.
@@ -101,14 +101,14 @@ export function MapPanel({ panelId }: { panelId: string }) {
 }
 ```
 
-If you don't need the `panelId` in props, use the `usePanelId()` hook — no changes to your component signature required:
+If you don't need the `panelId` in props, read it from the `usePanel()` hook — no changes to your component signature required:
 
 ```tsx
 // panels/EditorPanel.tsx
-import { usePanelId } from 'react-dockable-desktop';
+import { usePanel } from 'react-dockable-desktop';
 
 export function EditorPanel() {
-  const panelId = usePanelId();  // works in any panel container (docked, floating, modal, side)
+  const panelId = usePanel().id;  // works in any panel container (docked, floating, modal, side)
   return (
     <div style={{ width: '100%', height: '100%', padding: '1rem' }}>
       Panel ID: {panelId}
@@ -126,7 +126,7 @@ window.addEventListener('beforeunload', () =>
 );
 ```
 
-Pass the saved string as `initialState` in the `WorkspaceClient` constructor (Step 1). The layout is restored automatically on the next load — no `openPanel` calls needed.
+Pass the saved string as `initialState` to `createWorkspace()` (Step 1). The layout is restored automatically on the next load — no `openPanel` calls needed.
 
 ---
 
@@ -142,25 +142,25 @@ import { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import 'react-dockable-desktop/styles.css';
 import {
-  WorkspaceClient,
+  createWorkspace,
   DockableDesktopProvider,
-  WindowManager,
-  ModalStackRenderer,
-  SidePanelRenderer,
-  usePanelId,
+  RddDesktop,
+  RddModals,
+  RddSidePanels,
+  usePanel,
 } from 'react-dockable-desktop';
 
 function MapPanel() {
-  const panelId = usePanelId();
-  return <div style={{ padding: '1rem' }}>Map panel — ID: {panelId}</div>;
+  const { id } = usePanel();
+  return <div style={{ padding: '1rem' }}>Map panel — ID: {id}</div>;
 }
 
 function EditorPanel() {
-  const panelId = usePanelId();
-  return <div style={{ padding: '1rem' }}>Editor panel — ID: {panelId}</div>;
+  const { id } = usePanel();
+  return <div style={{ padding: '1rem' }}>Editor panel — ID: {id}</div>;
 }
 
-const workspace = new WorkspaceClient({
+const workspace = createWorkspace({
   panels: {
     map:    { component: MapPanel,    defaultOptions: { title: 'Map' } },
     editor: { component: EditorPanel, defaultOptions: { title: 'Editor' } },
@@ -174,12 +174,12 @@ export default function App() {
   }, []);
 
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-        <WindowManager />
-        <SidePanelRenderer />
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport" style={{ position: 'relative' }}>
+        <RddDesktop />
+        <RddSidePanels />
       </div>
-      <ModalStackRenderer />
+      <RddModals />
     </DockableDesktopProvider>
   );
 }
@@ -190,7 +190,7 @@ createRoot(document.getElementById('root')!).render(<App />);
 :::
 
 ::: tip Context menus are built-in
-Right-click context menus (on tabs, taskbar chips, and floating window headers) are powered by the library's built-in `<ContextMenu>` component — no extra package needed.
+Right-click context menus (on tabs, taskbar chips, and floating window headers) are built into `DockableDesktopProvider` — no extra package or component needed.
 :::
 
 ---
@@ -204,19 +204,19 @@ Right-click context menus (on tabs, taskbar chips, and floating window headers) 
 : No panels have been opened. Call `workspace.openPanel(id, componentKey)` in a `useEffect` or pass a layout via `initialState`. The workspace starts with an empty canvas if neither is provided.
 
 **Side drawer / modal renders in the wrong place**
-: `SidePanelRenderer` must be a direct sibling of `WindowManager` **inside** the sized container. `ModalStackRenderer` goes **outside** that container (it is a full-screen overlay). See the structure in Step 2.
+: `RddSidePanels` must be a direct sibling of `RddDesktop` **inside** the sized container. `RddModals` goes **outside** that container (it is a full-screen overlay). See the structure in Step 2.
 
 **`panelId` prop is `undefined`**
-: The component is being rendered outside a `DockableDesktopProvider`. The prop and the `usePanelId()` hook both require the provider in the ancestor tree.
+: The component is being rendered outside a `DockableDesktopProvider`. The prop and `usePanel()` both require the provider in the ancestor tree.
 
 **Workspace collapses to zero height**
-: The workspace wrapper needs an explicit height. Use `height: 100vh` (full viewport) or `height: 100%` with `height: 100%` on all ancestor elements up to `<html>`.
+: The workspace wrapper needs an explicit height. Use `className="rdd-fill-viewport"` (full viewport), `height: 100vh`, or `height: 100%` with `height: 100%` on all ancestor elements up to `<html>` — the library stylesheet doesn't set them for you.
 
 ---
 
 ## Next steps
 
-- [WorkspaceClient in depth →](./workspace-client)
+- [The workspace in depth →](./workspace-client)
 - [Layout serialization →](./layout)
 - [Advanced topics →](./advanced)
 - [API Reference →](/api/)

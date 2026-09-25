@@ -1,12 +1,12 @@
 # Best Practices
 
-## Create the WorkspaceClient outside React
+## Create the workspace outside React
 
-The client holds the panel registry, initial layout, and imperative API. Create it as a **module-level singleton** or in a stable context — not inside a component body.
+The workspace holds the panel registry, initial layout, and imperative API. Create it as a **module-level singleton** or in a stable context — not inside a component body.
 
 ```ts
 // ✅ Module-level singleton — stable across renders
-export const client = new WorkspaceClient({
+export const workspace = createWorkspace({
   panels: {
     map:    { component: MapPanel },
     editor: { component: EditorPanel },
@@ -18,8 +18,8 @@ export const client = new WorkspaceClient({
 ```tsx
 // ❌ Inside a component — recreated on every render
 function App() {
-  const client = new WorkspaceClient({ panels: { ... } }); // Wrong!
-  return <WindowManagerProvider client={client}>...</WindowManagerProvider>;
+  const workspace = createWorkspace({ panels: { ... } }); // Wrong!
+  return <DockableDesktopProvider workspace={workspace}>...</DockableDesktopProvider>;
 }
 ```
 
@@ -28,10 +28,10 @@ function App() {
 Avoid duplicate panels by checking first:
 
 ```ts
-if (!client.isOpen('my-map')) {
-  client.openPanel('my-map', 'map', { title: 'Map' });
+if (!workspace.isOpen('my-map')) {
+  workspace.openPanel('my-map', 'map', { title: 'Map' });
 } else {
-  client.focusPanel('my-map');
+  workspace.focusPanel('my-map');
 }
 ```
 
@@ -44,7 +44,7 @@ if (!client.isOpen('my-map')) {
 `isOpen`/`focusPanel` above assume every call site already knows and reuses the same literal `id` for a given entity. When that's not guaranteed — multiple places in your app can open "the panel for this document" without necessarily generating the same id — use `dedupeKey` instead of hand-rolling an id → panel lookup:
 
 ```ts
-client.openPanel(crypto.randomUUID(), 'document', {
+workspace.openPanel(crypto.randomUUID(), 'document', {
   props: { path: doc.path },
   dedupeKey: doc.path,
 });
@@ -52,46 +52,48 @@ client.openPanel(crypto.randomUUID(), 'document', {
 
 Any later call with the same `component` and `dedupeKey` focuses the existing panel instead of opening a duplicate — the new call's `id`/`props` are ignored when a match is found.
 
-## Keep per-panel `props` small, and prefer `registerStateProvider` for anything that changes
+## Keep per-panel `props` small, and prefer `useSaveState` for anything that changes
 
-`props` on `openPanel` rides through `saveLayout()`'s JSON wholesale on every save. That's fine for small identity/config values (a document id, a filename, a filter selection) but the wrong tool for anything content-sized or high-frequency-changing (a whole document's text, a large dataset) — bundling that into the layout blob means re-serializing it on every save, not just when it actually changes. Keep large/volatile content in your own store keyed by `panelId`, and use `props`/`registerStateProvider` only for what you actually want persisted alongside the layout.
+`props` on `openPanel` rides through `saveLayout()`'s JSON wholesale on every save. That's fine for small identity/config values (a document id, a filename, a filter selection) but the wrong tool for anything content-sized or high-frequency-changing (a whole document's text, a large dataset) — bundling that into the layout blob means re-serializing it on every save, not just when it actually changes. Keep large/volatile content in your own store keyed by `panelId`, and use `props`/`useSaveState` only for what you actually want persisted alongside the layout.
 
 ## Persist layouts with beforeunload
 
 ```ts
 window.addEventListener('beforeunload', () => {
-  localStorage.setItem('workspace-layout', client.saveLayout());
+  localStorage.setItem('workspace-layout', workspace.saveLayout());
 });
 ```
 
 ## Keep panel component keys stable
 
-Component keys are stored inside `saveLayout()` JSON. Renaming a key breaks all saved layouts. If you must rename a key, add a migration step in `loadLayout` before passing the JSON to the client.
+Component keys are stored inside `saveLayout()` JSON. Renaming a key breaks all saved layouts. If you must rename a key, add a migration step in `loadLayout` before passing the JSON to the workspace.
 
 ## Use dirty state for important editors
 
 ```ts
-const actions = useWindowManagerActions();
+const panel = usePanel();
 
 // Mark dirty when the user edits
-actions.setPanelDirty('editor-1', true);
+panel.setDirty(true);
 
 // Clear when saved
-actions.setPanelDirty('editor-1', false);
+panel.setDirty(false);
 ```
+
+Outside the panel, `workspace.setPanelDirty(id, dirty)` does the same.
 
 The built-in close guard will automatically prompt the user before closing a dirty panel.
 
 ## Keep panel components pure of layout concerns
 
-Panel components should focus on content, not layout. Use the imperative API (`client.*`) or the `useWindowManagerActions()` hook for layout operations triggered by user interaction inside a panel.
+Panel components should focus on content, not layout. Use the imperative API (`workspace.*`) or the `useWorkspace()` hook for layout operations triggered by user interaction inside a panel.
 
 ```tsx
 function MyPanel({ panelId }: { panelId: string }) {
-  const actions = useWindowManagerActions();
+  const workspace = useWorkspace();
 
   return (
-    <button onClick={() => actions.floatPanel(panelId)}>
+    <button onClick={() => workspace.floatPanel(panelId)}>
       Pop out
     </button>
   );

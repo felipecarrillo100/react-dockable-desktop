@@ -58,7 +58,7 @@ const mount = (initialState: string | null = null) => {
   act(() => {
     root = createRoot(container);
     root.render(
-      <DockableDesktopProvider client={client}>
+      <DockableDesktopProvider workspace={client}>
         <Probe />
         <WindowManager />
       </DockableDesktopProvider>,

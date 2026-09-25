@@ -7,7 +7,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { act } from 'react';
-import { useColorScheme, ToastContainer } from '../../index';
+import { useColorScheme, RddToasts } from '../../index';
 
 afterEach(() => { document.documentElement.removeAttribute('data-color-scheme'); document.body.innerHTML = ''; });
 
@@ -34,8 +34,8 @@ describe('hydration', () => {
     unmount();
   });
 
-  it('ToastContainer hydrates from empty server output and then mounts its region', async () => {
-    const { recoverable, unmount } = await hydrate('', <ToastContainer />);
+  it('RddToasts hydrates from empty server output and then mounts its region', async () => {
+    const { recoverable, unmount } = await hydrate('', <RddToasts />);
     expect(recoverable).toEqual([]);
     expect(document.body.querySelector('.rdd-toast-container')).not.toBeNull();
     unmount();

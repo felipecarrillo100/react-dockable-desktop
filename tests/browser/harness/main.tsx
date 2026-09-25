@@ -11,19 +11,22 @@
  *   ov=1            panel p3 hosts a PanelOverlayRoot with an inner floating widget
  *   cs=dark|light|none   colour scheme the app sets on <html> (none = app sets nothing)
  *   zb=N            zIndexBase passed to the provider
+ *   grow=1          no rdd-fill-viewport on the wrapper (the workspace grows with its content)
  *   canvas=1        also opens `cv`, a panel whose canvas sits in a [data-rdd-preview-unscale] box
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
+ *
+ * Uses only the public 7.0 API, as an app would.
  */
 /* eslint-disable react-refresh/only-export-components -- a test harness entry point; never hot-reloaded */
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../../src/index.css';
 import {
-  DockableDesktopProvider, WindowManager, Sidebar, Toolbar, PanelRegistry,
-  useWindowManagerState, useWindowManagerActions, usePanelId, useShowContextMenu,
-  PanelOverlayRoot, PanelFloatingWindow, SidePanelRenderer, ModalStackRenderer, usePanelActions,
+  createWorkspace, DockableDesktopProvider, RddDesktop, RddSidebar, RddToolbar,
+  useWorkspaceState, useWorkspace, usePanel, useContextMenu,
+  RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, useModals, useSidePanels,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
 } from '../../../src/index';
 
@@ -43,7 +46,7 @@ const applyScheme = () => { if (SCHEME !== 'none') document.documentElement.setA
 applyScheme();
 
 function ProbePanel() {
-  const id = usePanelId();
+  const { id } = usePanel();
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <input id={`in-${id}`} defaultValue="hello world text" style={{ margin: 4 }} />
@@ -53,21 +56,19 @@ function ProbePanel() {
     </div>
   );
 }
-PanelRegistry.register('probe', ProbePanel, {});
 
 function OverlayPanel() {
   const [open, setOpen] = useState(true);
   return (
-    <PanelOverlayRoot>
+    <RddPanelOverlay>
       <div style={{ width: '100%', height: '100%', background: '#224' }} id="ovbg" />
-      <PanelFloatingWindow id="w1" title="Widget" open={open} onClose={() => setOpen(false)}
+      <RddFloatingWidget id="w1" title="Widget" open={open} onClose={() => setOpen(false)}
         defaultAnchor={(q.get('anchor') || 'top-left') as FloatAnchor} defaultWidth={220} defaultHeight={160}>
         <div id="widgetbody" style={{ padding: 6 }}>widget body</div>
-      </PanelFloatingWindow>
-    </PanelOverlayRoot>
+      </RddFloatingWidget>
+    </RddPanelOverlay>
   );
 }
-PanelRegistry.register('overlay', OverlayPanel, {});
 
 function CanvasPanel() {
   return (
@@ -76,16 +77,25 @@ function CanvasPanel() {
     </div>
   );
 }
-PanelRegistry.register('canvas', CanvasPanel, {});
+
+const workspace = createWorkspace({
+  panels: {
+    probe: { component: ProbePanel },
+    overlay: { component: OverlayPanel },
+    canvas: { component: CanvasPanel },
+  },
+});
 
 const Icon = ({ t }: { t: string }) => <span style={{ fontSize: 12 }}>{t}</span>;
 const Plain = () => <div style={{ padding: 8 }}>overlay content</div>;
 
 function Inner() {
-  const state = useWindowManagerState();
-  const actions = useWindowManagerActions();
-  const overlays = usePanelActions();
-  const showCtx = useShowContextMenu();
+  const state = useWorkspaceState();
+  const actions = useWorkspace();
+  const { open: openModal } = useModals();
+  const { openLeft: openLeftPanel } = useSidePanels();
+  const overlays = { openModal, openLeftPanel };
+  const showCtx = useContextMenu();
   // Exposed to the specs, which drive the workspace from outside the page.
   // eslint-disable-next-line react-hooks/immutability
   (window as unknown as { __wm: unknown }).__wm = { state, actions, overlays, Plain };
@@ -128,14 +138,14 @@ function Inner() {
           ] }); }}>ctx-target</span>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative' }}>
-        {TBPOS === 'left' && <Toolbar position="left" items={items} visible={!TBHIDDEN} />}
-        <Sidebar position={SBPOS} tabs={tabs} defaultWidth={250}>
-          <WindowManager />
-        </Sidebar>
-        {TBPOS === 'right' && <Toolbar position="right" items={items} visible={!TBHIDDEN} />}
+        {TBPOS === 'left' && <RddToolbar position="left" items={items} visible={!TBHIDDEN} />}
+        <RddSidebar position={SBPOS} tabs={tabs} defaultWidth={250}>
+          <RddDesktop />
+        </RddSidebar>
+        {TBPOS === 'right' && <RddToolbar position="right" items={items} visible={!TBHIDDEN} />}
       </div>
-      <SidePanelRenderer />
-      <ModalStackRenderer />
+      <RddSidePanels />
+      <RddModals />
       <button id="after">after</button>
     </div>
   );
@@ -143,7 +153,7 @@ function Inner() {
 
 function App() {
   const app = (
-    <DockableDesktopProvider dir={DIR === 'prov' ? 'rtl' : undefined} zIndexBase={q.get('zb') ? Number(q.get('zb')) : undefined}>
+    <DockableDesktopProvider workspace={workspace} dir={DIR === 'prov' ? 'rtl' : undefined} zIndexBase={q.get('zb') ? Number(q.get('zb')) : undefined}>
       <Inner />
     </DockableDesktopProvider>
   );
@@ -156,6 +166,8 @@ function App() {
       </div>
     );
   }
-  return <div style={{ height: '100vh' }}>{wrapped}</div>;
+  // grow=1: a full-window app that forgot rdd-fill-viewport (a wrapper with no height of its own).
+  if (q.get('grow') === '1') return <div style={{ height: '100%' }}>{wrapped}</div>;
+  return <div className="rdd-fill-viewport">{wrapped}</div>;
 }
 createRoot(document.getElementById('root')!).render(<App />);

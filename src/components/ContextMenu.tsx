@@ -622,7 +622,7 @@ export const ContextMenuProvider: React.FC<{
 
 export function useShowContextMenu(): (options: ShowContextMenuOptions) => void {
   const ctx = React.useContext(ContextMenuContext);
-  if (!ctx) throw new Error('useShowContextMenu must be used within a ContextMenuProvider');
+  if (!ctx) throw new Error('useContextMenu must be used within <DockableDesktopProvider> or <RddContextMenu>');
   return ctx.show;
 }
 

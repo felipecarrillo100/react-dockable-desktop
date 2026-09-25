@@ -37,7 +37,7 @@ export interface PanelRegistryEntry {
  * inside dynamic layout cells or floating windows.
  * Exported so WorkspaceClient can create scoped, per-instance registries.
  */
-export class PanelRegistryClass {
+export class PanelRegistry {
   private registry = new Map<string, PanelRegistryEntry>();
 
   /**
@@ -73,5 +73,5 @@ export class PanelRegistryClass {
 }
 
 /** Global singleton instance of the Panel Registry. */
-export const PanelRegistry: PanelRegistryClass = new PanelRegistryClass();
-export default PanelRegistry;
+export const globalPanelRegistry: PanelRegistry = new PanelRegistry();
+export default globalPanelRegistry;

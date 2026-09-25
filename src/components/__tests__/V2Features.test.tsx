@@ -232,69 +232,26 @@ describe('C2: WorkspaceClient pending-call queue', () => {
   });
 });
 
-// ─── C2: "Forgot client=" warning (timer-based) ───────────────────────────────
+// ─── 7.0: the workspace store is live before any provider mounts ──────────────
+// Calls used to be queued until a provider connected, with a timed console.error if none ever
+// did. The store now exists on its own: calls apply immediately, and there is nothing to connect.
 
-describe('C2: WorkspaceClient warns when never connected', () => {
-  it('emits console.error after 1s if connected client never receives _connect()', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    // Temporarily pretend we are in development mode
-    const originalEnv = process.env.NODE_ENV;
-    // @ts-ignore
-    process.env.NODE_ENV = 'development';
-
-    const orphan = new WorkspaceClient({
-      panels: { map: { component: MockPanel } },
-    });
-
-    orphan.openPanel('orphan-panel', 'map'); // queues, starts timer
-
-    await new Promise(resolve => setTimeout(resolve, 1100));
-
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Did you forget client={workspace}')
-    );
-
-    errorSpy.mockRestore();
-    // @ts-ignore
-    process.env.NODE_ENV = originalEnv;
+describe('workspace store before mount', () => {
+  it('applies calls immediately, before any provider mounts', () => {
+    const early = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
+    early.openPanel('early-panel', 'map', { title: 'Early' });
+    expect(early.isOpen('early-panel')).toBe(true);
+    expect(early.getOpenPanelIds()).toEqual(['early-panel']);
+    expect(JSON.parse(early.saveLayout()).panels['early-panel'].title).toBe('Early');
   });
 
-  it('does NOT error when the client connects within 1s', async () => {
+  it('logs nothing for a workspace no provider ever uses', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    const originalEnv = process.env.NODE_ENV;
-    // @ts-ignore
-    process.env.NODE_ENV = 'development';
-
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    let root: Root | null = null;
-
-    const client = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
-    client.openPanel('will-connect', 'map'); // starts timer
-
-    // Mount before 1s fires
-    act(() => {
-      root = createRoot(container);
-      root.render(
-        <WindowManagerProvider client={client}>
-          <StateExtractor />
-        </WindowManagerProvider>
-      );
-    });
-
+    const orphan = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
+    orphan.openPanel('orphan-panel', 'map');
     await new Promise(resolve => setTimeout(resolve, 1100));
-
-    expect(errorSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('Did you forget client={workspace}')
-    );
-
-    act(() => { root!.unmount(); });
-    document.body.removeChild(container);
+    expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
-    // @ts-ignore
-    process.env.NODE_ENV = originalEnv;
   });
 });
 

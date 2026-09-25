@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react';
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
-import type { PanelInstance, SidePanelOptions, PanelTitle } from './PanelProviderContext';
+import type { OverlayInstance, SidePanelOptions, PanelTitle } from './PanelProviderContext';
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
@@ -13,7 +13,7 @@ import { useContainerRect, type ContainerRect } from '../hooks/useContainerRect'
  */
 interface SidePanelRendererItemProps {
   /** The panel instance containing metadata, component type, and rendering state. */
-  panel: PanelInstance;
+  panel: OverlayInstance;
   /** Floating anchor edge side for the drawer panel. */
   position: 'left' | 'right';
   /** Default width applied if no panel override configuration is provided. */
@@ -187,8 +187,7 @@ const SidePanelAnchor: React.FC<{ children: (containerRect: ContainerRect | null
 };
 
 /**
- * SidePanelRenderer component acts as the global container rendering both
- * left and right side drawers if they are currently active.
+ * Renders both side drawers when open. Public as `<RddSidePanels>`.
  */
 export const SidePanelRenderer: React.FC<SidePanelRendererProps> = ({ defaultWidth }) => {
   const { leftPanel, rightPanel } = usePanelState();

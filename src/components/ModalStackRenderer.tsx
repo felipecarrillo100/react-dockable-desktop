@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState, useMemo } from 'react';
 import { usePanelState, usePanelActions } from './PanelProviderContext';
 import { FormContainerProvider, type FormContainerContract, type CloseOptions } from './FormContainerContext';
-import type { PanelInstance, ModalOptions, PanelTitle } from './PanelProviderContext';
+import type { OverlayInstance, ModalOptions, PanelTitle } from './PanelProviderContext';
 import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
@@ -12,7 +12,7 @@ import { useEscapeLayer } from '../utils/escapeStack';
  */
 interface ModalRendererProps {
   /** The panel instance containing component structure, state, and option flags. */
-  modal: PanelInstance;
+  modal: OverlayInstance;
   /** The 0-based depth index of the modal within the active stack. */
   index: number;
   /** True if this modal is currently at the top of the stack. */
@@ -150,8 +150,8 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
 };
 
 /**
- * ModalStackRenderer component acts as the global container rendering
- * all active stacked modal windows in the workspace.
+ * Renders the modals opened through `useModals()`, stacked, topmost last. Mount one, inside
+ * `<DockableDesktopProvider>`.
  */
 export const ModalStackRenderer: React.FC = () => {
   const { modals } = usePanelState();

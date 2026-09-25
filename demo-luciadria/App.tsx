@@ -5,22 +5,23 @@ import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { NavDropdownMenu, DropdownSubmenu } from 'react-bootstrap-submenu';
 import {
     DockableDesktopProvider,
-    useWindowManagerState,
-    useWindowManagerActions,
-    WindowManager,
-    defaultPredefinedMessages,
-    SidePanelRenderer,
-    ModalStackRenderer,
-    usePanelActions,
-    ConfirmationForm,
-    Sidebar,
-    useFormContainer,
-    type ContextMenuPredefinedMessage,
+    useWorkspaceState,
+    useWorkspace,
+    RddDesktop,
+    defaultMessages,
+    RddSidePanels,
+    RddModals,
+    useModals,
+    useSidePanels,
+    RddConfirm,
+    RddSidebar,
+    usePanel,
+    type MessageDescriptor,
     useFormatMessage,
     formatLabel,
 } from '../src/index';
 import type { SidebarTab, SidebarHandle } from '../src/index';
-import { PanelRegistry } from '../src/index';
+import { workspace } from './workspace';
 import { IntlProvider, useIntl } from 'react-intl';
 import { enMessages, esMessages, nlMessages, frMessages } from './i18nMessages';
 import {EditAndMeasureIcon, SearchResultsIcon, SettingsIcon, WindowsIcon} from "./resources/SvgIcons.tsx";
@@ -37,15 +38,15 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [enableAnimations, setEnableAnimations] = useState<boolean>(true);
   const sidebarRef = React.useRef<SidebarHandle>(null);
-  const state = useWindowManagerState();
-  const { openPanel, loadLayout, saveLayout } = useWindowManagerActions();
-  const { closePanel, minimizePanel, maximizePanel, focusPanel, restorePanel } = useWindowManagerActions();
-  const { openLeftPanel, openRightPanel, openModal } = usePanelActions();
+  const state = useWorkspaceState();
+  const ws = useWorkspace();
+  const { openLeft: openLeftPanel, openRight: openRightPanel } = useSidePanels();
+  const { open: openModal } = useModals();
   const formatMessage = useFormatMessage();
 
   const spawnLeftDrawer = () => {
     openLeftPanel(
-      PanelRegistry.get('dirtyForm')?.Component || (() => null),
+      ws.registry.get('dirtyForm')?.Component || (() => null),
       {},
       { title: 'Left Side Panel (Dirty Intercept)' }
     );
@@ -53,7 +54,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
 
   const spawnRightDrawer = () => {
     openRightPanel(
-      PanelRegistry.get('dirtyForm')?.Component || (() => null),
+      ws.registry.get('dirtyForm')?.Component || (() => null),
       {},
       { title: 'Right Side Panel (Dirty Intercept)'}
     );
@@ -82,7 +83,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   };
 
   const spawnConfirmationFormModal = () => {
-    openModal(ConfirmationForm, {
+    openModal(RddConfirm, {
       message: 'Are you sure you want to proceed with this high-risk database migration operation?',
       alert: 'Warning: This action will permanently affect 14 active database tables.',
       alertType: 'warning',
@@ -97,7 +98,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
 
   const spawnSizeModal = (size: 'small' | 'medium' | 'large' | 'fullscreen' | 'auto') => {
     const ModalContent: React.FC = () => {
-      const { requestClose } = useFormContainer();
+      const { close: requestClose } = usePanel();
       const [showLongContent, setShowLongContent] = useState(false);
 
       return (
@@ -196,12 +197,12 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
 
   const spawnFloatingWindow = () => {
     const id = `floating-tool-${Date.now()}`;
-    openPanel(id, 'help', { title: `Utility Tool`, initialTarget: 'floating' });
+    ws.openPanel(id, 'help', { title: `Utility Tool`, initialTarget: 'floating' });
   };
 
   const spawnLuciadMapWindow = () => {
     const id = `luciad-map-${Date.now()}`;
-    openPanel(id, 'luciadMap', { title: `LuciadRIA Earth 3D`, initialTarget: 'floating' });
+    ws.openPanel(id, 'luciadMap', { title: `LuciadRIA Earth 3D`, initialTarget: 'floating' });
   };
 
   const resetWorkspaceLayout = React.useCallback(() => {
@@ -248,8 +249,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(initialConfig);
-  }, [loadLayout]);
+    ws.loadLayout(initialConfig);
+  }, [ws]);
 
   const applyDeveloperLayout = React.useCallback(() => {
     const devConfig = JSON.stringify({
@@ -311,8 +312,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(devConfig);
-  }, [loadLayout]);
+    ws.loadLayout(devConfig);
+  }, [ws]);
 
   const applyEditorOnlyLayout = React.useCallback(() => {
     const editorConfig = JSON.stringify({
@@ -359,8 +360,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(editorConfig);
-  }, [loadLayout]);
+    ws.loadLayout(editorConfig);
+  }, [ws]);
 
   const applyDataAnalysisLayout = React.useCallback(() => {
     const dataConfig = JSON.stringify({
@@ -422,8 +423,8 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(dataConfig);
-  }, [loadLayout]);
+    ws.loadLayout(dataConfig);
+  }, [ws]);
 
   // Listen for control center custom events
   useEffect(() => {
@@ -453,15 +454,15 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   useEffect(() => {
     const saved = localStorage.getItem('custom_window_layout');
     if (saved) {
-      loadLayout(saved);
+      ws.loadLayout(saved);
     } else {
       resetWorkspaceLayout();
     }
-  }, [loadLayout, resetWorkspaceLayout]);
+  }, [ws, resetWorkspaceLayout]);
 
   // Save/Load layout helpers
   const handleSaveToLocalStorage = () => {
-    const saved = saveLayout();
+    const saved = ws.saveLayout();
     localStorage.setItem('custom_window_layout', saved);
     alert('Layout saved to Local Storage!');
   };
@@ -469,7 +470,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
   const handleLoadFromLocalStorage = () => {
     const saved = localStorage.getItem('custom_window_layout');
     if (saved) {
-      loadLayout(saved);
+      ws.loadLayout(saved);
     } else {
       alert('No saved layout found in Local Storage.');
     }
@@ -556,7 +557,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
         const openPanels = Object.values(state.panels)
           .filter(p => p.state !== 'minimized')
           .map(p => {
-            const options = PanelRegistry.get(p.component)?.defaultOptions;
+            const options = ws.registry.get(p.component)?.defaultOptions;
             const isMax = p.state === 'floating' && state.floating.find(w => w.id === p.id)?.maximized;
             return {
               id: p.id,
@@ -570,7 +571,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
           });
 
         const minimizedList = state.minimized.map(p => {
-          const options = PanelRegistry.get(p.component)?.defaultOptions;
+          const options = ws.registry.get(p.component)?.defaultOptions;
           return {
             id: p.id,
             title: formatLabel(p.title, formatMessage),
@@ -592,16 +593,16 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                       <span className="sb-badge">{panel.isFloating ? 'Float' : 'Grid'}</span>
                     </div>
                     <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="sb-btn-outline" onClick={() => focusPanel(panel.id)}>Front</button>
+                      <button type="button" className="sb-btn-outline" onClick={() => ws.focusPanel(panel.id)}>Front</button>
                       <div className="d-flex gap-2">
                         {panel.canMinimize && (
-                          <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Minimize" onClick={() => minimizePanel(panel.id)} style={{ fontSize: '0.85rem' }}>_</button>
+                          <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Minimize" onClick={() => ws.minimizePanel(panel.id)} style={{ fontSize: '0.85rem' }}>_</button>
                         )}
                         {panel.isFloating && (
-                          <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Maximize" onClick={() => maximizePanel(panel.id)} style={{ fontSize: '0.8rem' }}>{panel.isMaximized ? '🗗' : '🗖'}</button>
+                          <button type="button" className="btn btn-link text-white-50 p-0 text-decoration-none" title="Maximize" onClick={() => ws.maximizePanel(panel.id)} style={{ fontSize: '0.8rem' }}>{panel.isMaximized ? '🗗' : '🗖'}</button>
                         )}
                         {panel.canClose && (
-                          <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
+                          <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => ws.closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
                         )}
                       </div>
                     </div>
@@ -622,9 +623,9 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                       <span className="sb-badge">Min</span>
                     </div>
                     <div className="d-flex align-items-center justify-content-between border-top border-secondary-subtle pt-1 mt-1">
-                      <button type="button" className="sb-btn-outline" onClick={() => restorePanel(panel.id)}>Restore</button>
+                      <button type="button" className="sb-btn-outline" onClick={() => ws.restorePanel(panel.id)}>Restore</button>
                       {panel.canClose && (
-                        <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
+                        <button type="button" className="btn btn-link text-danger p-0 text-decoration-none fw-bold" title="Close" onClick={() => ws.closePanel(panel.id)} style={{ fontSize: '0.8rem' }}>✕</button>
                       )}
                     </div>
                   </div>
@@ -681,7 +682,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [state.panels, state.floating, state.minimized, formatMessage,
-      focusPanel, minimizePanel, maximizePanel, closePanel, restorePanel,
+      ws,
       windowOpacity, showGrid, enableAnimations, sidebarPosition, locale, onLocaleChange]);
 
   return (
@@ -731,14 +732,14 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
 
               {/* Tools and components spawning - fixed IDs so repeated clicks re-focus instead of spawning duplicates */}
               <NavDropdownMenu title="Spawn Tools" id="tools-dropdown">
-                <NavDropdown.Item onClick={() => openPanel('layertree-main', 'layertree')}>🌿 Layer Tree</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('timecontrol-main', 'timecontrol')}>⏱ Time Control</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('overviewmap-main', 'overviewmap')}>🗺 Overview Map</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('table-main', 'table')}>📋 Attribute Table</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('toolpanels-main', 'toolpanels')}>🔧 Operations Toolbox</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('layertree-main', 'layertree')}>🌿 Layer Tree</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('timecontrol-main', 'timecontrol')}>⏱ Time Control</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('overviewmap-main', 'overviewmap')}>🗺 Overview Map</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('table-main', 'table')}>📋 Attribute Table</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('toolpanels-main', 'toolpanels')}>🔧 Operations Toolbox</NavDropdown.Item>
                 <NavDropdown.Divider />
-                <NavDropdown.Item onClick={() => openPanel('dirtyform-main', 'dirtyForm')}>⚠️ Intercept Form (Floating)</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('dirtyeditor-main', 'dirtyEditor')}>📝 Intercept Editor (Tabbed)</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('dirtyform-main', 'dirtyForm')}>⚠️ Intercept Form (Floating)</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('dirtyeditor-main', 'dirtyEditor')}>📝 Intercept Editor (Tabbed)</NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={spawnLeftDrawer}>🚪 Left Side Panel Drawer</NavDropdown.Item>
                 <NavDropdown.Item onClick={spawnRightDrawer}>🚪 Right Side Panel Drawer</NavDropdown.Item>
@@ -759,7 +760,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                 {visiblePanels.map(p => (
                   <NavDropdown.Item
                     key={p.id}
-                    onClick={() => openPanel(p.id, p.component)}
+                    onClick={() => ws.openPanel(p.id, p.component)}
                     className="small text-truncate"
                     style={{ maxWidth: '200px' }}
                   >
@@ -772,7 +773,7 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
                 <>
                   <NavDropdown.Divider />
                   <NavDropdown.Item
-                    onClick={() => openPanel('manager-panel', 'panelmanager', { title: 'Panel Registry Explorer', initialTarget: 'floating' })}
+                    onClick={() => ws.openPanel('manager-panel', 'panelmanager', { title: 'Panel Registry Explorer', initialTarget: 'floating' })}
                     className="text-info fw-bold text-center small"
                   >
                     Show All {hasMore ? `(${openPanelsList.length - N} more)` : ''}
@@ -854,16 +855,16 @@ function AppContent({ locale = 'en', onLocaleChange }: AppProps) {
 
       {/* Main Container: Sidebar + WindowManager */}
       <div className="flex-grow-1 w-100 d-flex flex-row overflow-hidden" style={{ position: 'relative' }}>
-        <Sidebar
+        <RddSidebar
           ref={sidebarRef}
           position={sidebarPosition}
           tabs={sidebarTabs}
         >
-          <WindowManager animations={enableAnimations} />
-        </Sidebar>
-        <SidePanelRenderer />
+          <RddDesktop animations={enableAnimations} />
+        </RddSidebar>
+        <RddSidePanels />
       </div>
-      <ModalStackRenderer />
+      <RddModals />
     </div>
   );
 }
@@ -883,12 +884,12 @@ interface AppWithIntlProps extends AppProps {
 function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
   const intl = useIntl();
 
-  const handleFormatMessage = (msg: ContextMenuPredefinedMessage) => {
+  const handleFormatMessage = (msg: MessageDescriptor) => {
     return intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values);
   };
 
   return (
-    <DockableDesktopProvider formatMessage={handleFormatMessage} predefinedMessages={defaultPredefinedMessages}>
+    <DockableDesktopProvider workspace={workspace} formatMessage={handleFormatMessage} messages={defaultMessages}>
       <AppContent locale={locale} onLocaleChange={onLocaleChange} />
     </DockableDesktopProvider>
   );

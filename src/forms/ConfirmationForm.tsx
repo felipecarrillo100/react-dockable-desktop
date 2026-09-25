@@ -5,7 +5,7 @@ import { useFormatMessage, usePredefinedMessages } from '../components/WindowMan
 /**
  * Props for the {@link ConfirmationForm} component.
  */
-export interface ConfirmationFormProps {
+export interface RddConfirmProps {
   /** Optional custom title text or localizable descriptor for the dialog container. */
   title?: string | { id: string; defaultMessage?: string; values?: any };
   /** Main message text or localizable descriptor to display. */
@@ -26,7 +26,7 @@ export interface ConfirmationFormProps {
  * ConfirmationForm component renders a standard dialog content layout,
  * allowing users to confirm actions or abort them. Exposes action callbacks.
  */
-export const ConfirmationForm: React.FC<ConfirmationFormProps> = ({
+export const ConfirmationForm: React.FC<RddConfirmProps> = ({
   title,
   message,
   alert,

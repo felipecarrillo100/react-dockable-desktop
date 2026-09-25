@@ -5,27 +5,28 @@ import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { NavDropdownMenu, DropdownSubmenu } from 'react-bootstrap-submenu';
 import {
     DockableDesktopProvider,
-    useWindowManagerState,
-    useWindowManagerActions,
-    WindowManager,
-    defaultPredefinedMessages,
-    SidePanelRenderer,
-    ModalStackRenderer,
-    usePanelActions,
-    ConfirmationForm,
-    Sidebar,
-    Toolbar,
+    useWorkspaceState,
+    useWorkspace,
+    RddDesktop,
+    defaultMessages,
+    RddSidePanels,
+    RddModals,
+    useModals,
+    useSidePanels,
+    RddConfirm,
+    RddSidebar,
+    RddToolbar,
     useMergedToolbarItems,
     useMergedSidebarTabs,
-    useFormContainer,
-    type ContextMenuPredefinedMessage,
+    usePanel,
+    type MessageDescriptor,
     useFormatMessage,
     formatLabel,
     toast,
-    ToastContainer,
+    RddToasts,
 } from '../src/index';
 import type { SidebarTab, SidebarHandle, ToolbarItem } from '../src/index';
-import { PanelRegistry } from '../src/index';
+import { workspace } from './workspace';
 import { IntlProvider, useIntl } from 'react-intl';
 import { enMessages, esMessages, nlMessages, frMessages, zhMessages, arMessages } from './i18nMessages';
 import {
@@ -52,15 +53,15 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const sidebarRef = React.useRef<SidebarHandle>(null);
-  const state = useWindowManagerState();
-  const { openPanel, loadLayout, saveLayout } = useWindowManagerActions();
-  const { closePanel, minimizePanel, maximizePanel, focusPanel, restorePanel } = useWindowManagerActions();
-  const { openLeftPanel, openRightPanel, openModal } = usePanelActions();
+  const state = useWorkspaceState();
+  const ws = useWorkspace();
+  const { openLeft: openLeftPanel, openRight: openRightPanel } = useSidePanels();
+  const { open: openModal } = useModals();
   const formatMessage = useFormatMessage();
 
   const spawnLeftDrawer = () => {
     openLeftPanel(
-      PanelRegistry.get('dirtyForm')?.Component || (() => null),
+      ws.registry.get('dirtyForm')?.Component || (() => null),
       {},
       { title: 'Left Side Panel (Dirty Intercept)' }
     );
@@ -68,7 +69,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
 
   const spawnRightDrawer = () => {
     openRightPanel(
-      PanelRegistry.get('dirtyForm')?.Component || (() => null),
+      ws.registry.get('dirtyForm')?.Component || (() => null),
       {},
       { title: 'Right Side Panel (Dirty Intercept)'}
     );
@@ -97,7 +98,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   };
 
   const spawnConfirmationFormModal = () => {
-    openModal(ConfirmationForm, {
+    openModal(RddConfirm, {
       message: 'Are you sure you want to proceed with this high-risk database migration operation?',
       alert: 'Warning: This action will permanently affect 14 active database tables.',
       alertType: 'warning',
@@ -112,7 +113,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
 
   const spawnSizeModal = (size: 'small' | 'medium' | 'large' | 'fullscreen' | 'auto') => {
     const ModalContent: React.FC = () => {
-      const { requestClose } = useFormContainer();
+      const { close: requestClose } = usePanel();
       const [showLongContent, setShowLongContent] = useState(false);
 
       return (
@@ -214,12 +215,12 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
 
   const spawnFloatingWindow = () => {
     const id = `floating-tool-${Date.now()}`;
-    openPanel(id, 'help', { title: `Utility Tool`, initialTarget: 'floating' });
+    ws.openPanel(id, 'help', { title: `Utility Tool`, initialTarget: 'floating' });
   };
 
   const spawnLeafletMapWindow = () => {
     const id = `leaflet-map-${Date.now()}`;
-    openPanel(id, 'luciadMap', { title: `Leaflet Map`, initialTarget: 'floating' });
+    ws.openPanel(id, 'luciadMap', { title: `Leaflet Map`, initialTarget: 'floating' });
   };
 
   const resetWorkspaceLayout = React.useCallback(() => {
@@ -266,8 +267,8 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(initialConfig);
-  }, [loadLayout]);
+    ws.loadLayout(initialConfig);
+  }, [ws]);
 
   const applyDeveloperLayout = React.useCallback(() => {
     const devConfig = JSON.stringify({
@@ -329,8 +330,8 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(devConfig);
-  }, [loadLayout]);
+    ws.loadLayout(devConfig);
+  }, [ws]);
 
   const applyEditorOnlyLayout = React.useCallback(() => {
     const editorConfig = JSON.stringify({
@@ -377,8 +378,8 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(editorConfig);
-  }, [loadLayout]);
+    ws.loadLayout(editorConfig);
+  }, [ws]);
 
   const applyDataAnalysisLayout = React.useCallback(() => {
     const dataConfig = JSON.stringify({
@@ -440,8 +441,8 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         'control-center': { id: 'control-center', title: 'Control Center', component: 'showcaseControl', state: 'docked' }
       }
     });
-    loadLayout(dataConfig);
-  }, [loadLayout]);
+    ws.loadLayout(dataConfig);
+  }, [ws]);
 
   // Listen for control center custom events
   useEffect(() => {
@@ -471,15 +472,15 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   useEffect(() => {
     const saved = localStorage.getItem('custom_window_layout');
     if (saved) {
-      loadLayout(saved);
+      ws.loadLayout(saved);
     } else {
       resetWorkspaceLayout();
     }
-  }, [loadLayout, resetWorkspaceLayout]);
+  }, [ws, resetWorkspaceLayout]);
 
   // Save/Load layout helpers
   const handleSaveToLocalStorage = () => {
-    const saved = saveLayout();
+    const saved = ws.saveLayout();
     localStorage.setItem('custom_window_layout', saved);
     alert('Layout saved to Local Storage!');
   };
@@ -487,7 +488,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
   const handleLoadFromLocalStorage = () => {
     const saved = localStorage.getItem('custom_window_layout');
     if (saved) {
-      loadLayout(saved);
+      ws.loadLayout(saved);
     } else {
       alert('No saved layout found in Local Storage.');
     }
@@ -611,7 +612,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
           <polyline points="2 7.5 8 11 14 7.5" />
         </svg>
       ),
-      onClick: () => openPanel('layertree-main', 'layertree'),
+      onClick: () => ws.openPanel('layertree-main', 'layertree'),
     },
   ];
 
@@ -694,7 +695,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         const openPanels = Object.values(state.panels)
           .filter(p => p.state !== 'minimized')
           .map(p => {
-            const options = PanelRegistry.get(p.component)?.defaultOptions;
+            const options = ws.registry.get(p.component)?.defaultOptions;
             const isMax = p.state === 'floating' && state.floating.find(w => w.id === p.id)?.maximized;
             return {
               id: p.id,
@@ -708,7 +709,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
           });
 
         const minimizedList = state.minimized.map(p => {
-          const options = PanelRegistry.get(p.component)?.defaultOptions;
+          const options = ws.registry.get(p.component)?.defaultOptions;
           return {
             id: p.id,
             title: formatLabel(p.title, formatMessage),
@@ -729,18 +730,18 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                     <span className="sb-badge">{panel.isFloating ? 'Float' : 'Grid'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button type="button" className="sb-btn-outline" onClick={() => focusPanel(panel.id)}>Front</button>
+                    <button type="button" className="sb-btn-outline" onClick={() => ws.focusPanel(panel.id)}>Front</button>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       {panel.canMinimize && (
-                        <button type="button" className="sb-btn-ghost" title="Minimize" onClick={() => minimizePanel(panel.id)}>{MinimizeIcon}</button>
+                        <button type="button" className="sb-btn-ghost" title="Minimize" onClick={() => ws.minimizePanel(panel.id)}>{MinimizeIcon}</button>
                       )}
                       {panel.isFloating && (
-                        <button type="button" className="sb-btn-ghost" title={panel.isMaximized ? 'Restore' : 'Maximize'} onClick={() => maximizePanel(panel.id)}>
+                        <button type="button" className="sb-btn-ghost" title={panel.isMaximized ? 'Restore' : 'Maximize'} onClick={() => ws.maximizePanel(panel.id)}>
                           {panel.isMaximized ? RestoreIcon : MaximizeIcon}
                         </button>
                       )}
                       {panel.canClose && (
-                        <button type="button" className="sb-btn-ghost danger" title="Close" onClick={() => closePanel(panel.id)}>{CloseIcon}</button>
+                        <button type="button" className="sb-btn-ghost danger" title="Close" onClick={() => ws.closePanel(panel.id)}>{CloseIcon}</button>
                       )}
                     </div>
                   </div>
@@ -760,9 +761,9 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                     <span className="sb-badge">Min</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button type="button" className="sb-btn-outline" onClick={() => restorePanel(panel.id)}>Restore</button>
+                    <button type="button" className="sb-btn-outline" onClick={() => ws.restorePanel(panel.id)}>Restore</button>
                     {panel.canClose && (
-                      <button type="button" className="sb-btn-ghost danger" title="Close" onClick={() => closePanel(panel.id)}>{CloseIcon}</button>
+                      <button type="button" className="sb-btn-ghost danger" title="Close" onClick={() => ws.closePanel(panel.id)}>{CloseIcon}</button>
                     )}
                   </div>
                 </div>
@@ -918,19 +919,19 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
 
               {/* Tools and components spawning - fixed IDs so repeated clicks re-focus instead of spawning duplicates */}
               <NavDropdownMenu title="Spawn Tools" id="tools-dropdown">
-                <NavDropdown.Item onClick={() => openPanel('layertree-main', 'layertree')}>🌿 Layer Tree</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('timecontrol-main', 'timecontrol')}>⏱ Time Control</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('overviewmap-main', 'overviewmap')}>🗺 Overview Map</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('table-main', 'table')}>📋 Attribute Table</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('toolpanels-main', 'toolpanels')}>🔧 Operations Toolbox</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('layertree-main', 'layertree')}>🌿 Layer Tree</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('timecontrol-main', 'timecontrol')}>⏱ Time Control</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('overviewmap-main', 'overviewmap')}>🗺 Overview Map</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('table-main', 'table')}>📋 Attribute Table</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('toolpanels-main', 'toolpanels')}>🔧 Operations Toolbox</NavDropdown.Item>
                 <NavDropdown.Divider />
-                <NavDropdown.Item onClick={() => openPanel('dirtyform-main', 'dirtyForm')}>⚠️ Intercept Form (Floating)</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('dirtyeditor-main', 'dirtyEditor')}>📝 Intercept Editor (Tabbed)</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('dirtyform-main', 'dirtyForm')}>⚠️ Intercept Form (Floating)</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('dirtyeditor-main', 'dirtyEditor')}>📝 Intercept Editor (Tabbed)</NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={spawnLeftDrawer}>🚪 Left Side Panel Drawer</NavDropdown.Item>
                 <NavDropdown.Item onClick={spawnRightDrawer}>🚪 Right Side Panel Drawer</NavDropdown.Item>
                 <NavDropdown.Item onClick={() => spawnNestedModal(1)}>🥞 Stacked Nested Modals</NavDropdown.Item>
-                <NavDropdown.Item onClick={spawnConfirmationFormModal}>❓ Reusable ConfirmationForm</NavDropdown.Item>
+                <NavDropdown.Item onClick={spawnConfirmationFormModal}>❓ Reusable RddConfirm</NavDropdown.Item>
                 <DropdownSubmenu title="💬 Modals by Size">
                   <NavDropdown.Item onClick={() => spawnSizeModal('small')}>🔹 Small (360px)</NavDropdown.Item>
                   <NavDropdown.Item onClick={() => spawnSizeModal('medium')}>🔸 Medium (560px)</NavDropdown.Item>
@@ -940,16 +941,16 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                 </DropdownSubmenu>
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={spawnFloatingWindow}>🪟 Spawn Help Window</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('rtlshowcase-main', 'rtlShowcase')}>🔄 RTL Content Showcase</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel('markdown-main', 'markdownEditor')}>📄 Markdown Editor</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => openPanel(`markdown-${Date.now()}`, 'markdownEditor')}>📄+ New Markdown Editor Instance</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('rtlshowcase-main', 'rtlShowcase')}>🔄 RTL Content Showcase</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('markdown-main', 'markdownEditor')}>📄 Markdown Editor</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel(`markdown-${Date.now()}`, 'markdownEditor')}>📄+ New Markdown Editor Instance</NavDropdown.Item>
               </NavDropdownMenu>
              {/* Elements dropdown showing active windows, with limit N + Show All */}
               <NavDropdownMenu title={`Active Elements (${openPanelsList.length})`} id="elements-dropdown">
                 {visiblePanels.map(p => (
                   <NavDropdown.Item
                     key={p.id}
-                    onClick={() => openPanel(p.id, p.component)}
+                    onClick={() => ws.openPanel(p.id, p.component)}
                     className="small text-truncate"
                     style={{ maxWidth: '200px' }}
                   >
@@ -962,7 +963,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                 <>
                   <NavDropdown.Divider />
                   <NavDropdown.Item
-                    onClick={() => openPanel('manager-panel', 'panelmanager', { title: 'Panel Registry Explorer', initialTarget: 'floating' })}
+                    onClick={() => ws.openPanel('manager-panel', 'panelmanager', { title: 'Panel Registry Explorer', initialTarget: 'floating' })}
                     className="text-info fw-bold text-center small"
                   >
                     Show All {hasMore ? `(${openPanelsList.length - N} more)` : ''}
@@ -1077,20 +1078,20 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
         </Container>
       </Navbar>
 
-      {/* Main Container: Toolbar + Sidebar + WindowManager */}
+      {/* Main Container: RddToolbar + RddSidebar + RddDesktop */}
       <div
         className={`flex-grow-1 w-100 d-flex overflow-hidden ${toolbarPosition === 'top' || toolbarPosition === 'bottom' ? 'flex-column' : 'flex-row'}`}
         style={{ position: 'relative' }}
       >
         {(toolbarPosition === 'left' || toolbarPosition === 'top') && (
-          <Toolbar
+          <RddToolbar
             position={toolbarPosition}
             items={mergedToolbarItems}
             visible={showToolbar}
             onVisibilityChange={setShowToolbar}
           />
         )}
-        <Sidebar
+        <RddSidebar
           ref={sidebarRef}
           position={sidebarPosition}
           tabs={mergedSidebarTabs}
@@ -1124,7 +1125,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
             ),
           }}
         >
-          <WindowManager
+          <RddDesktop
             skin={skin}
             animations={enableAnimations}
             defaultPanelIcon={
@@ -1135,19 +1136,19 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
               </svg>
             }
           />
-        </Sidebar>
+        </RddSidebar>
         {(toolbarPosition === 'right' || toolbarPosition === 'bottom') && (
-          <Toolbar
+          <RddToolbar
             position={toolbarPosition}
             items={mergedToolbarItems}
             visible={showToolbar}
             onVisibilityChange={setShowToolbar}
           />
         )}
-        <SidePanelRenderer />
+        <RddSidePanels />
       </div>
-      <ModalStackRenderer />
-      <ToastContainer progressBar />
+      <RddModals />
+      <RddToasts progressBar />
     </div>
   );
 }
@@ -1175,14 +1176,15 @@ function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
     return () => { document.documentElement.dir = 'ltr'; };
   }, [rtlLayout]);
 
-  const handleFormatMessage = (msg: ContextMenuPredefinedMessage) => {
+  const handleFormatMessage = (msg: MessageDescriptor) => {
     return intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values);
   };
 
   return (
     <DockableDesktopProvider
+      workspace={workspace}
       formatMessage={handleFormatMessage}
-      predefinedMessages={defaultPredefinedMessages}
+      messages={defaultMessages}
       dir={rtlLayout ? 'rtl' : 'ltr'}
     >
       <AppContent locale={locale} onLocaleChange={onLocaleChange} rtlLayout={rtlLayout} setRtlLayout={setRtlLayout} />

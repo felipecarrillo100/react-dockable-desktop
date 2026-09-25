@@ -14,6 +14,9 @@ export async function setup(project: TestProject): Promise<void> {
     configFile: false,
     root: join(__dirname, 'harness'),
     plugins: [react()],
+    // Vite inherits NODE_ENV=test from Vitest, which compiles out every development-only warning.
+    // Serve the harness as an app's dev server would.
+    define: { 'process.env.NODE_ENV': JSON.stringify('development') },
     logLevel: 'error',
     server: { host: '127.0.0.1', port: 5400 + Math.floor(Math.random() * 400), strictPort: false },
   });

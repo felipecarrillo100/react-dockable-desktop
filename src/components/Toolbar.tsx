@@ -142,7 +142,7 @@ export type ToolbarItem =
 // Props and Handle
 // ==========================================
 
-export interface ToolbarProps {
+export interface RddToolbarProps {
   /** Side the strip is attached to. Controls strip orientation. Default: 'left' */
   position?: 'left' | 'right' | 'top' | 'bottom';
   /** Ordered list of items to render. */
@@ -419,7 +419,7 @@ function renderItem(
 // Component
 // ==========================================
 
-export const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAttributes<ToolbarHandle>> = forwardRef<ToolbarHandle, ToolbarProps>(function Toolbar(
+export const Toolbar: React.ForwardRefExoticComponent<RddToolbarProps & React.RefAttributes<ToolbarHandle>> = forwardRef<ToolbarHandle, RddToolbarProps>(function Toolbar(
   { position = 'left', items, visible, onVisibilityChange, className, style },
   ref
 ) {
@@ -444,7 +444,7 @@ export const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAt
   // A collapsed strip is still in the DOM, so its buttons stayed in the Tab order — keyboard focus
   // landed on controls nobody could see. `inert` takes the whole subtree out of focus and the
   // accessibility tree. Set through the DOM rather than as a JSX prop: only React 19 knows `inert`,
-  // and this library supports React from 16.8.
+  // and this library supports React 18 as well.
   const stripRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const strip = stripRef.current;

@@ -106,7 +106,7 @@ export function usePanelContribution(contribution: PanelContribution): void {
   const store = useContext(PanelContributionContext);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  if (!store) throw new Error('usePanelContribution must be used within PanelContributionProvider');
+  if (!store) throw new Error('usePanelContribution must be used within <DockableDesktopProvider>');
 
   useLayoutEffect(() => {
     if (!store) return;
@@ -131,7 +131,7 @@ export function useActivePanelContribution(): PanelContribution | null {
   const activePanelId = useWindowManagerState(s => s.activePanelId);
   const store = useContext(PanelContributionContext);
 
-  if (!store) throw new Error('useActivePanelContribution must be used within PanelContributionProvider');
+  if (!store) throw new Error('useActiveContribution must be used within <DockableDesktopProvider>');
 
   const subscribe = useCallback(
     (onChange: Listener) => (store ? store.subscribe(onChange) : () => {}),

@@ -1,45 +1,31 @@
 /**
  * @file index.ts
- * @description Core entry point for react-dockable-desktop.
- * Exports public window manager components, contexts, hooks, type definitions, sidebar layouts, and overlay renderers.
+ * @description Public entry point for react-dockable-desktop 7.
+ *
+ * Components carry an `Rdd` prefix, so they never collide with a UI kit's own `Toolbar`,
+ * `Sidebar` or `ContextMenu`. The full 6.x → 7.0 map is in the migration guide.
+ *
+ * The library's modules still use their internal names; this file is the only place the 7.0 names
+ * are defined, and `api-surface.json` pins exactly what it exports.
  */
 
-// Core Components and Layouts
-export { default as WindowManager } from './components/WindowManager';
-export type { WindowManagerProps, TaskbarVisibility } from './components/WindowManager';
-export { PanelRegistry, PanelRegistryClass } from './components/PanelRegistry';
-export type { PanelRegistryEntry } from './components/PanelRegistry';
-
-// WorkspaceClient — primary configuration and imperative API object
-export { WorkspaceClient } from './WorkspaceClient';
-export type { WorkspaceClientConfig, PanelDefinition, BuiltInPanelEvents } from './WorkspaceClient';
-
-// Composite provider — wraps WindowManagerProvider + PanelProvider in correct order
+// ─── Workspace ──────────────────────────────────────────────────────────────────
+export { createWorkspace, useWorkspace } from './api';
+export type { Workspace, WorkspaceConfig } from './api';
+export type { PanelDefinition, BuiltInEvents } from './WorkspaceClient';
 export { DockableDesktopProvider } from './components/DockableDesktopProvider';
 export type { DockableDesktopProviderProps } from './components/DockableDesktopProvider';
-
-// State Actions and Context Providers
+export { PanelRegistry } from './components/PanelRegistry';
+export type { PanelRegistryEntry } from './components/PanelRegistry';
 export {
-  WindowManagerProvider,
-  useWindowManagerState,
-  useWindowManagerActions,
-  useRegistry,
+  useWindowManagerState as useWorkspaceState,
   useFormatMessage,
   formatLabel,
-  usePanelContext,
-  usePredefinedMessages,
-  defaultPredefinedMessages,
-  useStyleClasses,
-  usePanelId,
-  usePanelContextMenu
+  usePredefinedMessages as useMessages,
+  defaultPredefinedMessages as defaultMessages,
+  useStyleClasses as useHostClasses,
+  usePanelContextMenu,
 } from './components/WindowManagerContext';
-
-// Runtime serializability check — used internally to decide whether a panel's props can be
-// included in WorkspaceClient.saveLayout()'s output; exported so apps can apply the same check
-// themselves (e.g. before calling openPanel, to warn early rather than discover it at save time).
-export { isSerializable } from './components/serializable';
-
-// TypeScript Types and Interfaces
 export type {
   SplitOrientation,
   SplitDirection,
@@ -51,23 +37,33 @@ export type {
   FloatingWindow,
   PanelInfo,
   OpenPanelOptions,
-  WindowState,
-  WindowActions,
+  WorkspaceState,
+  WorkspaceActions,
   SerializedLayout,
-  ContextMenuPredefinedMessage,
+  MessageDescriptor,
   MessageFormatter,
-  PredefinedMessageKey,
-  StyleClasses,
-  WindowManagerProviderProps,
+  MessageKey,
+  HostClasses,
 } from './components/WindowManagerContext';
 
-// Context menu — built-in component, types, and adapter interface
-export {
-  ContextMenu,
-  DefaultContextMenuAdapter,
-  ContextMenuProvider,
-  useShowContextMenu,
-} from './components/ContextMenu';
+// Runtime serializability check — the same one saveLayout() uses to decide what it can persist
+export { isSerializable } from './components/serializable';
+
+// ─── The desktop ────────────────────────────────────────────────────────────────
+export { default as RddDesktop } from './components/WindowManager';
+export type { RddDesktopProps, TaskbarVisibility } from './components/WindowManager';
+
+// ─── Panel side: what a panel component uses ───────────────────────────────────
+export { usePanel, usePanelEvents, useBeforeClose, useSaveState } from './api';
+export type { PanelHandle, PanelEvents, PanelState } from './api';
+export { usePanelSize } from './components/FormContainerContext';
+export type { CloseOptions, ContainerType } from './components/FormContainerContext';
+export type { DirtyStateOptions } from './components/dirtyOptions';
+
+// ─── Context menu ───────────────────────────────────────────────────────────────
+export { RddContextMenu } from './api';
+export type { RddContextMenuProps } from './api';
+export { useShowContextMenu as useContextMenu } from './components/ContextMenu';
 export type {
   ContextMenuItem,
   ContextMenuSimpleItem,
@@ -79,58 +75,39 @@ export type {
   ContextMenuHandle,
   ShowContextMenuOptions,
   ContextMenuAdapter,
-  ContextMenuProps,
 } from './components/ContextMenu';
 
-// Form Container Context Contract
-export {
-  FormContainerContext,
-  FormContainerProvider,
-  useFormContainer,
-  usePanelSize
-} from './components/FormContainerContext';
-
+// ─── Modals and side drawers ────────────────────────────────────────────────────
+export { useModals, useSidePanels, RddSidePanels } from './api';
+export type { ModalsApi, SidePanelsApi, OverlayInstance, OverlayId, RddSidePanelsProps } from './api';
+export { default as RddModals } from './components/ModalStackRenderer';
 export type {
-  CloseOptions,
-  FormContainerContract
-} from './components/FormContainerContext';
-
-// Side Panels and Modal Stack Context
-export {
-  PanelProvider,
-  usePanelState,
-  usePanelActions
-} from './components/PanelProviderContext';
-
-export type {
-  PanelInstanceId,
   PanelTitle,
+  PanelTitleDescriptor,
   SidePanelOptions,
   ModalOptions,
-  PanelInstance,
-  PanelState,
-  PanelActions
+  OverlayState,
 } from './components/PanelProviderContext';
+export { default as RddConfirm } from './forms/ConfirmationForm';
+export type { RddConfirmProps } from './forms/ConfirmationForm';
 
-// Overlay Renderers
-export { default as ModalStackRenderer } from './components/ModalStackRenderer';
-export {
-  default as SidePanelRenderer,
-  LeftPanelRenderer,
-  RightPanelRenderer
-} from './components/SidePanelRenderer';
-export type { SidePanelRendererProps } from './components/SidePanelRenderer';
+// ─── Sidebar ────────────────────────────────────────────────────────────────────
+export { Sidebar as RddSidebar, SecondarySidebar as RddSecondarySidebar, useSidebar, useSidebarTab } from './components/Sidebar';
+export type {
+  SidebarTab,
+  RddSidebarProps,
+  RddSecondarySidebarProps,
+  SidebarHandle,
+  SidebarContextValue as SidebarContext,
+  SidebarTabContextValue as SidebarTabContext,
+  SidebarHeaderAction,
+  SidebarRailEntry,
+  SidebarActionButton,
+  SidebarCustomEntry,
+} from './components/Sidebar';
 
-// Reusable Forms
-export { default as ConfirmationForm } from './forms/ConfirmationForm';
-export type { ConfirmationFormProps } from './forms/ConfirmationForm';
-
-// Sidebar
-export { Sidebar, SecondarySidebar, useSidebar, useSidebarTab } from './components/Sidebar';
-export type { SidebarTab, SidebarProps, SecondarySidebarProps, SidebarHandle, SidebarContextValue, SidebarTabContextValue, SidebarHeaderAction, SidebarHeaderActionButton, SidebarHeaderActionCustom } from './components/Sidebar';
-
-// Toolbar
-export { Toolbar, useToolbar, ToolbarProvider } from './components/Toolbar';
+// ─── Toolbar ────────────────────────────────────────────────────────────────────
+export { Toolbar as RddToolbar, useToolbar } from './components/Toolbar';
 export type {
   ToolbarItem,
   ToolbarActionItem,
@@ -140,76 +117,70 @@ export type {
   ToolbarGroupSubItem,
   ToolbarGroupEntry,
   ToolbarSeparator,
-  ToolbarProps,
+  RddToolbarProps,
   ToolbarHandle,
   ToolbarContextValue,
 } from './components/Toolbar';
 
-// ─── Toast — imperative notification API, zero dependencies ──────────────────
-export { toast, ToastContainer } from './components/Toast';
+// ─── Toasts ─────────────────────────────────────────────────────────────────────
+export { toast, ToastContainer as RddToasts } from './components/Toast';
 export type {
   ToastFunction,
   ToastOptions,
   ToastType,
   ToastPosition,
-  ToastContainerProps,
+  RddToastsProps,
   ToastAdapter,
   ResolvedToastOptions,
   ToastPromiseMessages,
 } from './components/Toast';
 
-// ─── Panel Overlay — optional; tree-shaken when unused ───────────────────────
+// ─── Panel overlay: toolbars and floating widgets inside a panel ───────────────
 export {
-  PanelOverlayRoot,
-  PanelToolbar,
-  ToolbarButton,
-  ToolbarToggle,
-  ToolbarSearchInput,
-  ToolbarSeparator as PanelToolbarSeparator,
-  ToolbarSpacer,
-  ToolbarCenter,
-  ToolbarItem as PanelToolbarItem,
-  PanelFloatingWindow,
-  usePanelFloatingWindow,
-  usePanelFloatingWindowManager,
+  PanelOverlayRoot as RddPanelOverlay,
+  PanelToolbar as RddPanelToolbar,
+  ToolbarButton as RddToolbarButton,
+  ToolbarToggle as RddToolbarToggle,
+  ToolbarSearchInput as RddToolbarSearch,
+  ToolbarSeparator as RddToolbarSeparator,
+  ToolbarSpacer as RddToolbarSpacer,
+  ToolbarCenter as RddToolbarCenter,
+  ToolbarItem as RddToolbarItem,
+  PanelFloatingWindow as RddFloatingWidget,
+  usePanelFloatingWindowManager as useFloatingWidgets,
 } from './components/PanelOverlay';
 export type {
-  PanelOverlayRootProps,
-  PanelToolbarProps,
-  ToolbarButtonProps,
-  ToolbarToggleProps,
-  ToolbarSearchInputProps,
+  RddPanelOverlayProps,
+  RddPanelToolbarProps,
+  RddToolbarButtonProps,
+  RddToolbarToggleProps,
+  RddToolbarSearchProps,
   SearchResult,
-  PanelFloatingWindowProps,
+  RddFloatingWidgetProps,
   ToolbarVariant,
   ButtonVariant,
   ToolbarPosition,
   FloatAnchor,
-  ManagedWindowConfig,
-  PanelFloatingWindowManagerHandle,
-  UsePanelFloatingWindowReturn,
+  ManagedWidget,
+  FloatingWidgetsApi,
   Stretch,
   PanelFloatPlacement,
 } from './components/PanelOverlay';
 
-// ─── Panel Contributions — optional; active-panel-driven Toolbar/Sidebar content ───
+// ─── Panel contributions: active-panel-driven toolbar and sidebar content ──────
 export {
-  PanelContributionProvider,
   usePanelContribution,
-  useActivePanelContribution,
-  sidebarSectionToTab,
+  useActivePanelContribution as useActiveContribution,
+  sidebarSectionToTab as sectionToTab,
   useMergedToolbarItems,
   useMergedSidebarTabs,
 } from './components/PanelContributionContext';
 export type { PanelContribution, PanelSidebarSection } from './components/PanelContributionContext';
 
-// ─── Drag-resize primitives — build custom resizable UI inside your own panel content ───
+// ─── Drag-resize primitives for custom resizable UI inside panel content ───────
 export { startPointerDrag, computeResizedRect } from './components/dragResize';
 export type { PointerDragConfig, ResizeDir, ResizeRect, ResizeConstraints } from './components/dragResize';
 
-// ─── Color scheme — reactive read of the workspace's current data-color-scheme ───
+// ─── Colour scheme and direction ────────────────────────────────────────────────
 export { useColorScheme } from './hooks/useColorScheme';
-
-// Direction helpers — for app code that turns pointer positions into logical sides (see the RTL guide)
 export { isComputedRtl, isElementRtl } from './utils/rtl';
-

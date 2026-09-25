@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
-  Sidebar,
-  SecondarySidebar,
+  RddSidebar,
+  RddSecondarySidebar,
   DockableDesktopProvider,
-  ModalStackRenderer,
-  SidePanelRenderer,
-  usePanelActions,
-  useFormContainer,
+  RddModals,
+  RddSidePanels,
+  useModals,
+  useSidePanels,
+  usePanel,
   useSidebarTab,
 } from '../src/index';
 import type { SidebarHandle, SidebarTab } from '../src/index';
@@ -302,7 +303,7 @@ function MenuPanel({
   onSelectSecondaryOption,
   secondarySections,
 }: MenuPanelProps): React.ReactElement {
-  const { requestClose } = useFormContainer();
+  const { close: requestClose } = usePanel();
   const railVisible = useContext(RailVisibleContext);
   const secondaryRailVisible = useContext(SecondaryRailVisibleContext);
 
@@ -457,7 +458,8 @@ function AppContent(): React.ReactElement {
   // overlaps the drawer's own renderHeader row) — Sidebar itself doesn't need
   // this to be controlled for anything else here.
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const { openLeftPanel, openRightPanel, openModal } = usePanelActions();
+  const { openLeft: openLeftPanel, openRight: openRightPanel } = useSidePanels();
+  const { open: openModal } = useModals();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', 'dark');
@@ -628,7 +630,7 @@ function AppContent(): React.ReactElement {
     <RailVisibleContext.Provider value={railVisible}>
     <SecondaryRailVisibleContext.Provider value={secondaryRailVisible}>
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden', position: 'relative' }}>
-      <Sidebar
+      <RddSidebar
         ref={sidebarRef}
         position="left"
         defaultWidth={300}
@@ -651,7 +653,7 @@ function AppContent(): React.ReactElement {
             Same underlying Sidebar implementation, zero forked code; exercises
             headerAction/controlled activeTabId here too, mirroring the primary's
             own coverage of both. */}
-        <SecondarySidebar
+        <RddSecondarySidebar
           ref={secondaryRef}
           defaultWidth={260}
           showCloseButton
@@ -752,10 +754,10 @@ function AppContent(): React.ReactElement {
           </div>
           )}
         </div>
-        </SecondarySidebar>
-      </Sidebar>
-      <SidePanelRenderer defaultWidth={260} />
-      <ModalStackRenderer />
+        </RddSecondarySidebar>
+      </RddSidebar>
+      <RddSidePanels defaultWidth={260} />
+      <RddModals />
     </div>
     </SecondaryRailVisibleContext.Provider>
     </RailVisibleContext.Provider>

@@ -7,8 +7,8 @@
  * define in their IntlProvider messages table. The `defaultMessage` is used
  * as a fallback when no external formatter is provided.
  *
- * Pass a partial or full override to `<WindowManagerProvider predefinedMessages={…} />`
- * to customise labels without replacing the whole table.
+ * Pass a partial or full override as `createWorkspace({ messages })` or
+ * `<DockableDesktopProvider messages={…}>` to customise labels without replacing the whole table.
  */
 export const defaultPredefinedMessages = {
   floatWindow:     { id: 'dockable-desktop-floatWindow',     defaultMessage: 'Float Window' },
@@ -52,13 +52,13 @@ export const defaultPredefinedMessages = {
 } as const;
 
 /**
- * Union of every key in `defaultPredefinedMessages`.
+ * Union of every key in `defaultMessages`.
  *
  * Import this type in your i18n message tables to get a compile-time
  * guarantee that all keys are present and no typos exist:
  *
- *   import type { PredefinedMessageKey } from 'react-dockable-desktop';
+ *   import type { MessageKey } from 'react-dockable-desktop';
  *
- *   const myMessages: Record<PredefinedMessageKey, string> = { ... };
+ *   const myMessages: Record<MessageKey, string> = { ... };
  */
-export type PredefinedMessageKey = keyof typeof defaultPredefinedMessages;
+export type MessageKey = keyof typeof defaultPredefinedMessages;

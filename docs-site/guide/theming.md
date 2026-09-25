@@ -4,22 +4,22 @@
 
 ## How it works
 
-The `skin` prop on `<WindowManager />` sets a `data-workspace-skin` attribute on the workspace root element. The library stylesheet uses attribute selectors to map skin names to CSS custom properties:
+The `skin` prop on `<RddDesktop />` sets a `data-rdd-skin` attribute on the workspace root element (and on `<html>`, so the sidebar and toolbar outside it pick it up too). The library stylesheet uses attribute selectors to map skin names to CSS custom properties:
 
 ```css
-[data-workspace-skin="nord"] {
+[data-rdd-skin="nord"] {
   --rdd-bg-workspace: #2e3440;
   --rdd-accent-color: #88c0d0;
   /* ... */
 }
 ```
 
-All child components inherit those variables. Because `skin` is typed as `string` (not a restricted union), any name you define in CSS becomes valid — `<WindowManager skin="my-brand" />` works immediately.
+All child components inherit those variables. Because `skin` is typed as `string` (not a restricted union), any name you define in CSS becomes valid — `<RddDesktop skin="my-brand" />` works immediately.
 
 ## Built-in skins
 
 ```tsx
-<WindowManager skin="vscode" />   {/* default */}
+<RddDesktop skin="vscode" />   {/* default */}
 ```
 
 | Skin | Character | Active state |
@@ -56,23 +56,23 @@ These CSS custom properties drive the active state shape and effects. They are d
 
 | Token | Default | Controls |
 |-------|---------|---------|
-| `--tab-btn-active-bg` | `#1e2024` | Fill color of the active tab button. |
-| `--tab-btn-active-width` | `100%` | Button width. Chip skins (macos, slate) set `36px` for a contained floating shape. |
-| `--tab-btn-active-radius` | `0px` | Border-radius. Chip skins set `10px` or `8px` for rounded corners on all sides. |
-| `--tab-btn-active-shadow` | `none` | `box-shadow` on the button. Obsidian/Tokyo add an inset ambient glow. |
-| `--tab-btn-active-glow` | `none` | `filter` on the button. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
-| `--tab-accent-bar-width` | `3px` | Width of the edge accent bar. Set to `0px` to suppress it entirely. |
+| `--rdd-tab-btn-active-bg` | `#1e2024` | Fill color of the active tab button. |
+| `--rdd-tab-btn-active-width` | `100%` | Button width. Chip skins (macos, slate) set `36px` for a contained floating shape. |
+| `--rdd-tab-btn-active-radius` | `0px` | Border-radius. Chip skins set `10px` or `8px` for rounded corners on all sides. |
+| `--rdd-tab-btn-active-shadow` | `none` | `box-shadow` on the button. Obsidian/Tokyo add an inset ambient glow. |
+| `--rdd-tab-btn-active-glow` | `none` | `filter` on the button. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--rdd-tab-accent-bar-width` | `3px` | Width of the edge accent bar. Set to `0px` to suppress it entirely. |
 
 **Toolbar strip**
 
 | Token | Default | Controls |
 |-------|---------|---------|
-| `--toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Fill color of the active radio/group button. |
-| `--toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. |
-| `--toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. |
-| `--toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. |
+| `--rdd-toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Fill color of the active radio/group button. |
+| `--rdd-toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. |
+| `--rdd-toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. |
+| `--rdd-toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. |
 
-Both strips share `--tab-icon-active` for the accent color — set it once and both update.
+Both strips share `--rdd-tab-icon-active` for the accent color — set it once and both update.
 
 ### Customising the active state in your own skin
 
@@ -81,30 +81,30 @@ Only override the tokens you want to change; all others inherit their `:root` de
 **Minimal: narrower accent bar**
 
 ```css
-[data-workspace-skin="my-skin"] {
-  --tab-accent-bar-width: 1px;
-  --toolbar-accent-bar-width: 1px;
+[data-rdd-skin="my-skin"] {
+  --rdd-tab-accent-bar-width: 1px;
+  --rdd-toolbar-accent-bar-width: 1px;
 }
 ```
 
 **Floating pill (like `slate`)**
 
 ```css
-[data-workspace-skin="my-skin"] {
-  --tab-btn-active-bg:           rgba(255, 100, 80, 0.18);
-  --tab-btn-active-width:        36px;
-  --tab-btn-active-radius:       8px;
-  --tab-accent-bar-width:        0px;
-  --toolbar-btn-radio-active-bg: rgba(255, 100, 80, 0.18);
-  --toolbar-accent-bar-width:    0px;
+[data-rdd-skin="my-skin"] {
+  --rdd-tab-btn-active-bg:           rgba(255, 100, 80, 0.18);
+  --rdd-tab-btn-active-width:        36px;
+  --rdd-tab-btn-active-radius:       8px;
+  --rdd-tab-accent-bar-width:        0px;
+  --rdd-toolbar-btn-radio-active-bg: rgba(255, 100, 80, 0.18);
+  --rdd-toolbar-accent-bar-width:    0px;
 }
-[data-workspace-skin="my-skin"] .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="my-skin"] .rdd-sidebar-tab-btn.rdd-active {
   border-top: 1px solid transparent !important;
   border-bottom: 1px solid transparent !important;
   margin: 0 !important;
 }
-[data-workspace-skin="my-skin"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
-[data-workspace-skin="my-skin"] .rdd-toolbar-strip .rdd-toolbar-btn-group.rdd-active {
+[data-rdd-skin="my-skin"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
+[data-rdd-skin="my-skin"] .rdd-toolbar-strip .rdd-toolbar-btn-group.rdd-active {
   border-radius: 8px !important;
 }
 ```
@@ -112,14 +112,14 @@ Only override the tokens you want to change; all others inherit their `:root` de
 **Icon glow (dark skin)**
 
 ```css
-[data-workspace-skin="my-skin"] {
-  --tab-btn-active-glow:     drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
-  --toolbar-btn-active-glow: drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
+[data-rdd-skin="my-skin"] {
+  --rdd-tab-btn-active-glow:     drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
 }
 ```
 
 ::: tip Keep Sidebar and Toolbar in sync
-Both components share `--tab-icon-active` for the accent color — set it once and both update. Match `--tab-accent-bar-width` to `--toolbar-accent-bar-width` (and the fill/glow tokens) so Sidebar and Toolbar always read as a consistent pair.
+Both components share `--rdd-tab-icon-active` for the accent color — set it once and both update. Match `--rdd-tab-accent-bar-width` to `--rdd-toolbar-accent-bar-width` (and the fill/glow tokens) so Sidebar and Toolbar always read as a consistent pair.
 :::
 
 ## Creating a custom skin
@@ -136,11 +136,11 @@ import './my-skin.css';                        // your skin second
 
 **Step 2 — Define the CSS block**
 
-Create a file (e.g. `my-skin.css`) and define a block using `[data-workspace-skin]`:
+Create a file (e.g. `my-skin.css`) and define a block using `[data-rdd-skin]`:
 
 ```css
 /* my-skin.css */
-[data-workspace-skin="my-brand"] {
+[data-rdd-skin="my-brand"] {
   --rdd-bg-workspace:  #0d1117;
   --rdd-bg-panel:      #161b22;
   --rdd-bg-tab-bar:    #0d1117;
@@ -157,10 +157,10 @@ Create a file (e.g. `my-skin.css`) and define a block using `[data-workspace-ski
 
 You only need to override the variables you want to change. Any variable you omit inherits from the library defaults (`:root`).
 
-**Step 3 — Pass the name to `WindowManager`**
+**Step 3 — Pass the name to `RddDesktop`**
 
 ```tsx
-<WindowManager skin="my-brand" />
+<RddDesktop skin="my-brand" />
 ```
 
 That's it. No TypeScript changes, no library recompilation, no config registration.
@@ -171,14 +171,14 @@ The library automatically sets `data-color-scheme="dark"` or `"light"` on the wo
 
 ```css
 /* Dark mode — usually your primary skin definition */
-[data-workspace-skin="my-brand"] {
+[data-rdd-skin="my-brand"] {
   --rdd-bg-workspace: #0d1117;
   --rdd-accent-color: #f78166;
   /* ... */
 }
 
 /* Light mode override */
-[data-workspace-skin="my-brand"][data-color-scheme="light"] {
+[data-rdd-skin="my-brand"][data-color-scheme="light"] {
   --rdd-bg-workspace: #ffffff;
   --rdd-bg-panel:     #f6f8fa;
   --rdd-bg-tab-bar:   #f6f8fa;
@@ -230,12 +230,12 @@ function App() {
   const [skin, setSkin] = useState('vscode');
 
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-        <WindowManager skin={skin} />
-        <SidePanelRenderer />
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport" style={{ position: 'relative' }}>
+        <RddDesktop skin={skin} />
+        <RddSidePanels />
       </div>
-      <ModalStackRenderer />
+      <RddModals />
 
       {/* Skin picker anywhere outside the workspace */}
       <select value={skin} onChange={e => setSkin(e.target.value)}>
@@ -255,13 +255,13 @@ Copy this into your CSS file and fill in the color values. All variable names ar
 ```css
 /* ============================================================
    My custom skin starter template
-   Usage: <WindowManager skin="my-skin" />
+   Usage: <RddDesktop skin="my-skin" />
    ============================================================ */
 
-[data-workspace-skin="my-skin"] {
+[data-rdd-skin="my-skin"] {
 
   /* --- Workspace backgrounds --- */
-  --rdd-bg-primary:    #090b11;      /* page/html background behind the workspace */
+  --rdd-bg-primary:    #090b11;      /* workspace background */
   --rdd-bg-workspace:  #0f111a;      /* workspace canvas */
   --rdd-bg-panel:      #141722;      /* docked panel background */
   --rdd-bg-tab-bar:    #0d0f16;      /* tab bar strip */
@@ -342,7 +342,7 @@ Copy this into your CSS file and fill in the color values. All variable names ar
 }
 
 /* Optional: light mode variant */
-[data-workspace-skin="my-skin"][data-color-scheme="light"] {
+[data-rdd-skin="my-skin"][data-color-scheme="light"] {
   --rdd-bg-primary:    #f8f9fa;
   --rdd-bg-workspace:  #f1f5f9;
   --rdd-bg-panel:      #ffffff;
@@ -370,35 +370,35 @@ Copy this into your CSS file and fill in the color values. All variable names ar
 }
 ```
 
-The `Sidebar` component uses a separate variable set. Override these if your skin includes a `Sidebar`:
+The `RddSidebar` component uses a separate variable set. Override these if your skin includes an `RddSidebar`:
 
 ```css
-[data-workspace-skin="my-skin"][data-color-scheme="dark"] {
-  --sidebar-bg:                  #1e2024;
-  --sidebar-tabs-bg:             #141619;
-  --sidebar-border:              rgba(255, 255, 255, 0.08);
-  --sidebar-card-bg:             rgba(255, 255, 255, 0.03);
-  --sidebar-card-border:         rgba(255, 255, 255, 0.08);
-  --sidebar-card-active-bg:      rgba(56, 189, 248, 0.06);
-  --sidebar-card-active-border:  rgba(56, 189, 248, 0.3);
-  --sidebar-text-title:          #f8f9fa;
-  --sidebar-text-muted:          #8a90a0;
-  --sidebar-badge-bg:            #2d3139;
-  --sidebar-badge-text:          #b0b5c0;
-  --sidebar-btn-front-border:    #38bdf8;
-  --sidebar-btn-front-text:      #38bdf8;
-  --sidebar-btn-front-bg:        transparent;
-  --sidebar-btn-front-hover-bg:  rgba(56, 189, 248, 0.1);
-  --tab-icon-active:             #38bdf8;
-  --tab-icon-inactive:           #9ea4b0;
-  --tab-btn-active-bg:           #1e2024;  /* active tab fill */
+[data-rdd-skin="my-skin"][data-color-scheme="dark"] {
+  --rdd-sidebar-bg:                  #1e2024;
+  --rdd-sidebar-tabs-bg:             #141619;
+  --rdd-sidebar-border:              rgba(255, 255, 255, 0.08);
+  --rdd-sidebar-card-bg:             rgba(255, 255, 255, 0.03);
+  --rdd-sidebar-card-border:         rgba(255, 255, 255, 0.08);
+  --rdd-sidebar-card-active-bg:      rgba(56, 189, 248, 0.06);
+  --rdd-sidebar-card-active-border:  rgba(56, 189, 248, 0.3);
+  --rdd-sidebar-text-title:          #f8f9fa;
+  --rdd-sidebar-text-muted:          #8a90a0;
+  --rdd-sidebar-badge-bg:            #2d3139;
+  --rdd-sidebar-badge-text:          #b0b5c0;
+  --rdd-sidebar-btn-front-border:    #38bdf8;
+  --rdd-sidebar-btn-front-text:      #38bdf8;
+  --rdd-sidebar-btn-front-bg:        transparent;
+  --rdd-sidebar-btn-front-hover-bg:  rgba(56, 189, 248, 0.1);
+  --rdd-tab-icon-active:             #38bdf8;
+  --rdd-tab-icon-inactive:           #9ea4b0;
+  --rdd-tab-btn-active-bg:           #1e2024;  /* active tab fill */
 
   /* Active tab shape and effects — see Per-skin active state design language */
-  --tab-btn-active-width:        100%;     /* set 36px for a floating chip */
-  --tab-btn-active-radius:       0px;      /* set 8px–10px for rounded chip */
-  --tab-btn-active-shadow:       none;     /* inset glow: inset 0 0 12px rgba(...) */
-  --tab-btn-active-glow:         none;     /* icon glow: drop-shadow(0 0 5px rgba(...)) */
-  --tab-accent-bar-width:        3px;      /* set 0px to use a shape-only indicator */
+  --rdd-tab-btn-active-width:        100%;     /* set 36px for a floating chip */
+  --rdd-tab-btn-active-radius:       0px;      /* set 8px–10px for rounded chip */
+  --rdd-tab-btn-active-shadow:       none;     /* inset glow: inset 0 0 12px rgba(...) */
+  --rdd-tab-btn-active-glow:         none;     /* icon glow: drop-shadow(0 0 5px rgba(...)) */
+  --rdd-tab-accent-bar-width:        3px;      /* set 0px to use a shape-only indicator */
 }
 ```
 
@@ -520,57 +520,57 @@ The library doesn't load Outfit or Inter — load one yourself, or change the st
 | `--rdd-panel-text` | `var(--rdd-text-primary)` | Default text color inside panels. |
 | `--rdd-panel-title-color` | `var(--rdd-accent-color)` | Title / heading accent inside panels. |
 
-### Sidebar component
+### `RddSidebar` component
 
-These are set by `[data-color-scheme]` globally, not by `[data-workspace-skin]`. Override them in your skin using the compound selector (e.g. `[data-workspace-skin="my-skin"][data-color-scheme="dark"]`).
+These are set by `[data-color-scheme]` globally, not by `[data-rdd-skin]`. Override them in your skin using the compound selector (e.g. `[data-rdd-skin="my-skin"][data-color-scheme="dark"]`).
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--sidebar-bg` | `#1e2024` | Sidebar drawer background. |
-| `--sidebar-tabs-bg` | `#141619` | Sidebar icon strip background. |
-| `--sidebar-border` | `rgba(255,255,255,0.08)` | Drawer edge border. |
-| `--sidebar-card-bg` | `rgba(255,255,255,0.03)` | Content card background in the drawer. |
-| `--sidebar-card-border` | `rgba(255,255,255,0.08)` | Content card border. |
-| `--sidebar-card-active-bg` | `rgba(56,189,248,0.06)` | Selected/active card background. |
-| `--sidebar-card-active-border` | `rgba(56,189,248,0.3)` | Selected/active card border. |
-| `--sidebar-text-title` | `#f8f9fa` | Primary text inside the drawer. |
-| `--sidebar-text-muted` | `#8a90a0` | Secondary / muted text. |
-| `--sidebar-badge-bg` | `#2d3139` | Badge pill background. |
-| `--sidebar-badge-text` | `#b0b5c0` | Badge pill text. |
-| `--sidebar-btn-front-border` | `#38bdf8` | Primary action button border. |
-| `--sidebar-btn-front-text` | `#38bdf8` | Primary action button text. |
-| `--sidebar-btn-front-bg` | `transparent` | Primary action button background. |
-| `--sidebar-btn-front-hover-bg` | `rgba(56,189,248,0.1)` | Primary action button hover background. |
-| `--tab-icon-active` | `#38bdf8` | Active tab icon color in the strip. |
-| `--tab-icon-inactive` | `#9ea4b0` | Inactive tab icon color. |
-| `--tab-btn-active-bg` | `#1e2024` | Active tab button background (merges with drawer). |
-| `--tab-btn-active-width` | `100%` | Width of the active tab button. Chip skins (macos, slate) set `36px` for a contained floating shape. |
-| `--tab-btn-active-radius` | `0px` | Border-radius of the active tab button. |
-| `--tab-btn-active-shadow` | `none` | `box-shadow` on the active tab. Obsidian/Tokyo add an inset ambient glow. |
-| `--tab-btn-active-glow` | `none` | `filter` on the active tab. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
-| `--tab-accent-bar-width` | `3px` | Width of the sidebar edge accent bar. Set to `0px` to suppress it. |
+| `--rdd-sidebar-bg` | `#1e2024` | Sidebar drawer background. |
+| `--rdd-sidebar-tabs-bg` | `#141619` | Sidebar icon strip background. |
+| `--rdd-sidebar-border` | `rgba(255,255,255,0.08)` | Drawer edge border. |
+| `--rdd-sidebar-card-bg` | `rgba(255,255,255,0.03)` | Content card background in the drawer. |
+| `--rdd-sidebar-card-border` | `rgba(255,255,255,0.08)` | Content card border. |
+| `--rdd-sidebar-card-active-bg` | `rgba(56,189,248,0.06)` | Selected/active card background. |
+| `--rdd-sidebar-card-active-border` | `rgba(56,189,248,0.3)` | Selected/active card border. |
+| `--rdd-sidebar-text-title` | `#f8f9fa` | Primary text inside the drawer. |
+| `--rdd-sidebar-text-muted` | `#8a90a0` | Secondary / muted text. |
+| `--rdd-sidebar-badge-bg` | `#2d3139` | Badge pill background. |
+| `--rdd-sidebar-badge-text` | `#b0b5c0` | Badge pill text. |
+| `--rdd-sidebar-btn-front-border` | `#38bdf8` | Primary action button border. |
+| `--rdd-sidebar-btn-front-text` | `#38bdf8` | Primary action button text. |
+| `--rdd-sidebar-btn-front-bg` | `transparent` | Primary action button background. |
+| `--rdd-sidebar-btn-front-hover-bg` | `rgba(56,189,248,0.1)` | Primary action button hover background. |
+| `--rdd-tab-icon-active` | `#38bdf8` | Active tab icon color in the strip. |
+| `--rdd-tab-icon-inactive` | `#9ea4b0` | Inactive tab icon color. |
+| `--rdd-tab-btn-active-bg` | `#1e2024` | Active tab button background (merges with drawer). |
+| `--rdd-tab-btn-active-width` | `100%` | Width of the active tab button. Chip skins (macos, slate) set `36px` for a contained floating shape. |
+| `--rdd-tab-btn-active-radius` | `0px` | Border-radius of the active tab button. |
+| `--rdd-tab-btn-active-shadow` | `none` | `box-shadow` on the active tab. Obsidian/Tokyo add an inset ambient glow. |
+| `--rdd-tab-btn-active-glow` | `none` | `filter` on the active tab. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--rdd-tab-accent-bar-width` | `3px` | Width of the sidebar edge accent bar. Set to `0px` to suppress it. |
 
 ### Toolbar strip active state
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `--toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Background tint of the active radio/group toolbar button. |
-| `--toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. Obsidian/Tokyo override with an inset glow. |
-| `--toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
-| `--toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. Set to `0px` for chip-shaped skins. |
-| `--toolbar-separator-color` | `rgba(255,255,255,0.09)` | Separator line color between toolbar item groups. |
+| `--rdd-toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Background tint of the active radio/group toolbar button. |
+| `--rdd-toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. Obsidian/Tokyo override with an inset glow. |
+| `--rdd-toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--rdd-toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. Set to `0px` for chip-shaped skins. |
+| `--rdd-toolbar-separator-color` | `rgba(255,255,255,0.09)` | Separator line color between toolbar item groups. |
 
 ## Adding structural CSS
 
 CSS variables control colors and shadows. If your skin needs **structural changes** (different tab shape, rounded windows, glassmorphic blur), add class selectors scoped to your skin:
 
 ```css
-[data-workspace-skin="my-skin"] .rdd-floating-window {
+[data-rdd-skin="my-skin"] .rdd-floating-window {
   border-radius: 10px;
   backdrop-filter: blur(16px);
 }
 
-[data-workspace-skin="my-skin"] .rdd-workspace-tab {
+[data-rdd-skin="my-skin"] .rdd-workspace-tab {
   border-radius: 4px;
   margin: 3px 2px;
 }
@@ -580,5 +580,5 @@ Study the built-in skins in the library source (`src/index.css`) for examples �
 
 ## See also
 
-- [WorkspaceClient →](./workspace-client#windowmanager-props) — `skin` and `defaultPanelIcon` props on `WindowManager`
+- [Workspace →](./workspace-client#rdddesktop-props) — `skin` and `defaultPanelIcon` props on `RddDesktop`
 - [Advanced Topics →](./advanced) — multiple providers / workspaces on one page

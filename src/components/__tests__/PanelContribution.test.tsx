@@ -22,7 +22,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerActions } from '../WindowManagerContext';
 import { PanelProvider } from '../PanelProviderContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { globalPanelRegistry } from '../PanelRegistry';
 import { WorkspaceClient } from '../../WorkspaceClient';
 import WindowManager from '../WindowManager';
 import {
@@ -61,7 +61,7 @@ const MapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
     </div>
   );
 };
-PanelRegistry.register('mapPanel', MapPanel);
+globalPanelRegistry.register('mapPanel', MapPanel);
 
 // A panel contributing multiple sidebar sections at once.
 const RichPanel: React.FC<{ panelId: string }> = () => {
@@ -73,11 +73,11 @@ const RichPanel: React.FC<{ panelId: string }> = () => {
   });
   return <div />;
 };
-PanelRegistry.register('richPanel', RichPanel);
+globalPanelRegistry.register('richPanel', RichPanel);
 
 // A panel that contributes nothing.
 const PlainPanel: React.FC<{ panelId: string }> = () => <div />;
-PanelRegistry.register('plainPanel', PlainPanel);
+globalPanelRegistry.register('plainPanel', PlainPanel);
 
 let lastActions: any = null;
 let lastContribution: PanelContribution | null = null;
@@ -232,7 +232,7 @@ describe('PanelContribution', () => {
           </WindowManagerProvider>
         );
       });
-    }).toThrow('usePanelContribution must be used within PanelContributionProvider');
+    }).toThrow('usePanelContribution must be used within <DockableDesktopProvider>');
     errorSpy.mockRestore();
   });
 
@@ -253,7 +253,7 @@ describe('PanelContribution', () => {
           </WindowManagerProvider>
         );
       });
-    }).toThrow('useActivePanelContribution must be used within PanelContributionProvider');
+    }).toThrow('useActiveContribution must be used within <DockableDesktopProvider>');
     errorSpy.mockRestore();
   });
 
@@ -356,7 +356,7 @@ const IdentifiablePanel: React.FC<{ panelId: string }> = ({ panelId }) => {
   usePanelContribution(contribution);
   return <div />;
 };
-PanelRegistry.register('identifiablePanel', IdentifiablePanel);
+globalPanelRegistry.register('identifiablePanel', IdentifiablePanel);
 
 describe('PanelContribution after a layout restore', () => {
   let container: HTMLDivElement | null = null;

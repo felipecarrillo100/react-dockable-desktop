@@ -1,0 +1,20 @@
+/* The workspace fills the browser window (the library no longer styles html/body/#root). */
+html, body, #root { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+
+/* The shell fills the window. With 6.x this relied on the library's html/body/#root rule. */
+.app-root { display: flex; flex-direction: column; height: 100%; }
+
+/* A custom skin for the library. */
+[data-rdd-skin="brand"] {
+  --rdd-sidebar-bg: #102030;
+  --rdd-tab-icon-active: #ff8800;
+  --rdd-toolbar-separator-color: rgba(255, 255, 255, 0.2);
+}
+[data-rdd-skin="brand"] .rdd-toolbar-strip { border-color: var(--rdd-sidebar-border); }
+
+/* shadcn/ui's own theme tokens: the same spelling as some library variables, but not the library's. */
+:root {
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-foreground: hsl(240 5% 26%);
+}
+.kit-sidebar { border-right: 1px solid var(--sidebar-border); color: var(--sidebar-foreground); }

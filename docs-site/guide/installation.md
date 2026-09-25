@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- React `≥ 16.8` (hooks required)
+- React `≥ 18` (the library uses `useSyncExternalStore` and other React 18 APIs)
 
 ## npm
 

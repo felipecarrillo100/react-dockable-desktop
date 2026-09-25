@@ -4,67 +4,68 @@
 
 ## Setup
 
-The overlay system is provided by `PanelProvider`. If you use `DockableDesktopProvider` (recommended), it is already included.
-
-You must also place the two renderer components in the correct positions in your tree:
+The overlay system is part of `DockableDesktopProvider`. You only place the two renderer components in the correct positions in your tree:
 
 ```tsx
 // App.tsx
 import {
   DockableDesktopProvider,
-  WindowManager,
-  ModalStackRenderer,
-  SidePanelRenderer,
+  RddDesktop,
+  RddModals,
+  RddSidePanels,
 } from 'react-dockable-desktop';
 
 export default function App() {
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-        <WindowManager />
-        <SidePanelRenderer />  {/* inside the sized container — used for positioning drawers */}
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport" style={{ position: 'relative' }}>
+        <RddDesktop />
+        <RddSidePanels />  {/* inside the sized container — used for positioning drawers */}
       </div>
-      <ModalStackRenderer />   {/* outside the sized container — full-screen overlay */}
+      <RddModals />      {/* outside the sized container — full-screen overlay */}
     </DockableDesktopProvider>
   );
 }
 ```
 
 ::: warning Placement matters
-- `SidePanelRenderer` **must** be a sibling of `WindowManager`, inside the positioned container. Drawers position themselves relative to this container.
-- `ModalStackRenderer` **must** be outside that container so modals can overlay the entire viewport.
+- `RddSidePanels` **must** be a sibling of `RddDesktop`, inside the positioned container. Drawers position themselves relative to this container.
+- `RddModals` **must** be outside that container so modals can overlay the entire viewport.
 :::
 
-## `usePanelActions()`
+`RddSidePanels` renders both drawers. To render only one, pass `side="left"` or `side="right"` — for example to place each drawer in a different container. `defaultWidth` sets the width used when an `openLeft`/`openRight` call doesn't give one.
 
-All overlay operations go through the `usePanelActions()` hook, available in any component inside the provider:
+## `useModals()` and `useSidePanels()`
+
+Overlay operations go through two hooks, available in any component inside the provider — `useModals()` for the modal stack and `useSidePanels()` for the drawers:
 
 ```ts
-import { usePanelActions } from 'react-dockable-desktop';
+import { useModals, useSidePanels } from 'react-dockable-desktop';
 
 function MyComponent() {
-  const { openModal, openLeftPanel, openRightPanel, close, closeAll } = usePanelActions();
+  const modals = useModals();          // open, close, closeAll, get, update, setDirty, stack, topmost
+  const sidePanels = useSidePanels();  // openLeft, openRight, close, closeAll, get, update, setDirty, left, right
 }
 ```
 
 ## Opening a modal
 
 ```ts
-const id = openModal(Component, props, options?);
+const id = modals.open(Component, props, options?);
 ```
 
-`openModal` pushes a new modal onto the stack and returns the instance ID. The modal appears on top of the workspace.
+`open` pushes a new modal onto the stack and returns the instance ID. The modal appears on top of the workspace.
 
 ```tsx
 function LaunchButton() {
-  const { openModal, close } = usePanelActions();
+  const modals = useModals();
 
   const handleClick = () => {
-    const id = openModal(SettingsPanel, { section: 'general' }, {
+    const id = modals.open(SettingsPanel, { section: 'general' }, {
       title: 'Settings',
       size:  'large',
     });
-    // id can be used later: close(id), actions.getInstance(id), etc.
+    // id can be used later: modals.close(id), modals.get(id), etc.
   };
 
   return <button onClick={handleClick}>Settings</button>;
@@ -86,15 +87,15 @@ function LaunchButton() {
 Drawers slide in from the left or right edge of the workspace container.
 
 ```ts
-const id = await openLeftPanel(Component, props, options?);
-const id = await openRightPanel(Component, props, options?);
+const id = await sidePanels.openLeft(Component, props, options?);
+const id = await sidePanels.openRight(Component, props, options?);
 ```
 
 ```tsx
-const { openRightPanel, close } = usePanelActions();
+const sidePanels = useSidePanels();
 
 const showDetails = async () => {
-  const id = await openRightPanel(DetailsPanel, { itemId: 'abc' }, {
+  const id = await sidePanels.openRight(DetailsPanel, { itemId: 'abc' }, {
     title: 'Item Details',
     width: 380,
   });
@@ -113,35 +114,38 @@ const showDetails = async () => {
 ## Closing panels
 
 ```ts
-// Close one instance by ID (works for modals and drawers):
-close(id);
+// Close one instance by ID, on the hook for its kind:
+modals.close(id);
+sidePanels.close(id);
 
-// Close everything — all modals and both drawers:
-closeAll();
+// Close all modals, leave drawers open:
+modals.closeAll();
 
-// Close only modals, leave drawers open:
-closeAllModals();
+// Close both drawers:
+sidePanels.closeAll();
 ```
 
-From inside a panel component, use `useFormContainer().requestClose()` instead:
+The open overlays are on the hooks too: `modals.stack` (bottom to top), `modals.topmost`, and `sidePanels.left` / `sidePanels.right`.
+
+From inside the overlay's own component, use `usePanel().close()` instead:
 
 ```ts
-const container = useFormContainer();
-container.requestClose();          // respects dirty-state guard
-container.requestClose({ force: true }); // bypasses all guards
+const panel = usePanel();
+panel.close();                  // respects dirty-state guard
+panel.close({ force: true });   // bypasses all guards
 ```
 
 ## Dirty state in modals
 
-The same dirty-state mechanism works inside modals. Call `container.setDirty(true)` inside your modal component and the user will see the confirmation dialog before the modal closes:
+The same dirty-state mechanism works inside modals. Call `panel.setDirty(true)` inside your modal component and the user will see the confirmation dialog before the modal closes. `useBeforeClose()` works in modals and drawers too:
 
 ```tsx
 function EditModal() {
-  const container = useFormContainer();
+  const panel = usePanel();
   const [saved, setSaved] = useState(false);
 
-  const handleInput = () => container.setDirty(true);
-  const handleSave  = () => { save(); setSaved(true); container.setDirty(false); };
+  const handleInput = () => panel.setDirty(true);
+  const handleSave  = () => { save(); setSaved(true); panel.setDirty(false); };
 
   return (
     <div>
@@ -154,55 +158,55 @@ function EditModal() {
 
 ## Stacking modals
 
-Multiple `openModal` calls stack visually. The topmost modal is active; pressing ESC or clicking the backdrop closes only the topmost.
+Multiple `modals.open` calls stack visually. The topmost modal is active; pressing ESC or clicking the backdrop closes only the topmost.
 
 One ESC closes one overlay — the one on top. Context menus and toolbar flyouts come first, then modals (topmost first), then side drawers (the one opened last first). A modal with `closable: false` swallows ESC rather than letting it close the drawer behind it. A control inside an overlay that handles ESC itself — a search box clearing its query, say — can keep the overlay open by calling `event.preventDefault()` in its own `onKeyDown`.
 
 ```ts
-const id1 = openModal(StepOneModal, {});
+const id1 = modals.open(StepOneModal, {});
 // User action opens a second modal on top:
-const id2 = openModal(ConfirmationForm, {
+const id2 = modals.open(RddConfirm, {
   message: 'Continue to step 2?',
-  onOK:    () => { close(id2); advance(); },
-  onCancel: () => close(id2),
+  onOK:    () => { modals.close(id2); advance(); },
+  onCancel: () => modals.close(id2),
 });
 ```
 
-## `ConfirmationForm` — built-in yes/no dialog
+## `RddConfirm` — built-in yes/no dialog
 
-Import and use `ConfirmationForm` directly in `openModal` for quick confirmations without writing a custom component:
+Import and use `RddConfirm` directly in `modals.open` for quick confirmations without writing a custom component:
 
 ```tsx
-import { ConfirmationForm } from 'react-dockable-desktop';
+import { RddConfirm, useModals } from 'react-dockable-desktop';
 
-const { openModal, close } = usePanelActions();
+const modals = useModals();
 
 const confirm = () => {
-  const id = openModal(ConfirmationForm, {
+  const id = modals.open(RddConfirm, {
     title:    'Delete item',
     message:  'This will permanently delete the item.',
     alert:    'This cannot be undone.',
     alertType: 'danger',
     useYesNoTitles: true,
-    onOK:    () => { close(id); deleteItem(); },
-    onCancel: () => close(id),
+    onOK:    () => { modals.close(id); deleteItem(); },
+    onCancel: () => modals.close(id),
   });
 };
 ```
 
-See [Panel Lifecycle & Forms →](./forms-and-panels#confirmationform-component) for the full props reference.
+See [Panel Lifecycle & Forms →](./forms-and-panels#rddconfirm-component) for how the dirty-state dialog uses it; its props type is `RddConfirmProps`.
 
-## `Sidebar` component
+## `RddSidebar` component
 
-`Sidebar` is a composite layout component that renders a vertical tab strip and a collapsible drawer panel. It handles all open/close animation, keyboard navigation, and state preservation internally.
+`RddSidebar` is a composite layout component that renders a vertical tab strip and a collapsible drawer panel. It handles all open/close animation, keyboard navigation, and state preservation internally.
 
 ```tsx
-import { Sidebar, type SidebarHandle } from 'react-dockable-desktop';
+import { RddSidebar, type SidebarHandle } from 'react-dockable-desktop';
 import { useRef } from 'react';
 
 const sidebarRef = useRef<SidebarHandle>(null);
 
-<Sidebar
+<RddSidebar
   ref={sidebarRef}
   position="right"
   defaultWidth={280}
@@ -225,7 +229,7 @@ const sidebarRef = useRef<SidebarHandle>(null);
   ]}
 >
   <MainMapArea />   {/* rendered in the space beside the sidebar */}
-</Sidebar>
+</RddSidebar>
 ```
 
 ### `SidebarTab`
@@ -240,13 +244,13 @@ const sidebarRef = useRef<SidebarHandle>(null);
 | `preserveState` | `boolean` | — | Keep the component alive in the DOM behind `display: none` when closed, instead of unmounting it. |
 | `hidden` | `boolean` | — | Omit this tab's rail button entirely — no icon, no click target — while it stays fully openable via `openTab()`/`useSidebar().openTab()`/a controlled `activeTabId`. Use for menu-driven panels with no persistent icon (e.g. a Google-Maps-style hamburger that opens content not otherwise pinned to the rail). Default `false`. |
 
-### `SidebarProps`
+### `RddSidebarProps`
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `tabs` | `SidebarTab[]` | — | **Required.** Tab definitions. |
-| `headerAction` | `SidebarRailEntry \| SidebarRailEntry[]` | — | One or more non-toggling action buttons and/or real tabs shown above the tabs. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
-| `footerAction` | `SidebarRailEntry \| SidebarRailEntry[]` | — | Mirror of `headerAction`, pinned to the bottom of the tab strip regardless of tab count. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
+| `headerAction` | an entry or an array of entries — each a `SidebarActionButton`, `SidebarCustomEntry` or `SidebarTab` | — | One or more non-toggling action buttons and/or real tabs shown above the tabs. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
+| `footerAction` | same as `headerAction` | — | Mirror of `headerAction`, pinned to the bottom of the tab strip regardless of tab count. See [`headerAction`/`footerAction`](#headeraction-footeraction) below. |
 | `showCloseButton` | `boolean` | `false` | Show an "X" close button in the expanded drawer's header — an extra way to collapse the sidebar besides clicking the active tab's own icon again. Has no effect once the default header is suppressed — via `hideDefaultHeader`, or simply by passing `renderHeader` (either one is sufficient) — since the entire default header, this button included, is skipped for every tab in that case. |
 | `hideDefaultHeader` | `boolean` | `false` | Suppress the library's own drawer header (title + `showCloseButton`'s close button) for **every** tab — not per-tab — so `renderHeader` (or each tab's own `renderContent`) can supply a header, border, and styling instead. Passing `renderHeader` by itself has the same suppressing effect even if this is left unset — the two props are combined with OR, so supplying `renderHeader` alone is never a silent no-op. The close mechanism works the same either way: the `onClose` parameter passed to `renderContent`/`renderHeader`, or `useSidebarTab().onClose` from anywhere in a tab's content tree. |
 | `renderHeader` | `(tab: SidebarTab, onClose, onOpen) => ReactNode` | — | Custom header renderer used in place of the library's own drawer header. Passing `renderHeader` is by itself sufficient to suppress the default header, whether or not `hideDefaultHeader` is also set. Called once for whichever tab is currently active, so one header implementation is shared uniformly across every tab instead of being repeated inside each tab's `renderContent`. Omit `renderHeader` and set `hideDefaultHeader: true` to render no header at all. |
@@ -267,22 +271,22 @@ const sidebarRef = useRef<SidebarHandle>(null);
 
 ### Dual sidebars
 
-`SecondarySidebar` is a second, independent `Sidebar` instance for the opposite edge of the screen — same component, same behavior, no forked implementation. It must be rendered inside a primary `Sidebar`'s `children` (this is a hard requirement, not just a recommendation — it detects the primary via context, which only flows to descendants) and automatically takes whichever side the primary *isn't* using, so you never specify a side yourself:
+`RddSecondarySidebar` is a second, independent `RddSidebar` instance for the opposite edge of the screen — same component, same behavior, no forked implementation. It must be rendered inside a primary `RddSidebar`'s `children` (this is a hard requirement, not just a recommendation — it detects the primary via context, which only flows to descendants) and automatically takes whichever side the primary *isn't* using, so you never specify a side yourself:
 
 ```tsx
-import { Sidebar, SecondarySidebar } from 'react-dockable-desktop';
+import { RddSidebar, RddSecondarySidebar } from 'react-dockable-desktop';
 
-<Sidebar position="left" tabs={primaryTabs}>
-  <SecondarySidebar tabs={secondaryTabs}>
+<RddSidebar position="left" tabs={primaryTabs}>
+  <RddSecondarySidebar tabs={secondaryTabs}>
     {/* Your app content */}
-  </SecondarySidebar>
-</Sidebar>
+  </RddSecondarySidebar>
+</RddSidebar>
 ```
 
-`SecondarySidebarProps` is identical to `SidebarProps` except `position` isn't settable (it's always the opposite of the primary) — everything else (`tabs`, `headerAction`/`footerAction`, `hideDefaultHeader`/`renderHeader`, controlled `activeTabId`, `showCloseButton`, and so on) works exactly the same as on a primary `Sidebar`.
+`RddSecondarySidebarProps` is identical to `RddSidebarProps` except `position` isn't settable (it's always the opposite of the primary) — everything else (`tabs`, `headerAction`/`footerAction`, `hideDefaultHeader`/`renderHeader`, controlled `activeTabId`, `showCloseButton`, and so on) works exactly the same as on a primary `RddSidebar`.
 
 ::: warning
-`SecondarySidebar` throws if rendered without a primary `Sidebar` ancestor, or if nested inside another `SecondarySidebar` — this library supports exactly one primary and one secondary sidebar, nothing deeper.
+`RddSecondarySidebar` throws if rendered without a primary `RddSidebar` ancestor, or if nested inside another `RddSecondarySidebar` — this library supports exactly one primary and one secondary sidebar, nothing deeper.
 :::
 
 Reach either sidebar's actions from anywhere in its own tree via `useSidebar()` — `position`/`isSecondary` on its return value (see [`useSidebar()`](#usesidebar) below) tell you which one you're inside. Content nested inside the secondary that needs to control the *primary* (or vice versa) needs a `ref`/`SidebarHandle` passed down explicitly — `useSidebar()` always resolves to the nearest instance, not a specific one.
@@ -297,20 +301,20 @@ content, and closes through the same lifecycle); only its position in the rail d
 use case: end `footerAction` with a "Settings" tab that expands like any other tab, preceded by one
 or more simple action buttons.
 
-Action button entries never affect `activeTabId` or the drawer: `Sidebar` only renders them and
+Action button entries never affect `activeTabId` or the drawer: `RddSidebar` only renders them and
 forwards the click. What happens next (opening a side panel, a modal, a custom menu, or nothing at
 all) is entirely up to you.
 
 ```tsx
-<Sidebar
+<RddSidebar
   tabs={tabs}
   headerAction={{
     icon: <MenuIcon />,
     label: 'Menu',
-    onClick: () => openLeftPanel(MainMenu, {}, { title: 'Menu' }),
+    onClick: () => sidePanels.openLeft(MainMenu, {}, { title: 'Menu' }),
   }}
   footerAction={[
-    { icon: <InfoIcon />, label: 'About', onClick: () => openModal(About, {}) },
+    { icon: <InfoIcon />, label: 'About', onClick: () => modals.open(About, {}) },
     {
       id: 'settings',
       label: 'Settings',
@@ -320,7 +324,7 @@ all) is entirely up to you.
   ]}
 >
   <MainMapArea />
-</Sidebar>
+</RddSidebar>
 ```
 
 Each entry takes one of three forms:
@@ -333,7 +337,7 @@ Each entry takes one of three forms:
 
 ```tsx
 // Fully custom — a Bootstrap button, unmodified:
-<Sidebar
+<RddSidebar
   tabs={tabs}
   headerAction={{
     render: () => (
@@ -382,11 +386,11 @@ const activeTab = sidebarRef.current?.getActiveTab();  // → string | null
 
 ### Sidebar hooks
 
-Two hooks let panels control the Sidebar without a ref or prop drilling.
+Two hooks let panels control the sidebar without a ref or prop drilling.
 
 #### `useSidebar()`
 
-Available to **any component inside a `<Sidebar>` tree** — including floating panels and docked panels rendered via `{children}`:
+Available to **any component inside an `<RddSidebar>` tree** — including floating panels and docked panels rendered via `{children}`:
 
 ```tsx
 import { useSidebar } from 'react-dockable-desktop';
@@ -407,11 +411,11 @@ function LayerTree() {
 | `openTab(tabId)` | `(tabId: string) => void` | Expand the drawer and activate the given tab. |
 | `closeDrawer()` | `() => void` | Collapse the drawer. |
 | `getActiveTab()` | `() => string \| null` | Returns the current tab ID, or `null` if collapsed. |
-| `position` | `'left' \| 'right'` | Which side this Sidebar instance is rendering on. |
-| `isSecondary` | `boolean` | `true` if this instance is a [`SecondarySidebar`](#dual-sidebars), `false` for a primary `Sidebar`. |
+| `position` | `'left' \| 'right'` | Which side this sidebar instance is rendering on. |
+| `isSecondary` | `boolean` | `true` if this instance is an [`RddSecondarySidebar`](#dual-sidebars), `false` for a primary `RddSidebar`. |
 
 ::: warning
-`useSidebar()` throws if called outside a `<Sidebar>` tree. A reusable panel component that may render with or without a surrounding Sidebar should check for that possibility itself (e.g. a prop indicating whether one is present) rather than relying on this hook to degrade gracefully.
+`useSidebar()` throws if called outside an `<RddSidebar>` tree. A reusable panel component that may render with or without a surrounding sidebar should check for that possibility itself (e.g. a prop indicating whether one is present) rather than relying on this hook to degrade gracefully.
 :::
 
 #### `useSidebarTab()`
@@ -454,11 +458,11 @@ function SearchResultsPanel() {
 A floating panel can open a sidebar tab and broadcast data in a single action:
 
 ```tsx
-import { useSidebar, usePanelContext } from 'react-dockable-desktop';
+import { useSidebar, useWorkspace } from 'react-dockable-desktop';
 
 function LayerTree() {
   const { openTab } = useSidebar();
-  const { publish } = usePanelContext();
+  const { publish } = useWorkspace();
 
   const handleSearch = (query: string) => {
     const results = performSearch(query);
@@ -526,23 +530,35 @@ See the [Context Menus guide](./context-menus) for the full type reference.
 `usePanelContextMenu` is safe to call unconditionally — it is a no-op when the component renders outside a `DockableDesktopProvider` (e.g., in tests).
 :::
 
-## `PanelActions` reference
+## `ModalsApi` / `SidePanelsApi` reference
 
 ```ts
-interface PanelActions {
-  openModal<P>(Component: ComponentType<P>, props: P, options?: ModalOptions): string;
-  openLeftPanel<P>(Component: ComponentType<P>, props: P, options?: SidePanelOptions): Promise<string | null>;
-  openRightPanel<P>(Component: ComponentType<P>, props: P, options?: SidePanelOptions): Promise<string | null>;
-  close(id: string): void;
+interface ModalsApi {
+  stack: OverlayInstance[];                 // open modals, bottom to top
+  topmost: OverlayInstance | null;
+  open<P>(Component: ComponentType<P>, props: P, options?: ModalOptions): OverlayId;
+  close(id: OverlayId): void;
   closeAll(): void;
-  closeAllModals(): void;
-  getInstance(id: string): PanelInstance | undefined;
-  setDirty(id: string, dirty: boolean, options?: DirtyStateOptions): void;
+  get(id: OverlayId): OverlayInstance | undefined;
+  update(id: OverlayId, updates: { props?, options?, dirty?, dirtyOptions? }): void;
+  setDirty(id: OverlayId, dirty: boolean, options?: DirtyStateOptions): void;
+}
+
+interface SidePanelsApi {
+  left: OverlayInstance | null;
+  right: OverlayInstance | null;
+  openLeft<P>(Component: ComponentType<P>, props: P, options?: SidePanelOptions): Promise<OverlayId | null>;
+  openRight<P>(Component: ComponentType<P>, props: P, options?: SidePanelOptions): Promise<OverlayId | null>;
+  close(id: OverlayId): void;
+  closeAll(): void;                         // closes both drawers
+  get(id: OverlayId): OverlayInstance | undefined;
+  update(id: OverlayId, updates: { props?, options?, dirty?, dirtyOptions? }): void;
+  setDirty(id: OverlayId, dirty: boolean, options?: DirtyStateOptions): void;
 }
 ```
 
 ## See also
 
-- [Panel Lifecycle & Forms →](./forms-and-panels) — dirty state, close guards, `useFormContainer`
+- [Panel Lifecycle & Forms →](./forms-and-panels) — dirty state, close guards, `usePanel`
 - [Event Bus & Communication →](./event-bus) — panels communicating via pub/sub
-- [Quick Start →](./quick-start) — where to place `ModalStackRenderer` and `SidePanelRenderer`
+- [Quick Start →](./quick-start) — where to place `RddModals` and `RddSidePanels`
