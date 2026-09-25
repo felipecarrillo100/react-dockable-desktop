@@ -38,6 +38,6 @@ features:
     title: Pub/Sub Event Bus
     details: Lightweight inter-panel messaging with subscribe/publish. Panels communicate without prop drilling.
   - icon: 🛠️
-    title: WorkspaceClient Pattern
-    details: Configuration and imperative API live on a client object outside the React tree — like TanStack QueryClient.
+    title: Workspace Outside React
+    details: createWorkspace() returns a store that is live before mount — open panels, publish events and load layouts from anywhere, like a TanStack QueryClient.
 ---

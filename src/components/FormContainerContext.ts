@@ -31,7 +31,7 @@ export interface FormContainerContract {
   onCloseRequested: (handler: () => boolean | Promise<boolean>) => (() => void);
   /**
    * Registers a callback reporting this panel's *current* restorable state, pulled fresh by
-   * `WorkspaceClient.saveLayout()` every time it's called — for panels whose static open-time
+   * `workspace.saveLayout()` every time it's called — for panels whose static open-time
    * props can't capture state accumulated after opening (scroll position, an in-progress edit, a
    * view-mode toggle). Only meaningful for docked/floating panels — left/right side panels and
    * modals already have a complete answer to this via `openLeftPanel`/`openRightPanel`/
@@ -120,7 +120,7 @@ export const useFormContainer = (): FormContainerContract => {
 };
 
 /**
- * Reactive alternative to calling {@link FormContainerContract.getDimensions} yourself.
+ * Reactive alternative to measuring the panel's container yourself.
  * Returns the panel's current `{ width, height }`, or `null` before it has been laid
  * out, and re-renders whenever the panel's rendered box changes — including resizes
  * caused by the workspace itself (a grid split being dragged, docking, floating, or

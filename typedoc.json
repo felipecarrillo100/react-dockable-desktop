@@ -5,6 +5,7 @@
   "entryFileName": "index",
   "plugin": ["typedoc-plugin-markdown"],
   "readme": "none",
+  "excludeInternal": true,
   "disableSources": false,
   "categorizeByGroup": true,
   "groupOrder": ["WorkspaceClient", "Provider", "Hooks", "State", "Types", "*"],

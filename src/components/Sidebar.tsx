@@ -198,7 +198,7 @@ export interface RddSidebarProps {
   renderHeader?: (tab: SidebarTab, onClose: () => void, onOpen: () => void) => React.ReactNode;
   /**
    * @internal Marks this instance as a secondary sidebar for context-broadcasting
-   * purposes. Set automatically by `<SecondarySidebar>` — do not pass this directly.
+   * purposes. Set automatically by `<RddSecondarySidebar>` — do not pass this directly.
    * Default: false
    */
   isSecondary?: boolean;
@@ -207,7 +207,7 @@ export interface RddSidebarProps {
 }
 
 /**
- * Imperative handle exposed by `<Sidebar ref={...}>`.
+ * Imperative handle exposed by `<RddSidebar ref={...}>`.
  */
 export interface SidebarHandle {
   openTab: (tabId: string) => void;
@@ -224,7 +224,7 @@ export interface SidebarHandle {
 
 /**
  * Value provided by `useSidebar()`. Available to any component inside the
- * `<Sidebar>` React tree, including panels rendered via `{children}`.
+ * `<RddSidebar>` React tree, including panels rendered via `{children}`.
  */
 export interface SidebarContextValue {
   openTab: (tabId: string) => void;
@@ -232,7 +232,7 @@ export interface SidebarContextValue {
   getActiveTab: () => string | null;
   /** Which side this Sidebar instance is rendering on. */
   position: 'left' | 'right';
-  /** True if this instance is a `<SecondarySidebar>`, false for a primary `<Sidebar>`. */
+  /** True if this instance is a `<RddSecondarySidebar>`, false for a primary `<RddSidebar>`. */
   isSecondary: boolean;
 }
 
@@ -769,7 +769,7 @@ export const Sidebar: React.ForwardRefExoticComponent<RddSidebarProps & React.Re
 // ==========================================
 
 /**
- * Props for {@link SecondarySidebar} — identical to {@link RddSidebarProps} except
+ * Props for {@link RddSecondarySidebar} — identical to {@link RddSidebarProps} except
  * `position` (always the opposite of whatever primary `Sidebar` it's nested inside)
  * and `isSecondary` (always `true`) are not settable.
  */
@@ -782,7 +782,7 @@ export type RddSecondarySidebarProps = Omit<RddSidebarProps, 'position' | 'isSec
  * isn't using, so the side is never specified directly.
  *
  * @throws Error if rendered without an ancestor `Sidebar`, or nested inside another
- * `SecondarySidebar` — this library supports exactly one primary and one secondary,
+ * `RddSecondarySidebar` — this library supports exactly one primary and one secondary,
  * nothing deeper.
  */
 export const SecondarySidebar: React.ForwardRefExoticComponent<RddSecondarySidebarProps & React.RefAttributes<SidebarHandle>> =
@@ -803,7 +803,7 @@ export const SecondarySidebar: React.ForwardRefExoticComponent<RddSecondarySideb
 // ==========================================
 
 /**
- * Returns sidebar control functions from anywhere inside a `<Sidebar>` tree,
+ * Returns sidebar control functions from anywhere inside a `<RddSidebar>` tree,
  * including floating panels rendered via `{children}`.
  *
  * @throws Error if used outside of a {@link Sidebar}.

@@ -8,6 +8,7 @@ import { ContextMenuContext, ContextMenuProvider, DefaultContextMenuAdapter } fr
 import type { ContextMenuAdapter } from './ContextMenu';
 import { WorkspaceClient } from '../WorkspaceClient';
 import { WorkspaceInstanceContext } from './WorkspaceInstanceContext';
+import type { Workspace } from '../api';
 
 /** Props for `<DockableDesktopProvider>`. */
 export interface DockableDesktopProviderProps {
@@ -16,7 +17,7 @@ export interface DockableDesktopProviderProps {
    * The workspace to render, from `createWorkspace()`. Omit it and the provider creates an empty
    * one of its own (register panels through `useWorkspace().registry`).
    */
-  workspace?: WorkspaceClient<object>;
+  workspace?: Workspace<object>;
   /** Translates every built-in label. Overridden by the workspace's own `formatMessage`. */
   formatMessage?: MessageFormatter;
   /** Overrides any subset of the built-in message table. Overridden by the workspace's own `messages`. */

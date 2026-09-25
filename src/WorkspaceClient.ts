@@ -13,7 +13,7 @@ import type {
 } from './components/WindowManagerContext';
 import type { ShowContextMenuOptions } from './components/ContextMenu';
 
-/** Built-in lifecycle events always available on the WorkspaceClient event bus. */
+/** Built-in lifecycle events always available on the workspace event bus. */
 export interface BuiltInEvents {
   'panel:opened':    { id: string; component: string };
   'panel:closed':    { id: string };
@@ -41,13 +41,13 @@ export interface BuiltInEvents {
   'layout:panels-excluded': { panels: { id: string; component: string }[] };
 }
 
-/** Per-panel definition supplied to WorkspaceClient constructor. */
+/** Per-panel definition supplied to `createWorkspace({ panels })`. */
 export interface PanelDefinition {
   component: ComponentType<any>;
   defaultOptions?: PanelRegistryEntry['defaultOptions'];
 }
 
-/** Configuration object accepted by the WorkspaceClient constructor. */
+/** Configuration object accepted by `createWorkspace()`. */
 export interface WorkspaceClientConfig {
   /**
    * Declarative panel catalog. Replaces imperative globalPanelRegistry.register() calls.
