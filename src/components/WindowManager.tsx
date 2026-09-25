@@ -415,7 +415,7 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
 
   const contract = React.useMemo<FormContainerContract>(() => ({
     requestClose: (options) => requestClosePanel(panelId, options),
-    setDirty: (dirty) => setPanelDirty(panelId, dirty),
+    setDirty: (dirty, options) => setPanelDirty(panelId, dirty, options),
     onCloseRequested: (handler) => {
       registerCloseGuard(panelId, handler);
       return () => unregisterCloseGuard(panelId);

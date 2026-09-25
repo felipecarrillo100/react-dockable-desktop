@@ -82,6 +82,15 @@ panel.setDirty(false);
 
 Outside the panel, `workspace.setPanelDirty(id, dirty)` does the same.
 
+## Don't put the `usePanel()` handle in dependency arrays
+
+The handle carries live state (`isActive`, `isMinimized`, `isFloating`, `containerType`), so it changes identity; its actions (`setTitle`, `setDirty`, `close`, …) never do. Depend on the action and on the values you write:
+
+```tsx
+const { setTitle } = usePanel();
+useEffect(() => { setTitle(doc.title); }, [setTitle, doc.title]);   // not [panel, doc.title]
+```
+
 The built-in close guard will automatically prompt the user before closing a dirty panel.
 
 ## Keep panel components pure of layout concerns

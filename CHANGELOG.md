@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.1] — 2026-09-25
+
+Fixes found by a consumer migrating a 30-file app from 6.4.0 with the 7.0.0 migration guide, and a revised guide. No API change.
+
+### Fixed
+- **An effect that listed the `usePanel()` handle and wrote the panel's title or dirty flag looped** until React stopped it (`Maximum update depth exceeded`), replacing the panel's body with the error. It is what a mechanical port of a 6.x `[container]` effect produces, and neither `tsc` nor a production build can see it. Two causes, both fixed:
+  - the handle got a new identity on every write to the panel. It now changes only when `isActive`, `isMinimized`, `isFloating` or `containerType` does, and its functions (`close`, `minimize`, `setDirty`, `setTitle`, `setIcon`) never change identity — in modals and drawers too, whose container object changes with their title;
+  - `setTitle` and `setDirty` wrote a new state even when nothing changed. Writing the title or dirty value a panel, modal or drawer already has is now a no-op.
+- **`usePanel().setDirty(dirty, options)` dropped `options` in docked and floating panels**, so a custom unsaved-changes title or message never reached the close confirmation. Modals and drawers were not affected.
+- **`usePanel().setIcon()` in a docked or floating panel** silently did nothing, while the docs said it changed the tab icon. It still does nothing there — the tab shows the registration's `defaultOptions.icon` — but now warns once in development, and the docs say so.
+
+### Docs
+- Migration guide (§ numbers unchanged): `usePanel()`'s identity contract and a rewrite rule for effects that call `setTitle`/`setDirty` (§3.2, §4.6); a rule for the generic new names (`Workspace`, `usePanel`, `useModals`, …) and a counter-check that no file without this library was changed (§1 rule 10, §6 step 2); the one-hook form for overlays (§4.5); what to do when the app already declares the `html, body, #root` rule (§5.3); a first-render check straight after the compiler (§6 check 1b); install `^7.0.1` (§2); the app's own `var(--sidebar-bg)`-style uses of this library's tokens are renamed too (§5.1); and comments the migration makes false are updated (§1 rule 7).
+- The identity contract in `forms-and-panels.md`, `best-practices.md`, the README and the `PanelHandle` doc comment.
+
+### Tests
+- Regression tests for the handle's identity, the loop (docked, modal, drawer, and in a real browser), no-op writes and the `setDirty` options — each checked to fail with its fix removed.
+- `tests/migration-fixture` now includes the naive port of the 6.x effect.
+- A layout written by `saveLayout()` running the 6.4.0 source is kept as a fixture, and must restore — and save back — unchanged.
+
 ## [7.0.0] — 2026-09-25
 
 A clean break: the public API takes the names the Vue and Angular ports of this library use, the workspace becomes a store that is live before anything mounts, and the stylesheet stops styling the host page. Nothing is deprecated first — every old name is gone, so the TypeScript compiler finds every call site. **Migration guide: [docs-site/guide/migration.md](docs-site/guide/migration.md#v6-x-→-v7-0-0)** — written so it can be applied by an automated agent in one pass; this release was accepted by having an agent migrate the four demo apps and a fixture app with the guide alone.
@@ -461,7 +481,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.1...HEAD
+[7.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.0...v7.0.1
 [7.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.4.0...v7.0.0
 [6.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.2...v6.4.0
 [6.3.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.1...v6.3.2

@@ -10,7 +10,7 @@ import {
   type MessageDescriptor, type ContextMenuHandle, type RddSidebarProps,
 } from 'react-dockable-desktop';
 import { Toolbar } from './other-ui-kit';
-import { NotesPanel, MapPanel } from './panels';
+import { NotesPanel, MapPanel, DocumentPanel } from './panels';
 import './fixture.css';
 
 export interface AppEvents {
@@ -28,6 +28,7 @@ export const workspace: Workspace<AppEvents> = createWorkspace<AppEvents>({
   panels: {
     notes: { component: NotesPanel, defaultOptions: { title: 'Notes' } },
     map: { component: MapPanel, defaultOptions: { title: 'Map' } },
+    document: { component: DocumentPanel, defaultOptions: { title: 'Document' } },
   },
   messages: messages as Record<string, MessageDescriptor>,
 });

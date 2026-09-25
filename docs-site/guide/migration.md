@@ -28,6 +28,14 @@ This guide is written so an automated agent can apply it in one pass. §1 gives 
 the order. §3–§5 are the changes: the rename tables in §3 are mechanical, and each rule in §4 and
 §5 names what to look for and shows the result. §6 is how to verify.
 
+**Revised for 7.0.1**, after a consumer migration report. Section numbers are unchanged. New:
+§1 rule 10 (generic new names), the `usePanel()` identity contract in §3.2 and §4.6, and a
+rewrite rule for effects that call `setTitle`/`setDirty` (§4.6); the one-hook form in §4.5;
+option (0) in §5.3; check 1b (the app renders a panel) and the counter-check in §6 step 2.
+Install **7.0.1 or later** (§2 step 2). On 7.0.0 neither the `usePanel()` handle nor its
+functions were stable, so an effect that lists either loops; §4.6 says what to do if you must stay
+on 7.0.0.
+
 ---
 
 ### 1. Rules for applying this guide
@@ -57,18 +65,30 @@ the order. §3–§5 are the changes: the rename tables in §3 are mechanical, a
    those keys with the same tables.
 7. **Strings are not identifiers.** Change a string literal only where §5 says so (CSS custom
    properties, the skin attribute). Don't rename words inside user-facing text, comments or
-   unrelated strings (a comment that names the 6.x API may be updated). If a string *shows* this library's API to people (a code sample in a docs
+   unrelated strings (a comment that names the 6.x API may be updated, and a comment that the
+   migration makes false — "`container` is stable, so…" — must be). If a string *shows* this library's API to people (a code sample in a docs
    page, a help text), leave it and add a `// TODO(rdd-7): review` next to it for a person.
 8. **CSS custom properties:** rename only the exact names listed in §5.1. Never use a pattern such
    as `--sidebar-*`. shadcn/ui defines its own `--sidebar-border`, `--sidebar-foreground` and
    others, and they must not be touched (see §5.1 for how to tell them apart).
 9. **Don't edit** `node_modules/`, build output (`dist/`, `build/`, `.next/`), or lockfiles by hand.
+10. **Generic new names.** Several 7.0 names are common words that another package in the
+    project, or the app itself, may already use: `Workspace`, `createWorkspace`, `usePanel`,
+    `PanelHandle`, `useModals`, `useSidePanels`, `useMessages` and `useHostClasses`. Rule 1 cuts
+    both ways:
+    - Never find-and-replace a 6.x name, or insert a 7.0 name, across the whole project. Work file
+      by file, and only in files that import from `'react-dockable-desktop'`.
+    - Before adding a 7.0 name to an import, check that the file doesn't already bind it (rule 4).
+      A `Workspace` imported from another package stays as it is, and this library's is imported
+      as `Workspace as RddWorkspace`.
+    - A file that doesn't import from this library is never changed, except for stylesheets (§5).
+      §6 step 2 checks this.
 
 ### 2. Procedure
 
 1. Check that the working tree is clean. Run `npx tsc --noEmit` and record the existing error
    count, so pre-existing errors can be told apart from migration errors.
-2. `npm install react-dockable-desktop@7`
+2. `npm install react-dockable-desktop@^7.0.1` (not 7.0.0; see §4.6).
 3. Apply the §3 tables to every `.ts`, `.tsx`, `.js`, `.jsx`, `.mts` and `.cts` file, following
    the §1 rules.
 4. Apply every §4 rule whose pattern appears in the project.
@@ -129,6 +149,11 @@ still returns the whole state.
 `useWorkspace()` returns the workspace object itself. Destructuring it is fine
 (`const { openPanel } = useWorkspace()`): every method is bound to its workspace. It never
 changes identity, so it is safe in dependency arrays.
+
+`usePanel()` is different: it returns a `PanelHandle` that carries live state (`isActive`,
+`isMinimized`, `isFloating`, `containerType`), so **the handle object changes identity**. From
+7.0.1 its functions (`close`, `minimize`, `setDirty`, `setTitle`, `setIcon`) never do; in 7.0.0
+they did too. Don't list the handle in a dependency array; see §4.6.
 
 **Unchanged:** `useSidebar`, `useSidebarTab`, `useToolbar`, `usePanelContribution`,
 `usePanelContextMenu`, `useMergedToolbarItems`, `useMergedSidebarTabs`, `useColorScheme`,
@@ -374,8 +399,18 @@ keeping the props that applied to it:
 
 **Look for:** `usePanelActions` and `usePanelState`.
 
-Map each member used on the old object to the new hook. If a component uses both kinds, call both
-hooks.
+Map each member used on the old object to the new hook. Use **one** hook when every member the
+component uses belongs to one kind of overlay — this is the common case. Call both hooks only
+when the component uses both modals and drawers.
+
+```tsx
+// 6.x — a drawer that reads itself and closes itself: two hooks, because 6.x split state and actions
+const { rightPanel } = usePanelState();
+const { close } = usePanelActions();
+
+// 7.0.0 — one hook: both members belong to the drawers
+const { right: rightPanel, close } = useSidePanels();
+```
 
 | 6.x member | 7.0.0 |
 |---|---|
@@ -383,7 +418,7 @@ hooks.
 | `closeAllModals()` | `useModals().closeAll()` |
 | `openLeftPanel(C, props, opts)` | `useSidePanels().openLeft(C, props, opts)` |
 | `openRightPanel(C, props, opts)` | `useSidePanels().openRight(C, props, opts)` |
-| `close(id)` | `close(id)` on the hook for that overlay's kind. If the id can be either kind, call both; closing an unknown id does nothing |
+| `close(id)` | `close(id)` on the hook for that overlay's kind. The kind is almost always clear from what the file opens. Only if the id can really be either kind, call both; closing an unknown id does nothing |
 | `closeAll()` | `useModals().closeAll()` **and** `useSidePanels().closeAll()` |
 | `getInstance(id)` | `get(id)` on the hook for that kind |
 | `updateInstance(id, u)` | `update(id, u)` on the hook for that kind |
@@ -430,6 +465,49 @@ drawers. It returns a `PanelHandle`.
 | `onCloseRequested(guard)` | `useBeforeClose(guard)` |
 | `registerStateProvider(fn)` | `useSaveState(fn)` |
 | `onActivate`, `onDeactivate`, `onMinimize`, `onRestore`, `onClose`, `onResize`, `onContainerTypeChange` | `usePanelEvents({ onActivate, onDeactivate, onMinimize, onRestore, onClose, onResize, onContainerTypeChange })` |
+
+> **Identity contract.** 6.x's `useFormContainer()` returned a stable object, so code listed it
+> in dependency arrays. `usePanel()`'s handle carries live state, so **the handle changes
+> identity** whenever `isActive`, `isMinimized`, `isFloating` or `containerType` changes. From
+> 7.0.1 its functions never change identity. So:
+> - never list the handle (`panel`) in a dependency array;
+> - list the function you call (`setTitle`) and the values you write.
+>
+> **On 7.0.0 only:** the handle *and* its functions changed on every `setTitle`/`setDirty`, so an
+> effect that listed either one looped until React stopped it (`Maximum update depth exceeded`).
+> If the project must stay on 7.0.0, list only the values you write, leave the functions out of
+> the array, and add `// TODO(rdd-7): list setTitle/setDirty once on 7.0.1`. On 7.0.1 and later
+> the form below is correct.
+
+**Rewrite rule: an effect that *calls* a container function.** The sibling of the subscription
+rule below. An effect that calls `setTitle`, `setDirty` or `setIcon` and listed the container
+(`fc`, `container`, or whatever it is called) in its dependencies keeps its body, calls the
+functions through the handle, and drops the handle from the array:
+
+```tsx
+// 6.x
+const container = useFormContainer();
+useEffect(() => {
+  if (!descriptor) return;
+  container.setTitle(descriptor.title);
+  container.setDirty(Boolean(descriptor.dirty));
+}, [container, descriptor?.title, descriptor?.dirty]);
+
+// 7.0.0 — WRONG: the handle in the array
+const panel = usePanel();
+useEffect(() => { /* … */ }, [panel, descriptor?.title, descriptor?.dirty]);
+
+// 7.0.1+ — right: destructure the stable functions, depend on them and on the values
+const { setTitle, setDirty } = usePanel();
+useEffect(() => {
+  if (!descriptor) return;
+  setTitle(descriptor.title);
+  setDirty(Boolean(descriptor.dirty));
+}, [setTitle, setDirty, descriptor?.title, descriptor?.dirty]);
+```
+
+The same applies to `useMemo` and `useCallback` arrays, and to a custom hook that receives the
+handle as an argument and uses it in an array: pass or depend on the functions, not the handle.
 
 The three hooks `useBeforeClose`, `useSaveState` and `usePanelEvents`:
 - are called at the top level of the component, like any hook, and clean up automatically;
@@ -585,7 +663,12 @@ these is true:
 - it's declared inside a rule whose selector contains `[data-workspace-skin`,
   `[data-color-scheme`, or a class starting with `rdd-`;
 - it's used inside such a rule;
-- it's set on an element that this library renders.
+- it's set on an element that this library renders;
+- it's a **use** (`var(--sidebar-bg)`) in the app's own CSS — the app reading this library's theme
+  token — and no other kit in the project defines that exact name. To check, search the project's
+  own stylesheets and its UI-kit setup for a *declaration* of the name (`--sidebar-bg:`). shadcn/ui
+  declares `--sidebar`, `--sidebar-foreground`, `--sidebar-border`, `--sidebar-accent` and similar,
+  never `--sidebar-bg` or the `--sidebar-card-*`/`-btn-*` names.
 
 Leave every other occurrence alone. If a single declaration serves both (rare), duplicate it:
 keep the original and add the `--rdd-` copy next to it.
@@ -604,6 +687,12 @@ The `skin` prop is unchanged. The attribute it writes is renamed. Update:
 
 6.x shipped `html, body, #root { margin:0; padding:0; width:100%; height:100%; overflow:hidden }`.
 7.0.0 doesn't. Apply exactly one of the following:
+
+- **(0) The app already declares it.** If the app's own global stylesheet already sets a height on
+  `html`, `body` and the root element (the same rule, or an equivalent one), change nothing. If a
+  comment next to it says it exists because of this library (for example, to silence its
+  zero-height warning), update the comment: from 7.0 this rule is what makes the workspace fill
+  the window, so it must not be deleted as a duplicate.
 
 - **(a) The workspace fills the browser window.** Most apps: the provider or `RddDesktop` is
   rendered at the top of the app, and nothing else on the page is meant to scroll. Add this rule,
@@ -638,9 +727,18 @@ No class is renamed. Don't change any `rdd-*` class in stylesheets or code.
 
 Run every check. The migration is done when all pass.
 
-1. **Compiler:** `npx tsc --noEmit` shows no new errors compared with the count recorded in §2.
-   Every removed 6.x export is a compile error, so this check finds anything §3/§4 missed. For a
-   plain JavaScript project, run the bundler build instead and check for missing-export errors.
+1. **Compiler, then first render.** Both parts come before any other check.
+   - **1a. Compiler:** `npx tsc --noEmit` shows no new errors compared with the count recorded in
+     §2. Every removed 6.x export is a compile error, so this check finds any **rename** §3/§4
+     missed. For a plain JavaScript project, run the bundler build instead and check for
+     missing-export errors.
+   - **1b. The app renders a panel.** The compiler can't see runtime breaks (a production build
+     can't either). Start the app (dev server), open one panel of every component the app
+     registers — or run the project's end-to-end suite if it has one — and check the browser
+     console: there must be no React error, in particular no `Maximum update depth exceeded`
+     and no error-boundary output in place of a panel's body. If there is one, check §4.6's
+     identity contract first. Don't report the migration as progressing past this step until it
+     passes.
 2. **Imports:** every import from `'react-dockable-desktop'` uses only 7.0.0 names. Search for any
    old name from §3 or §4 inside an import from this package:
 
@@ -654,6 +752,18 @@ Run every check. The migration is done when all pass.
 
    Types appear in this search only if they're listed here. `tsc` (check 1) catches the type
    renames from §3.4.
+
+   **Counter-check (§1 rule 10):** the migration changed no file that doesn't use this library.
+   List the changed files that don't mention it:
+
+   ```sh
+   git diff --name-only --diff-filter=M | xargs grep -L "react-dockable-desktop"
+   ```
+
+   Every file it prints must be a stylesheet or the `index.html` changed by §5, `package.json`,
+   the lockfile, or a mock file for this package (§1 rule 6).
+   Anything else was renamed by mistake — typically a `Workspace`, `usePanel` or `useModals` from
+   another package — and must be reverted.
 3. **CSS:** these searches must print nothing that belongs to this library (§5.1 says how to tell).
    A hit that belongs to another kit (such as shadcn/ui) is fine.
 
@@ -672,6 +782,9 @@ Run every check. The migration is done when all pass.
    - a toast shows;
    - a skin passed through `skin=` is applied;
    - in the sidebar and toolbar, colours come from the `--rdd-*` variables.
+
+   If you can't run the app and its tests don't cover an item, list that item as **not verified**
+   in your report instead of passing it.
 7. **Review markers:** list every `// TODO(rdd-7): review` left by §4.6, and report them to a
    person.
 

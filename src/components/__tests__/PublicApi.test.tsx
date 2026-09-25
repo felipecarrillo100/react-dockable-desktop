@@ -1,8 +1,8 @@
 /**
  * The 7.0 public API, used exactly as an app would: everything imported from src/index.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import React, { useRef, useState } from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import {
@@ -223,5 +223,150 @@ describe('RddContextMenu', () => {
     render(<Host />);
     act(() => { ref!.current!.show({ x: 5, y: 5, items: [{ label: 'Direct', action: () => {} }] }); });
     expect(document.body.querySelector('.rdd-context-menu')?.textContent).toContain('Direct');
+  });
+});
+
+describe('usePanel identity', () => {
+  // The pattern a mechanical 6.x → 7.0 port produces: the handle in the dependency array of an
+  // effect that writes title and dirty state. 7.0.0 looped on it. The counter stops a regression
+  // at 50 runs, so it fails here instead of hanging the suite.
+  let effectRuns = 0;
+  let setProbeTitle: (t: string) => void = () => {};
+  const LoopProbe: React.FC = () => {
+    const panel = usePanel();
+    const [title, setTitle] = useState('First');
+    setProbeTitle = setTitle;
+    useEffect(() => {
+      if (++effectRuns > 50) return;
+      panel.setTitle(title);
+      panel.setDirty(title !== 'First');
+    }, [panel, title]);
+    return <div className="loop-probe">{title}</div>;
+  };
+  beforeEach(() => { effectRuns = 0; });
+
+  it('an effect that lists the handle and writes title and dirty settles in a docked panel', () => {
+    const ws = createWorkspace({ panels: { loop: { component: LoopProbe } } });
+    render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
+    act(() => { ws.openPanel('a', 'loop'); });
+    act(() => { setProbeTitle('Second'); });
+    expect(effectRuns).toBeLessThanOrEqual(4);
+    expect(tab('a')?.textContent).toContain('Second');
+  });
+
+  it('the same effect settles in a modal and in a drawer', async () => {
+    let modals: ModalsApi | undefined;
+    let sides: SidePanelsApi | undefined;
+    const Opener = () => { modals = useModals(); sides = useSidePanels(); return null; };
+    render(<DockableDesktopProvider><Opener /><RddModals /><RddSidePanels /></DockableDesktopProvider>);
+    act(() => { modals!.open(LoopProbe, {}, { title: 'Modal' }); });
+    act(() => { setProbeTitle('Second'); });
+    expect(effectRuns).toBeLessThanOrEqual(4);
+    act(() => { setProbeTitle('First'); });
+    act(() => { modals!.closeAll(); });
+    effectRuns = 0;
+    await act(async () => { await sides!.openRight(LoopProbe, {}, { title: 'Drawer' }); });
+    act(() => { setProbeTitle('Third'); });
+    expect(effectRuns).toBeLessThanOrEqual(4);
+  });
+
+  it('mutators never change identity; title and dirty writes leave the handle as it is', () => {
+    const seen: PanelHandle[] = [];
+    const Probe = () => { seen.push(usePanel()); return null; };
+    const ws = createWorkspace({ panels: { p: { component: Probe } } });
+    render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
+    act(() => { ws.openPanel('a', 'p'); });
+    const handlesOfA = () => seen.filter(h => h.id === 'a');
+    const first = handlesOfA().at(-1)!;
+    act(() => { first.setTitle('Renamed'); first.setDirty(true); });
+    expect(handlesOfA().at(-1)).toBe(first);
+    act(() => { ws.openPanel('b', 'p'); });
+    act(() => { ws.floatPanel('a'); });
+    act(() => { ws.minimizePanel('a'); });
+    act(() => { ws.restorePanel('a'); });
+    const last = handlesOfA().at(-1)!;
+    expect(last).not.toBe(first);
+    for (const k of ['close', 'minimize', 'setDirty', 'setTitle', 'setIcon'] as const) {
+      expect(last[k]).toBe(first[k]);
+    }
+  });
+
+  it('in a modal, whose container changes with its title and dirty flag, the mutators still keep their identity', () => {
+    let modals: ModalsApi | undefined;
+    const seen: PanelHandle[] = [];
+    const Opener = () => { modals = useModals(); return null; };
+    const Body = () => { seen.push(usePanel()); return null; };
+    render(<DockableDesktopProvider><Opener /><RddModals /></DockableDesktopProvider>);
+    act(() => { modals!.open(Body, {}, { title: 'T' }); });
+    const first = seen.at(-1)!;
+    act(() => { first.setTitle('Changed'); });
+    act(() => { first.setDirty(true); });
+    act(() => { first.setDirty(false); });
+    expect(seen.length).toBeGreaterThan(1);
+    for (const k of ['close', 'minimize', 'setDirty', 'setTitle', 'setIcon'] as const) {
+      expect(seen.at(-1)![k]).toBe(first[k]);
+    }
+  });
+
+  it('writing the title or dirty state a panel already has changes nothing', () => {
+    let handle: PanelHandle | undefined;
+    const Probe = () => { handle = usePanel(); return null; };
+    const ws = createWorkspace({ panels: { p: { component: Probe } } });
+    render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
+    act(() => { ws.openPanel('a', 'p'); });
+    act(() => { handle!.setTitle('T'); handle!.setDirty(true, { message: 'Unsaved' }); });
+    const before = ws._core.getSnapshot();
+    act(() => { handle!.setTitle('T'); handle!.setDirty(true, { message: 'Unsaved' }); });
+    expect(ws._core.getSnapshot()).toBe(before);
+    act(() => { handle!.setTitle({ id: 'k', defaultMessage: 'K' }); });
+    const withDescriptor = ws._core.getSnapshot();
+    act(() => { handle!.setTitle({ id: 'k', defaultMessage: 'K' }); });
+    expect(ws._core.getSnapshot()).toBe(withDescriptor);
+  });
+
+  it('in a modal, writing the title or dirty state it already has changes nothing', () => {
+    let modals: ModalsApi | undefined;
+    let handle: PanelHandle | undefined;
+    const Opener = () => { modals = useModals(); return null; };
+    const Body = () => { handle = usePanel(); return null; };
+    render(<DockableDesktopProvider><Opener /><RddModals /></DockableDesktopProvider>);
+    act(() => { modals!.open(Body, {}, { title: 'T' }); });
+    act(() => { handle!.setTitle('T'); handle!.setDirty(false); });
+    const stack = modals!.stack;
+    act(() => { handle!.setTitle('T'); handle!.setDirty(false); });
+    expect(modals!.stack).toBe(stack);
+  });
+
+  it('setDirty options reach the close confirmation of a docked panel', async () => {
+    let handle: PanelHandle | undefined;
+    const Probe = () => { handle = usePanel(); return null; };
+    const ws = createWorkspace({ panels: { p: { component: Probe } } });
+    render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
+    act(() => { ws.openPanel('a', 'p'); });
+    act(() => { handle!.setDirty(true, { message: 'Custom' }); });
+    let received: unknown;
+    await act(async () => {
+      await ws.requestClosePanel('a', { onConfirm: async opts => { received = opts; return true; } });
+    });
+    expect(received).toEqual({ message: 'Custom' });
+  });
+
+  it('setIcon in a docked panel warns once in development (the tab icon comes from the registration)', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      let handle: PanelHandle | undefined;
+      const Probe = () => { handle = usePanel(); return null; };
+      const ws = createWorkspace({ panels: { p: { component: Probe } } });
+      render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
+      act(() => { ws.openPanel('a', 'p'); });
+      act(() => { handle!.setIcon(<span />); handle!.setIcon(<span />); });
+      const calls = warn.mock.calls.filter(c => String(c[0]).includes('setIcon'));
+      expect(calls).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+      process.env.NODE_ENV = originalEnv;
+    }
   });
 });

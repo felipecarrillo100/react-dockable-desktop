@@ -39,6 +39,29 @@ export function NotesPanel() {
   );
 }
 
+/**
+ * Keeps its tab title and dirty flag in step with a document. The 6.x original listed the
+ * container, which was stable, in the effect's dependencies:
+ *   const container = useFormContainer();
+ *   useEffect(() => { container.setTitle(doc.title); container.setDirty(doc.dirty); },
+ *     [container, doc.title, doc.dirty]);
+ * This is the naive, mechanical port of it. 7.0.0 looped on it (a consumer report); from 7.0.1 it
+ * settles, and App.test.tsx keeps it that way.
+ */
+export function DocumentPanel() {
+  const panel = usePanel();
+  const [doc, setDoc] = useState({ title: 'Untitled', dirty: false });
+  useEffect(() => {
+    panel.setTitle(doc.title);
+    panel.setDirty(doc.dirty);
+  }, [panel, doc.title, doc.dirty]);
+  return (
+    <div data-testid="document">
+      <button data-testid="rename" onClick={() => setDoc({ title: 'Report.docx', dirty: true })}>Rename</button>
+    </div>
+  );
+}
+
 export function MapPanel() {
   const [legendOpen, setLegendOpen] = useState(false);
   const widgets = useFloatingWidgets();
