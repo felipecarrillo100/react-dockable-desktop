@@ -20,31 +20,16 @@ const css = readFileSync(join(ROOT, 'src', 'index.css'), 'utf8').replace(/\/\*[\
 /** Unprefixed classes still shipped on purpose, each with the release that removes it. */
 const LEGACY_CLASSES = new Set<string>([]);
 
-/**
- * Unprefixed custom properties documented as public theming API (docs-site/guide/theming.md).
- * Renaming them breaks consumers, so they are renamed to `--rdd-*` in 7.0.0. Nothing may be
- * added to this list.
- */
-const LEGACY_PROPERTIES = new Set([
-  'bg-drop-hover',
-  'sidebar-badge-bg', 'sidebar-badge-text', 'sidebar-bg', 'sidebar-border', 'sidebar-btn-front-bg',
-  'sidebar-btn-front-border', 'sidebar-btn-front-hover-bg', 'sidebar-btn-front-text',
-  'sidebar-btn-hover-bg', 'sidebar-card-active-bg', 'sidebar-card-active-border',
-  'sidebar-card-active-shadow', 'sidebar-card-bg', 'sidebar-card-border', 'sidebar-card-hover-bg',
-  'sidebar-card-hover-border', 'sidebar-drawer-header-bg', 'sidebar-tabs-bg', 'sidebar-text-muted',
-  'sidebar-text-title',
-  'tab-accent-bar-width', 'tab-btn-active-bg', 'tab-btn-active-glow', 'tab-btn-active-radius',
-  'tab-btn-active-shadow', 'tab-btn-active-width', 'tab-icon-active', 'tab-icon-inactive',
-  'toolbar-accent-bar-width', 'toolbar-btn-active-glow', 'toolbar-btn-active-shadow',
-  'toolbar-btn-hover-bg', 'toolbar-btn-radio-active-bg', 'toolbar-btn-toggle-active-bg',
-  'toolbar-separator-color',
-]);
+/** Unprefixed custom properties still shipped on purpose. Emptied in 7.0.0; nothing may be added. */
+const LEGACY_PROPERTIES = new Set<string>([]);
 
 /**
  * `rdd-*` classes that no library component emits, because the consumer applies them (documented
  * hooks) or the browser does. Each needs a reason.
  */
-const CONSUMER_APPLIED_CLASSES = new Set<string>([]);
+const CONSUMER_APPLIED_CLASSES = new Set<string>([
+  'rdd-fill-viewport', // the consumer puts it on their workspace wrapper (docs: quick-start)
+]);
 
 /** Values `rdd-${position}` can take (Toolbar strip position). */
 const BARE_TEMPLATE_VALUES = ['rdd-left', 'rdd-right', 'rdd-top', 'rdd-bottom'];

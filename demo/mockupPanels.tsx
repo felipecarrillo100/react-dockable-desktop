@@ -1,24 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  PanelRegistry,
-  useFormContainer,
-  usePanelContext,
+  usePanel,
+  useBeforeClose,
+  useWorkspace,
   useSidebar,
   useToolbar,
-  useWindowManagerState,
-  useWindowManagerActions,
-  usePanelActions,
-  usePanelId,
+  useWorkspaceState,
+  useModals,
+  useSidePanels,
   usePanelContextMenu,
-  ConfirmationForm,
-  PanelOverlayRoot,
-  PanelToolbar,
-  ToolbarButton,
-  ToolbarToggle,
-  ToolbarSpacer,
-  ToolbarCenter,
-  PanelToolbarSeparator,
-  usePanelFloatingWindowManager,
+  RddConfirm,
+  RddPanelOverlay,
+  RddPanelToolbar,
+  RddToolbarButton,
+  RddToolbarToggle,
+  RddToolbarSpacer,
+  RddToolbarCenter,
+  RddToolbarSeparator,
+  useFloatingWidgets,
   toast,
   useColorScheme,
   usePanelSize,
@@ -26,6 +25,7 @@ import {
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import MarkdownEditorPanel from './MarkdownEditorPanel';
+import { workspace } from './workspace';
 import Editor from '@monaco-editor/react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -46,26 +46,26 @@ L.Icon.Default.mergeOptions({
 
 const CODE_SNIPPETS: Record<string, string> = {
   editor: `// Code Editor Component Registration
-PanelRegistry.register('editor', CodeEditor, {
+workspace.registry.register('editor', CodeEditor, {
   title: 'Code Editor',
   icon: '📝',
   initialTarget: 'docked'
 });
 
 // Marking a form/editor as containing unsaved changes (dirty state)
-const container = useFormContainer();
-container.setDirty(true); // Blocks close and triggers ConfirmationForm`,
+const panel = usePanel();
+panel.setDirty(true); // Blocks close and triggers RddConfirm`,
 
   dirtyForm: `// Unsaved Changes Confirmation Prompt Setup
-PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, {
+workspace.registry.register('dirtyForm', DirtyFormDemoPanel, {
   title: 'Intercept Form',
   icon: '⚠️',
   initialTarget: 'floating'
 });
 
-// When close is clicked, WindowManager calls requestClosePanel(id, {
+// When close is clicked, RddDesktop calls requestClosePanel(id, {
 //   onConfirm: (customOpts) => new Promise((resolve) => {
-//     openModal(ConfirmationForm, {
+//     openModal(RddConfirm, {
 //       title: customOpts?.title || "Unsaved Changes",
 //       message: "Discard your changes and close the panel?",
 //       onOK: () => resolve(true),      // Confirms close
@@ -75,7 +75,7 @@ PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, {
 // })`,
 
   mainMap: `// 1. Locked Main Map Panel (Persistent Layout Anchor)
-PanelRegistry.register('mainMap', MainMap, {
+workspace.registry.register('mainMap', MainMap, {
   title: 'Main Map',
   icon: '🗺️',
   initialTarget: 'docked',
@@ -86,7 +86,7 @@ PanelRegistry.register('mainMap', MainMap, {
   renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
 });`,
   luciadMap: `// 2. Leaflet Map Panel (Supports multiple floating/draggable instances)
-PanelRegistry.register('luciadMap', LeafletMapPanel, {
+workspace.registry.register('luciadMap', LeafletMapPanel, {
   title: 'Leaflet Map',
   icon: '🌍',
   initialTarget: 'docked',  // Can be spawned as a floating window dynamically
@@ -96,45 +96,45 @@ PanelRegistry.register('luciadMap', LeafletMapPanel, {
 });`,
 
   showcaseControl: `// Dockable Control Center Dashboard Setup
-PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
+workspace.registry.register('showcaseControl', ShowcaseControlCenter, {
   title: 'Control Center',
   icon: '🚀',
   initialTarget: 'docked'
 });
 
 // Modifying the layout dynamically
-const { loadLayout } = useWindowManagerActions();
+const { loadLayout } = useWorkspace();
 loadLayout(JSON_LAYOUT_STRING);`,
 
-  v3features: `// v3.0: F6 — DockableDesktopProvider (wraps both providers)
-<DockableDesktopProvider client={workspace}>
-  <WindowManager />
-  <ModalStackRenderer />
+  v3features: `// One provider, given the workspace
+<DockableDesktopProvider workspace={workspace}>
+  <RddDesktop />
+  <RddModals />
 </DockableDesktopProvider>
 
-// v3.0: F7 — usePanelId() — no prop drilling needed
+// usePanel() — a panel knows its own id, no prop drilling needed
 function MyPanel() {
-  const panelId = usePanelId();
-  return <button onClick={() => ws.closePanel(panelId)}>Close me</button>;
+  const panel = usePanel();
+  return <button onClick={() => panel.close()}>Close me</button>;
 }
 
-// v3.0: F4 — State Selector (skips re-renders on unrelated changes)
-const activeId = useWindowManagerState(s => s.activePanelId);
-const count   = useWindowManagerState(s => Object.keys(s.panels).length);
+// State selector (skips re-renders on unrelated changes)
+const activeId = useWorkspaceState(s => s.activePanelId);
+const count   = useWorkspaceState(s => Object.keys(s.panels).length);
 
-// v3.0: F5 — Lifecycle callbacks via WorkspaceClient
+// Lifecycle callbacks on the workspace
 workspace.onPanelOpen((id, component) =>
   analytics.track('panel_open', { id, component })
 );
 
-// v3.0: F8 — Typed WorkspaceClient<TUserEvents>
+// A typed event bus
 interface AppEvents { 'layer:toggle': { layerId: string; visible: boolean } }
-const ws = new WorkspaceClient<AppEvents>({ panels });
+const ws = createWorkspace<AppEvents>({ panels });
 ws.publish('layer:toggle', { layerId: 'markers', visible: true }); // typed
 ws.subscribe('panel:opened', d => console.log(d.id));             // built-in`,
 
   markdownEditor: `// Markdown Editor — Panel Contributions showcase
-PanelRegistry.register('markdownEditor', MarkdownEditorPanel, {
+workspace.registry.register('markdownEditor', MarkdownEditorPanel, {
   title: 'Markdown Editor',
   icon: '📄',
   initialTarget: 'docked'
@@ -156,7 +156,7 @@ usePanelContribution({
   ],
 });
 
-// The app shell (App.tsx) merges this into its own <Toolbar>/<Sidebar> via:
+// The app shell (App.tsx) merges this into its own <RddToolbar>/<RddSidebar> via:
 //   useMergedToolbarItems(staticItems)   — appends contributed items + separator
 //   useMergedSidebarTabs(staticTabs)     — appends contributed sections as tabs
 // This panel never touches either component directly.
@@ -169,8 +169,8 @@ usePanelContribution({
 // The array is re-read each time the menu opens, so items
 // can react to component state (dirty, selection, mode, etc.)
 
-import { usePanelContextMenu } from 'dockable-windows';
-import type { ContextMenuItem } from 'dockable-windows';
+import { usePanelContextMenu } from 'react-dockable-desktop';
+import type { ContextMenuItem } from 'react-dockable-desktop';
 
 function DirtyEditor() {
   const [isDirty, setIsDirty] = useState(false);
@@ -193,14 +193,14 @@ function DirtyEditor() {
 // Float → ⋮ button  → custom items only (button absent if empty)`,
 
   rtlShowcase: `// RTL Content Showcase Panel
-PanelRegistry.register('rtlShowcase', RTLShowcasePanel, {
+workspace.registry.register('rtlShowcase', RTLShowcasePanel, {
   title: 'RTL Showcase',
   icon: '🔄',
   initialTarget: 'docked'
 });
 
-// Reading direction from the WindowManager state
-const state = useWindowManagerState();
+// Reading direction from the workspace state
+const state = useWorkspaceState();
 console.log(state.dir);   // 'ltr' | 'rtl'
 console.log(state.isRtl); // boolean
 
@@ -209,14 +209,14 @@ console.log(state.isRtl); // boolean
 };
 
 export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({ panelId, type }) => {
-  const { openModal } = usePanelActions();
+  const { open: openModal } = useModals();
   const snippet = CODE_SNIPPETS[type] || '// No snippet available';
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
 
     const SnippetModal: React.FC = () => {
-      const { requestClose } = useFormContainer();
+      const { close: requestClose } = usePanel();
       const [copied, setCopied] = useState(false);
 
       const handleCopy = () => {
@@ -278,32 +278,31 @@ export const CodeSnippetButton: React.FC<{ panelId: string; type: string }> = ({
 // ==========================================
 
 export const ShowcaseControlCenter: React.FC = () => {
-  const state = useWindowManagerState();
-  const { openPanel } = useWindowManagerActions();
-  const { openLeftPanel, openRightPanel } = usePanelActions();
+  const state = useWorkspaceState();
+  const ws = useWorkspace();
+  const { openLeft: openLeftPanel, openRight: openRightPanel } = useSidePanels();
   const [activeTab, setActiveTab] = useState<'tour' | 'presets' | 'theme' | 'monitor' | 'v3'>('tour');
 
   // F4 — state selectors: only re-render this hook when these specific values change
-  const activePanelId = useWindowManagerState(s => s.activePanelId);
-  const panelCount = useWindowManagerState(s => Object.keys(s.panels).length);
-  const floatingCount = useWindowManagerState(s => s.floating.length);
+  const activePanelId = useWorkspaceState(s => s.activePanelId);
+  const panelCount = useWorkspaceState(s => Object.keys(s.panels).length);
+  const floatingCount = useWorkspaceState(s => s.floating.length);
 
   // F5 — lifecycle event log via panel event bus
   const [lifecycleLog, setLifecycleLog] = useState<Array<{ type: string; id: string }>>([]);
-  const { subscribe } = usePanelContext();
   useEffect(() => {
     const addLog = (type: string) => (d: unknown) => {
       const { id } = d as { id: string };
       setLifecycleLog(prev => [{ type, id }, ...prev].slice(0, 12));
     };
     const unsubs = [
-      subscribe('panel:opened', addLog('opened')),
-      subscribe('panel:closed', addLog('closed')),
-      subscribe('panel:minimized', addLog('minimized')),
-      subscribe('panel:restored', addLog('restored')),
+      ws.subscribe('panel:opened', addLog('opened')),
+      ws.subscribe('panel:closed', addLog('closed')),
+      ws.subscribe('panel:minimized', addLog('minimized')),
+      ws.subscribe('panel:restored', addLog('restored')),
     ];
     return () => unsubs.forEach(u => u());
-  }, [subscribe]);
+  }, [ws]);
 
   // Tutorial checklist state
   const [steps, setSteps] = useState({
@@ -333,13 +332,13 @@ export const ShowcaseControlCenter: React.FC = () => {
     markStep('drawer');
     if (side === 'left') {
       openLeftPanel(
-        PanelRegistry.get('dirtyForm')?.Component || (() => null),
+        ws.registry.get('dirtyForm')?.Component || (() => null),
         {},
         { title: 'Left Side Panel (Dirty Intercept)' }
       );
     } else {
       openRightPanel(
-        PanelRegistry.get('dirtyForm')?.Component || (() => null),
+        ws.registry.get('dirtyForm')?.Component || (() => null),
         {},
         { title: 'Right Side Panel (Dirty Intercept)' }
       );
@@ -439,7 +438,7 @@ export const ShowcaseControlCenter: React.FC = () => {
                   <input type="checkbox" className="form-check-input" checked={steps.drag} onChange={(e) => setSteps(s => ({ ...s, drag: e.target.checked }))} />
                 </div>
                 <p className="text-secondary small mt-1 mb-2">Drag any tab header to the edge of another tab or the grid border to tile the layout.</p>
-                <button className="btn btn-xs btn-outline-primary py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => { markStep('drag'); openPanel(`new-test-${Date.now()}`, 'help', { title: 'Test Widget' }); }}>
+                <button className="btn btn-xs btn-outline-primary py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => { markStep('drag'); ws.openPanel(`new-test-${Date.now()}`, 'help', { title: 'Test Widget' }); }}>
                   ➕ Spawn Drag-Test Tab
                 </button>
               </div>
@@ -451,7 +450,7 @@ export const ShowcaseControlCenter: React.FC = () => {
                   <input type="checkbox" className="form-check-input" checked={steps.float} readOnly />
                 </div>
                 <p className="text-secondary small mt-1 mb-2">Float a tab using the double window icon in the header, or spawn a floating window directly.</p>
-                <button className="btn btn-xs btn-outline-primary py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => openPanel(`floating-tool-${Date.now()}`, 'help', { title: 'Floating Utility', initialTarget: 'floating' })}>
+                <button className="btn btn-xs btn-outline-primary py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => ws.openPanel(`floating-tool-${Date.now()}`, 'help', { title: 'Floating Utility', initialTarget: 'floating' })}>
                   🪟 Spawn Floating Window
                 </button>
               </div>
@@ -472,7 +471,7 @@ export const ShowcaseControlCenter: React.FC = () => {
                   <input type="checkbox" className="form-check-input" checked={steps.dirty} onChange={(e) => setSteps(s => ({ ...s, dirty: e.target.checked }))} />
                 </div>
                 <p className="text-secondary small mt-1 mb-2">Edit content in the editor to make it "dirty", then close it to trigger the custom confirmation prompt.</p>
-                <button className="btn btn-xs btn-outline-warning text-dark py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => { markStep('dirty'); openPanel('dirtyeditor-main', 'dirtyEditor'); }}>
+                <button className="btn btn-xs btn-outline-warning text-dark py-0 px-2 font-monospace" style={{ fontSize: '0.7rem' }} onClick={() => { markStep('dirty'); ws.openPanel('dirtyeditor-main', 'dirtyEditor'); }}>
                   ⚠️ Open Dirty Editor
                 </button>
               </div>
@@ -601,7 +600,7 @@ export const ShowcaseControlCenter: React.FC = () => {
                   <span className="text-secondary" style={{ fontSize: '0.7rem' }}>floating count:</span>
                   <span className="text-warning fw-bold" style={{ fontSize: '0.7rem' }}>{floatingCount}</span>
                 </div>
-                <pre className="mt-2 mb-0 text-muted" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap' }}>{`// Only re-renders when activePanelId changes:\nconst id = useWindowManagerState(\n  s => s.activePanelId\n);`}</pre>
+                <pre className="mt-2 mb-0 text-muted" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap' }}>{`// Only re-renders when activePanelId changes:\nconst id = useWorkspaceState(\n  s => s.activePanelId\n);`}</pre>
               </div>
             </div>
 
@@ -627,7 +626,7 @@ export const ShowcaseControlCenter: React.FC = () => {
             {/* F6/F7/F8 — Quick References */}
             <div>
               <h6 className="text-uppercase text-secondary mb-1" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>F6/F7/F8 — Quick Reference</h6>
-              <pre className="mb-0 text-muted p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap', background: 'var(--rdd-panel-card-bg)', maxHeight: '120px' }}>{`// F6: one provider replaces two\n<DockableDesktopProvider client={ws}>\n  ...\n</DockableDesktopProvider>\n\n// F7: panel reads own ID without props\nconst id = usePanelId();\n\n// F8: fully-typed event bus\nconst ws = new WorkspaceClient<MyEvents>({...});\nws.publish('layer:toggle', { id: 'a' });`}</pre>
+              <pre className="mb-0 text-muted p-2 rounded border border-secondary border-opacity-15 overflow-auto" style={{ fontSize: '0.62rem', whiteSpace: 'pre-wrap', background: 'var(--rdd-panel-card-bg)', maxHeight: '120px' }}>{`// one provider, given the workspace\n<DockableDesktopProvider workspace={ws}>\n  ...\n</DockableDesktopProvider>\n\n// a panel reads its own id without props\nconst { id } = usePanel();\n\n// a fully-typed event bus\nconst ws = createWorkspace<MyEvents>({...});\nws.publish('layer:toggle', { id: 'a' });`}</pre>
             </div>
 
           </div>
@@ -654,7 +653,7 @@ export default AppLayout;
 `;
 
 export const CodeEditor: React.FC = () => {
-  const container = useFormContainer();
+  const container = usePanel();
   const colorScheme = useColorScheme();
   const editorTheme: 'vs-dark' | 'light' = colorScheme === 'light' ? 'light' : 'vs-dark';
   const [currentVal, setCurrentVal] = useState(defaultCode);
@@ -709,31 +708,31 @@ export const CodeEditor: React.FC = () => {
   );
 
   return (
-    <PanelOverlayRoot>
-      <PanelToolbar
+    <RddPanelOverlay>
+      <RddPanelToolbar
         position="top"
         variant="solid"
         buttonVariant="outlined"
         style={{ padding: '2px 0' }}
       >
-        <ToolbarSpacer />
-        <ToolbarButton icon={PlayIcon} onClick={() => {}} title="Run" />
-        <PanelToolbarSeparator />
-        <ToolbarButton icon={FormatIcon} onClick={() => {}} title="Format" />
-        <ToolbarToggle
+        <RddToolbarSpacer />
+        <RddToolbarButton icon={PlayIcon} onClick={() => {}} title="Run" />
+        <RddToolbarSeparator />
+        <RddToolbarButton icon={FormatIcon} onClick={() => {}} title="Format" />
+        <RddToolbarToggle
           icon={WrapIcon}
           active={wordWrap}
           onToggle={() => setWordWrap(v => !v)}
           title="Word wrap"
         />
-        <PanelToolbarSeparator />
-        <ToolbarButton
+        <RddToolbarSeparator />
+        <RddToolbarButton
           icon={SaveIcon}
           onClick={handleSave}
           disabled={!isDirty}
           title={isDirty ? 'Save changes' : 'Saved'}
         />
-      </PanelToolbar>
+      </RddPanelToolbar>
       <div className="w-100 h-100" style={{ paddingTop: 36, boxSizing: 'border-box' }}>
         <Editor
           height="100%"
@@ -751,7 +750,7 @@ export const CodeEditor: React.FC = () => {
           }}
         />
       </div>
-    </PanelOverlayRoot>
+    </RddPanelOverlay>
   );
 };
 
@@ -792,7 +791,7 @@ export const PreviewOutput: React.FC = () => {
 };
 
 export const HelpCenter: React.FC = () => {
-  const panelId = usePanelId();
+  const panelId = usePanel().id;
   return (
     <div className="w-100 h-100 p-4 bg-transparent" style={{ color: 'var(--rdd-panel-text)', opacity: 0.85, overflow: 'auto' }}>
       <h5 className="border-bottom pb-2 mb-3" style={{ color: 'var(--rdd-panel-text)', borderColor: 'var(--rdd-panel-card-border)' }}>Workspace Guide</h5>
@@ -802,7 +801,7 @@ export const HelpCenter: React.FC = () => {
         <li><strong>Save & Restore:</strong> Save your customized layout to JSON and restore it instantly.</li>
       </ul>
       <div className="mt-4 pt-3 border-top small font-monospace d-flex align-items-center gap-2" style={{ borderColor: 'var(--rdd-panel-card-border)' }}>
-        <span className="text-secondary" style={{ fontSize: '0.75rem' }}>usePanelId()</span>
+        <span className="text-secondary" style={{ fontSize: '0.75rem' }}>usePanel().id</span>
         <span className="text-muted">→</span>
         <code className="text-info" style={{ fontSize: '0.75rem' }}>{panelId}</code>
       </div>
@@ -818,7 +817,7 @@ const LAYER_DEFINITIONS = [
 ];
 
 export const LayerTree: React.FC = () => {
-  const { publish } = usePanelContext();
+  const ws = useWorkspace();
   const { openTab, closeDrawer } = useSidebar();
   const { getActiveInGroup } = useToolbar();
   const activeTool = getActiveInGroup('tool');
@@ -832,7 +831,7 @@ export const LayerTree: React.FC = () => {
   useEffect(() => {
     LAYER_DEFINITIONS.forEach(layer => {
       if (!layer.locked) {
-        publish('layer-visibility', { layerId: layer.id, visible: layer.defaultVisible });
+        ws.publish('layer-visibility', { layerId: layer.id, visible: layer.defaultVisible });
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -840,7 +839,7 @@ export const LayerTree: React.FC = () => {
   const handleToggle = (layerId: string) => {
     setVisibility(prev => {
       const next = { ...prev, [layerId]: !prev[layerId] };
-      publish('layer-visibility', { layerId, visible: next[layerId] });
+      ws.publish('layer-visibility', { layerId, visible: next[layerId] });
       return next;
     });
   };
@@ -1176,9 +1175,9 @@ const CameraIcon = (
 // MainMap is a thin wrapper so that MainMapInner is a child of PanelOverlayRoot
 // and can correctly call usePanelFloatingWindowManager() inside the context.
 export const MainMap: React.FC<{ panelId: string }> = () => (
-  <PanelOverlayRoot className="bg-dark">
+  <RddPanelOverlay className="bg-dark">
     <MainMapInner />
-  </PanelOverlayRoot>
+  </RddPanelOverlay>
 );
 
 const MainMapInner: React.FC = () => {
@@ -1186,8 +1185,8 @@ const MainMapInner: React.FC = () => {
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
-  const { subscribe } = usePanelContext();
-  const floats = usePanelFloatingWindowManager();
+  const ws = useWorkspace();
+  const floats = useFloatingWidgets();
   const floatsRef = useRef(floats);
   useEffect(() => { floatsRef.current = floats; });
   const colorScheme = useColorScheme();
@@ -1291,7 +1290,8 @@ const MainMapInner: React.FC = () => {
 
   // Subscribe to layer visibility events
   useEffect(() => {
-    const unsubscribe = subscribe('layer-visibility', (data: { layerId: string; visible: boolean }) => {
+    const unsubscribe = ws.subscribe('layer-visibility', (payload) => {
+      const data = payload as { layerId: string; visible: boolean };
       const map = mapRef.current;
       const layerGroup = layerGroupsRef.current[data.layerId];
       if (!map || !layerGroup) return;
@@ -1307,7 +1307,7 @@ const MainMapInner: React.FC = () => {
       }
     });
     return unsubscribe;
-  }, [subscribe]);
+  }, [ws]);
 
   const ZoomInIcon = (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1343,12 +1343,12 @@ const MainMapInner: React.FC = () => {
 
   return (
     <>
-      <PanelToolbar position="top">
-        <ToolbarCenter>
-          <ToolbarButton icon={HomeIcon} onClick={handleResetView} title="Reset view" />
-        </ToolbarCenter>
-        <ToolbarSpacer />
-        <ToolbarToggle
+      <RddPanelToolbar position="top">
+        <RddToolbarCenter>
+          <RddToolbarButton icon={HomeIcon} onClick={handleResetView} title="Reset view" />
+        </RddToolbarCenter>
+        <RddToolbarSpacer />
+        <RddToolbarToggle
           icon={InfoIcon}
           active={floats.isOpen('map-info')}
           onToggle={() => floats.isOpen('map-info')
@@ -1357,7 +1357,7 @@ const MainMapInner: React.FC = () => {
           }
           title="Map info"
         />
-        <ToolbarToggle
+        <RddToolbarToggle
           icon={LayersIcon}
           active={floats.isOpen('map-legend')}
           onToggle={() => floats.isOpen('map-legend')
@@ -1366,13 +1366,13 @@ const MainMapInner: React.FC = () => {
           }
           title="Legend"
         />
-      </PanelToolbar>
+      </RddPanelToolbar>
 
-      <PanelToolbar position="right">
-        <ToolbarSpacer />
-        <ToolbarButton icon={ZoomInIcon} onClick={handleZoomIn} title="Zoom in" />
-        <ToolbarButton icon={ZoomOutIcon} onClick={handleZoomOut} title="Zoom out" />
-      </PanelToolbar>
+      <RddPanelToolbar position="right">
+        <RddToolbarSpacer />
+        <RddToolbarButton icon={ZoomInIcon} onClick={handleZoomIn} title="Zoom in" />
+        <RddToolbarButton icon={ZoomOutIcon} onClick={handleZoomOut} title="Zoom out" />
+      </RddPanelToolbar>
 
       <div ref={containerRef} className="w-100 h-100" style={{ minHeight: '100px', zIndex: 1 }} />
     </>
@@ -1384,7 +1384,7 @@ const MainMapInner: React.FC = () => {
 // ==========================================
 
 export const DirtyFormDemoPanel: React.FC = () => {
-  const container = useFormContainer();
+  const container = usePanel();
   const [dirty, setDirtyState] = useState(false);
   const [customGuard, setCustomGuard] = useState(false);
   const [titleInput, setTitleInput] = useState('');
@@ -1395,15 +1395,10 @@ export const DirtyFormDemoPanel: React.FC = () => {
     container.setDirty(next);
   };
 
-  useEffect(() => {
-    if (customGuard) {
-      const cleanup = container.onCloseRequested(() => {
-        alert("Close guard triggered: closing is BLOCKED because the lock switch is ON!");
-        return false;
-      });
-      return cleanup;
-    }
-  }, [customGuard, container]);
+  useBeforeClose(customGuard ? () => {
+    alert("Close guard triggered: closing is BLOCKED because the lock switch is ON!");
+    return false;
+  } : null);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitleInput(e.target.value);
@@ -1463,14 +1458,14 @@ export const DirtyFormDemoPanel: React.FC = () => {
           <button
             type="button"
             className="btn btn-sm btn-outline-danger flex-grow-1"
-            onClick={() => container.requestClose()}
+            onClick={() => container.close()}
           >
             Close Programmatically
           </button>
           <button
             type="button"
             className="btn btn-sm btn-danger"
-            onClick={() => container.requestClose({ force: true })}
+            onClick={() => container.close({ force: true })}
             title="Bypasses all dirty checks and guards"
           >
             Force Close
@@ -1484,7 +1479,7 @@ export const DirtyFormDemoPanel: React.FC = () => {
 const dirtyEditorDefault = '// Type something here, changes make the tab dirty.\n// Click Save to clear the dirty state.';
 
 export const DirtyEditorDemoPanel: React.FC = () => {
-  const container = useFormContainer();
+  const container = usePanel();
   const [content, setContent] = useState(dirtyEditorDefault);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -1631,7 +1626,7 @@ const RTL_CONTENT = {
 };
 
 export const RTLShowcasePanel: React.FC = () => {
-  const state = useWindowManagerState();
+  const state = useWorkspaceState();
   const isRtl = state.dir === 'rtl';
   const c = isRtl ? RTL_CONTENT.rtl : RTL_CONTENT.ltr;
 
@@ -1725,7 +1720,7 @@ export const RTLShowcasePanel: React.FC = () => {
 
 // Register all panels
 export function registerDemoPanels() {
-    PanelRegistry.register('mainMap', MainMap, {
+    workspace.registry.register('mainMap', MainMap, {
         title: 'Main Map',
         icon: '🗺️',
         initialTarget: 'docked',
@@ -1735,44 +1730,44 @@ export function registerDemoPanels() {
         disableLivePreview: true,
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('editor', CodeEditor, {
+    workspace.registry.register('editor', CodeEditor, {
         title: 'Code Editor',
         icon: '⚛️',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
-    PanelRegistry.register('terminal', TerminalConsole, {
+    workspace.registry.register('terminal', TerminalConsole, {
         title: 'Console Output',
         icon: '💻',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
-    PanelRegistry.register('preview', PreviewOutput, {
+    workspace.registry.register('preview', PreviewOutput, {
         title: 'Sandbox Widget',
         icon: '📦',
         initialTarget: 'floating',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
     });
-    PanelRegistry.register('help', HelpCenter, {
+    workspace.registry.register('help', HelpCenter, {
         title: 'Workspace Help',
         icon: '❓',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="v3features" />
     });
-    PanelRegistry.register('showcaseControl', ShowcaseControlCenter, {
+    workspace.registry.register('showcaseControl', ShowcaseControlCenter, {
         title: 'Control Center',
         icon: '🚀',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
     });
-    PanelRegistry.register('luciadMap', LeafletMapPanel, {
+    workspace.registry.register('luciadMap', LeafletMapPanel, {
         title: 'Leaflet Map',
         icon: '🌍',
         initialTarget: 'docked',
         disableLivePreview: true,
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="luciadMap" />
     });
-    PanelRegistry.register('layertree', LayerTree, {
+    workspace.registry.register('layertree', LayerTree, {
         title: 'Layer tree',
         icon: '🌿',
         initialTarget: 'floating',
@@ -1780,7 +1775,7 @@ export function registerDemoPanels() {
         defaultAnchor: 'top-left',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('timecontrol', TimeControl, {
+    workspace.registry.register('timecontrol', TimeControl, {
         title: 'Time Control bar',
         icon: '⏱️',
         initialTarget: 'floating',
@@ -1792,52 +1787,52 @@ export function registerDemoPanels() {
         },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
-    PanelRegistry.register('overviewmap', OverviewMap, {
+    workspace.registry.register('overviewmap', OverviewMap, {
         title: 'Overview locator',
         icon: '👁️',
         initialTarget: 'floating',
         favoritePosition: { x: 80, y: 500, width: 220, height: 180 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('table', TablePanel, {
+    workspace.registry.register('table', TablePanel, {
         title: 'Attribute Table',
         icon: '📋',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
     });
-    PanelRegistry.register('toolpanels', ToolPanel, {
+    workspace.registry.register('toolpanels', ToolPanel, {
         title: 'Toolbox Panel',
         icon: '🔧',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
-    PanelRegistry.register('panelmanager', PanelManagerForm, {
+    workspace.registry.register('panelmanager', PanelManagerForm, {
         title: 'Panel Registry Form',
         icon: '⚙️',
         initialTarget: 'floating',
         favoritePosition: { x: 400, y: 150, width: 500, height: 420 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
     });
-    PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, {
+    workspace.registry.register('dirtyForm', DirtyFormDemoPanel, {
         title: 'Intercept Form',
         icon: '⚠️',
         initialTarget: 'floating',
         favoritePosition: { x: 350, y: 150, width: 450, height: 420 },
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
     });
-    PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, {
+    workspace.registry.register('dirtyEditor', DirtyEditorDemoPanel, {
         title: 'Intercept Editor',
         icon: '📝',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="contextMenu" />
     });
-    PanelRegistry.register('rtlShowcase', RTLShowcasePanel, {
+    workspace.registry.register('rtlShowcase', RTLShowcasePanel, {
         title: 'RTL Showcase',
         icon: '🔄',
         initialTarget: 'docked',
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="rtlShowcase" />
     });
-    PanelRegistry.register('markdownEditor', MarkdownEditorPanel, {
+    workspace.registry.register('markdownEditor', MarkdownEditorPanel, {
         title: 'Markdown Editor',
         icon: '📄',
         initialTarget: 'docked',

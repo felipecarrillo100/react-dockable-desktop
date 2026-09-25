@@ -10,7 +10,7 @@ import {
   usePredefinedMessages,
   useStyleClasses,
   formatLabel,
-  type ContextMenuPredefinedMessage,
+  type MessageDescriptor,
   type MessageFormatter,
 } from '../WindowManagerContext';
 
@@ -72,7 +72,7 @@ describe('Internationalization & Localisation', () => {
 
     it('resolves an i18n descriptor through the formatter', () => {
       const fmt: MessageFormatter = vi.fn(() => 'Translated');
-      const descriptor: ContextMenuPredefinedMessage = { id: 'app.title', defaultMessage: 'Default' };
+      const descriptor: MessageDescriptor = { id: 'app.title', defaultMessage: 'Default' };
       expect(formatLabel(descriptor, fmt)).toBe('Translated');
       expect(fmt).toHaveBeenCalledWith(descriptor);
     });
@@ -213,7 +213,7 @@ describe('Internationalization & Localisation', () => {
     it('unsavedChangesMessage descriptor contains {title} placeholder by default', () => {
       mountWith();
       // default message should reference {title}
-      const msg = lastPredefined.unsavedChangesMessage as ContextMenuPredefinedMessage;
+      const msg = lastPredefined.unsavedChangesMessage as MessageDescriptor;
       expect(msg.defaultMessage ?? msg.id).toContain('{title}');
     });
   });

@@ -45,7 +45,7 @@ import {
   usePanelFloatingWindow,
   usePanelFloatingWindowManager,
 } from '../PanelOverlay';
-import type { ManagedWindowConfig } from '../PanelOverlay';
+import type { ManagedWidget } from '../PanelOverlay';
 import { WindowManagerProvider } from '../WindowManagerContext';
 import type { MessageFormatter } from '../WindowManagerContext';
 
@@ -1359,7 +1359,7 @@ describe('PO27: resize-to-stretch snapping', () => {
 /**
  * Localisable float titles.
  *
- * The bug these cover: `ManagedWindowConfig.title` was `string`, so a host that localises its UI
+ * The bug these cover: `ManagedWidget.title` was `string`, so a host that localises its UI
  * could not make a float's header follow a language change — the title stayed in whatever language
  * was active when the window opened. Every other title surface already accepted a descriptor.
  *
@@ -1392,7 +1392,7 @@ describe('PO28–PO31: localisable float titles', () => {
    * Opening once is also what the assertions need: PO29 must observe a window that was never
    * reopened.
    */
-  const Managed: React.FC<{ title: ManagedWindowConfig['title'] }> = ({ title }) => {
+  const Managed: React.FC<{ title: ManagedWidget['title'] }> = ({ title }) => {
     const manager = usePanelFloatingWindowManager();
     useEffect(() => {
       if (!manager.isOpen('legend')) manager.open('legend', { title, content: <span /> });
@@ -1400,7 +1400,7 @@ describe('PO28–PO31: localisable float titles', () => {
     return null;
   };
 
-  const mountManaged = (fmt: MessageFormatter, title: ManagedWindowConfig['title'] = DESCRIPTOR) => {
+  const mountManaged = (fmt: MessageFormatter, title: ManagedWidget['title'] = DESCRIPTOR) => {
     const App: React.FC<{ fmt: MessageFormatter }> = ({ fmt }) => (
       <WindowManagerProvider formatMessage={fmt}>
         <PanelOverlayRoot><Managed title={title} /></PanelOverlayRoot>

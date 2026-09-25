@@ -1,10 +1,11 @@
 import type { ComponentType } from 'react';
-import { PanelRegistryClass } from './components/PanelRegistry';
+import { PanelRegistry } from './components/PanelRegistry';
 import type { PanelRegistryEntry } from './components/PanelRegistry';
+import { createWorkspaceCore, type WorkspaceCore } from './components/WindowManagerContext';
 import type {
-  WindowActions,
+  WorkspaceActions,
   MessageFormatter,
-  ContextMenuPredefinedMessage,
+  MessageDescriptor,
   DropPosition,
   SplitDirection,
   DirtyStateOptions,
@@ -13,7 +14,7 @@ import type {
 import type { ShowContextMenuOptions } from './components/ContextMenu';
 
 /** Built-in lifecycle events always available on the WorkspaceClient event bus. */
-export interface BuiltInPanelEvents {
+export interface BuiltInEvents {
   'panel:opened':    { id: string; component: string };
   'panel:closed':    { id: string };
   'panel:minimized': { id: string };
@@ -49,7 +50,7 @@ export interface PanelDefinition {
 /** Configuration object accepted by the WorkspaceClient constructor. */
 export interface WorkspaceClientConfig {
   /**
-   * Declarative panel catalog. Replaces imperative PanelRegistry.register() calls.
+   * Declarative panel catalog. Replaces imperative globalPanelRegistry.register() calls.
    * Keys are the component identifiers used in openPanel() and serialised layouts.
    */
   panels?: Record<string, PanelDefinition>;
@@ -65,7 +66,7 @@ export interface WorkspaceClientConfig {
   /** Custom i18n formatter for all internal strings. */
   formatMessage?: MessageFormatter;
   /** Override any subset of the built-in predefined message catalog. */
-  predefinedMessages?: Record<string, ContextMenuPredefinedMessage>;
+  predefinedMessages?: Record<string, MessageDescriptor>;
   /** Initial layout direction. */
   dir?: 'ltr' | 'rtl';
   /**
@@ -88,21 +89,19 @@ export interface WorkspaceClientConfig {
 }
 
 /**
- * WorkspaceClient is the central configuration and imperative API object for
- * react-dockable-desktop. Create one instance outside the React tree and pass
- * it to `<WindowManagerProvider client={client}>`.
+ * A workspace: the layout, every action on it, the panel registry and the event bus. Create one
+ * with `createWorkspace()` outside the React tree and pass it to
+ * `<DockableDesktopProvider workspace={…}>`; inside the tree, `useWorkspace()` returns it.
  *
- * Pattern: TanStack QueryClient / Redux store — configuration and imperative
- * access live on the client; rendering is delegated to the thin React provider.
+ * Pattern: TanStack QueryClient / Redux store — configuration and imperative access live on the
+ * workspace; rendering is delegated to the thin React provider.
  *
  * @remarks
- * Calls made before the provider mounts are queued and replayed automatically
- * in order once `_connect()` fires. Duplicate `openPanel` calls for the same
- * ID are deduplicated while queued. Subscriptions made before mount are
- * buffered and re-registered on each connect/reconnect.
+ * The workspace is live from the moment it is created: calls made before any provider mounts
+ * apply immediately, and a provider that mounts later shows the result.
  *
  * @example
- * const workspace = new WorkspaceClient<MyEvents>({
+ * const workspace = createWorkspace<MyEvents>({
  *   panels: {
  *     map:    { component: MapPanel },
  *     editor: { component: EditorPanel, defaultOptions: { title: 'Code Editor' } },
@@ -110,9 +109,9 @@ export interface WorkspaceClientConfig {
  *   initialState: localStorage.getItem('layout'),
  * });
  *
- * <WindowManagerProvider client={workspace}>
- *   <WindowManager />
- * </WindowManagerProvider>
+ * <DockableDesktopProvider workspace={workspace}>
+ *   <RddDesktop />
+ * </DockableDesktopProvider>
  *
  * // Imperative access from anywhere:
  * workspace.saveLayout();
@@ -123,7 +122,7 @@ export interface WorkspaceClientConfig {
 // docs use) has no index signature and so never satisfied the Record constraint (TS2344).
 export class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
   /** Scoped panel registry — fully independent from the global singleton. */
-  readonly registry: PanelRegistryClass;
+  readonly registry: PanelRegistry;
 
   /** Serialised layout to restore on mount, or null to start with an empty canvas. */
   readonly initialState: string | null;
@@ -131,27 +130,14 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   /** Non-rendering configuration forwarded to the provider. */
   readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir' | 'defaultSplitRatio' | 'defaultEdgeSplitRatio' | 'zIndexBase'>;
 
-  private _actions: WindowActions | null = null;
-  private _initialized = false;
+  /** @internal The workspace store. Live from construction; a provider only subscribes to it. */
+  readonly _core: WorkspaceCore;
 
-  /** Calls queued before _connect() fires — replayed in order on first connect. */
-  private _pendingCalls: Array<(actions: WindowActions) => void> = [];
-
-  /** Tracks openPanel IDs in the pending queue to prevent duplicates before mount. */
-  private _pendingOpenPanelIds = new Set<string>();
-
-  /** Subscriptions buffered before connect — re-registered on every connect/reconnect. */
-  private _pendingSubscriptions: Array<{
-    event: string;
-    callback: (data: unknown) => void;
-    unsub: (() => void) | null;
-  }> = [];
-
-  /** Timer that emits an error if _connect() is never called with pending work. */
-  private _disconnectedWarnTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The store's actions, to which every method below forwards. */
+  private get _actions(): WorkspaceActions { return this._core.actions; }
 
   constructor(config: WorkspaceClientConfig = {}) {
-    this.registry = new PanelRegistryClass();
+    this.registry = new PanelRegistry();
     this.initialState = config.initialState ?? null;
     this.config = {
       formatMessage: config.formatMessage,
@@ -167,109 +153,50 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
         this.registry.register(id, def.component, def.defaultOptions);
       }
     }
+
+    // Every method is bound to this workspace, so `const { openPanel } = useWorkspace()` works —
+    // destructuring a class instance's methods otherwise loses `this`.
+    for (const key of Object.getOwnPropertyNames(WorkspaceClient.prototype) as Array<keyof this>) {
+      const descriptor = Object.getOwnPropertyDescriptor(WorkspaceClient.prototype, key);
+      if (key === 'constructor' || !descriptor || typeof descriptor.value !== 'function') continue;
+      (this as Record<keyof this, unknown>)[key] = (descriptor.value as (...a: unknown[]) => unknown).bind(this);
+    }
+
+    this._core = createWorkspaceCore({
+      registry: this.registry,
+      initialState: this.initialState,
+      dir: config.dir,
+      zIndexBase: config.zIndexBase,
+      defaultSplitRatio: config.defaultSplitRatio,
+      defaultEdgeSplitRatio: config.defaultEdgeSplitRatio,
+    });
   }
 
-  // ── Internal lifecycle ────────────────────────────────────────────────────
-
-  /** @internal Called by WindowManagerProvider after mount. */
-  _connect(actions: WindowActions): void {
-    this._actions = actions;
-    if (this._disconnectedWarnTimer !== null) {
-      clearTimeout(this._disconnectedWarnTimer);
-      this._disconnectedWarnTimer = null;
-    }
-    if (!this._initialized) {
-      this._initialized = true;
-    }
-    for (const entry of this._pendingSubscriptions) {
-      entry.unsub = actions.subscribe(entry.event, entry.callback);
-    }
-    const pending = this._pendingCalls.splice(0);
-    for (const fn of pending) fn(actions);
-  }
-
-  /** @internal Called by WindowManagerProvider on unmount. */
-  _disconnect(): void {
-    this._actions = null;
-    for (const entry of this._pendingSubscriptions) {
-      entry.unsub?.();
-      entry.unsub = null;
-    }
-  }
-
-  /** True while the provider is mounted and React state is accessible. */
-  get isConnected(): boolean {
-    return this._actions !== null;
-  }
-
-  // ── Internal helpers ──────────────────────────────────────────────────────
-
-  private _startWarnTimer(): void {
-    if (this._disconnectedWarnTimer === null) {
-      this._disconnectedWarnTimer = setTimeout(() => {
-        if (!this.isConnected && this._pendingCalls.length > 0) {
-          console.error(
-            '[react-dockable-desktop] WorkspaceClient has ' + this._pendingCalls.length +
-            ' queued call(s) but was never connected to a WindowManagerProvider. ' +
-            'Did you forget client={workspace} on <WindowManagerProvider>?'
-          );
-        }
-      }, process.env.NODE_ENV === 'production' ? 5000 : 1000);
-    }
-  }
-
-  private _dispatch(fn: (actions: WindowActions) => void): void {
-    if (this._actions) {
-      fn(this._actions);
-    } else {
-      this._pendingCalls.push(fn);
-      this._startWarnTimer();
-    }
+  private _dispatch(fn: (actions: WorkspaceActions) => void): void {
+    fn(this._actions);
   }
 
   private _subscribeRaw(event: string, cb: (data: unknown) => void): () => void {
-    if (this._actions) return this._actions.subscribe(event, cb);
-    const entry = { event, callback: cb, unsub: null as (() => void) | null };
-    this._pendingSubscriptions.push(entry);
-    return () => {
-      entry.unsub?.();
-      entry.unsub = null;
-      const idx = this._pendingSubscriptions.indexOf(entry);
-      if (idx !== -1) this._pendingSubscriptions.splice(idx, 1);
-    };
+    return this._actions.subscribe(event, cb);
   }
 
-  // ── Forwarding methods — mirrors the WindowActions public interface ────────
+  // ── Forwarding methods — mirrors the WorkspaceActions public interface ────────
 
-  openPanel(...args: Parameters<WindowActions['openPanel']>): void {
-    if (this._actions) {
-      this._actions.openPanel(...args);
-      return;
-    }
-    const id = args[0];
-    if (!this._pendingOpenPanelIds.has(id)) {
-      this._pendingOpenPanelIds.add(id);
-      this._pendingCalls.push(a => {
-        this._pendingOpenPanelIds.delete(id);
-        a.openPanel(...args);
-      });
-      this._startWarnTimer();
-    }
-  }
+  openPanel(...args: Parameters<WorkspaceActions['openPanel']>): void { this._actions.openPanel(...args); }
 
   closePanel(id: string): void { this._dispatch(a => a.closePanel(id)); }
 
   minimizePanel(id: string): void { this._dispatch(a => a.minimizePanel(id)); }
 
-  restorePanel(...args: Parameters<WindowActions['restorePanel']>): void {
+  restorePanel(...args: Parameters<WorkspaceActions['restorePanel']>): void {
     this._dispatch(a => a.restorePanel(...args));
   }
 
-  floatPanel(...args: Parameters<WindowActions['floatPanel']>): void {
+  floatPanel(...args: Parameters<WorkspaceActions['floatPanel']>): void {
     this._dispatch(a => a.floatPanel(...args));
   }
 
-  dockPanel(...args: Parameters<WindowActions['dockPanel']>): void {
+  dockPanel(...args: Parameters<WorkspaceActions['dockPanel']>): void {
     this._dispatch(a => a.dockPanel(...args));
   }
 
@@ -283,24 +210,20 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   focusPanel(id: string): void { this._dispatch(a => a.focusPanel(id)); }
 
   /** Returns `true` if a panel with this ID is currently open. */
-  isOpen(id: string): boolean { return this._actions?.isOpen(id) ?? false; }
+  isOpen(id: string): boolean { return this._actions.isOpen(id); }
 
   /** Returns the IDs of all currently open panels. */
-  getOpenPanelIds(): string[] { return this._actions?.getOpenPanelIds() ?? []; }
+  getOpenPanelIds(): string[] { return this._actions.getOpenPanelIds(); }
 
   /** Finds an already-open panel of the given component with a matching `dedupeKey` (set via
    * `openPanel`'s `dedupeKey` option). Returns `null` if none is open. */
   findPanelId(component: string, dedupeKey: string): string | null {
-    return this._actions?.findPanelId(component, dedupeKey) ?? null;
+    return this._actions.findPanelId(component, dedupeKey);
   }
 
-  saveLayout(): string { return this._actions?.saveLayout() ?? ''; }
+  saveLayout(): string { return this._actions.saveLayout(); }
 
-  loadLayout(json: string): boolean {
-    if (this._actions) return this._actions.loadLayout(json);
-    this._pendingCalls.push(a => { a.loadLayout(json); });
-    return false;
-  }
+  loadLayout(json: string): boolean { return this._actions.loadLayout(json); }
 
   setDirection(dir: 'ltr' | 'rtl'): void { this._dispatch(a => a.setDirection(dir)); }
 
@@ -332,14 +255,9 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    * group is removed once empty. A tab whose close guard refuses — or a dirty tab that
    * `onConfirm` doesn't approve — stays open, and so does its group.
    * Resolves once every close request has been settled.
-   *
-   * @remarks If called before the provider mounts, the request is queued and this returns an
-   * already-resolved promise, as `requestClosePanel` does.
    */
   closeLeafGroup(leafId: string, options?: { onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }): Promise<void> {
-    if (this._actions) return this._actions.closeLeafGroup(leafId, options);
-    this._pendingCalls.push(a => { void a.closeLeafGroup(leafId, options); });
-    return Promise.resolve();
+    return this._actions.closeLeafGroup(leafId, options);
   }
 
   /** Registers a guard that can veto closing the given panel. */
@@ -351,7 +269,7 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   unregisterCloseGuard(id: string): void { this._dispatch(a => a.unregisterCloseGuard(id)); }
 
   /** Registers a callback reporting a panel's current restorable state, pulled fresh on every
-   * `saveLayout()` call — see {@link BuiltInPanelEvents}'s `'layout:panels-excluded'` doc and
+   * `saveLayout()` call — see {@link BuiltInEvents}'s `'layout:panels-excluded'` doc and
    * `FormContainerContract.registerStateProvider`. */
   registerStateProvider(id: string, provider: () => unknown): void {
     this._dispatch(a => a.registerStateProvider(id, provider));
@@ -366,22 +284,16 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   }
 
   /** Updates a panel's displayed title. */
-  updatePanelTitle(id: string, title: string | ContextMenuPredefinedMessage): void {
+  updatePanelTitle(id: string, title: string | MessageDescriptor): void {
     this._dispatch(a => a.updatePanelTitle(id, title));
   }
 
   /**
    * Requests that a panel close, honoring its dirty flag and any registered close guard.
    * Resolves once the close (or user cancellation) has been resolved.
-   *
-   * @remarks If called before the provider mounts, the request is queued and this
-   * returns an already-resolved promise immediately — the caller can't observe the
-   * eventual outcome of a queued call, only that the request was accepted.
    */
   requestClosePanel(id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }): Promise<void> {
-    if (this._actions) return this._actions.requestClosePanel(id, options);
-    this._pendingCalls.push(a => { a.requestClosePanel(id, options); });
-    return Promise.resolve();
+    return this._actions.requestClosePanel(id, options);
   }
 
   /** Docks a panel to one of the workspace's outer edges. */
@@ -394,16 +306,16 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
 
   // ── Typed event bus ───────────────────────────────────────────────────────
 
-  publish<K extends keyof (TUserEvents & BuiltInPanelEvents)>(
+  publish<K extends keyof (TUserEvents & BuiltInEvents)>(
     event: K,
-    data: (TUserEvents & BuiltInPanelEvents)[K]
+    data: (TUserEvents & BuiltInEvents)[K]
   ): void {
     this._dispatch(a => a.publish(event as string, data));
   }
 
-  subscribe<K extends keyof (TUserEvents & BuiltInPanelEvents)>(
+  subscribe<K extends keyof (TUserEvents & BuiltInEvents)>(
     event: K,
-    callback: (data: (TUserEvents & BuiltInPanelEvents)[K]) => void
+    callback: (data: (TUserEvents & BuiltInEvents)[K]) => void
   ): () => void {
     return this._subscribeRaw(event as string, callback as (data: unknown) => void);
   }
@@ -413,7 +325,7 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   /** Subscribe to panel open events. Fires only for newly created panels. */
   onPanelOpen(callback: (id: string, component: string) => void): () => void {
     return this._subscribeRaw('panel:opened', data => {
-      const d = data as BuiltInPanelEvents['panel:opened'];
+      const d = data as BuiltInEvents['panel:opened'];
       callback(d.id, d.component);
     });
   }
@@ -421,36 +333,36 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   /** Subscribe to panel close events. */
   onPanelClose(callback: (id: string) => void): () => void {
     return this._subscribeRaw('panel:closed', data => {
-      callback((data as BuiltInPanelEvents['panel:closed']).id);
+      callback((data as BuiltInEvents['panel:closed']).id);
     });
   }
 
   /** Subscribe to panel minimize events. */
   onPanelMinimize(callback: (id: string) => void): () => void {
     return this._subscribeRaw('panel:minimized', data => {
-      callback((data as BuiltInPanelEvents['panel:minimized']).id);
+      callback((data as BuiltInEvents['panel:minimized']).id);
     });
   }
 
   /** Subscribe to panel restore events. */
   onPanelRestore(callback: (id: string) => void): () => void {
     return this._subscribeRaw('panel:restored', data => {
-      callback((data as BuiltInPanelEvents['panel:restored']).id);
+      callback((data as BuiltInEvents['panel:restored']).id);
     });
   }
 
-  /** Subscribe to the coalesced layout-change signal — see {@link BuiltInPanelEvents}'s
+  /** Subscribe to the coalesced layout-change signal — see {@link BuiltInEvents}'s
    * `'layout:changed'` doc for exactly what it covers (and doesn't). */
   onLayoutChanged(callback: () => void): () => void {
     return this._subscribeRaw('layout:changed', () => callback());
   }
 
   /** Subscribe to notification that a `saveLayout()` call excluded one or more panels because
-   * their current props weren't serializable — see {@link BuiltInPanelEvents}'s
+   * their current props weren't serializable — see {@link BuiltInEvents}'s
    * `'layout:panels-excluded'` doc. */
   onPanelsExcluded(callback: (panels: { id: string; component: string }[]) => void): () => void {
     return this._subscribeRaw('layout:panels-excluded', data => {
-      callback((data as BuiltInPanelEvents['layout:panels-excluded']).panels);
+      callback((data as BuiltInEvents['layout:panels-excluded']).panels);
     });
   }
 }

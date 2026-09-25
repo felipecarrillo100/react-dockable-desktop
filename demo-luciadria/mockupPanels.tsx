@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   type ContextMenuItem,
-  PanelRegistry,
-  useFormContainer,
-  useWindowManagerActions,
+  usePanelEvents,
+  useWorkspace,
   usePanelSize
 } from '../src/index';
+import { workspace } from './workspace';
 import PanelManagerForm from './PanelManagerForm';
 import { DirtyFormDemoPanel, DirtyEditorDemoPanel, ShowcaseControlCenter, CodeSnippetButton } from '../demo/mockupPanels';
 import { getReference } from '@luciad/ria/reference/ReferenceProvider.js';
@@ -258,8 +258,23 @@ export const ToolPanel: React.FC = () => (
 export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<RIAMap | null>(null);
-  const contract = useFormContainer();
-  const { focusPanel, showContextMenu } = useWindowManagerActions();
+  const ws = useWorkspace();
+
+  // TODO(rdd-7): review — these subscriptions used to be created inside the map-creation effect
+  // (only after the map was created); they are now registered at the top level. Both handlers
+  // are no-ops while mapRef.current is null.
+  const handleResize = useMemo(() => throttle((_width: number, _height: number) => {
+    if (mapRef.current) {
+      mapRef.current.resize();
+    }
+  }, 200, {
+    leading: true,
+    trailing: true
+  }), []);
+  usePanelEvents({
+    onResize: handleResize,
+    onMinimize: () => { mapRef.current?.invalidate(); },
+  });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -274,7 +289,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
 
       if (map) {
         map.onClick = () => {
-          focusPanel(panelId);
+          ws.focusPanel(panelId);
           return false;
         };
 
@@ -285,7 +300,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
               ? { separator: true as const }
               : { label: item.label, action: item.action }
           );
-          showContextMenu({ x: position[0], y: position[1], items });
+          ws.showContextMenu({ x: position[0], y: position[1], items });
         };
       }
 
@@ -311,23 +326,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
         };
       });
 
-      // Subscribe to the window resize emitter
-      const unsubscribeResize = contract.onResize?.(throttle((_width: number, _height: number) => {
-        if (mapRef.current) {
-          mapRef.current.resize();
-        }
-      }, 200, {
-        leading: true,
-        trailing: true
-      }));
-
-      const unsubscribeMinimize = contract.onMinimize?.(() => {
-        mapRef.current?.invalidate();
-      });
-
       return () => {
-        unsubscribeMinimize?.();
-        unsubscribeResize?.();
         if (mapRef.current) {
           mapRef.current.destroy();
           mapRef.current = null;
@@ -336,7 +335,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
     } catch (e) {
       console.error("Failed to initialize LuciadRIA Map in EPSG:4978:", e);
     }
-  }, [panelId, showContextMenu]);
+  }, [panelId, ws]);
 
   return (
     <div className="position-relative" style={{ overflow: 'hidden', width: '100%', height: "100%", backgroundColor: "orange" }}>
@@ -351,7 +350,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
 export const MainMap: React.FC<{ panelId: string }> = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<RIAMap | null>(null);
-  const { showContextMenu } = useWindowManagerActions();
+  const ws = useWorkspace();
   const panelSize = usePanelSize();
 
   useEffect(() => {
@@ -371,7 +370,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
             ? { separator: true as const }
             : { label: item.label, action: item.action }
         );
-        showContextMenu({ x: position[0], y: position[1], items });
+        ws.showContextMenu({ x: position[0], y: position[1], items });
       };
 
       addMapLayers(map, (layer) => {
@@ -405,7 +404,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
     } catch (e) {
       console.error("Failed to initialize MainMap in EPSG:4978:", e);
     }
-  }, [showContextMenu]);
+  }, [ws]);
 
   useEffect(() => {
     if (panelSize) mapRef.current?.resize();
@@ -423,7 +422,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
 
 // Register all panels
 export function registerDemoPanels(): void {
-  PanelRegistry.register('mainMap', MainMap, {
+  workspace.registry.register('mainMap', MainMap, {
     title: 'Main Map',
     initialTarget: 'docked',
     canClose: false,
@@ -431,22 +430,22 @@ export function registerDemoPanels(): void {
     canDrag: false,
     renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="mainMap" />
   });
-  PanelRegistry.register('editor', CodeEditor, { 
+  workspace.registry.register('editor', CodeEditor, { 
     title: 'Code Editor', 
     initialTarget: 'docked',
     renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="editor" />
   });
-  PanelRegistry.register('terminal', TerminalConsole, { title: 'Console Output', initialTarget: 'docked' });
-  PanelRegistry.register('preview', PreviewOutput, { title: 'Sandbox Widget', initialTarget: 'floating' });
-  PanelRegistry.register('help', HelpCenter, { title: 'Workspace Help', initialTarget: 'docked' });
-  PanelRegistry.register('showcaseControl', ShowcaseControlCenter, { 
+  workspace.registry.register('terminal', TerminalConsole, { title: 'Console Output', initialTarget: 'docked' });
+  workspace.registry.register('preview', PreviewOutput, { title: 'Sandbox Widget', initialTarget: 'floating' });
+  workspace.registry.register('help', HelpCenter, { title: 'Workspace Help', initialTarget: 'docked' });
+  workspace.registry.register('showcaseControl', ShowcaseControlCenter, { 
     title: 'Control Center', 
     initialTarget: 'docked',
     renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="showcaseControl" />
   });
-  PanelRegistry.register('luciadMap', LuciadMapPanel, { title: 'LuciadRIA Earth 3D', initialTarget: 'docked' });
-  PanelRegistry.register('layertree', LayerTree, { title: 'Layer tree', initialTarget: 'floating', favoritePosition: { x: 1000, y: 100, width: 300, height: 400 } });
-  PanelRegistry.register('timecontrol', TimeControl, {
+  workspace.registry.register('luciadMap', LuciadMapPanel, { title: 'LuciadRIA Earth 3D', initialTarget: 'docked' });
+  workspace.registry.register('layertree', LayerTree, { title: 'Layer tree', initialTarget: 'floating', favoritePosition: { x: 1000, y: 100, width: 300, height: 400 } });
+  workspace.registry.register('timecontrol', TimeControl, {
     title: 'Time Control bar',
     initialTarget: 'floating',
     favoritePosition: {
@@ -456,17 +455,17 @@ export function registerDemoPanels(): void {
       height: '100px'
     }
   });
-  PanelRegistry.register('overviewmap', OverviewMap, { title: 'Overview locator', initialTarget: 'floating', favoritePosition: { x: 80, y: 500, width: 220, height: 180 } });
-  PanelRegistry.register('table', TablePanel, { title: 'Attribute Table', initialTarget: 'docked' });
-  PanelRegistry.register('toolpanels', ToolPanel, { title: 'Toolbox Panel', initialTarget: 'docked' });
-  PanelRegistry.register('panelmanager', PanelManagerForm, { title: 'Panel Registry Form', initialTarget: 'floating', favoritePosition: { x: 400, y: 150, width: 500, height: 420 } });
-  PanelRegistry.register('dirtyForm', DirtyFormDemoPanel, { 
+  workspace.registry.register('overviewmap', OverviewMap, { title: 'Overview locator', initialTarget: 'floating', favoritePosition: { x: 80, y: 500, width: 220, height: 180 } });
+  workspace.registry.register('table', TablePanel, { title: 'Attribute Table', initialTarget: 'docked' });
+  workspace.registry.register('toolpanels', ToolPanel, { title: 'Toolbox Panel', initialTarget: 'docked' });
+  workspace.registry.register('panelmanager', PanelManagerForm, { title: 'Panel Registry Form', initialTarget: 'floating', favoritePosition: { x: 400, y: 150, width: 500, height: 420 } });
+  workspace.registry.register('dirtyForm', DirtyFormDemoPanel, { 
     title: 'Intercept Form', 
     initialTarget: 'floating', 
     favoritePosition: { x: 350, y: 150, width: 450, height: 420 },
     renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />
   });
-  PanelRegistry.register('dirtyEditor', DirtyEditorDemoPanel, { 
+  workspace.registry.register('dirtyEditor', DirtyEditorDemoPanel, { 
     title: 'Intercept Editor', 
     initialTarget: 'docked',
     renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="dirtyForm" />

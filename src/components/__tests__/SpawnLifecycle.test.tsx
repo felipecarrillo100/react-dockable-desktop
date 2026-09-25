@@ -3,12 +3,12 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { globalPanelRegistry } from '../PanelRegistry';
 
 const MockPanel: React.FC<{ panelId: string }> = () => <div />;
-PanelRegistry.register('map', MockPanel);
-PanelRegistry.register('help', MockPanel, { initialTarget: 'floating' });
-PanelRegistry.register('noclose', MockPanel, { canClose: false });
+globalPanelRegistry.register('map', MockPanel);
+globalPanelRegistry.register('help', MockPanel, { initialTarget: 'floating' });
+globalPanelRegistry.register('noclose', MockPanel, { canClose: false });
 
 let lastState: any = null;
 let lastActions: any = null;

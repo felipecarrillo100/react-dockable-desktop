@@ -5,7 +5,7 @@ import { usePredefinedMessages } from './WindowManagerContext';
 export type { DirtyStateOptions };
 
 /** Unique string identifier for panel/modal instances. */
-export type PanelInstanceId = string;
+export type OverlayId = string;
 
 /**
  * Descriptor object for localizable panel titles, supporting context translation systems.
@@ -59,9 +59,9 @@ export interface ModalOptions {
 /**
  * Represents a rendered instance of a panel or modal in the layout.
  */
-export interface PanelInstance {
+export interface OverlayInstance {
   /** Unique ID generated for this instance. */
-  id: PanelInstanceId;
+  id: OverlayId;
   /** React Component to mount inside the panel. */
   Component: ComponentType<any>;
   /** Property props passed to the Component. */
@@ -77,53 +77,53 @@ export interface PanelInstance {
 }
 
 /** Stores the active layout structures for floating overlays. */
-export interface PanelState {
+export interface OverlayState {
   /** The currently open left drawer panel instance, or null. */
-  leftPanel: PanelInstance | null;
+  leftPanel: OverlayInstance | null;
   /** The currently open right drawer panel instance, or null. */
-  rightPanel: PanelInstance | null;
+  rightPanel: OverlayInstance | null;
   /** Stack containing all active floating modal instances. */
-  modals: PanelInstance[];
+  modals: OverlayInstance[];
 }
 
 /** Exposes methods to trigger state actions on drawers and modals. */
 export interface PanelActions {
   /** Mounts a panel in the left-side container drawer. */
-  openLeftPanel: <P extends object>(Component: ComponentType<P>, props: P, options?: SidePanelOptions) => Promise<PanelInstanceId | null>;
+  openLeftPanel: <P extends object>(Component: ComponentType<P>, props: P, options?: SidePanelOptions) => Promise<OverlayId | null>;
   /** Mounts a panel in the right-side container drawer. */
-  openRightPanel: <P extends object>(Component: ComponentType<P>, props: P, options?: SidePanelOptions) => Promise<PanelInstanceId | null>;
+  openRightPanel: <P extends object>(Component: ComponentType<P>, props: P, options?: SidePanelOptions) => Promise<OverlayId | null>;
   /** Pushes a new modal component instance to the top of the stack. */
-  openModal: <P extends object>(Component: ComponentType<P>, props: P, options?: ModalOptions) => PanelInstanceId;
+  openModal: <P extends object>(Component: ComponentType<P>, props: P, options?: ModalOptions) => OverlayId;
   /** Closes an instance by ID. */
-  close: (id: PanelInstanceId) => void;
+  close: (id: OverlayId) => void;
   /** Closes all drawers and modals in a single action. */
   closeAll: () => void;
   /** Closes all open modals. */
   closeAllModals: () => void;
   /** Retrieves metadata for an active instance by ID. */
-  getInstance: (id: PanelInstanceId) => PanelInstance | undefined;
+  getInstance: (id: OverlayId) => OverlayInstance | undefined;
   /** Updates the props, configuration options, or dirty flag of an active panel. */
-  updateInstance: (id: PanelInstanceId, updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>) => void;
+  updateInstance: (id: OverlayId, updates: Partial<Pick<OverlayInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>) => void;
   /** Flags an instance as dirty (contains unsaved changes). */
-  setDirty: (id: PanelInstanceId, dirty: boolean, options?: DirtyStateOptions) => void;
+  setDirty: (id: OverlayId, dirty: boolean, options?: DirtyStateOptions) => void;
   /** Subscribes a custom close confirmation intercept handler. */
-  registerCloseHandler: (id: PanelInstanceId, handler: () => Promise<boolean>) => void;
+  registerCloseHandler: (id: OverlayId, handler: () => Promise<boolean>) => void;
   /** Unsubscribes close confirmation handler. */
-  unregisterCloseHandler: (id: PanelInstanceId) => void;
+  unregisterCloseHandler: (id: OverlayId) => void;
 }
 
 let idCounter = 0;
-const generateId = (): PanelInstanceId => `panel-${++idCounter}-${Date.now()}`;
+const generateId = (): OverlayId => `panel-${++idCounter}-${Date.now()}`;
 
-const closeHandlers = new Map<PanelInstanceId, () => Promise<boolean>>();
+const closeHandlers = new Map<OverlayId, () => Promise<boolean>>();
 
-const initialState: PanelState = {
+const initialState: OverlayState = {
   leftPanel: null,
   rightPanel: null,
   modals: [],
 };
 
-const PanelStateContext = createContext<PanelState | null>(null);
+const PanelStateContext = createContext<OverlayState | null>(null);
 const PanelActionsContext = createContext<PanelActions | null>(null);
 
 /**
@@ -131,7 +131,7 @@ const PanelActionsContext = createContext<PanelActions | null>(null);
  * for drawers (left/right) and active stacked modal overlays.
  */
 export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<PanelState>(initialState);
+  const [state, setState] = useState<OverlayState>(initialState);
   // A message descriptor, not a string: titles are formatted when rendered, so the default title
   // follows the app's formatter and `predefinedMessages` like every other label.
   const defaultModalTitle = usePredefinedMessages().modalTitle;
@@ -139,11 +139,11 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  const registerCloseHandler = useCallback((id: PanelInstanceId, handler: () => Promise<boolean>) => {
+  const registerCloseHandler = useCallback((id: OverlayId, handler: () => Promise<boolean>) => {
     closeHandlers.set(id, handler);
   }, []);
 
-  const unregisterCloseHandler = useCallback((id: PanelInstanceId) => {
+  const unregisterCloseHandler = useCallback((id: OverlayId) => {
     closeHandlers.delete(id);
   }, []);
 
@@ -152,7 +152,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       Component: ComponentType<P>,
       props: P,
       options: SidePanelOptions = {}
-    ): Promise<PanelInstanceId | null> => {
+    ): Promise<OverlayId | null> => {
       const currentPanel = stateRef.current.leftPanel;
       if (currentPanel) {
         const handler = closeHandlers.get(currentPanel.id);
@@ -163,7 +163,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
 
       const id = generateId();
-      const instance: PanelInstance = {
+      const instance: OverlayInstance = {
         id,
         Component: Component as ComponentType<any>,
         props: props as Record<string, any>,
@@ -181,7 +181,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       Component: ComponentType<P>,
       props: P,
       options: SidePanelOptions = {}
-    ): Promise<PanelInstanceId | null> => {
+    ): Promise<OverlayId | null> => {
       const currentPanel = stateRef.current.rightPanel;
       if (currentPanel) {
         const handler = closeHandlers.get(currentPanel.id);
@@ -192,7 +192,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
 
       const id = generateId();
-      const instance: PanelInstance = {
+      const instance: OverlayInstance = {
         id,
         Component: Component as ComponentType<any>,
         props: props as Record<string, any>,
@@ -210,7 +210,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       Component: ComponentType<P>,
       props: P,
       options: ModalOptions = {}
-    ): PanelInstanceId => {
+    ): OverlayId => {
       const id = generateId();
       const formTitle = (props as any).title;
       
@@ -219,7 +219,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         title: options.title || formTitle || defaultModalTitle,
       };
 
-      const instance: PanelInstance = {
+      const instance: OverlayInstance = {
         id,
         Component: Component as ComponentType<any>,
         props: props as Record<string, any>,
@@ -232,7 +232,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     [defaultModalTitle]
   );
 
-  const close = useCallback((id: PanelInstanceId) => {
+  const close = useCallback((id: OverlayId) => {
     setState(s => ({
       leftPanel: s.leftPanel?.id === id ? null : s.leftPanel,
       rightPanel: s.rightPanel?.id === id ? null : s.rightPanel,
@@ -249,7 +249,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, []);
 
   const getInstance = useCallback(
-    (id: PanelInstanceId): PanelInstance | undefined => {
+    (id: OverlayId): OverlayInstance | undefined => {
       if (state.leftPanel?.id === id) return state.leftPanel;
       if (state.rightPanel?.id === id) return state.rightPanel;
       return state.modals.find(m => m.id === id);
@@ -259,8 +259,8 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const updateInstance = useCallback(
     (
-      id: PanelInstanceId,
-      updates: Partial<Pick<PanelInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>
+      id: OverlayId,
+      updates: Partial<Pick<OverlayInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>
     ) => {
       setState(s => ({
         leftPanel: s.leftPanel?.id === id ? { ...s.leftPanel, ...updates } : s.leftPanel,
@@ -271,7 +271,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     []
   );
 
-  const setDirty = useCallback((id: PanelInstanceId, dirty: boolean, options?: DirtyStateOptions) => {
+  const setDirty = useCallback((id: OverlayId, dirty: boolean, options?: DirtyStateOptions) => {
     updateInstance(id, { dirty, dirtyOptions: options });
   }, [updateInstance]);
 
@@ -317,9 +317,9 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
  * React hook to retrieve the active floating/drawer panels state.
  * @throws Error if used outside of a {@link PanelProvider}.
  */
-export const usePanelState = (): PanelState => {
+export const usePanelState = (): OverlayState => {
   const ctx = useContext(PanelStateContext);
-  if (!ctx) throw new Error('usePanelState must be used within PanelProvider');
+  if (!ctx) throw new Error('useModals / useSidePanels must be used within <DockableDesktopProvider>');
   return ctx;
 };
 
@@ -329,6 +329,6 @@ export const usePanelState = (): PanelState => {
  */
 export const usePanelActions = (): PanelActions => {
   const ctx = useContext(PanelActionsContext);
-  if (!ctx) throw new Error('usePanelActions must be used within PanelProvider');
+  if (!ctx) throw new Error('useModals / useSidePanels must be used within <DockableDesktopProvider>');
   return ctx;
 };

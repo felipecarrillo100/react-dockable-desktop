@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useRef, useMemo, useCallback, useEffect, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useState, useRef, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useFormContainer } from './FormContainerContext';
-import { PanelRegistry, type PanelRegistryClass } from './PanelRegistry';
+import { globalPanelRegistry, type PanelRegistry } from './PanelRegistry';
 import type { WorkspaceClient } from '../WorkspaceClient';
 import { defaultPredefinedMessages } from './predefinedMessages';
-import type { PredefinedMessageKey } from './predefinedMessages';
-export type { PredefinedMessageKey } from './predefinedMessages';
+import type { MessageKey } from './predefinedMessages';
+export type { MessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 import type { DirtyStateOptions } from './dirtyOptions';
 export type { DirtyStateOptions };
@@ -14,7 +14,7 @@ import { isSerializable } from './serializable';
 /**
  * Structure representing localizable message descriptors used in context menus.
  */
-export interface ContextMenuPredefinedMessage {
+export interface MessageDescriptor {
   /** Translation dictionary key. */
   id: string;
   /** Fallback label text if translation key is missing. */
@@ -24,7 +24,7 @@ export interface ContextMenuPredefinedMessage {
 }
 
 /** Function type interface responsible for resolving localizable messages to flat strings. */
-export type MessageFormatter = (msg: ContextMenuPredefinedMessage) => string;
+export type MessageFormatter = (msg: MessageDescriptor) => string;
 
 /** Orientation modifier indicating split directions. */
 export type SplitOrientation = 'horizontal' | 'vertical';
@@ -115,8 +115,8 @@ export interface PanelInfo {
   /** Unique panel identifier. */
   id: string;
   /** Plain text label or localizable message descriptor. */
-  title: string | ContextMenuPredefinedMessage;
-  /** String matching the component registration ID in the {@link PanelRegistry}. */
+  title: string | MessageDescriptor;
+  /** String matching the component registration ID in the {@link globalPanelRegistry}. */
   component: string;
   /** Current workspace placement mode. */
   state: 'docked' | 'floating' | 'minimized';
@@ -132,7 +132,7 @@ export interface PanelInfo {
   dirtyOptions?: DirtyStateOptions;
   /** Custom per-instance data passed via `openPanel(id, component, { props })`. Unconstrained —
    *  any value is accepted, but only a value that passes {@link isSerializable} is actually
-   *  included in {@link WindowActions.saveLayout}'s output. See {@link PanelInfo.serializable}. */
+   *  included in {@link WorkspaceActions.saveLayout}'s output. See {@link PanelInfo.serializable}. */
   props?: Record<string, unknown>;
   /** Whether this panel's current `props` can round-trip through `saveLayout()`/`loadLayout()`.
    *  Computed automatically — `true` when no `props` were passed, or when they were and passed
@@ -142,16 +142,16 @@ export interface PanelInfo {
   serializable: boolean;
   /** Optional dedup key. If another open panel of the same `component` already has this exact
    *  key, `openPanel` focuses that existing panel instead of creating a new one — see
-   *  {@link WindowActions.openPanel}'s `dedupeKey` option and {@link WindowActions.findPanelId}. */
+   *  {@link WorkspaceActions.openPanel}'s `dedupeKey` option and {@link WorkspaceActions.findPanelId}. */
   dedupeKey?: string;
 }
 
 /**
- * Options accepted by {@link WindowActions.openPanel}.
+ * Options accepted by {@link WorkspaceActions.openPanel}.
  */
 export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
   /** Override the panel tab/window title. Accepts a plain string or an i18n message descriptor. */
-  title?: string | ContextMenuPredefinedMessage;
+  title?: string | MessageDescriptor;
   /** Initial placement: `'floating'`, `'docked'` (default when a grid exists), or `'tabbed'`. */
   initialTarget?: 'floating' | 'docked' | 'tabbed';
   /** Pin the new floating window to a workspace corner on creation. Has no effect when
@@ -173,7 +173,7 @@ export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
    * passed to *this* call are ignored in that case, the same way re-opening an already-open exact
    * `id` already focuses it instead of duplicating it. Use this when multiple call sites might
    * not agree on the same literal `id` for what is semantically the same entity (e.g. "the panel
-   * for the document at this path"). See also {@link WindowActions.findPanelId}.
+   * for the document at this path"). See also {@link WorkspaceActions.findPanelId}.
    */
   dedupeKey?: string;
 }
@@ -181,13 +181,13 @@ export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
 /**
  * Global window manager state tree representing grid nodes, windows, and panels.
  */
-export interface WindowState {
+export interface WorkspaceState {
   /** Root branch node representing the grid. */
   gridRoot: LayoutNode;
   /** Array of active floated windows. */
   floating: FloatingWindow[];
   /** Array of minimized panels waiting in the taskbar dock. */
-  minimized: { id: string; title: string | ContextMenuPredefinedMessage; component: string }[];
+  minimized: { id: string; title: string | MessageDescriptor; component: string }[];
   /** Map indexing panel metadata descriptors. */
   panels: Record<string, PanelInfo>;
   /** The ID of the panel tab currently being dragged. */
@@ -213,22 +213,20 @@ export interface WindowState {
 }
 
 /**
- * All layout mutation methods, event bus handles, and serialization methods
- * exposed by the `WindowManagerProvider`.
+ * Every layout action, the event bus, and layout serialization — the methods of a workspace.
  *
- * Obtain this object via {@link useWindowManagerActions} inside a component,
- * or via {@link WorkspaceClient} methods from outside the React tree.
+ * Call them on the workspace from `useWorkspace()` inside a component, or on the object
+ * `createWorkspace()` returned, from anywhere.
  *
- * @group Hooks
  * @example
  * ```tsx
- * function MyToolbar() {
- *   const actions = useWindowManagerActions();
- *   return <button onClick={() => actions.openPanel('map-1', 'map')}>Open Map</button>;
+ * function OpenMapButton() {
+ *   const { openPanel } = useWorkspace();
+ *   return <button onClick={() => openPanel('map-1', 'map')}>Open Map</button>;
  * }
  * ```
  */
-export interface WindowActions {
+export interface WorkspaceActions {
   /**
    * Opens a registered panel into the workspace.
    * If the panel ID is already open, the panel is focused instead of duplicated.
@@ -455,7 +453,7 @@ export interface WindowActions {
    * @param id - Panel instance ID.
    * @param title - New title string or localizable message descriptor.
    */
-  updatePanelTitle: (id: string, title: string | ContextMenuPredefinedMessage) => void;
+  updatePanelTitle: (id: string, title: string | MessageDescriptor) => void;
   /**
    * Closes a panel, first running any registered close guards.
    * If the panel is dirty, shows the built-in unsaved-changes confirmation dialog.
@@ -476,19 +474,19 @@ export interface WindowActions {
   setDirection: (dir: 'ltr' | 'rtl') => void;
   /**
    * Imperatively shows the workspace context menu at the given position.
-   * Delegates to the active {@link ContextMenuProvider}, so custom adapters
-   * and externally-placed providers are respected automatically.
+   * Uses the workspace's context menu (the `contextMenuAdapter` given to
+   * `<DockableDesktopProvider>`, or an enclosing `<RddContextMenu>`).
    */
   showContextMenu: (options: ShowContextMenuOptions) => void;
 }
 
 /**
- * Extension of {@link WindowActions} used internally by WindowManager components.
+ * Extension of {@link WorkspaceActions} used internally by WindowManager components.
  * `setActivePanel` is not part of the public API — it is a low-level tab-focus
  * primitive used exclusively within this library's rendering layer.
  * @internal
  */
-export interface InternalWindowActions extends WindowActions {
+export interface InternalWindowActions extends WorkspaceActions {
   /** @internal */
   setActivePanel: (id: string | null) => void;
   /** @internal */
@@ -499,20 +497,21 @@ export interface InternalWindowActions extends WindowActions {
   registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
 }
 
-export const WindowStateContext: React.Context<WindowState | null> = createContext<WindowState | null>(null);
+export const WindowStateContext: React.Context<WorkspaceState | null> = createContext<WorkspaceState | null>(null);
 const WindowActionsContext = createContext<InternalWindowActions | null>(null);
 const WindowI18nContext = createContext<MessageFormatter | null>(null);
 
 interface WindowStoreSyncContextValue {
-  getSnapshot: () => WindowState;
+  getSnapshot: () => WorkspaceState;
   subscribeToState: (callback: () => void) => () => void;
 }
-const WindowStoreSyncContext = createContext<WindowStoreSyncContextValue | null>(null);
+/** @internal Snapshot + subscribe for selector hooks (`useWorkspaceState(selector)`, `usePanel`). */
+export const WindowStoreSyncContext: React.Context<WindowStoreSyncContextValue | null> = createContext<WindowStoreSyncContextValue | null>(null);
 
-const WindowPredefinedMessagesContext = createContext<Record<PredefinedMessageKey, ContextMenuPredefinedMessage>>(defaultPredefinedMessages);
+const WindowPredefinedMessagesContext = createContext<Record<MessageKey, MessageDescriptor>>(defaultPredefinedMessages);
 
 /** Represents custom CSS classes injected into layout parts. */
-export interface StyleClasses {
+export interface HostClasses {
   modalClass?: string;
   modalBodyClass?: string;
   sidePanelClass?: string;
@@ -521,17 +520,17 @@ export interface StyleClasses {
   windowBodyClass?: string;
 }
 
-const StyleClassContext = createContext<StyleClasses>({});
+const StyleClassContext = createContext<HostClasses>({});
 
 /** Custom hook to read configured style class contexts. */
-export const useStyleClasses = (): StyleClasses => useContext(StyleClassContext);
+export const useStyleClasses = (): HostClasses => useContext(StyleClassContext);
 
-const RegistryContext = createContext<PanelRegistryClass>(PanelRegistry);
+const RegistryContext = createContext<PanelRegistry>(globalPanelRegistry);
 
 /**
- * React hook to read the scoped {@link PanelRegistryClass} for the current provider.
+ * React hook to read the scoped {@link PanelRegistry} for the current provider.
  * When the provider was created with a {@link WorkspaceClient}, this returns the client's
- * private registry. Otherwise it returns the global `PanelRegistry` singleton.
+ * private registry. Otherwise it returns the global `globalPanelRegistry` singleton.
  *
  * @group Hooks
  * @returns The panel registry instance in scope.
@@ -544,7 +543,7 @@ const RegistryContext = createContext<PanelRegistryClass>(PanelRegistry);
  * }
  * ```
  */
-export const useRegistry = (): PanelRegistryClass => useContext(RegistryContext);
+export const useRegistry = (): PanelRegistry => useContext(RegistryContext);
 
 // Event Bus class for pub-sub communication between panels
 class PanelEventBus {
@@ -582,7 +581,7 @@ export interface SerializedLayout {
    * The globally active panel at save time — the one the user was actually looking at.
    *
    * Omitted when nothing was active, and when the active panel didn't survive this snapshot's
-   * serializability pruning (see {@link WindowActions.saveLayout}) — so it never names a panel
+   * serializability pruning (see {@link WorkspaceActions.saveLayout}) — so it never names a panel
    * absent from this payload's own `panels`. Absent on every layout saved before this field
    * existed, in which case the restore derives it from `gridRoot`'s own per-leaf selection
    * instead; a present-but-no-longer-valid value falls back to the same derivation. `version`
@@ -592,7 +591,7 @@ export interface SerializedLayout {
   activePanelId?: string | null;
   gridRoot: LayoutNode;
   floating: FloatingWindow[];
-  minimized: { id: string; title: string | ContextMenuPredefinedMessage; component: string }[];
+  minimized: { id: string; title: string | MessageDescriptor; component: string }[];
   panels: Record<string, PanelInfo>;
 }
 
@@ -825,7 +824,7 @@ function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   return { gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels, activePanelId };
 }
 
-function parseInitialState(json: string | null): Pick<WindowState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
+function parseInitialState(json: string | null): Pick<WorkspaceState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
   if (json) {
     try {
       const payload = parseLayoutPayload(JSON.parse(json));
@@ -853,7 +852,7 @@ export interface WindowManagerProviderProps {
   formatMessage?: MessageFormatter;
   /** Override the built-in predefined UI strings (confirm button labels, close tooltips, etc.).
    *  Merge with or replace `defaultPredefinedMessages` to localise system strings. */
-  predefinedMessages?: Record<string, ContextMenuPredefinedMessage>;
+  predefinedMessages?: Record<string, MessageDescriptor>;
   /** Layout direction. `'rtl'` mirrors all controls, tab order, and drop zones.
    *  Can also be changed at runtime via `WorkspaceClient.setDirection()`. @default 'ltr' */
   dir?: 'ltr' | 'rtl';
@@ -878,86 +877,82 @@ export interface WindowManagerProviderProps {
   zIndexBase?: number;
 }
 
-export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
-  children,
-  client,
-  formatMessage,
-  predefinedMessages,
-  dir: dirProp,
-  modalClass,
-  modalBodyClass,
-  sidePanelClass,
-  sidePanelBodyClass,
-  windowClass,
-  windowBodyClass,
-  zIndexBase: zIndexBaseProp
-}) => {
-  // Scoped registry: client's own instance, or fall back to the global singleton for backward compat
-  const registry = useRef(client?.registry ?? PanelRegistry).current;
+/** Everything a workspace store needs from its configuration. */
+export interface WorkspaceCoreConfig {
+  registry: PanelRegistry;
+  initialState?: string | null;
+  dir?: 'ltr' | 'rtl';
+  zIndexBase?: number;
+  defaultSplitRatio?: number;
+  defaultEdgeSplitRatio?: number;
+}
 
-  // Effective config: client props take precedence over individual provider props
-  const effectiveFormatMessage = client?.config.formatMessage ?? formatMessage;
-  const effectivePredefinedMessages = client?.config.predefinedMessages ?? predefinedMessages;
-  const effectiveDir = client?.config.dir ?? dirProp;
-  const effectiveZIndexBase = client?.config.zIndexBase ?? zIndexBaseProp ?? 1000;
+/** @internal What a workspace store exposes: its actions, and a subscribable snapshot. */
+export interface WorkspaceCore {
+  actions: InternalWindowActions;
+  getSnapshot: () => WorkspaceState;
+  subscribeToState: (cb: () => void) => () => void;
+  /** Provider props fill in what the workspace's own config left unset (dir, zIndexBase). */
+  applyProviderDefaults: (defaults: { dir?: 'ltr' | 'rtl'; zIndexBase?: number }) => void;
+}
 
-  const [state, setState] = useState<WindowState>(() => {
-    const layout = parseInitialState(client?.initialState ?? null);
+/**
+ * @internal Builds a workspace store: the layout state, every action on it, and the event bus.
+ * It has no React dependency — it exists (and accepts calls) before any provider mounts, and a
+ * provider only subscribes to it. See {@link WorkspaceClient} for the public face.
+ */
+export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore {
+  const registry = config.registry;
+
+  const effectiveDir = config.dir;
+  const effectiveZIndexBase = config.zIndexBase ?? 1000;
+
+  let state: WorkspaceState = (() => {
+    const layout = parseInitialState(config.initialState ?? null);
     return {
       ...layout,
       draggedPanelId: null,
       dir: effectiveDir || 'ltr',
       isRtl: effectiveDir === 'rtl',
-      splitRatio: Math.min(0.9, Math.max(0.1, client?.config.defaultSplitRatio ?? 0.5)),
-      edgeSplitRatio: Math.min(0.9, Math.max(0.1, client?.config.defaultEdgeSplitRatio ?? 0.2)),
+      splitRatio: Math.min(0.9, Math.max(0.1, config.defaultSplitRatio ?? 0.5)),
+      edgeSplitRatio: Math.min(0.9, Math.max(0.1, config.defaultEdgeSplitRatio ?? 0.2)),
     };
-  });
+  })();
 
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  // The state lives here, outside React: actions apply immediately, before or after any provider
+  // mounts, and the provider reads it through useSyncExternalStore.
+  const listeners = new Set<() => void>();
+  const setState = (update: WorkspaceState | ((prev: WorkspaceState) => WorkspaceState)): void => {
+    const prev = state;
+    const next = typeof update === 'function' ? update(prev) : update;
+    if (next === prev) return;
+    state = next;
+    listeners.forEach(listener => listener());
+  };
+  // Read-only view kept under the old name, so every `stateRef.current` read sees live state.
+  const stateRef = { get current(): WorkspaceState { return state; } };
+  const getSnapshot = (): WorkspaceState => state;
+  const subscribeToState = (cb: () => void): (() => void) => {
+    listeners.add(cb);
+    return () => { listeners.delete(cb); };
+  };
 
-  const stateSubscribersRef = useRef<Set<() => void>>(new Set());
+  const closeGuardsRef: { current: Record<string, () => boolean | Promise<boolean>> } = { current: {} };
+  const stateProvidersRef: { current: Record<string, () => unknown> } = { current: {} };
 
-  useEffect(() => {
-    stateSubscribersRef.current.forEach(cb => cb());
-  }, [state]);
+  const eventBusRef = { current: new PanelEventBus() };
+  const maxZRef = { current: effectiveZIndexBase };
 
-  const getSnapshot = useCallback((): WindowState => stateRef.current, []);
-  const subscribeToState = useCallback((cb: () => void): (() => void) => {
-    stateSubscribersRef.current.add(cb);
-    return () => stateSubscribersRef.current.delete(cb);
-  }, []);
-
-  const closeGuardsRef = useRef<Record<string, () => boolean | Promise<boolean>>>({});
-  const stateProvidersRef = useRef<Record<string, () => unknown>>({});
-
-  const mergedMessages = useMemo(() => ({
-    ...defaultPredefinedMessages,
-    ...effectivePredefinedMessages
-  }), [effectivePredefinedMessages]);
-
-  const eventBusRef = useRef(new PanelEventBus());
-  const maxZRef = useRef(effectiveZIndexBase);
-
-  // Mirror the z-index base onto document.documentElement as a CSS variable so the
-  // library's portaled chrome (ContextMenu, Toast, Toolbar's flyout, ModalStackRenderer),
-  // which renders outside this provider's own DOM subtree, shifts in lockstep with
-  // maxZRef — same rationale as the data-workspace-skin mirroring in WindowManager.tsx.
-  useEffect(() => {
-    document.documentElement.style.setProperty('--rdd-z-base', String(effectiveZIndexBase));
-    return () => { document.documentElement.style.removeProperty('--rdd-z-base'); };
-  }, [effectiveZIndexBase]);
-
-  const subscribe = useCallback((event: string, callback: (data: any) => void) => {
+  const subscribe = (event: string, callback: (data: any) => void) => {
     return eventBusRef.current.subscribe(event, callback);
-  }, []);
+  };
 
-  const publish = useCallback((event: string, data: any) => {
+  const publish = (event: string, data: any) => {
     eventBusRef.current.publish(event, data);
-  }, []);
+  };
 
   // Helper: Find free cascading location for floating window
-  const getCascadedPosition = useCallback((
+  const getCascadedPosition = (
     fav: { x: number | string; y: number | string; width: number | string; height: number | string },
     currentFloating: FloatingWindow[]
   ) => {
@@ -1001,9 +996,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     y = Math.max(0, Math.min(y, viewH - 40));
 
     return { x, y, width, height };
-  }, []);
+  };
 
-  const focusPanel = useCallback((id: string) => {
+  const focusPanel = (id: string) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1042,7 +1037,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       if (prev.activePanelId === id) return prev; // no-op for minimized
       return { ...prev, activePanelId: id };
     });
-  }, []);
+  };
 
   // Recursive helpers to manipulate layout tree
   const removePanelFromTree = (node: LayoutNode, id: string): LayoutNode | null => {
@@ -1126,7 +1121,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   // maximize, and must not render the intermediate states.
 
   /** Brings a minimized panel back where it was: its old floating rect, or its old group. */
-  const applyRestore = (prev: WindowState, id: string, activate: boolean): WindowState => {
+  const applyRestore = (prev: WorkspaceState, id: string, activate: boolean): WorkspaceState => {
     const panel = prev.panels[id];
     if (!panel || panel.state !== 'minimized') return prev;
 
@@ -1139,7 +1134,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     const nextActive = activate ? id : prev.activePanelId;
     const entry = registry.get(panel.component);
 
-    const floatBack = (): WindowState => {
+    const floatBack = (): WorkspaceState => {
       maxZRef.current += 1;
       const favPos = panel.lastFloatingRect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
       const cascaded = getCascadedPosition(favPos, prev.floating);
@@ -1187,10 +1182,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   /** Turns a docked panel into a floating window. Refused for `canDrag: false` panels. */
   const applyFloat = (
-    prev: WindowState,
+    prev: WorkspaceState,
     id: string,
     { rect, anchor, activate = true }: { rect?: { x: number; y: number; width: number; height: number }; anchor?: FloatAnchor | null; activate?: boolean } = {},
-  ): WindowState => {
+  ): WorkspaceState => {
     const panel = prev.panels[id];
     if (!panel) return prev;
 
@@ -1204,7 +1199,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     maxZRef.current += 1;
     const cascaded = getCascadedPosition(favPos, otherWindows);
 
-    const next: WindowState = {
+    const next: WorkspaceState = {
       ...prev,
       gridRoot: cleanRoot || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null },
       floating: [...otherWindows, { ...cascaded, id, z: maxZRef.current, anchor: anchor ?? null }],
@@ -1217,7 +1212,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   };
 
   /** Docks a panel into `targetLeafId`, or the first group when that id is missing. */
-  const applyDock = (prev: WindowState, id: string, targetLeafId?: string, activate = true): WindowState => {
+  const applyDock = (prev: WorkspaceState, id: string, targetLeafId?: string, activate = true): WorkspaceState => {
     const panel = prev.panels[id];
     if (!panel) return prev;
 
@@ -1229,7 +1224,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     const requested = targetLeafId && hasLeaf(cleanRoot, targetLeafId) ? targetLeafId : undefined;
     const leafId = requested || findFirstLeafId(cleanRoot) || EMPTY_LEAF.id;
 
-    const next: WindowState = {
+    const next: WorkspaceState = {
       ...prev,
       gridRoot: addPanelToLeaf(cleanRoot, leafId, id),
       floating: nextFloating,
@@ -1241,7 +1236,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return { ...next, activePanelId: resolveActivePanelId(next, activate ? id : null) };
   };
 
-  const openPanel = useCallback(<P extends object = Record<string, unknown>>(id: string, component: string, options?: OpenPanelOptions<P>) => {
+  const openPanel = <P extends object = Record<string, unknown>>(id: string, component: string, options?: OpenPanelOptions<P>) => {
     // Dedup redirect: resolve to an already-open panel of the same component/dedupeKey, if any,
     // before anything else runs — the caller's own `id`/`props` are ignored for this call in
     // that case, the same way re-opening an already-open exact `id` already focuses it instead
@@ -1353,9 +1348,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     });
     if (isNew) eventBusRef.current.publish('panel:opened', { id: resolvedId, component });
     if (isNew || isRedirect) eventBusRef.current.publish('layout:changed', {});
-  }, [getCascadedPosition, focusPanel]);
+  };
 
-  const closePanel = useCallback((id: string) => {
+  const closePanel = (id: string) => {
     const exists = id in stateRef.current.panels;
     setState(prev => {
       const panel = prev.panels[id];
@@ -1396,25 +1391,25 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       eventBusRef.current.publish('panel:closed', { id });
       eventBusRef.current.publish('layout:changed', {});
     }
-  }, []);
+  };
 
-  const registerCloseGuard = useCallback((id: string, guard: () => boolean | Promise<boolean>) => {
+  const registerCloseGuard = (id: string, guard: () => boolean | Promise<boolean>) => {
     closeGuardsRef.current[id] = guard;
-  }, []);
+  };
 
-  const unregisterCloseGuard = useCallback((id: string) => {
+  const unregisterCloseGuard = (id: string) => {
     delete closeGuardsRef.current[id];
-  }, []);
+  };
 
-  const registerStateProvider = useCallback((id: string, provider: () => unknown) => {
+  const registerStateProvider = (id: string, provider: () => unknown) => {
     stateProvidersRef.current[id] = provider;
-  }, []);
+  };
 
-  const unregisterStateProvider = useCallback((id: string) => {
+  const unregisterStateProvider = (id: string) => {
     delete stateProvidersRef.current[id];
-  }, []);
+  };
 
-  const setPanelDirty = useCallback((id: string, dirty: boolean, options?: DirtyStateOptions) => {
+  const setPanelDirty = (id: string, dirty: boolean, options?: DirtyStateOptions) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1426,9 +1421,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         }
       };
     });
-  }, []);
+  };
 
-  const updatePanelTitle = useCallback((id: string, title: string | ContextMenuPredefinedMessage) => {
+  const updatePanelTitle = (id: string, title: string | MessageDescriptor) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1440,9 +1435,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         }
       };
     });
-  }, []);
+  };
 
-  const requestClosePanel = useCallback(async (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
+  const requestClosePanel = async (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
     if (options?.force) {
       closePanel(id);
       return;
@@ -1467,9 +1462,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }
 
     closePanel(id);
-  }, [closePanel]);
+  };
 
-  const minimizePanel = useCallback((id: string) => {
+  const minimizePanel = (id: string) => {
     const wasActive = stateRef.current.panels[id]?.state !== 'minimized' && id in stateRef.current.panels;
     setState(prev => {
       const panel = prev.panels[id];
@@ -1544,9 +1539,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       eventBusRef.current.publish('panel:minimized', { id });
       eventBusRef.current.publish('layout:changed', {});
     }
-  }, []);
+  };
 
-  const restorePanel = useCallback((id: string, options?: { focus?: boolean }) => {
+  const restorePanel = (id: string, options?: { focus?: boolean }) => {
     const wasMinimized = stateRef.current.panels[id]?.state === 'minimized';
     const shouldFocus = options?.focus !== false;
     setState(prev => applyRestore(prev, id, shouldFocus));
@@ -1554,20 +1549,20 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       eventBusRef.current.publish('panel:restored', { id });
       eventBusRef.current.publish('layout:changed', {});
     }
-  }, [getCascadedPosition]);
+  };
 
-  const floatPanel = useCallback((id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
+  const floatPanel = (id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
     const panel = stateRef.current.panels[id];
     const willFloat = !!panel && registry.get(panel.component)?.defaultOptions?.canDrag !== false;
     setState(prev => applyFloat(prev, id, { rect, anchor }));
     if (willFloat) eventBusRef.current.publish('layout:changed', {});
-  }, [getCascadedPosition]);
+  };
 
-  const dockPanel = useCallback((id: string, targetLeafId?: string) => {
+  const dockPanel = (id: string, targetLeafId?: string) => {
     const exists = id in stateRef.current.panels;
     setState(prev => applyDock(prev, id, targetLeafId));
     if (exists) eventBusRef.current.publish('layout:changed', {});
-  }, []);
+  };
 
   // Helper to split a layout leaf node into a branch (for drag split targets)
   const splitLeafInTree = (
@@ -1606,11 +1601,11 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     }
   };
 
-  const setDraggedPanelId = useCallback((id: string | null) => {
+  const setDraggedPanelId = (id: string | null) => {
     setState(prev => ({ ...prev, draggedPanelId: id }));
-  }, []);
+  };
 
-  const dockPanelToGroup = useCallback((id: string, targetLeafId: string, position: DropPosition) => {
+  const dockPanelToGroup = (id: string, targetLeafId: string, position: DropPosition) => {
     const before = stateRef.current;
     const willMove = id in before.panels
       && hasLeaf(before.gridRoot, targetLeafId)
@@ -1651,7 +1646,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         newRoot = splitLeafInTree(cleanRoot, targetLeafId, id, position, prev.splitRatio);
       }
 
-      const next: WindowState = {
+      const next: WorkspaceState = {
         ...prev,
         gridRoot: newRoot,
         floating: nextFloating,
@@ -1664,9 +1659,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       return { ...next, activePanelId: resolveActivePanelId(next, id) };
     });
     if (willMove) eventBusRef.current.publish('layout:changed', {});
-  }, []);
+  };
 
-  const dockPanelToWorkspaceEdge = useCallback((id: string, position: SplitDirection) => {
+  const dockPanelToWorkspaceEdge = (id: string, position: SplitDirection) => {
     const before = stateRef.current;
     const willMove = id in before.panels && removePanelFromTree(before.gridRoot, id) !== null;
     setState(prev => {
@@ -1701,7 +1696,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         children
       };
 
-      const next: WindowState = {
+      const next: WorkspaceState = {
         ...prev,
         gridRoot: newRoot,
         floating: nextFloating,
@@ -1714,9 +1709,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       return { ...next, activePanelId: resolveActivePanelId(next, id) };
     });
     if (willMove) eventBusRef.current.publish('layout:changed', {});
-  }, []);
+  };
 
-  const movePanelOrder = useCallback((panelId: string, targetLeafId: string, targetIndex: number) => {
+  const movePanelOrder = (panelId: string, targetLeafId: string, targetIndex: number) => {
     const before = stateRef.current;
     const willMove = panelId in before.panels
       && hasLeaf(before.gridRoot, targetLeafId)
@@ -1769,7 +1764,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       const newRoot = insertInLeaf(cleanRoot || EMPTY_LEAF);
       const nextFloating = prev.floating.filter(w => w.id !== panelId);
 
-      const next: WindowState = {
+      const next: WorkspaceState = {
         ...prev,
         gridRoot: newRoot,
         floating: nextFloating,
@@ -1782,9 +1777,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       return { ...next, activePanelId: resolveActivePanelId(next, panelId) };
     });
     if (willMove) eventBusRef.current.publish('layout:changed', {});
-  }, []);
+  };
 
-  const closeLeafGroup = useCallback(async (leafId: string, options?: { onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
+  const closeLeafGroup = async (leafId: string, options?: { onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
     const findLeaf = (node: LayoutNode): LayoutLeafNode | null => {
       if (node.type === 'leaf') return node.id === leafId ? node : null;
       for (const child of node.children) {
@@ -1830,16 +1825,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     setState(prev => {
       const current = findLeaf(prev.gridRoot);
       if (!current || current.panels.length > 0) return prev;
-      const next: WindowState = {
+      const next: WorkspaceState = {
         ...prev,
         gridRoot: removeLeafFromTree(prev.gridRoot) || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null }
       };
       return { ...next, activePanelId: resolveActivePanelId(next, null) };
     });
     eventBusRef.current.publish('layout:changed', {});
-  }, [requestClosePanel]);
+  };
 
-  const maximizePanel = useCallback((id: string) => {
+  const maximizePanel = (id: string) => {
     const panel = stateRef.current.panels[id];
     if (!panel) return;
 
@@ -1881,9 +1876,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       ...prev,
       floating: prev.floating.map(w => w.id === id ? { ...w, maximized: !w.maximized } : w)
     }));
-  }, [getCascadedPosition]);
+  };
 
-  const updateSplitSizes = useCallback((path: number[], sizes: number[]) => {
+  const updateSplitSizes = (path: number[], sizes: number[]) => {
     const updateInTree = (node: LayoutNode, depth: number): LayoutNode => {
       if (node.type === 'leaf') return node;
       if (depth === path.length) {
@@ -1898,16 +1893,16 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       ...prev,
       gridRoot: updateInTree(prev.gridRoot, 0)
     }));
-  }, []);
+  };
 
-  const updateFloatingPosition = useCallback((id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>) => {
+  const updateFloatingPosition = (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>) => {
     setState(prev => ({
       ...prev,
       floating: prev.floating.map(w => w.id === id ? { ...w, ...updates } : w)
     }));
-  }, []);
+  };
 
-  const saveLayout = useCallback(() => {
+  const saveLayout = () => {
     const currentPanels = stateRef.current.panels;
     const excludedIds: string[] = [];
     const includedPanels: Record<string, PanelInfo> = {};
@@ -1970,9 +1965,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       panels: includedPanels
     };
     return JSON.stringify(payload);
-  }, []);
+  };
 
-  const loadLayout = useCallback((layoutJson: string): boolean => {
+  const loadLayout = (layoutJson: string): boolean => {
     try {
       const payload = parseLayoutPayload(JSON.parse(layoutJson));
       if (!payload) return false;
@@ -1990,141 +1985,152 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
       console.error('Failed to parse layout configuration:', e);
       return false;
     }
-  }, []);
+  };
 
-  const setActivePanel = useCallback((id: string | null) => {
+  const setActivePanel = (id: string | null) => {
     setState(prev => {
       if (prev.activePanelId === id) return prev;
       return { ...prev, activePanelId: id };
     });
-  }, []);
+  };
 
-  const setDirection = useCallback((dir: 'ltr' | 'rtl') => {
+  const setDirection = (dir: 'ltr' | 'rtl') => {
     setState(prev => {
       if (prev.dir === dir) return prev;
       return { ...prev, dir, isRtl: dir === 'rtl' };
     });
-  }, []);
+  };
 
-  const isOpen = useCallback((id: string) => id in stateRef.current.panels, []);
+  const isOpen = (id: string) => id in stateRef.current.panels;
 
-  const getOpenPanelIds = useCallback(() => Object.keys(stateRef.current.panels), []);
+  const getOpenPanelIds = () => Object.keys(stateRef.current.panels);
 
-  const findPanelId = useCallback((component: string, dedupeKey: string): string | null => {
+  const findPanelId = (component: string, dedupeKey: string): string | null => {
     const match = Object.values(stateRef.current.panels).find(
       p => p.component === component && p.dedupeKey === dedupeKey
     );
     return match?.id ?? null;
-  }, []);
+  };
+
+  const customMenuGettersRef: { current: Map<string, () => ContextMenuItem[]> } = { current: new Map() };
+
+  const showContextMenuFnRef: { current: ((options: ShowContextMenuOptions) => void) | null } = { current: null };
+  const registerContextMenuFn = (fn: (options: ShowContextMenuOptions) => void) => {
+    showContextMenuFnRef.current = fn;
+    return () => { showContextMenuFnRef.current = null; };
+  };
+  const showContextMenu = (options: ShowContextMenuOptions) => {
+    showContextMenuFnRef.current?.(options);
+  };
+
+  const registerPanelContextMenu = (panelId: string, getItems: () => ContextMenuItem[]) => {
+    customMenuGettersRef.current.set(panelId, getItems);
+    return () => { customMenuGettersRef.current.delete(panelId); };
+  };
+
+  const getPanelContextMenuItems = (panelId: string): ContextMenuItem[] =>
+    customMenuGettersRef.current.get(panelId)?.() ?? [];
+
+  const actions: InternalWindowActions = {
+    openPanel,
+    closePanel,
+    minimizePanel,
+    restorePanel,
+    floatPanel,
+    dockPanel,
+    maximizePanel,
+    updateSplitSizes,
+    updateFloatingPosition,
+    focusPanel,
+    isOpen,
+    getOpenPanelIds,
+    findPanelId,
+    saveLayout,
+    loadLayout,
+    publish,
+    subscribe,
+    setDraggedPanelId,
+    dockPanelToGroup,
+    movePanelOrder,
+    closeLeafGroup,
+    registerCloseGuard,
+    unregisterCloseGuard,
+    registerStateProvider,
+    unregisterStateProvider,
+    setPanelDirty,
+    updatePanelTitle,
+    requestClosePanel,
+    dockPanelToWorkspaceEdge,
+    setActivePanel,
+    setDirection,
+    registerPanelContextMenu,
+    getPanelContextMenuItems,
+    showContextMenu,
+    registerContextMenuFn,
+  };
+
+  const applyProviderDefaults = (defaults: { dir?: 'ltr' | 'rtl'; zIndexBase?: number }): void => {
+    if (config.dir === undefined && defaults.dir) setDirection(defaults.dir);
+    if (config.zIndexBase === undefined && defaults.zIndexBase !== undefined && state.floating.length === 0) {
+      maxZRef.current = defaults.zIndexBase;
+    }
+  };
+
+  return { actions, getSnapshot, subscribeToState, applyProviderDefaults };
+}
+
+
+export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
+  children,
+  client,
+  formatMessage,
+  predefinedMessages,
+  dir: dirProp,
+  modalClass,
+  modalBodyClass,
+  sidePanelClass,
+  sidePanelBodyClass,
+  windowClass,
+  windowBodyClass,
+  zIndexBase: zIndexBaseProp
+}) => {
+  // The workspace store: the client's own, or one owned by this provider (then panels come from
+  // the global globalPanelRegistry, as before). The store is live before this mounts; nothing connects.
+  const [core] = useState<WorkspaceCore>(() => {
+    const c = client
+      ? client._core
+      : createWorkspaceCore({ registry: globalPanelRegistry, dir: dirProp, zIndexBase: zIndexBaseProp });
+    c.applyProviderDefaults({ dir: dirProp, zIndexBase: zIndexBaseProp });
+    return c;
+  });
+  const registry = client?.registry ?? globalPanelRegistry;
+  const state = useSyncExternalStore(core.subscribeToState, core.getSnapshot, core.getSnapshot);
+  const actions = core.actions;
+
+  // Effective config: client config takes precedence over individual provider props
+  const effectiveFormatMessage = client?.config.formatMessage ?? formatMessage;
+  const effectivePredefinedMessages = client?.config.predefinedMessages ?? predefinedMessages;
+  const effectiveDir = client?.config.dir ?? dirProp;
+  const effectiveZIndexBase = client?.config.zIndexBase ?? zIndexBaseProp ?? 1000;
+
+  const mergedMessages = useMemo(() => ({
+    ...defaultPredefinedMessages,
+    ...effectivePredefinedMessages
+  }), [effectivePredefinedMessages]);
+
+  // Mirror the z-index base onto document.documentElement as a CSS variable so the
+  // library's portaled chrome (ContextMenu, Toast, Toolbar's flyout, ModalStackRenderer),
+  // which renders outside this provider's own DOM subtree, shifts in lockstep with
+  // the floating windows' z counter.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--rdd-z-base', String(effectiveZIndexBase));
+    return () => { document.documentElement.style.removeProperty('--rdd-z-base'); };
+  }, [effectiveZIndexBase]);
 
   useEffect(() => {
-    if (effectiveDir) {
-      setState(prev => {
-        if (prev.dir === effectiveDir) return prev;
-        return { ...prev, dir: effectiveDir, isRtl: effectiveDir === 'rtl' };
-      });
-    }
-  }, [effectiveDir]);
+    if (effectiveDir) actions.setDirection(effectiveDir);
+  }, [effectiveDir, actions]);
 
-  const customMenuGettersRef = useRef<Map<string, () => ContextMenuItem[]>>(new Map());
-
-  const showContextMenuFnRef = useRef<((options: ShowContextMenuOptions) => void) | null>(null);
-  const registerContextMenuFn = useCallback(
-    (fn: (options: ShowContextMenuOptions) => void) => {
-      showContextMenuFnRef.current = fn;
-      return () => { showContextMenuFnRef.current = null; };
-    }, []
-  );
-  const showContextMenu = useCallback((options: ShowContextMenuOptions) => {
-    showContextMenuFnRef.current?.(options);
-  }, []);
-
-  const registerPanelContextMenu = useCallback(
-    (panelId: string, getItems: () => ContextMenuItem[]) => {
-      customMenuGettersRef.current.set(panelId, getItems);
-      return () => { customMenuGettersRef.current.delete(panelId); };
-    }, []
-  );
-
-  const getPanelContextMenuItems = useCallback(
-    (panelId: string): ContextMenuItem[] =>
-      customMenuGettersRef.current.get(panelId)?.() ?? [],
-    []
-  );
-
-  const actions = useMemo<InternalWindowActions>(() => ({
-    openPanel,
-    closePanel,
-    minimizePanel,
-    restorePanel,
-    floatPanel,
-    dockPanel,
-    maximizePanel,
-    updateSplitSizes,
-    updateFloatingPosition,
-    focusPanel,
-    isOpen,
-    getOpenPanelIds,
-    findPanelId,
-    saveLayout,
-    loadLayout,
-    publish,
-    subscribe,
-    setDraggedPanelId,
-    dockPanelToGroup,
-    movePanelOrder,
-    closeLeafGroup,
-    registerCloseGuard,
-    unregisterCloseGuard,
-    registerStateProvider,
-    unregisterStateProvider,
-    setPanelDirty,
-    updatePanelTitle,
-    requestClosePanel,
-    dockPanelToWorkspaceEdge,
-    setActivePanel,
-    setDirection,
-    registerPanelContextMenu,
-    getPanelContextMenuItems,
-    showContextMenu,
-    registerContextMenuFn,
-  }), [
-    openPanel,
-    closePanel,
-    minimizePanel,
-    restorePanel,
-    floatPanel,
-    dockPanel,
-    maximizePanel,
-    updateSplitSizes,
-    updateFloatingPosition,
-    focusPanel,
-    isOpen,
-    getOpenPanelIds,
-    findPanelId,
-    saveLayout,
-    loadLayout,
-    publish,
-    subscribe,
-    setDraggedPanelId,
-    dockPanelToGroup,
-    movePanelOrder,
-    closeLeafGroup,
-    registerCloseGuard,
-    unregisterCloseGuard,
-    registerStateProvider,
-    unregisterStateProvider,
-    setPanelDirty,
-    updatePanelTitle,
-    requestClosePanel,
-    dockPanelToWorkspaceEdge,
-    setActivePanel,
-    setDirection,
-    registerPanelContextMenu,
-    getPanelContextMenuItems,
-    showContextMenu,
-    registerContextMenuFn,
-  ]);
 
   const defaultFormatMessage: MessageFormatter = (msg) => {
     let text = msg.defaultMessage || msg.id;
@@ -2164,16 +2170,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 
   }, []);
 
-  useEffect(() => {
-    if (client) {
-      client._connect(actions);
-      return () => { client._disconnect(); };
-    }
-  }, [client, actions]);
-
   const syncContextValue = useMemo<WindowStoreSyncContextValue>(
-    () => ({ getSnapshot, subscribeToState }),
-    [getSnapshot, subscribeToState]
+    () => ({ getSnapshot: core.getSnapshot, subscribeToState: core.subscribeToState }),
+    [core]
   );
 
   return (
@@ -2196,31 +2195,29 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 };
 
 /**
- * React hook to subscribe to the live {@link WindowState} inside a component.
- * The component re-renders whenever the state changes.
+ * The live workspace state. The component re-renders whenever it changes — or, given a selector,
+ * only when the selected value changes.
  *
- * For imperative reads without a subscription, use {@link WorkspaceClient} methods
- * like `isOpen()` and `getOpenPanelIds()` instead.
+ * For reads without a subscription, call the workspace's `isOpen()` or `getOpenPanelIds()`.
  *
- * @group Hooks
- * @returns The current workspace state tree.
- * @throws Error if used outside of a {@link WindowManagerProvider}.
+ * @returns The current workspace state, or the selector's result.
+ * @throws Error if used outside `<DockableDesktopProvider>`.
  * @example
  * ```tsx
- * function PanelList() {
- *   const { panels } = useWindowManagerState();
- *   return <ul>{Object.keys(panels).map(id => <li key={id}>{id}</li>)}</ul>;
+ * function PanelCount() {
+ *   const count = useWorkspaceState(s => Object.keys(s.panels).length);
+ *   return <span>{count} open</span>;
  * }
  * ```
  */
 const noopSubscribe = (_cb: () => void): (() => void) => () => {};
 
-export function useWindowManagerState(): WindowState;
-export function useWindowManagerState<T>(selector: (state: WindowState) => T): T;
-export function useWindowManagerState<T>(selector?: (state: WindowState) => T): WindowState | T {
+export function useWindowManagerState(): WorkspaceState;
+export function useWindowManagerState<T>(selector: (state: WorkspaceState) => T): T;
+export function useWindowManagerState<T>(selector?: (state: WorkspaceState) => T): WorkspaceState | T {
   const stateCtx = useContext(WindowStateContext);
   const syncCtx = useContext(WindowStoreSyncContext);
-  const selectorRef = useRef<((state: WindowState) => T) | undefined>(selector);
+  const selectorRef = useRef<((state: WorkspaceState) => T) | undefined>(selector);
   selectorRef.current = selector;
 
   const syncResult = useSyncExternalStore(
@@ -2235,14 +2232,14 @@ export function useWindowManagerState<T>(selector?: (state: WindowState) => T): 
     }
   );
 
-  if (!stateCtx) throw new Error('useWindowManagerState must be used within WindowManagerProvider');
+  if (!stateCtx) throw new Error('useWorkspaceState must be used within <DockableDesktopProvider>');
   if (!selector) return stateCtx;
   return syncResult;
 }
 
 /**
  * React hook to retrieve all layout mutation actions.
- * Returns the public {@link WindowActions} interface.
+ * Returns the public {@link WorkspaceActions} interface.
  *
  * @group Hooks
  * @returns The full set of workspace mutation methods.
@@ -2257,9 +2254,9 @@ export function useWindowManagerState<T>(selector?: (state: WindowState) => T): 
  * }
  * ```
  */
-export const useWindowManagerActions = (): WindowActions => {
+export const useWindowManagerActions = (): WorkspaceActions => {
   const ctx = useContext(WindowActionsContext);
-  if (!ctx) throw new Error('useWindowManagerActions must be used within WindowManagerProvider');
+  if (!ctx) throw new Error('useWorkspace must be used within <DockableDesktopProvider>');
   return ctx;
 };
 
@@ -2269,7 +2266,7 @@ export const useWindowManagerActions = (): WindowActions => {
  */
 export const useWindowManagerActionsInternal = (): InternalWindowActions => {
   const ctx = useContext(WindowActionsContext);
-  if (!ctx) throw new Error('useWindowManagerActionsInternal must be used within WindowManagerProvider');
+  if (!ctx) throw new Error('react-dockable-desktop components must be used within <DockableDesktopProvider>');
   return ctx;
 };
 
@@ -2293,7 +2290,7 @@ export const useFormatMessage = (): MessageFormatter => {
  * Helper to resolve dynamic label strings or localizable descriptor objects into text.
  */
 export const formatLabel = (
-  label: string | ContextMenuPredefinedMessage | undefined,
+  label: string | MessageDescriptor | undefined,
   formatter: MessageFormatter
 ): string => {
   if (!label) return '';
@@ -2304,7 +2301,7 @@ export const formatLabel = (
 /**
  * React hook providing pub-sub helper methods for inter-panel event messaging.
  */
-export const usePanelContext = (): Pick<WindowActions, 'publish' | 'subscribe'> => {
+export const usePanelContext = (): Pick<WorkspaceActions, 'publish' | 'subscribe'> => {
   const { publish, subscribe } = useWindowManagerActions();
   return { publish, subscribe };
 };
@@ -2312,7 +2309,7 @@ export const usePanelContext = (): Pick<WindowActions, 'publish' | 'subscribe'> 
 /**
  * React hook to fetch the localizable predefined message map catalog.
  */
-export const usePredefinedMessages = (): Record<PredefinedMessageKey, ContextMenuPredefinedMessage> => {
+export const usePredefinedMessages = (): Record<MessageKey, MessageDescriptor> => {
   return useContext(WindowPredefinedMessagesContext);
 };
 
@@ -2337,7 +2334,7 @@ export const usePanelId = (): string => useFormContainer().instanceId;
 /**
  * React hook for injecting custom context menu items into a panel's context menu from inside the panel component.
  * Items are dynamic — the array is re-read each time the menu opens, so state-driven changes (enable/disable, add/remove) work automatically.
- * The hook reads the panel ID internally via {@link usePanelId} — no prop needed.
+ * The hook knows which panel it is in — no id needed.
  *
  * @param items - Array of `ContextMenuItem` entries (simple items, separators, submenus).
  * @example

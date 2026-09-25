@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.0] — 2026-09-25
+
+A clean break: the public API takes the names the Vue and Angular ports of this library use, the workspace becomes a store that is live before anything mounts, and the stylesheet stops styling the host page. Nothing is deprecated first — every old name is gone, so the TypeScript compiler finds every call site. **Migration guide: [docs-site/guide/migration.md](docs-site/guide/migration.md#v6-x-→-v7-0-0)** — written so it can be applied by an automated agent in one pass; this release was accepted by having an agent migrate the four demo apps and a fixture app with the guide alone.
+
+### Breaking
+- **React 18 or later.** The peer range said 16.8; the library already relied on React 18 APIs.
+- **`createWorkspace()` replaces `new WorkspaceClient()`.** The workspace is a store that exists on its own: calls made before a `<DockableDesktopProvider>` mounts apply immediately (the queue and `_connect()` are gone). `<DockableDesktopProvider workspace={…}>` replaces `client={…}`; `messages` replaces `predefinedMessages`, in the workspace config and on the provider.
+- **Components carry an `Rdd` prefix**, so they can't collide with a UI kit's own `Toolbar`, `Sidebar` or `ContextMenu`: `RddDesktop`, `RddSidebar`, `RddSecondarySidebar`, `RddToolbar`, `RddModals`, `RddToasts`, `RddConfirm`, `RddPanelOverlay`, `RddPanelToolbar`, `RddToolbarButton`/`Toggle`/`Search`/`Separator`/`Item`/`Spacer`/`Center`, `RddFloatingWidget` (the widget inside a panel — "window" now means only the workspace's floating windows).
+- **Merged components:** `RddSidePanels side="left" | "right"` replaces `SidePanelRenderer`, `LeftPanelRenderer` and `RightPanelRenderer`; `RddContextMenu` replaces `ContextMenuProvider` and the standalone `ContextMenu`.
+- **One provider.** `DockableDesktopProvider` is the only one exported; `WindowManagerProvider`, `PanelProvider`, `ToolbarProvider`, `PanelContributionProvider` and `ContextMenuProvider` are internal.
+- **Hooks:** `useWorkspace()` (actions, registry, events — stable) and `useWorkspaceState(selector)` replace `useWindowManagerActions`, `useWindowManagerState`, `useRegistry` and `usePanelContext`. `usePanel()` replaces `useFormContainer()` and `usePanelId()`; its lifecycle subscriptions become hooks — `usePanelEvents({…})`, `useBeforeClose(guard)`, `useSaveState(fn)` — that clean up by themselves. `useModals()` and `useSidePanels()` replace `usePanelActions()` / `usePanelState()`. Renamed: `useContextMenu`, `useActiveContribution`, `useFloatingWidgets`, `useMessages`, `useHostClasses`, `sectionToTab`, `defaultMessages`. `usePanelFloatingWindow` is removed (a `useState` does the same).
+- **The global `PanelRegistry` singleton is removed.** `PanelRegistry` is now the class; register panels through `createWorkspace({ panels })` or `workspace.registry`.
+- **Types renamed** to match: `Workspace`, `WorkspaceConfig`, `WorkspaceState`, `WorkspaceActions`, `BuiltInEvents`, `PanelHandle`, `OverlayInstance`, `OverlayState`, `OverlayId`, `MessageKey`, `MessageDescriptor`, `HostClasses`, `ManagedWidget`, `FloatingWidgetsApi`, the `Rdd*Props` types and more. `PanelState` now means a panel's own state (`'docked' | 'floating' | 'minimized'`).
+- **CSS:** the 36 remaining unprefixed custom properties are `--rdd-*` (`--sidebar-bg` → `--rdd-sidebar-bg`, …); the skin attribute is `data-rdd-skin` (was `data-workspace-skin`). **The stylesheet no longer styles `html`, `body` and `#root`** — it used to fix them to 100% height with `overflow: hidden`, which stopped any host page from scrolling. A full-window app adds the new `.rdd-fill-viewport` class to its wrapper (or keeps the old rule in its own CSS); a development warning names the fix when the workspace outgrows the window.
+
+### Unchanged
+Every workspace action (`openPanel`, `dockPanelToGroup`, `closeLeafGroup`, …), every domain type (`LayoutNode`, `PanelInfo`, `ToolbarItem`, …), `toast()`, every CSS class name, and the saved-layout format — layouts saved by 6.x load unchanged.
+
+### Tests
+- `api-surface.json` pins every runtime and type export; `ApiSurface.test.ts` fails on any unplanned change.
+- `tests/migration-fixture` — a 6.x app migrated with the guide alone — keeps type-checking and passing its own test against the current API.
+
 ## [6.4.0] — 2026-09-25
 
 Keyboard and screen-reader access, right-to-left layouts that follow the pointer, and the browser state a panel used to lose when it moved — the remaining defects from the Vue and Angular ports' reports. No API is removed or renamed; a few things are visible and listed under **Upgrade notes**.
@@ -439,7 +461,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.4.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.0...HEAD
+[7.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.4.0...v7.0.0
 [6.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.2...v6.4.0
 [6.3.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.1...v6.3.2
 [6.3.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.0...v6.3.1

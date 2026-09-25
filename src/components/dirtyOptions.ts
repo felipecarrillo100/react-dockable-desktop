@@ -3,7 +3,7 @@
  * @description Type definitions for customizing automatic close warning overlays.
  */
 
-import type { ContextMenuPredefinedMessage } from './WindowManagerContext';
+import type { MessageDescriptor } from './WindowManagerContext';
 
 /**
  * Represents custom configuration options applied to the automatic unsaved changes modal.
@@ -13,13 +13,13 @@ export interface DirtyStateOptions {
    * Custom header title text or localizable message descriptor.
    * Replaces the default "Unsaved Changes" title.
    */
-  title?: string | ContextMenuPredefinedMessage;
+  title?: string | MessageDescriptor;
 
   /**
    * Custom warning explanation text or localizable message descriptor.
    * Replaces the standard default message body templates.
    */
-  message?: string | ContextMenuPredefinedMessage;
+  message?: string | MessageDescriptor;
 
   /**
    * Optional custom alert notification banner text.

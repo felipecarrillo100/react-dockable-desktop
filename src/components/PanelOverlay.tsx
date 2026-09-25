@@ -95,10 +95,9 @@ const ANCHORS: readonly FloatAnchor[] = ['top-left', 'top-right', 'bottom-left',
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 /**
- * Configuration for a window spawned imperatively via `usePanelFloatingWindowManager().open()`.
- * @see usePanelFloatingWindowManager
+ * Configuration for a widget spawned imperatively via `useFloatingWidgets().open()`.
  */
-export interface ManagedWindowConfig {
+export interface ManagedWidget {
   /**
    * Text shown in the window's header bar. Accepts a plain string or an i18n message descriptor.
    *
@@ -136,7 +135,7 @@ const PanelToolbarContext = createContext<PanelToolbarCtx | null>(null);
 
 interface PanelManagerCtx {
   managedWindowIds: string[];
-  openManaged(id: string, config: ManagedWindowConfig): void;
+  openManaged(id: string, config: ManagedWidget): void;
   closeManaged(id: string): void;
   closeAllManaged(): void;
 }
@@ -188,7 +187,7 @@ function getHoveredZone(container: HTMLElement, clientX: number, clientY: number
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
 
 /** Props for `<PanelOverlayRoot>`. */
-export interface PanelOverlayRootProps {
+export interface RddPanelOverlayProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -196,18 +195,18 @@ export interface PanelOverlayRootProps {
 
 /**
  * Context provider and layout root for the Panel Overlay system. Wrap your panel content
- * with this to enable `PanelToolbar`, `PanelFloatingWindow`, and `usePanelFloatingWindowManager`.
+ * with this to enable `RddPanelToolbar`, `RddFloatingWidget`, and `useFloatingWidgets`.
  * @example
  * function MyPanel() {
  *   return (
- *     <PanelOverlayRoot style={{ position: 'relative', width: '100%', height: '100%' }}>
- *       <PanelToolbar position="top">...</PanelToolbar>
- *       <div className="panel-body">content</div>
- *     </PanelOverlayRoot>
+ *     <RddPanelOverlay style={{ position: 'relative', width: '100%', height: '100%' }}>
+ *       <RddPanelToolbar position="top">...</RddPanelToolbar>
+ *       <div className="my-panel-body">content</div>
+ *     </RddPanelOverlay>
  *   );
  * }
  */
-export function PanelOverlayRoot({ children, className, style }: PanelOverlayRootProps): React.ReactElement {
+export function PanelOverlayRoot({ children, className, style }: RddPanelOverlayProps): React.ReactElement {
   const [toolbarSizes, setToolbarSizes] = useState<Partial<Record<ToolbarPosition, number>>>({});
   const [zOrders, setZOrders] = useState<Record<string, number>>({});
   const [stacks, setStacks] = useState<Record<FloatAnchor, string[]>>({
@@ -217,7 +216,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoveredZone, setHoveredZone] = useState<FloatAnchor | null>(null);
   const [topId, setTopId] = useState<string | null>(null);
-  const [managedWindows, setManagedWindows] = useState<Map<string, ManagedWindowConfig>>(() => new Map());
+  const [managedWindows, setManagedWindows] = useState<Map<string, ManagedWidget>>(() => new Map());
   const zCounterRef = useRef(100);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -271,7 +270,7 @@ export function PanelOverlayRoot({ children, className, style }: PanelOverlayRoo
     });
   }, []);
 
-  const openManaged = useCallback((id: string, config: ManagedWindowConfig): void => {
+  const openManaged = useCallback((id: string, config: ManagedWidget): void => {
     setManagedWindows(prev => {
       const next = new Map(prev);
       next.set(id, config);
@@ -386,7 +385,7 @@ export type ToolbarVariant = 'transparent' | 'frosted' | 'solid';
 export type ButtonVariant = 'ghost' | 'soft' | 'outlined' | 'filled';
 
 /** Props for `<PanelToolbar>`. */
-export interface PanelToolbarProps {
+export interface RddPanelToolbarProps {
   /** Edge of the panel overlay to attach to. @see ToolbarPosition */
   position: ToolbarPosition;
   /** Background style of the toolbar strip. @default 'transparent' */
@@ -401,16 +400,16 @@ export interface PanelToolbarProps {
 }
 
 /**
- * Toolbar strip that attaches to any edge of a `PanelOverlayRoot`.
+ * Toolbar strip that attaches to any edge of an `RddPanelOverlay`.
  * Left/right toolbars inset automatically to avoid overlapping top/bottom toolbars.
  * RTL layouts are detected and handled automatically.
  * @example
- * <PanelToolbar position="top" variant="frosted">
- *   <ToolbarButton icon={<SaveIcon />} title="Save" onClick={save} />
- *   <ToolbarToggle icon={<GridIcon />} title="Grid" active={grid} onToggle={() => setGrid(v => !v)} />
- * </PanelToolbar>
+ * <RddPanelToolbar position="top" variant="frosted">
+ *   <RddToolbarButton icon={<SaveIcon />} title="Save" onClick={save} />
+ *   <RddToolbarToggle icon={<GridIcon />} title="Grid" active={grid} onToggle={() => setGrid(v => !v)} />
+ * </RddPanelToolbar>
  */
-export function PanelToolbar({ position, variant = 'transparent', buttonVariant = 'ghost', buttonSize, style, className, children }: PanelToolbarProps): React.ReactElement {
+export function PanelToolbar({ position, variant = 'transparent', buttonVariant = 'ghost', buttonSize, style, className, children }: RddPanelToolbarProps): React.ReactElement {
   const ctx = useContext(PanelToolbarContext);
   const ref = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -484,7 +483,7 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
 // ─── ToolbarButton ────────────────────────────────────────────────────────────
 
 /** Props for `<ToolbarButton>`. */
-export interface ToolbarButtonProps {
+export interface RddToolbarButtonProps {
   /** Button icon — typically a small SVG component. */
   icon: React.ReactNode;
   /** Click handler. */
@@ -497,7 +496,7 @@ export interface ToolbarButtonProps {
 }
 
 /** Icon button for use inside a `PanelToolbar`. */
-export function ToolbarButton({ icon, onClick, disabled, title, variant }: ToolbarButtonProps): React.ReactElement {
+export function ToolbarButton({ icon, onClick, disabled, title, variant }: RddToolbarButtonProps): React.ReactElement {
   return (
     <button
       type="button"
@@ -516,7 +515,7 @@ export function ToolbarButton({ icon, onClick, disabled, title, variant }: Toolb
 // ─── ToolbarToggle ────────────────────────────────────────────────────────────
 
 /** Props for `<ToolbarToggle>`. */
-export interface ToolbarToggleProps {
+export interface RddToolbarToggleProps {
   /** Button icon — typically a small SVG component. */
   icon: React.ReactNode;
   /** Whether the toggle is in the active/pressed state. Sets `aria-pressed` automatically. */
@@ -531,7 +530,7 @@ export interface ToolbarToggleProps {
 }
 
 /** Two-state icon toggle button for use inside a `PanelToolbar`. Sets `aria-pressed` automatically. */
-export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant }: ToolbarToggleProps): React.ReactElement {
+export function ToolbarToggle({ icon, active, onToggle, disabled, title, variant }: RddToolbarToggleProps): React.ReactElement {
   return (
     <button
       type="button"
@@ -578,7 +577,7 @@ export function ToolbarCenter({ children }: { children: React.ReactNode }): Reac
 
 // ─── ToolbarSearchInput ───────────────────────────────────────────────────────
 
-/** A single result item returned by `ToolbarSearchInputProps.onSearch`. */
+/** A single result item returned by `RddToolbarSearchProps.onSearch`. */
 export interface SearchResult {
   /** Unique identifier for this result — passed to `onSelect`. */
   id: string;
@@ -593,7 +592,7 @@ export interface SearchResult {
 }
 
 /** Props for `<ToolbarSearchInput>`. */
-export interface ToolbarSearchInputProps {
+export interface RddToolbarSearchProps {
   /** Placeholder text shown in the expanded input field. @default the `searchPlaceholder` message ('Search…') */
   placeholder?: string;
   /**
@@ -617,7 +616,7 @@ export interface ToolbarSearchInputProps {
  *   onSelect={result => workspace.focusLayer(result.id)}
  * />
  */
-export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: ToolbarSearchInputProps): React.ReactElement {
+export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolbarSearchProps): React.ReactElement {
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const searchLabel = formatLabel(messages.search, formatMessage);
@@ -774,7 +773,7 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: ToolbarS
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
 /** Props for `<PanelFloatingWindow>`. */
-export interface PanelFloatingWindowProps {
+export interface RddFloatingWidgetProps {
   /** Unique identifier within the panel overlay. Used for z-order and stack tracking. */
   id: string;
   /** Text shown in the window's header bar. Accepts a plain string or an i18n message descriptor. */
@@ -800,7 +799,7 @@ export interface PanelFloatingWindowProps {
   defaultStretch?: Stretch;
   /**
    * Controlled stretch state. When provided — **including as `null`** — the caller is the single
-   * source of truth: gestures report through {@link PanelFloatingWindowProps.onPlacementChange}
+   * source of truth: gestures report through {@link RddFloatingWidgetProps.onPlacementChange}
    * instead of updating internally, and the caller must echo the new value back. Omit entirely
    * (`undefined`) for uncontrolled behaviour, matching `ToolbarToggleItem.active` and
    * `Sidebar.activeTabId`.
@@ -824,40 +823,40 @@ export interface PanelFloatingWindowProps {
 }
 
 /**
- * Declarative floating window anchored inside a `PanelOverlayRoot`.
+ * A floating widget inside a panel — anchored within an `RddPanelOverlay`.
  *
  * Docks to any corner, drags free of it, and drops back onto one. Windows sharing a corner stack
  * along the block axis with animated offsets. An axis can also **span the panel** instead of
  * carrying a fixed size, so the window tracks the panel as it resizes — see
- * {@link PanelFloatingWindowProps.defaultStretch} and {@link Stretch}.
+ * {@link RddFloatingWidgetProps.defaultStretch} and {@link Stretch}.
  *
  * Resize handles follow what is actually movable: a free-floating window is pinned by nothing and
  * offers all eight, while a docked one offers only its free edges — plus both ends of any spanning
  * axis, either of which releases it.
  *
  * @example
- * const info = usePanelFloatingWindow();
- * <PanelFloatingWindow
+ * const [infoOpen, setInfoOpen] = useState(false);
+ * <RddFloatingWidget
  *   id="layer-info" title="Layer Info"
- *   open={info.isOpen} onClose={info.close}
+ *   open={infoOpen} onClose={() => setInfoOpen(false)}
  *   defaultAnchor="top-right" defaultWidth={300} defaultHeight={200}
  * >
  *   <LayerInfoContent />
- * </PanelFloatingWindow>
+ * </RddFloatingWidget>
  *
  * @example
  * // A full-width status strip along the bottom, tracking the panel's width.
  * // defaultHeight still applies; defaultWidth is what the inline axis returns to if released.
- * <PanelFloatingWindow
+ * <RddFloatingWidget
  *   id="timeline" title="Timeline"
  *   open onClose={close}
  *   defaultAnchor="bottom-left" defaultStretch="width"
  *   defaultWidth={240} defaultHeight={120}
  * >
  *   <TimelineContent />
- * </PanelFloatingWindow>
+ * </RddFloatingWidget>
  */
-export function PanelFloatingWindow(props: PanelFloatingWindowProps): React.ReactElement | null {
+export function PanelFloatingWindow(props: RddFloatingWidgetProps): React.ReactElement | null {
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
   return <FloatingWindowBody key={props.id} ctx={ctx} {...props} />;
@@ -865,7 +864,7 @@ export function PanelFloatingWindow(props: PanelFloatingWindowProps): React.Reac
 
 // ─── Internal: FloatingWindowBody ─────────────────────────────────────────────
 
-interface FloatingWindowBodyProps extends PanelFloatingWindowProps {
+interface FloatingWindowBodyProps extends RddFloatingWidgetProps {
   ctx: PanelOverlayCtx | null;
 }
 
@@ -1446,12 +1445,11 @@ export function usePanelFloatingWindow(): UsePanelFloatingWindowReturn {
 const EMPTY_IDS: string[] = [];
 
 /**
- * Imperative handle returned by `usePanelFloatingWindowManager`.
- * @see usePanelFloatingWindowManager
+ * What `useFloatingWidgets()` returns.
  */
-export interface PanelFloatingWindowManagerHandle {
+export interface FloatingWidgetsApi {
   /** Spawn or reconfigure a named window. Safe to call with an already-open ID to update config. */
-  open(id: string, config: ManagedWindowConfig): void;
+  open(id: string, config: ManagedWidget): void;
   /** Close a named window by ID. No-op if the window is not open. */
   close(id: string): void;
   /** Close all managed windows. */
@@ -1464,25 +1462,25 @@ export interface PanelFloatingWindowManagerHandle {
 
 /**
  * Imperative hook for spawning N named floating windows at runtime from data or event handlers.
- * All windows share z-ordering, drag, and corner-docking infrastructure of the `PanelOverlayRoot`,
- * and accept the same placement options — including {@link ManagedWindowConfig.stretch} to span an
+ * All widgets share z-ordering, drag, and corner-docking infrastructure of the `RddPanelOverlay`,
+ * and accept the same placement options — including {@link ManagedWidget.stretch} to span an
  * axis of the panel.
  *
- * Must be called inside a **descendant** of `PanelOverlayRoot`, not in the component that renders the root.
- * @returns A stable `PanelFloatingWindowManagerHandle`.
+ * Must be called inside a **descendant** of `RddPanelOverlay`, not in the component that renders it.
+ * @returns A stable `FloatingWidgetsApi`.
  * @example
- * const manager = usePanelFloatingWindowManager();
+ * const manager = useFloatingWidgets();
  * manager.open('feature-42', { title: 'Feature 42', content: <FeatureDetail id={42} />, anchor: 'top-right' });
  *
  * // A full-width strip along the bottom edge:
  * manager.open('timeline', { title: 'Timeline', content: <Timeline />, anchor: 'bottom-left', stretch: 'width', height: 120 });
  */
-export function usePanelFloatingWindowManager(): PanelFloatingWindowManagerHandle {
+export function usePanelFloatingWindowManager(): FloatingWidgetsApi {
   const ctx = useContext(PanelManagerContext);
   const ids = ctx?.managedWindowIds ?? EMPTY_IDS;
 
   return useMemo(() => ({
-    open: (id: string, config: ManagedWindowConfig) => ctx?.openManaged(id, config),
+    open: (id: string, config: ManagedWidget) => ctx?.openManaged(id, config),
     close: (id: string) => ctx?.closeManaged(id),
     closeAll: () => ctx?.closeAllManaged(),
     isOpen: (id: string) => ids.includes(id),

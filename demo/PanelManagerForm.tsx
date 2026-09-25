@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { useWindowManagerActions, useWindowManagerState, PanelRegistry, type PanelTitle } from '../src/index';
+import { useWorkspace, useWorkspaceState, type PanelTitle } from '../src/index';
 
 export const PanelManagerForm: React.FC = () => {
-  const state = useWindowManagerState();
-  const { openPanel, closePanel, minimizePanel, restorePanel, focusPanel } = useWindowManagerActions();
+  const state = useWorkspaceState();
+  const ws = useWorkspace();
+  const { registry } = ws;
   const [search, setSearch] = useState('');
 
-  const registeredIds = PanelRegistry.getRegisteredIds();
+  const registeredIds = registry.getRegisteredIds();
 
   // Combine registered components and dynamically opened panels
   const allPanelItems = registeredIds.map(id => {
-    const registryEntry = PanelRegistry.get(id);
+    const registryEntry = registry.get(id);
     const activeInstance = Object.values(state.panels).find(p => p.component === id);
     return {
       componentId: id,
@@ -56,7 +57,7 @@ export const PanelManagerForm: React.FC = () => {
         {filtered.map(item => {
           const isOpened = !!item.instance;
           const isMinimized = item.instance?.state === 'minimized';
-          const registryEntry = PanelRegistry.get(item.componentId);
+          const registryEntry = registry.get(item.componentId);
           const options = registryEntry?.defaultOptions;
 
           return (
@@ -70,9 +71,9 @@ export const PanelManagerForm: React.FC = () => {
                 onClick={() => {
                   if (isOpened) {
                     if (isMinimized) {
-                      restorePanel(item.instance!.id);
+                      ws.restorePanel(item.instance!.id);
                     }
-                    focusPanel(item.instance!.id);
+                    ws.focusPanel(item.instance!.id);
                   }
                 }}
                 style={{ cursor: isOpened ? 'pointer' : 'default' }}
@@ -91,7 +92,7 @@ export const PanelManagerForm: React.FC = () => {
                     {isMinimized ? (
                       <button 
                         type="button" 
-                        onClick={() => restorePanel(item.instance!.id)}
+                        onClick={() => ws.restorePanel(item.instance!.id)}
                         className="btn btn-sm btn-outline-success font-monospace py-0 px-2"
                         style={{ fontSize: '0.7rem' }}
                       >
@@ -101,7 +102,7 @@ export const PanelManagerForm: React.FC = () => {
                       options?.canMinimize !== false && (
                         <button 
                           type="button" 
-                          onClick={() => minimizePanel(item.instance!.id)}
+                          onClick={() => ws.minimizePanel(item.instance!.id)}
                           className="btn btn-sm btn-outline-warning font-monospace py-0 px-2"
                           style={{ fontSize: '0.7rem' }}
                         >
@@ -112,7 +113,7 @@ export const PanelManagerForm: React.FC = () => {
                     {options?.canClose !== false && (
                       <button 
                         type="button" 
-                        onClick={() => closePanel(item.instance!.id)}
+                        onClick={() => ws.closePanel(item.instance!.id)}
                         className="btn btn-sm btn-outline-danger font-monospace py-0 px-2"
                         style={{ fontSize: '0.7rem' }}
                       >
@@ -123,7 +124,7 @@ export const PanelManagerForm: React.FC = () => {
                 ) : (
                   <button 
                     type="button" 
-                    onClick={() => openPanel(item.componentId, item.componentId)}
+                    onClick={() => ws.openPanel(item.componentId, item.componentId)}
                     className="btn btn-sm btn-outline-info font-monospace py-0 px-2"
                     style={{ fontSize: '0.7rem' }}
                   >

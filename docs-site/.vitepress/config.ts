@@ -17,7 +17,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
       {
-        text: 'v6.4.0',
+        text: 'v7.0.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md' },
           { text: 'Migration Guide', link: '/guide/migration' },
@@ -38,7 +38,7 @@ export default defineConfig({
         {
           text: 'Core Concepts',
           items: [
-            { text: 'WorkspaceClient', link: '/guide/workspace-client' },
+            { text: 'Workspace', link: '/guide/workspace-client' },
             { text: 'Panel Registry', link: '/guide/panel-registry' },
             { text: 'Layout System', link: '/guide/layout' },
           ],

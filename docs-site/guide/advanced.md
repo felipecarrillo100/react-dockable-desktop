@@ -2,7 +2,7 @@
 
 ## Pre-loading a layout with a specific initial tree
 
-Use `WorkspaceClient.initialState` to define a precise default layout rather than relying on drag-and-drop configuration by the user. The value is the same JSON produced by `saveLayout()`.
+Use the `initialState` option of `createWorkspace()` to define a precise default layout rather than relying on drag-and-drop configuration by the user. The value is the same JSON produced by `saveLayout()`.
 
 ```ts
 const DEFAULT_LAYOUT = JSON.stringify({
@@ -37,7 +37,7 @@ const DEFAULT_LAYOUT = JSON.stringify({
   },
 });
 
-const client = new WorkspaceClient({
+const workspace = createWorkspace({
   panels: {
     map:     { component: MapPanel },
     props:   { component: PropertiesPanel },
@@ -47,7 +47,7 @@ const client = new WorkspaceClient({
 });
 ```
 
-The `initialState` is read **once at construction time** — it is not reactive.
+The `initialState` is read **once, when the workspace is created** — it is not reactive.
 
 ## Zero-unmount DOM preservation
 
@@ -60,16 +60,13 @@ Browser state moves with the DOM too (since 6.4.0). A hidden subtree normally lo
 If you need to react to visibility, use the lifecycle hooks:
 
 ```ts
-import { useFormContainer } from 'react-dockable-desktop';
+import { usePanelEvents } from 'react-dockable-desktop';
 
 function MyPanel() {
-  const { onRestore, onMinimize } = useFormContainer();
-
-  useEffect(() => {
-    const unsubRestore  = onRestore(() => { /* panel became visible */ });
-    const unsubMinimize = onMinimize(() => { /* panel was hidden */ });
-    return () => { unsubRestore(); unsubMinimize(); };
-  }, []);
+  usePanelEvents({
+    onRestore:  () => { /* panel became visible */ },
+    onMinimize: () => { /* panel was hidden */ },
+  });
 }
 ```
 
@@ -78,7 +75,7 @@ function MyPanel() {
 Inject React nodes into a panel's tab header:
 
 ```ts
-const client = new WorkspaceClient({
+const workspace = createWorkspace({
   panels: {
     chart: {
       component: ChartPanel,
@@ -140,29 +137,29 @@ For a resize handle that grows/shrinks a box in up to 8 directions instead of a 
 
 See the dedicated [RTL Support →](./rtl) guide for the full wiring pattern, what flips automatically, macOS skin behaviour, and the `isElementRtl` utility.
 
-In short: pass `dir="rtl"` to `DockableDesktopProvider` **and** set `document.documentElement.dir = 'rtl'` so portals (ContextMenu, toolbar flyout, Toast) that render into `document.body` also pick up the RTL direction via CSS inheritance.
+In short: pass `dir="rtl"` to `DockableDesktopProvider` **and** set `document.documentElement.dir = 'rtl'` so portals (context menu, toolbar flyout, toasts) that render into `document.body` also pick up the RTL direction via CSS inheritance.
 
 ## Multiple providers on one page
 
-Each `WorkspaceClient` instance has its own scoped `PanelRegistryClass`. Multiple providers can coexist on the same page without panel key conflicts:
+Each workspace has its own `PanelRegistry`. Multiple providers can coexist on the same page without panel key conflicts:
 
 ```tsx
-const wsA = new WorkspaceClient({ panels: { map: { component: MapA } } });
-const wsB = new WorkspaceClient({ panels: { map: { component: MapB } } });
+const wsA = createWorkspace({ panels: { map: { component: MapA } } });
+const wsB = createWorkspace({ panels: { map: { component: MapB } } });
 
 <div>
-  <WindowManagerProvider client={wsA}><WindowManager /></WindowManagerProvider>
-  <WindowManagerProvider client={wsB}><WindowManager /></WindowManagerProvider>
+  <DockableDesktopProvider workspace={wsA}><RddDesktop /></DockableDesktopProvider>
+  <DockableDesktopProvider workspace={wsB}><RddDesktop /></DockableDesktopProvider>
 </div>
 ```
 
-## DockableDesktopProvider, state selectors, lifecycle callbacks, `usePanelId()`
+## Provider, state selectors, panel hooks
 
-These v3 features are documented in the dedicated guides:
+These are documented in the dedicated guides:
 
-- [Panel Lifecycle & Forms →](./forms-and-panels) — `usePanelId()`, `useFormContainer()`, lifecycle hooks
+- [Panel Lifecycle & Forms →](./forms-and-panels) — `usePanel()`, `useBeforeClose()`, `useSaveState()`, `usePanelEvents()`
 - [Event Bus & Communication →](./event-bus) — `onPanelOpen/Close/Minimize/Restore`, typed events, state subscriptions
-- [WorkspaceClient →](./workspace-client) — `DockableDesktopProvider`, `useWindowManagerState` selectors, CSS class overrides
+- [Workspace →](./workspace-client) — `createWorkspace()`, `useWorkspace()`, `DockableDesktopProvider`, `useWorkspaceState` selectors, CSS class overrides
 
 ## Keyboard and screen readers
 
@@ -177,24 +174,31 @@ The chrome follows the WAI-ARIA Authoring Practices patterns (since 6.4.0):
 
 ## Server rendering (Next.js, Remix)
 
-The chrome renders on the server: `renderToString` of `<DockableDesktopProvider>`, `<WindowManager>`, `<Sidebar>`, `<Toolbar>` and the overlay hosts works without a DOM, and hydrates without a mismatch. `<ToastContainer>` renders nothing until it is mounted on the client, and `useColorScheme()` reports `'dark'` on the server, switching to the page's real scheme once hydrated.
+The chrome renders on the server: `renderToString` of `<DockableDesktopProvider>`, `<RddDesktop>`, `<RddSidebar>`, `<RddToolbar>` and the overlay hosts works without a DOM, and hydrates without a mismatch. `<RddToasts>` renders nothing until it is mounted on the client, and `useColorScheme()` reports `'dark'` on the server, switching to the page's real scheme once hydrated.
 
 Panel content is a different matter: it is your code, and anything that touches `window` or `document` while rendering (a map engine, an editor) must only render on the client. In Next.js, mark the file that renders the workspace `'use client'`, and load DOM-bound panels with `dynamic(() => import('./MapPanel'), { ssr: false })`.
 
 ## i18n / custom messages
 
-Pass a `formatMessage` function to translate all built-in strings:
+Pass a `formatMessage` function to translate all built-in strings. On `DockableDesktopProvider` it can change from render to render, so it follows the current locale; create the workspace once, outside the component:
 
-```ts
+```tsx
 import { useIntl } from 'react-intl';
+
+const workspace = createWorkspace({ panels: { ... } });
 
 function App() {
   const intl = useIntl();
-  const client = useMemo(() => new WorkspaceClient({
-    panels: { ... },
-    formatMessage: (msg) => intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values),
-  }), [intl]);
 
-  return <WindowManagerProvider client={client}>...</WindowManagerProvider>;
+  return (
+    <DockableDesktopProvider
+      workspace={workspace}
+      formatMessage={(msg) => intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage }, msg.values)}
+    >
+      ...
+    </DockableDesktopProvider>
+  );
 }
 ```
+
+A `formatMessage` passed to `createWorkspace()` instead takes precedence over the provider's. To change the built-in texts themselves, pass `messages` — a partial override of `defaultMessages` — to either one. Inside React, `useMessages()` returns the effective table and `useFormatMessage()` the formatter.

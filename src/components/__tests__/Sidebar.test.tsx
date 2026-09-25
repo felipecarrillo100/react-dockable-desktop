@@ -372,7 +372,7 @@ describe('SB15: useSidebar() outside Sidebar throws', () => {
         root = createRoot(container);
         root.render(<Probe />);
       });
-    }).toThrow('useSidebar must be used within Sidebar');
+    }).toThrow('useSidebar must be used within <RddSidebar>');
     errorSpy.mockRestore();
   });
 });
@@ -391,7 +391,7 @@ describe('SB16: useSidebarTab() outside Sidebar throws', () => {
         root = createRoot(container);
         root.render(<Probe />);
       });
-    }).toThrow('useSidebarTab must be used within a Sidebar tab renderContent tree');
+    }).toThrow('useSidebarTab must be used within an RddSidebar tab\'s renderContent');
     errorSpy.mockRestore();
   });
 });
@@ -1470,7 +1470,7 @@ describe('SB44: SecondarySidebar with no primary Sidebar ancestor throws', () =>
         root = createRoot(container);
         root.render(<SecondarySidebar tabs={[makeTab('a')]}>content</SecondarySidebar>);
       });
-    }).toThrow('SecondarySidebar must be rendered inside a primary Sidebar\'s children');
+    }).toThrow('RddSecondarySidebar must be rendered inside a primary RddSidebar\'s children');
     errorSpy.mockRestore();
   });
 });
@@ -1491,7 +1491,7 @@ describe('SB45: SecondarySidebar nested inside another SecondarySidebar throws',
           </Sidebar>
         );
       });
-    }).toThrow('SecondarySidebar cannot be nested inside another SecondarySidebar');
+    }).toThrow('RddSecondarySidebar cannot be nested inside another RddSecondarySidebar');
     errorSpy.mockRestore();
   });
 });

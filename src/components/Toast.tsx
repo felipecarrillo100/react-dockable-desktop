@@ -46,11 +46,11 @@ export interface ResolvedToastOptions {
 }
 
 /**
- * Props for `<ToastContainer>`. Mount one instance at your app root alongside `ModalStackRenderer`.
+ * Props for `<RddToasts>`. Mount one instance at your app root, alongside `<RddModals>`.
  * @example
- * <ToastContainer position="top-right" progressBar />
+ * <RddToasts position="top-right" progressBar />
  */
-export interface ToastContainerProps {
+export interface RddToastsProps {
   /** Where notifications appear in the viewport. @default 'top-right' */
   position?:        ToastPosition;
   /** Maximum number of notifications shown simultaneously. Extras are queued. @default 3 */
@@ -91,7 +91,7 @@ export interface ToastPromiseMessages<T> {
  * Strategy interface for replacing the built-in toast renderer with an external library.
  * Pass an instance via `<ToastContainer adapter={...} />` to redirect all `toast.*` calls
  * without changing any call sites in your application.
- * @see ToastContainerProps.adapter
+ * @see RddToastsProps.adapter
  */
 export interface ToastAdapter {
   /** Called when a new notification is requested. */
@@ -452,7 +452,7 @@ export function ToastContainer({
   progressBar     = false,
   width           = 320,
   adapter,
-}: ToastContainerProps): React.ReactElement | null {
+}: RddToastsProps): React.ReactElement | null {
   const [toasts, setToasts] = useState<ActiveToast[]>([]);
   // Both hooks work without a provider (English defaults), so a ToastContainer mounted outside
   // the workspace still renders.

@@ -5,7 +5,7 @@ import { act } from 'react';
 import { WindowManagerProvider, useWindowManagerActions, useWindowManagerState } from '../WindowManagerContext';
 import { PanelProvider, usePanelState, usePanelActions } from '../PanelProviderContext';
 import { useFormContainer, usePanelSize } from '../FormContainerContext';
-import { PanelRegistry } from '../PanelRegistry';
+import { globalPanelRegistry } from '../PanelRegistry';
 import WindowManager from '../WindowManager';
 import ModalStackRenderer from '../ModalStackRenderer';
 import ConfirmationForm from '../../forms/ConfirmationForm';
@@ -38,7 +38,7 @@ const TestLifecycleChild: React.FC<{ panelId: string }> = ({ panelId }) => {
   );
 };
 
-PanelRegistry.register('testLifecycle', TestLifecycleChild);
+globalPanelRegistry.register('testLifecycle', TestLifecycleChild);
 
 // Panel that exposes FormContainerContract via buttons so tests can drive it
 const TestFormChild: React.FC<{ panelId: string }> = ({ panelId }) => {
@@ -63,7 +63,7 @@ const TestFormChild: React.FC<{ panelId: string }> = ({ panelId }) => {
   );
 };
 
-PanelRegistry.register('testForm', TestFormChild);
+globalPanelRegistry.register('testForm', TestFormChild);
 
 // Panel that registers a pull-based state provider via useFormContainer(), driven by buttons
 // so tests can mutate its "current state" and confirm saveLayout() pulls it fresh each time.
@@ -93,7 +93,7 @@ const TestStateProviderChild: React.FC<{ panelId: string }> = ({ panelId }) => {
   );
 };
 
-PanelRegistry.register('testStateProvider', TestStateProviderChild);
+globalPanelRegistry.register('testStateProvider', TestStateProviderChild);
 
 // Panel that renders a custom prop, to verify openPanel's `props` option is actually spread
 // onto the component alongside `panelId`.
@@ -101,7 +101,7 @@ const TestPropsChild: React.FC<{ panelId: string; label?: string }> = ({ panelId
   <div id={`props-child-${panelId}`}>{label ?? 'no-label'}</div>
 );
 
-PanelRegistry.register('testProps', TestPropsChild);
+globalPanelRegistry.register('testProps', TestPropsChild);
 
 let testActions: any = null;
 let testState: any = null;

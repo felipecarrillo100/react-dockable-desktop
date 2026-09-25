@@ -4,16 +4,16 @@
 
 ```ts
 // Docked (default) — goes into the first available leaf group
-client.openPanel('my-map', 'map', { title: 'Satellite View' });
+workspace.openPanel('my-map', 'map', { title: 'Satellite View' });
 
 // Forced docked — explicit
-client.openPanel('my-map', 'map', { initialTarget: 'docked' });
+workspace.openPanel('my-map', 'map', { initialTarget: 'docked' });
 
 // Floating — opens as a resizable window
-client.openPanel('settings', 'settings', { initialTarget: 'floating' });
+workspace.openPanel('settings', 'settings', { initialTarget: 'floating' });
 
 // Tabbed alongside an existing panel
-client.openPanel('log-2', 'logs', { initialTarget: 'tabbed' });
+workspace.openPanel('log-2', 'logs', { initialTarget: 'tabbed' });
 ```
 
 If the panel ID is already open, `openPanel` focuses it instead of creating a duplicate.
@@ -21,7 +21,7 @@ If the panel ID is already open, `openPanel` focuses it instead of creating a du
 ## Activating / focusing panels
 
 ```ts
-client.focusPanel('my-map');
+workspace.focusPanel('my-map');
 // For floating: raises z-index so the window appears on top.
 // For docked: selects the tab within its leaf group.
 ```
@@ -29,41 +29,41 @@ client.focusPanel('my-map');
 ## Querying open panels
 
 ```ts
-if (!client.isOpen('my-map')) {
-  client.openPanel('my-map', 'map');
+if (!workspace.isOpen('my-map')) {
+  workspace.openPanel('my-map', 'map');
 }
 
-const openIds = client.getOpenPanelIds();
+const openIds = workspace.getOpenPanelIds();
 // → ['my-map', 'settings', 'log-2']
 ```
 
 ## Floating window operations
 
 ```ts
-client.floatPanel('my-map');                  // detach from grid
-client.floatPanel('my-map', { x: 100, y: 60, width: 800, height: 600 });
+workspace.floatPanel('my-map');                  // detach from grid
+workspace.floatPanel('my-map', { x: 100, y: 60, width: 800, height: 600 });
 
-client.maximizePanel('my-map');               // fill the workspace
-client.dockPanel('my-map');                   // return to grid
-client.dockPanel('my-map', 'left-leaf');      // dock to specific group
+workspace.maximizePanel('my-map');               // fill the workspace
+workspace.dockPanel('my-map');                   // return to grid
+workspace.dockPanel('my-map', 'left-leaf');      // dock to specific group
 ```
 
 ## Minimizing
 
 ```ts
-client.minimizePanel('my-map');   // sends to taskbar
-client.restorePanel('my-map');    // restores from taskbar
+workspace.minimizePanel('my-map');   // sends to taskbar
+workspace.restorePanel('my-map');    // restores from taskbar
 ```
 
 ## Layout serialization
 
 ```ts
 // Save the entire workspace to JSON
-const snapshot = client.saveLayout();
+const snapshot = workspace.saveLayout();
 localStorage.setItem('layout', snapshot);
 
 // Restore — replaces everything currently open
-client.loadLayout(localStorage.getItem('layout') ?? '');
+workspace.loadLayout(localStorage.getItem('layout') ?? '');
 ```
 
 The snapshot JSON contains:
@@ -78,7 +78,7 @@ The snapshot JSON contains:
 ### Which panel is active after a restore
 
 A restored workspace comes back with `state.activePanelId` set to the panel the user was actually
-looking at — which matters because that is the panel `useActivePanelContribution()` reads from, so
+looking at — which matters because that is the panel `useActiveContribution()` reads from, so
 every contributed sidebar tab and toolbar item is wired to it.
 
 It resolves in this order:
@@ -97,10 +97,10 @@ becomes visible in its place, rather than leaving it on a panel that is gone or 
 
 ### Pre-loading a layout on startup
 
-Pass the JSON string directly to `WorkspaceClient.initialState`:
+Pass the JSON string directly as the `initialState` of `createWorkspace()`:
 
 ```ts
-const client = new WorkspaceClient({
+const workspace = createWorkspace({
   panels: { ... },
   initialState: localStorage.getItem('layout'),
 });
@@ -113,15 +113,16 @@ The layout is parsed synchronously before the first render — no flicker, no `u
 For layouts fetched from a server, use the imperative API:
 
 ```ts
-// Outside React (after provider mounts):
-fetchLayoutFromServer().then(json => client.loadLayout(json));
+// Outside React:
+fetchLayoutFromServer().then(json => workspace.loadLayout(json));
 
 // Or inside a component:
+const workspace = useWorkspace();
 useEffect(() => {
   fetch('/api/layout').then(r => r.text()).then(json => {
-    actions.loadLayout(json);
+    workspace.loadLayout(json);
   });
-}, []);
+}, [workspace]);
 ```
 
 ## Dirty-state close guards
@@ -130,19 +131,13 @@ Prevent accidental data loss with close guards:
 
 ```ts
 // In your panel component:
-const actions = useWindowManagerActions();
-
-useEffect(() => {
-  actions.registerCloseGuard('editor-1', () => {
-    return !hasUnsavedChanges || confirm('Discard unsaved changes?');
-  });
-  return () => actions.unregisterCloseGuard('editor-1');
-}, [hasUnsavedChanges]);
+useBeforeClose(hasUnsavedChanges ? () => confirm('Discard unsaved changes?') : null);
 
 // Or use the built-in dirty flag + modal:
-actions.setPanelDirty('editor-1', true, {
+const panel = usePanel();
+panel.setDirty(true, {
   title: 'Unsaved Changes',
-  body: 'Your changes will be lost. Continue?',
+  message: 'Your changes will be lost. Continue?',
 });
 ```
 
@@ -150,14 +145,13 @@ actions.setPanelDirty('editor-1', true, {
 
 ```ts
 // Publish from any panel or outside React:
-client.publish('map:zoom', { level: 12 });
-actions.publish('selection:changed', { ids: ['feature-1'] });
+workspace.publish('map:zoom', { level: 12 });
 
 // Subscribe in a panel:
-const actions = useWindowManagerActions();
+const workspace = useWorkspace();
 useEffect(() => {
-  return actions.subscribe('map:zoom', ({ level }) => {
+  return workspace.subscribe('map:zoom', ({ level }) => {
     setZoom(level);
   });
-}, []);
+}, [workspace]);
 ```

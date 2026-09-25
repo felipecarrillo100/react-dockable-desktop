@@ -1,6 +1,6 @@
     # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v6.4.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.0.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -26,12 +26,12 @@ serialised layout format**, so a layout saved by either library loads in the oth
 - **Split-Docking Grid** — drag panels to split any zone into rows/columns or group into tabbed containers
 - **Workspace Edge Docking** — drag to the outer edges to dock a panel as a full-width or full-height strip
 - **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
-- **Panel Overlay** — per-panel overlay layer with anchored toolbars (`PanelToolbar`, `ToolbarButton`, `ToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; an axis can span the panel instead of carrying a fixed size, so a strip or column tracks the panel as it resizes — set declaratively or by dragging an edge out until it snaps; `usePanelFloatingWindowManager()` opens N named windows dynamically from data or event handlers
+- **Panel Overlay** — per-panel overlay layer with anchored toolbars (`RddPanelToolbar`, `RddToolbarButton`, `RddToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; an axis can span the panel instead of carrying a fixed size, so a strip or column tracks the panel as it resizes — set declaratively or by dragging an edge out until it snaps; `useFloatingWidgets()` opens N named windows dynamically from data or event handlers
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
 - **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed, across docking, floating, and tab-switching alike, all by default; WebGL, maps, terminals, and forms retain full state with zero integration work
 - **i18n & RTL** — full Right-to-Left layout support; `dir="rtl"` flips every control, tab order, and drop zone automatically
 - **Inter-Panel Pub/Sub** — lightweight typed event bus for decoupled panel-to-panel communication
-- **Imperative API** — `WorkspaceClient` opens, closes, focuses, and serializes panels from anywhere — inside or outside React
+- **Imperative API** — the workspace from `createWorkspace()` opens, closes, focuses, and serializes panels from anywhere — inside or outside React
 - **Layout Serialization** — save and restore the full workspace as a JSON string; survives page reloads
 - **7 Built-in Skins** — VSCode, macOS, Chrome, Slate, Nord, Obsidian, Tokyo — all fully themeable via CSS variables
 - **Toast Notifications** — imperative singleton `toast.info/success/warning/error/promise()` with queue, pause-on-hover, progress bar, and a `ToastAdapter` interface for delegating to a third-party notification library
@@ -53,23 +53,23 @@ Import styles in your app entry file:
 import 'react-dockable-desktop/styles.css';
 ```
 
-**Requirements:** React ≥ 16.8 (hooks required). No other runtime dependencies.
+**Requirements:** React ≥ 18. No other runtime dependencies.
 
 ---
 
 ## Quick Start
 
-### 1. Create a WorkspaceClient
+### 1. Create a workspace
 
-Define your panel catalog and create a `WorkspaceClient` **outside React**, at module scope. It acts as the bridge between your imperative code and the React tree.
+Define your panel catalog and create the workspace with `createWorkspace()` **outside React**, at module scope. It acts as the bridge between your imperative code and the React tree, and it is live immediately — calls made before the provider mounts apply straight away.
 
 ```ts
 // workspace.ts
-import { WorkspaceClient } from 'react-dockable-desktop';
+import { createWorkspace } from 'react-dockable-desktop';
 import MapPanel    from './panels/MapPanel';
 import EditorPanel from './panels/EditorPanel';
 
-export const workspace = new WorkspaceClient({
+export const workspace = createWorkspace({
   panels: {
     map:    { component: MapPanel,    defaultOptions: { title: 'Map View' } },
     editor: { component: EditorPanel, defaultOptions: { title: 'Editor'   } },
@@ -80,26 +80,26 @@ export const workspace = new WorkspaceClient({
 
 ### 2. Mount the Provider
 
-`DockableDesktopProvider` is the single composite provider — it wraps everything the library needs:
+`DockableDesktopProvider` is the only provider — it wraps everything the library needs:
 
 ```tsx
 // App.tsx
-import { DockableDesktopProvider, WindowManager, ModalStackRenderer } from 'react-dockable-desktop';
+import { DockableDesktopProvider, RddDesktop, RddModals } from 'react-dockable-desktop';
 import { workspace } from './workspace';
 
 export default function App() {
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ width: '100vw', height: '100vh' }}>
-        <WindowManager />
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport">
+        <RddDesktop />
       </div>
-      <ModalStackRenderer />
+      <RddModals />
     </DockableDesktopProvider>
   );
 }
 ```
 
-> **Important:** the `WindowManager` container must have an explicit height. A `height: 100%` that resolves to zero will produce a development warning.
+> **Important:** the `RddDesktop` container must have an explicit height. A `height: 100%` that resolves to zero will produce a development warning. The stylesheet styles nothing outside the library's own elements, so `rdd-fill-viewport` (full-window height, no overflow) is opt-in — and remove the browser's default body margin in your own CSS (`body { margin: 0 }`).
 
 ### 3. Open Panels
 
@@ -126,11 +126,10 @@ Panels can now be dragged, split, tabbed, floated, and minimized out of the box.
 A panel is any React component. Use built-in hooks to integrate with the layout:
 
 ```tsx
-import { useFormContainer, usePanelId } from 'react-dockable-desktop';
+import { usePanel } from 'react-dockable-desktop';
 
 export default function EditorPanel() {
-  const panelId = usePanelId();               // this panel's instance ID — no prop needed
-  const { setDirty, setTitle } = useFormContainer();
+  const { id, setDirty, setTitle } = usePanel();   // id: this panel's instance ID — no prop needed
 
   const handleChange = (value: string) => {
     setDirty(true);                           // blocks close until user confirms discard
@@ -143,43 +142,24 @@ export default function EditorPanel() {
 
 ### Lifecycle callbacks
 
-`useFormContainer()` exposes a full push-based lifecycle API — no subscriptions to global state required:
+Lifecycle hooks are called at the top level of the panel component. They always call the latest function you pass (no dependency array) and clean up on unmount:
 
 ```tsx
-import { useFormContainer } from 'react-dockable-desktop';
-import { useEffect } from 'react';
+import { usePanel, usePanelEvents, usePanelSize, useBeforeClose, useSaveState } from 'react-dockable-desktop';
 
 export default function MapPanel() {
-  const {
-    containerType,          // current container type at mount: 'dockable-panel' | 'floating-window'
-    onActivate,             // fires when this panel becomes the globally active panel
-    onDeactivate,           // fires when this panel loses active status (or is destroyed)
-    onContainerTypeChange,  // fires when the panel moves between docked and floating
-    onClose,                // fires just before the panel is destroyed
-    requestMinimize,        // imperatively minimize this panel to the taskbar
-    getDimensions,          // synchronously read current {width, height} — null until first layout
-  } = useFormContainer();
+  const { containerType, minimize } = usePanel();  // containerType: 'dockable-panel' | 'floating-window' | …, updates live
+  const size = usePanelSize();                     // { width, height } | null — re-renders on resize
 
-  useEffect(() => {
-    const unsub = [
-      onActivate?.(() => {
-        // e.g. resume animation, reload data
-        const dims = getDimensions?.();
-        console.log('active, size:', dims);
-      }),
-      onDeactivate?.(() => {
-        // e.g. pause background work
-      }),
-      onContainerTypeChange?.((type) => {
-        // type === 'floating-window' | 'dockable-panel'
-        // e.g. trigger map.resize() after layout change
-      }),
-      onClose?.(() => {
-        // final cleanup — unsubscribe from external stores
-      }),
-    ];
-    return () => unsub.forEach(fn => fn?.());
-  }, []);
+  usePanelEvents({
+    onActivate:   () => { /* e.g. resume animation, reload data */ },
+    onDeactivate: () => { /* e.g. pause background work */ },
+    onContainerTypeChange: (type) => { /* e.g. trigger map.resize() after layout change */ },
+    onClose:      () => { /* final cleanup — unsubscribe from external stores */ },
+  });
+
+  useBeforeClose(async () => confirm('Close the map?'));   // resolve false to keep it open
+  useSaveState(() => ({ zoom: currentZoom() }));           // saved with the layout by saveLayout()
 
   return <div>Map</div>;
 }
@@ -193,40 +173,44 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 
 | Hook | Returns | Use For |
 | :--- | :--- | :--- |
-| `useWindowManagerActions()` | `WindowActions` | Open, close, float, dock, minimize, maximize, serialize panels |
-| `useWindowManagerState(selector?)` | `WindowState` or selected slice | Read layout, floating windows, active panel ID |
-| `usePanelActions()` | `PanelActions` | Open modal overlays and left/right side drawers |
-| `usePanelContext()` | `{ publish, subscribe }` | Inter-panel typed event bus |
-| `useFormContainer()` | `FormContainerContract` | Dirty state, close guards, dynamic title/icon, lifecycle callbacks (activate, deactivate, container-type change), imperative minimize, sync dimensions |
-| `usePanelSize()` | `{ width, height } \| null` | Reactive alternative to `getDimensions()` — live panel dimensions across docking, floating, and tab changes, no manual subscription |
-| `usePanelId()` | `string` | The panel's own instance ID — no prop drilling needed |
-| `useToolbar()` | `ToolbarContextValue` | Read/write Toolbar state (active tool, modifiers) from any panel |
-| `useSidebar()` | `SidebarContextValue` | Open/close Sidebar tabs from any component in the Sidebar tree |
-| `useSidebarTab()` | `SidebarTabContext` | Self-control for content inside a Sidebar tab |
+| `useWorkspace()` | `Workspace` | The workspace: open, close, float, dock, minimize, maximize, serialize panels; `publish`/`subscribe`; `registry` |
+| `useWorkspaceState(selector?)` | `WorkspaceState` or selected slice | Read layout, floating windows, active panel ID |
+| `useModals()` | `ModalsApi` | Open, close and track modal overlays |
+| `useSidePanels()` | `SidePanelsApi` | Open, close and track the left/right side drawers |
+| `usePanel()` | `PanelHandle` | Inside a panel: its `id`, live `containerType`, `isActive`, dirty state, dynamic title/icon, `close()`, `minimize()` |
+| `usePanelEvents(events)` | `void` | Inside a panel: activate, deactivate, minimize, restore, close, resize, container-type change |
+| `useBeforeClose(guard)` | `void` | Inside a panel: a close guard; resolve `false` to keep it open |
+| `useSaveState(getState)` | `void` | Inside a panel: state pulled fresh by every `saveLayout()` |
+| `usePanelSize()` | `{ width, height } \| null` | Live panel dimensions across docking, floating, and tab changes, no manual subscription |
+| `useToolbar()` | `ToolbarContextValue` | Read/write toolbar state (active tool, modifiers) from any panel |
+| `useSidebar()` | `SidebarContext` | Open/close sidebar tabs from any component in the `RddSidebar` tree |
+| `useSidebarTab()` | `SidebarTabContext` | Self-control for content inside a sidebar tab |
+| `useContextMenu()` | `(options) => void` | Show the shared context menu at a pointer event or position |
 | `usePanelContextMenu(items)` | `void` | Inject dynamic context menu items into this panel's right-click menu |
-| `usePanelFloatingWindowManager()` | `PanelFloatingWindowManagerHandle` | Open/close N named floating windows inside a panel overlay at runtime; each independently anchored, dockable, and resizable |
-| `useRegistry()` | `PanelRegistryClass` | The scoped panel registry for the current provider |
+| `useFloatingWidgets()` | `FloatingWidgetsApi` | Open/close N named floating widgets inside a panel overlay at runtime; each independently anchored, dockable, and resizable |
 | `useFormatMessage()` | `MessageFormatter` | i18n formatter matching the current provider's locale |
+| `useMessages()` | `Record<MessageKey, MessageDescriptor>` | The effective built-in message table |
+| `useHostClasses()` | `HostClasses` | The class props set on the provider (`modalClass`, `windowClass`, …) |
 | `usePanelContribution(contribution)` | `void` | Publish toolbar items/sidebar sections shown only while this panel is active |
-| `useActivePanelContribution()` | `PanelContribution \| null` | Read the active panel's published contribution, to merge manually |
-| `useMergedToolbarItems(staticItems)` | `ToolbarItem[]` | `staticItems` + the active panel's contributed toolbar items, ready for `<Toolbar items={...}>` |
-| `useMergedSidebarTabs(staticTabs)` | `SidebarTab[]` | `staticTabs` + the active panel's contributed sections as dynamic tabs, ready for `<Sidebar tabs={...}>` |
+| `useActiveContribution()` | `PanelContribution \| null` | Read the active panel's published contribution, to merge manually |
+| `useMergedToolbarItems(staticItems)` | `ToolbarItem[]` | `staticItems` + the active panel's contributed toolbar items, ready for `<RddToolbar items={...}>` |
+| `useMergedSidebarTabs(staticTabs)` | `SidebarTab[]` | `staticTabs` + the active panel's contributed sections as dynamic tabs, ready for `<RddSidebar tabs={...}>` |
 | `useColorScheme()` | `'dark' \| 'light'` | Reactively read the workspace's current color scheme from your own panel content |
 
 **State selectors** prevent unnecessary re-renders:
 
 ```ts
 // Only re-renders when activePanelId changes — not on every layout mutation:
-const activeId = useWindowManagerState(s => s.activePanelId);
-const panelCount = useWindowManagerState(s => Object.keys(s.panels).length);
+const activeId = useWorkspaceState(s => s.activePanelId);
+const panelCount = useWorkspaceState(s => Object.keys(s.panels).length);
 ```
 
 ---
 
-## WorkspaceClient Reference
+## Workspace Reference
 
 ```ts
-const workspace = new WorkspaceClient({ panels, initialState?, formatMessage?, dir? });
+const workspace = createWorkspace({ panels, initialState?, formatMessage?, messages?, dir? });
 
 // Panel lifecycle
 workspace.openPanel(id, component, options?)   // options: title, initialTarget, anchor
@@ -261,28 +245,21 @@ workspace.setDirection('ltr' | 'rtl')
 
 ---
 
-## FormContainerContract Reference
+## PanelHandle Reference
 
-`useFormContainer()` returns a `FormContainerContract` with these members:
+`usePanel()` returns a `PanelHandle` — in docked panels, floating windows, modals and side drawers alike:
 
 | Member | Type | Description |
 | :--- | :--- | :--- |
-| `requestClose(options?)` | `(options?: CloseOptions) => void` | Request the container to close; respects dirty state and close guards |
-| `setDirty(dirty, options?)` | `(dirty: boolean) => void` | Mark unsaved changes; triggers confirmation dialog on close |
-| `onCloseRequested(handler)` | `(handler) => unsubscribe` | Register a close guard; return `false` to block the close |
-| `setTitle(title)` | `(title) => void` | Change the tab/window title dynamically |
-| `setIcon?(icon)` | `(icon: ReactNode) => void` | Change the tab/window icon dynamically |
-| `containerType?` | `ContainerType` | Container type **at mount time** — see `onContainerTypeChange` for live updates |
-| `instanceId` | `string` | The panel's instance ID |
-| `onClose?(handler)` | `(handler) => unsubscribe` | Subscribe to panel destruction |
-| `onMinimize?(handler)` | `(handler) => unsubscribe` | Subscribe to minimize events |
-| `onRestore?(handler)` | `(handler) => unsubscribe` | Subscribe to restore-from-taskbar events |
-| `onResize?(handler)` | `(handler) => unsubscribe` | Subscribe to resize events; handler receives `(width, height)` |
-| `requestMinimize?()` | `() => void` | Imperatively minimize this panel to the taskbar |
-| `getDimensions?()` | `() => {width, height} \| null` | Synchronously read the current rendered size; `null` until first layout |
-| `onActivate?(handler)` | `(handler) => unsubscribe` | Subscribe to this panel becoming the globally active panel |
-| `onDeactivate?(handler)` | `(handler) => unsubscribe` | Subscribe to this panel losing active status; also fires on destruction |
-| `onContainerTypeChange?(handler)` | `(handler) => unsubscribe` | Subscribe to dock↔float transitions; handler receives the new `ContainerType` |
+| `id` | `string` | The panel's instance ID |
+| `containerType` | `ContainerType` | Where it is rendered; updates live (a docked panel that is floated re-renders as `'floating-window'`) |
+| `isActive` | `boolean` | The globally active panel. Always `false` in a modal or drawer |
+| `isMinimized` / `isFloating` | `boolean` | Current state of a workspace panel |
+| `close(options?)` | `(options?: CloseOptions) => void` | Request the container to close; respects dirty state and close guards (`{ force: true }` skips them) |
+| `minimize()` | `() => void` | Minimize this panel to the taskbar; no effect in a modal or drawer |
+| `setDirty(dirty, options?)` | `(dirty: boolean, options?: DirtyStateOptions) => void` | Mark unsaved changes; triggers confirmation dialog on close |
+| `setTitle(title)` | `(title: string \| MessageDescriptor) => void` | Change the tab/window title dynamically |
+| `setIcon(icon)` | `(icon: ReactNode) => void` | Change the tab/window icon dynamically |
 
 ### ContainerType
 
@@ -293,12 +270,10 @@ type ContainerType =
   | 'left-panel'       // rendered inside the left side drawer
   | 'right-panel'      // rendered inside the right side drawer
   | 'modal'            // rendered inside a modal overlay
-  | 'standalone';      // rendered outside the Window Manager (default / no context)
+  | 'standalone';      // rendered outside the desktop (default / no context)
 ```
 
-`containerType` on the contract reflects the state **at mount time**. Subscribe to `onContainerTypeChange` to get notified whenever the panel moves between `'dockable-panel'` and `'floating-window'`. Minimize/restore cycles do **not** fire `onContainerTypeChange`; use `onMinimize`/`onRestore` for those.
-
-All `on*` subscribers return an unsubscribe function. Call it (or return it from `useEffect`) to avoid leaks.
+Minimize/restore cycles do **not** change `containerType` or fire `onContainerTypeChange`; use `usePanelEvents({ onMinimize, onRestore })` for those.
 
 ---
 
@@ -310,8 +285,8 @@ window.addEventListener('beforeunload', () => {
   localStorage.setItem('workspace-layout', workspace.saveLayout());
 });
 
-// Restore by passing the saved string to the constructor:
-new WorkspaceClient({
+// Restore by passing the saved string to createWorkspace():
+createWorkspace({
   panels: { ... },
   initialState: localStorage.getItem('workspace-layout'),
 });
@@ -321,29 +296,30 @@ new WorkspaceClient({
 
 ## Side Panels & Modals
 
-Add `SidePanelRenderer` and `ModalStackRenderer` to your app root. Placement matters — `SidePanelRenderer` must be **inside** the workspace container so drawers position correctly; `ModalStackRenderer` goes **outside** as a full-screen overlay:
+Add `RddSidePanels` and `RddModals` to your app root. Placement matters — `RddSidePanels` must be **inside** the workspace container so drawers position correctly; `RddModals` goes **outside** as a full-screen overlay:
 
 ```tsx
 // App.tsx
-import { SidePanelRenderer, ModalStackRenderer } from 'react-dockable-desktop';
+import { DockableDesktopProvider, RddDesktop, RddSidePanels, RddModals } from 'react-dockable-desktop';
 
 function App() {
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-        <WindowManager />
-        <SidePanelRenderer />  {/* inside — drawers position relative to this container */}
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport" style={{ position: 'relative' }}>
+        <RddDesktop />
+        <RddSidePanels />  {/* inside — drawers position relative to this container */}
       </div>
-      <ModalStackRenderer />   {/* outside — full-screen overlay */}
+      <RddModals />        {/* outside — full-screen overlay */}
     </DockableDesktopProvider>
   );
 }
 
-// From any panel component:
-const { openModal, openRightPanel } = usePanelActions();
+// From any component inside the provider:
+const modals = useModals();
+const sidePanels = useSidePanels();
 
-openModal(MyForm, { itemId: 42 }, { title: 'Edit Item', size: 'medium' });
-openRightPanel(PropertiesPanel, { nodeId }, { title: 'Properties', width: 320 });
+modals.open(MyForm, { itemId: 42 }, { title: 'Edit Item', size: 'medium' });
+sidePanels.openRight(PropertiesPanel, { nodeId }, { title: 'Properties', width: 320 });
 ```
 
 ---
@@ -365,7 +341,7 @@ Touch support is built in for v3.1.0+. No extra setup required:
 The library does **not** auto-detect direction — the consuming app owns it. Two things must be wired together:
 
 ```tsx
-// 1. Keep html[dir] in sync for portals (ContextMenu, flyout, Toast)
+// 1. Keep html[dir] in sync for portals (context menu, flyout, toasts)
 //    that render into document.body and need CSS direction inheritance.
 useEffect(() => {
   document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
@@ -374,8 +350,9 @@ useEffect(() => {
 // 2. Pass dir prop to the provider — controls workspace layout engine.
 <DockableDesktopProvider
   dir={isRtl ? 'rtl' : 'ltr'}
+  workspace={workspace}
   formatMessage={(msg) => intl.formatMessage({ id: msg.id, defaultMessage: msg.defaultMessage })}
-  predefinedMessages={customMessages}
+  messages={customMessages}
 >
 ```
 
@@ -390,10 +367,10 @@ See the [RTL Support guide](https://felipecarrillo100.github.io/react-dockable-d
 ## Skins
 
 ```tsx
-<WindowManager skin="vscode" />   // default
-<WindowManager skin="macos" />
-<WindowManager skin="nord" />
-<WindowManager skin="tokyo" />
+<RddDesktop skin="vscode" />   // default
+<RddDesktop skin="macos" />
+<RddDesktop skin="nord" />
+<RddDesktop skin="tokyo" />
 ```
 
 | Skin | Character | Active state (Sidebar & Toolbar) |
@@ -406,7 +383,7 @@ See the [RTL Support guide](https://felipecarrillo100.github.io/react-dockable-d
 | `obsidian` | Vercel Midnight — pure black/white | Deep glow + icon drop-shadow |
 | `tokyo` | Tokyo Night — purple accent | Neon glow + vivid icon drop-shadow |
 
-All built-in skins include dark and light variants. Create your own skin by overriding CSS custom properties under a `[data-workspace-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference and the [Per-skin active state guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#per-skin-active-state-design-language) to customise the Sidebar/Toolbar active indicator in your own skin.
+All built-in skins include dark and light variants. Create your own skin by overriding CSS custom properties under a `[data-rdd-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference and the [Per-skin active state guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#per-skin-active-state-design-language) to customise the sidebar/toolbar active indicator in your own skin.
 
 ---
 
@@ -430,18 +407,18 @@ Complete guides, API reference, and interactive demo at:
 | :--- | :--- |
 | [Installation](https://felipecarrillo100.github.io/react-dockable-desktop/guide/installation) | Requirements, CSS import order, module formats |
 | [Quick Start](https://felipecarrillo100.github.io/react-dockable-desktop/guide/quick-start) | Minimal working app with layout persistence |
-| [WorkspaceClient](https://felipecarrillo100.github.io/react-dockable-desktop/guide/workspace-client) | Full imperative API, multiple providers, i18n config |
-| [Panel Registry](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-registry) | `defaultOptions`, scoped vs global registry |
+| [Workspace](https://felipecarrillo100.github.io/react-dockable-desktop/guide/workspace-client) | `createWorkspace`, full imperative API, multiple providers, i18n config |
+| [Panel Registry](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-registry) | `defaultOptions`, per-workspace registry |
 | [Layout System](https://felipecarrillo100.github.io/react-dockable-desktop/guide/layout) | Opening, floating, minimizing, serializing layouts |
-| [Panel Lifecycle & Forms](https://felipecarrillo100.github.io/react-dockable-desktop/guide/forms-and-panels) | Dirty state, close guards, `useFormContainer` |
-| [Modals & Side Panels](https://felipecarrillo100.github.io/react-dockable-desktop/guide/modals-and-drawers) | Modal stack, drawers, `Sidebar` component |
+| [Panel Lifecycle & Forms](https://felipecarrillo100.github.io/react-dockable-desktop/guide/forms-and-panels) | Dirty state, close guards, `usePanel` and lifecycle hooks |
+| [Modals & Side Panels](https://felipecarrillo100.github.io/react-dockable-desktop/guide/modals-and-drawers) | Modal stack, drawers, `RddSidebar` component |
 | [Event Bus](https://felipecarrillo100.github.io/react-dockable-desktop/guide/event-bus) | Typed pub/sub, built-in lifecycle events |
 | [Theming](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) | CSS variables, custom skins, dark/light modes |
 | [Advanced Topics](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced) | RTL, multiple workspaces, custom header actions, custom drag-resize interactions |
 | [Best Practices](https://felipecarrillo100.github.io/react-dockable-desktop/guide/best-practices) | Patterns for production-ready implementations |
-| [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `PanelOverlayRoot`, panel toolbars, `PanelFloatingWindow`, `usePanelFloatingWindowManager` |
-| [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<ToastContainer>`, queue behaviour, theming, `ToastAdapter` |
-| [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrade from v1 → v2 → v3 → v4 |
+| [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `RddPanelOverlay`, panel toolbars, `RddFloatingWidget`, `useFloatingWidgets` |
+| [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<RddToasts>`, queue behaviour, theming, `ToastAdapter` |
+| [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrading across major versions |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |
 
 ---

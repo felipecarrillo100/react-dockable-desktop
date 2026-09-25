@@ -64,11 +64,11 @@ export interface SidebarTab {
 }
 
 /**
- * Simple case for `SidebarProps.headerAction`/`footerAction`: the library renders a
+ * Simple case for `RddSidebarProps.headerAction`/`footerAction`: the library renders a
  * default-styled icon button (visually consistent with the regular tab buttons) and forwards
  * the click.
  */
-export interface SidebarHeaderActionButton {
+export interface SidebarActionButton {
   /** Only needed when used inside a `SidebarRailEntry[]` array, for the React key. */
   id?: string;
   icon: React.ReactNode;
@@ -79,12 +79,12 @@ export interface SidebarHeaderActionButton {
 }
 
 /**
- * Full-control case for `SidebarProps.headerAction`/`footerAction`: the consumer supplies their
+ * Full-control case for `RddSidebarProps.headerAction`/`footerAction`: the consumer supplies their
  * own markup (a Material UI `IconButton`, a Bootstrap `Button`, a Tailwind-styled `<button>`, or
  * anything else) wholesale. The library renders exactly what this returns, unwrapped, so the
  * consumer's own hover/active/focus/ripple behavior and click handling are untouched.
  */
-export interface SidebarHeaderActionCustom {
+export interface SidebarCustomEntry {
   /** Only needed when used inside a `SidebarRailEntry[]` array, for the React key. */
   id?: string;
   render: () => React.ReactNode;
@@ -96,21 +96,21 @@ export interface SidebarHeaderActionCustom {
  * it and forwards the click; what happens next (opening a side panel, a modal, anything else)
  * is entirely up to the consumer.
  */
-export type SidebarHeaderAction = SidebarHeaderActionButton | SidebarHeaderActionCustom;
+export type SidebarHeaderAction = SidebarActionButton | SidebarCustomEntry;
 
 /**
- * A single entry inside `SidebarProps.headerAction`/`footerAction` when used as an array: either
+ * A single entry inside `RddSidebarProps.headerAction`/`footerAction` when used as an array: either
  * a non-toggling action button/custom render (see `SidebarHeaderAction`), or a real `SidebarTab`
  * that behaves exactly like a main-list tab — it mounts, activates, and closes through the same
  * lifecycle, so e.g. a "Settings" entry pinned to the footer can expand like any other tab.
  */
-export type SidebarRailEntry = SidebarTab | SidebarHeaderActionButton | SidebarHeaderActionCustom;
+export type SidebarRailEntry = SidebarTab | SidebarActionButton | SidebarCustomEntry;
 
 function isRailTab(entry: SidebarRailEntry): entry is SidebarTab {
   return 'renderContent' in entry;
 }
 
-function isRailCustom(entry: SidebarRailEntry): entry is SidebarHeaderActionCustom {
+function isRailCustom(entry: SidebarRailEntry): entry is SidebarCustomEntry {
   return 'render' in entry;
 }
 
@@ -119,7 +119,7 @@ function toRailArray(value: SidebarRailEntry | SidebarRailEntry[] | undefined): 
   return Array.isArray(value) ? value : [value];
 }
 
-export interface SidebarProps {
+export interface RddSidebarProps {
   /** Which side the activity bar and drawer appear on. Default: 'right' */
   position?: 'left' | 'right';
   tabs: SidebarTab[];
@@ -461,8 +461,8 @@ function SidebarResizeHandle({
 // Sidebar (main component)
 // ==========================================
 
-export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<SidebarHandle>> =
-  forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
+export const Sidebar: React.ForwardRefExoticComponent<RddSidebarProps & React.RefAttributes<SidebarHandle>> =
+  forwardRef<SidebarHandle, RddSidebarProps>(function Sidebar(
     {
       position = 'right',
       tabs,
@@ -769,11 +769,11 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 // ==========================================
 
 /**
- * Props for {@link SecondarySidebar} — identical to {@link SidebarProps} except
+ * Props for {@link SecondarySidebar} — identical to {@link RddSidebarProps} except
  * `position` (always the opposite of whatever primary `Sidebar` it's nested inside)
  * and `isSecondary` (always `true`) are not settable.
  */
-export type SecondarySidebarProps = Omit<SidebarProps, 'position' | 'isSecondary'>;
+export type RddSecondarySidebarProps = Omit<RddSidebarProps, 'position' | 'isSecondary'>;
 
 /**
  * A second, independent `Sidebar` instance for the opposite edge of the screen —
@@ -785,14 +785,14 @@ export type SecondarySidebarProps = Omit<SidebarProps, 'position' | 'isSecondary
  * `SecondarySidebar` — this library supports exactly one primary and one secondary,
  * nothing deeper.
  */
-export const SecondarySidebar: React.ForwardRefExoticComponent<SecondarySidebarProps & React.RefAttributes<SidebarHandle>> =
-  forwardRef<SidebarHandle, SecondarySidebarProps>(function SecondarySidebar(props, ref) {
+export const SecondarySidebar: React.ForwardRefExoticComponent<RddSecondarySidebarProps & React.RefAttributes<SidebarHandle>> =
+  forwardRef<SidebarHandle, RddSecondarySidebarProps>(function SecondarySidebar(props, ref) {
     const primary = useContext(SidebarContext);
     if (!primary) {
-      throw new Error('SecondarySidebar must be rendered inside a primary Sidebar\'s children');
+      throw new Error('RddSecondarySidebar must be rendered inside a primary RddSidebar\'s children');
     }
     if (primary.isSecondary) {
-      throw new Error('SecondarySidebar cannot be nested inside another SecondarySidebar');
+      throw new Error('RddSecondarySidebar cannot be nested inside another RddSecondarySidebar');
     }
     const opposite = primary.position === 'left' ? 'right' : 'left';
     return <Sidebar ref={ref} {...props} position={opposite} isSecondary />;
@@ -810,7 +810,7 @@ export const SecondarySidebar: React.ForwardRefExoticComponent<SecondarySidebarP
  */
 export function useSidebar(): SidebarContextValue {
   const ctx = useContext(SidebarContext);
-  if (!ctx) throw new Error('useSidebar must be used within Sidebar');
+  if (!ctx) throw new Error('useSidebar must be used within <RddSidebar>');
   return ctx;
 }
 
@@ -822,7 +822,7 @@ export function useSidebar(): SidebarContextValue {
  */
 export function useSidebarTab(): SidebarTabContextValue {
   const ctx = useContext(SidebarTabContext);
-  if (!ctx) throw new Error('useSidebarTab must be used within a Sidebar tab renderContent tree');
+  if (!ctx) throw new Error('useSidebarTab must be used within an RddSidebar tab\'s renderContent');
   return ctx;
 }
 

@@ -1,17 +1,17 @@
 # Toolbar
 
-`<Toolbar>` is a vertical (or horizontal) strip that hosts action buttons, mutually-exclusive radio tool groups, and independent toggle modifiers. Its state lives library-wide inside `DockableDesktopProvider`, so any panel can read or change the active tool via the `useToolbar()` hook.
+`<RddToolbar>` is a vertical (or horizontal) strip that hosts action buttons, mutually-exclusive radio tool groups, and independent toggle modifiers. Its state lives library-wide inside `DockableDesktopProvider`, so any panel can read or change the active tool via the `useToolbar()` hook.
 
 ## Basic usage
 
-Place `<Toolbar>` as a sibling of `<Sidebar>` and `<WindowManager>` inside your workspace container. Both components sit side-by-side — neither wraps the other.
+Place `<RddToolbar>` as a sibling of `<RddSidebar>` (which wraps `<RddDesktop>`) inside your workspace container. The toolbar and the sidebar sit side-by-side — neither wraps the other.
 
 ```tsx
 import {
   DockableDesktopProvider,
-  WindowManager,
-  Sidebar,
-  Toolbar,
+  RddDesktop,
+  RddSidebar,
+  RddToolbar,
   type ToolbarItem,
 } from 'react-dockable-desktop';
 import { useState } from 'react';
@@ -34,18 +34,18 @@ const toolbarItems: ToolbarItem[] = [
   {
     type: 'action', id: 'layers', label: 'Open Layers',
     icon: <LayersIcon />,
-    onClick: () => openPanel('layertree-main', 'layertree'),
+    onClick: () => workspace.openPanel('layertree-main', 'layertree'),
   },
 ];
 
 export default function App() {
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <Toolbar position="left" items={toolbarItems} />
-        <Sidebar position="right" tabs={sidebarTabs}>
-          <WindowManager />
-        </Sidebar>
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport" style={{ display: 'flex' }}>
+        <RddToolbar position="left" items={toolbarItems} />
+        <RddSidebar position="right" tabs={sidebarTabs}>
+          <RddDesktop />
+        </RddSidebar>
       </div>
     </DockableDesktopProvider>
   );
@@ -118,12 +118,12 @@ const { getActiveInGroup } = useToolbar();
 const activeBrush = getActiveInGroup('brush-tool'); // 'brush-pencil' | 'brush-eraser' | ... | null
 ```
 
-**Controlled:** provide `activeItemId` and wire `onActiveItemChange` to your state. The Toolbar never modifies context — you are the single source of truth.
+**Controlled:** provide `activeItemId` and wire `onActiveItemChange` to your state. `RddToolbar` never modifies context — you are the single source of truth.
 
 ```tsx
 const [activeBrush, setActiveBrush] = useState<string | null>(null);
 
-<Toolbar items={[{
+<RddToolbar items={[{
   type: 'group', id: 'brush-tool', label: 'Brush tools',
   defaultIcon: <BrushIcon />,
   items: brushSubItems,
@@ -132,7 +132,7 @@ const [activeBrush, setActiveBrush] = useState<string | null>(null);
 }]} />
 ```
 
-## `ToolbarProps` reference
+## `RddToolbarProps` reference
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -150,7 +150,7 @@ const [activeBrush, setActiveBrush] = useState<string | null>(null);
 ```tsx
 const [showToolbar, setShowToolbar] = useState(true);
 
-<Toolbar
+<RddToolbar
   position="left"
   items={toolbarItems}
   visible={showToolbar}
@@ -169,7 +169,7 @@ import type { ToolbarHandle } from 'react-dockable-desktop';
 
 const toolbarRef = useRef<ToolbarHandle>(null);
 
-<Toolbar ref={toolbarRef} ... visible={showToolbar} onVisibilityChange={setShowToolbar} />
+<RddToolbar ref={toolbarRef} ... visible={showToolbar} onVisibilityChange={setShowToolbar} />
 
 // Imperative methods delegate to onVisibilityChange:
 toolbarRef.current?.show();
@@ -185,7 +185,7 @@ toolbarRef.current?.toggle();
 
 ## `useToolbar()` hook
 
-Read and write toolbar state from **any component** inside `<DockableDesktopProvider>` — including floating panels and docked panels far removed from the `<Toolbar>` component itself:
+Read and write toolbar state from **any component** inside `<DockableDesktopProvider>` — including floating panels and docked panels far removed from the `<RddToolbar>` component itself:
 
 ```tsx
 import { useToolbar } from 'react-dockable-desktop';
@@ -237,36 +237,36 @@ function MapController() {
 
 ```tsx
 // Vertical strips (width: 48px, height: 100%)
-<Toolbar position="left"   items={items} />   // border on the right
-<Toolbar position="right"  items={items} />   // border on the left
+<RddToolbar position="left"   items={items} />   // border on the right
+<RddToolbar position="right"  items={items} />   // border on the left
 
 // Horizontal strips (height: 48px, width: 100%)
-<Toolbar position="top"    items={items} />   // border on the bottom
-<Toolbar position="bottom" items={items} />   // border on the top
+<RddToolbar position="top"    items={items} />   // border on the bottom
+<RddToolbar position="bottom" items={items} />   // border on the top
 ```
 
 The active accent border on radio items always faces the workspace (inward-facing edge). On a `left` toolbar, the accent bar is on the left edge of the button (flush with the workspace); on a `top` toolbar, it's on the bottom edge. On skins like `slate` and `macos` the bar is replaced entirely by a floating chip shape; on `nord` it becomes a short horizontal line drawn below the icon.
 
 ## Theming CSS variables
 
-All toolbar colors use CSS custom properties that cascade from `[data-color-scheme]` and `[data-workspace-skin]`. You can override them for your own skin without touching component CSS:
+All toolbar colors use CSS custom properties that cascade from `[data-color-scheme]` and `[data-rdd-skin]`. You can override them for your own skin without touching component CSS:
 
 | Variable | Light | Dark | Description |
 |----------|-------|------|-------------|
-| `--toolbar-btn-hover-bg` | `rgba(0,0,0,.05)` | `rgba(255,255,255,.06)` | Button hover background. |
-| `--toolbar-btn-radio-active-bg` | `rgba(0,102,204,.1)` | `rgba(56,189,248,.14)` | Radio active button background tint. |
-| `--toolbar-btn-toggle-active-bg` | `rgba(0,102,204,.06)` | `rgba(56,189,248,.08)` | Toggle active button background tint. |
-| `--toolbar-separator-color` | `rgba(0,0,0,.1)` | `rgba(255,255,255,.09)` | Separator line color. |
-| `--tab-icon-active` | `#0066cc` | `#38bdf8` | Accent color for active radio button icon and border. Shared with the Sidebar strip. |
-| `--toolbar-btn-active-shadow` | `none` | `none` | `box-shadow` on active radio/group buttons. Obsidian/Tokyo override with an inset ambient glow. |
-| `--toolbar-btn-active-glow` | `none` | `none` | `filter` on active radio/group buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
-| `--toolbar-accent-bar-width` | `3px` | `3px` | Width of the edge accent bar on active buttons. Set to `0px` to replace the bar with a chip shape. |
+| `--rdd-toolbar-btn-hover-bg` | `rgba(0,0,0,.05)` | `rgba(255,255,255,.06)` | Button hover background. |
+| `--rdd-toolbar-btn-radio-active-bg` | `rgba(0,102,204,.1)` | `rgba(56,189,248,.14)` | Radio active button background tint. |
+| `--rdd-toolbar-btn-toggle-active-bg` | `rgba(0,102,204,.06)` | `rgba(56,189,248,.08)` | Toggle active button background tint. |
+| `--rdd-toolbar-separator-color` | `rgba(0,0,0,.1)` | `rgba(255,255,255,.09)` | Separator line color. |
+| `--rdd-tab-icon-active` | `#0066cc` | `#38bdf8` | Accent color for active radio button icon and border. Shared with the sidebar strip. |
+| `--rdd-toolbar-btn-active-shadow` | `none` | `none` | `box-shadow` on active radio/group buttons. Obsidian/Tokyo override with an inset ambient glow. |
+| `--rdd-toolbar-btn-active-glow` | `none` | `none` | `filter` on active radio/group buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
+| `--rdd-toolbar-accent-bar-width` | `3px` | `3px` | Width of the edge accent bar on active buttons. Set to `0px` to replace the bar with a chip shape. |
 
-The accent variables are automatically overridden per skin — Nord, Tokyo Night, Obsidian, Chrome, Slate, and macOS each set their own `--tab-icon-active` and toolbar active-state tokens to match their signature visual language. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) for details on customising this in your own skin.
+The accent variables are automatically overridden per skin — Nord, Tokyo Night, Obsidian, Chrome, Slate, and macOS each set their own `--rdd-tab-icon-active` and toolbar active-state tokens to match their signature visual language. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) for details on customising this in your own skin.
 
 ## See also
 
-- [Sidebar →](./modals-and-drawers#sidebar-component) — collapsible tab strip, hooks
+- [Sidebar →](./modals-and-drawers#rddsidebar-component) — collapsible tab strip, hooks
 - [Panel Contributions →](./panel-contributions) — let panels publish toolbar items only while active
 - [Per-skin active state design language →](./theming#per-skin-active-state-design-language) — all 7 patterns, token reference, custom skin examples
 - [Event Bus & Communication →](./event-bus) — panels communicating via pub/sub

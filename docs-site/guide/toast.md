@@ -4,19 +4,19 @@
 
 ## Quick start
 
-Place `<ToastContainer>` once at the root of your application, alongside `ModalStackRenderer`:
+Place `<RddToasts>` once at the root of your application, alongside `RddModals`:
 
 ```tsx
-import { ToastContainer } from 'react-dockable-desktop';
+import { DockableDesktopProvider, RddDesktop, RddModals, RddToasts } from 'react-dockable-desktop';
 
 function App() {
   return (
-    <DockableDesktopProvider client={workspace}>
-      <div style={{ width: '100vw', height: '100vh' }}>
-        <WindowManager />
+    <DockableDesktopProvider workspace={workspace}>
+      <div className="rdd-fill-viewport">
+        <RddDesktop />
       </div>
-      <ModalStackRenderer />
-      <ToastContainer />
+      <RddModals />
+      <RddToasts />
     </DockableDesktopProvider>
   );
 }
@@ -108,7 +108,7 @@ All `toast.*` methods accept an optional `ToastOptions` object as the second arg
 | `content` | `ReactNode` | — | Replaces the string message with arbitrary JSX |
 | `onClose` | `() => void` | — | Callback fired when the toast is dismissed |
 
-## `<ToastContainer>` props
+## `<RddToasts>` props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -152,8 +152,8 @@ Toasts inherit the active skin automatically via CSS custom properties:
 
 | Token | Default (dark) | Default (light) | Purpose |
 |-------|---------------|-----------------|---------|
-| `--rdd-toast-bg` | `#2a2d32` | `#ffffff` | Card background — slightly lighter than `--sidebar-bg` so the card lifts off panels behind it |
-| `--rdd-toast-border` | `rgba(255,255,255,0.14)` | `rgba(0,0,0,0.14)` | Card border — stronger than `--sidebar-border` for dark-on-dark legibility |
+| `--rdd-toast-bg` | `#2a2d32` | `#ffffff` | Card background — slightly lighter than `--rdd-sidebar-bg` so the card lifts off panels behind it |
+| `--rdd-toast-border` | `rgba(255,255,255,0.14)` | `rgba(0,0,0,0.14)` | Card border — stronger than `--rdd-sidebar-border` for dark-on-dark legibility |
 | `--rdd-toast-info-color` | `#67e8f9` | `#0369a1` | Info accent (left border + icon) |
 | `--rdd-toast-success-color` | `#4ade80` | `#15803d` | Success accent |
 | `--rdd-toast-warning-color` | `#fbbf24` | `#b45309` | Warning accent |
@@ -163,14 +163,14 @@ Toasts inherit the active skin automatically via CSS custom properties:
 
 All tokens switch automatically with `[data-color-scheme="light"]` — no per-skin overrides needed.
 
-Override any token on `:root` to adjust the appearance globally, or under a `[data-workspace-skin="myskin"]` selector for per-skin control.
+Override any token on `:root` to adjust the appearance globally, or under a `[data-rdd-skin="myskin"]` selector for per-skin control.
 
 ## Progress bar
 
 Enable the countdown progress bar opt-in on the container:
 
 ```tsx
-<ToastContainer progressBar />
+<RddToasts progressBar />
 ```
 
 The bar shrinks from full width to zero over the toast's duration. It pauses with the timer when the cursor hovers (if `pauseOnHover` is enabled). Hidden on sticky toasts (`duration: 0`).
@@ -208,14 +208,14 @@ const antdAdapter: ToastAdapter = {
 };
 
 // In your app root:
-<ToastContainer adapter={antdAdapter} />
+<RddToasts adapter={antdAdapter} />
 ```
 
 When `adapter` is provided:
 - All `toast.*` calls are forwarded to `adapter.show()` / `adapter.update()` / `adapter.dismiss()`
 - The built-in queue, timer, and card rendering are bypassed
-- If `adapter.Container` is `null`, nothing is rendered by `<ToastContainer>` (the adapter owns its own DOM)
-- If `adapter.Container` is a component, it is portal-rendered by `<ToastContainer>` with a `position` prop
+- If `adapter.Container` is `null`, nothing is rendered by `<RddToasts>` (the adapter owns its own DOM)
+- If `adapter.Container` is a component, it is portal-rendered by `<RddToasts>` with a `position` prop
 
 ## TypeScript types
 
@@ -225,7 +225,7 @@ import type {
   ToastPosition,        // 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
   ToastOptions,         // per-toast options passed to toast.*()
   ResolvedToastOptions, // fully-resolved options as seen by ToastAdapter
-  ToastContainerProps,  // <ToastContainer> prop types
+  RddToastsProps,       // <RddToasts> prop types
   ToastAdapter,         // custom renderer interface
   ToastPromiseMessages, // { pending, success, error } for toast.promise()
 } from 'react-dockable-desktop';

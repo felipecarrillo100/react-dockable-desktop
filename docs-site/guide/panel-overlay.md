@@ -2,8 +2,8 @@
 
 The Panel Overlay system adds a **panel-scoped overlay layer** to any container — anchored toolbars, buttons, search, and corner-anchored floating info windows. Everything renders inside the panel's own DOM boundary and shares one unified infrastructure for z-ordering, drag state, and corner docking.
 
-::: tip Distinct from `<Toolbar>`
-`<Toolbar>` (see [Toolbar →](./toolbar)) is a **workspace-level** tool strip for radio tools, toggles, and action groups that live outside any individual panel. Panel Overlay is **panel-scoped** — it renders inside a single panel container and is invisible to every other panel.
+::: tip Distinct from `<RddToolbar>`
+`<RddToolbar>` (see [Toolbar →](./toolbar)) is a **workspace-level** tool strip for radio tools, toggles, and action groups that live outside any individual panel. Panel Overlay is **panel-scoped** — it renders inside a single panel container and is invisible to every other panel.
 :::
 
 ## When to use it
@@ -14,37 +14,37 @@ The Panel Overlay system adds a **panel-scoped overlay layer** to any container 
 
 ---
 
-## `PanelOverlayRoot`
+## `RddPanelOverlay`
 
-`PanelOverlayRoot` is the provider and container for the entire overlay system. It must wrap all toolbar and floating window components.
+`RddPanelOverlay` is the provider and container for the entire overlay system. It must wrap all toolbar and floating window components.
 
 ```tsx
 import {
-  PanelOverlayRoot,
-  PanelToolbar,
-  ToolbarButton,
+  RddPanelOverlay,
+  RddPanelToolbar,
+  RddToolbarButton,
 } from 'react-dockable-desktop';
 
 function MapPanel() {
   return (
-    <PanelOverlayRoot style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <RddPanelOverlay style={{ width: '100%', height: '100%', position: 'relative' }}>
       {/* Your panel content goes here */}
       <div id="map-container" style={{ width: '100%', height: '100%' }} />
 
       {/* Toolbars and floating windows are siblings of the content */}
-      <PanelToolbar position="top">
-        <ToolbarButton icon={<ZoomInIcon />} title="Zoom in" onClick={zoomIn} />
-      </PanelToolbar>
-    </PanelOverlayRoot>
+      <RddPanelToolbar position="top">
+        <RddToolbarButton icon={<ZoomInIcon />} title="Zoom in" onClick={zoomIn} />
+      </RddPanelToolbar>
+    </RddPanelOverlay>
   );
 }
 ```
 
 **Requirements:**
 - Must have an explicit size. Give the root element `position: relative` and a known width/height (usually `width: 100%; height: 100%` to fill the panel).
-- All `PanelToolbar` and `PanelFloatingWindow` components must be **descendants** of the same `PanelOverlayRoot`.
+- All `RddPanelToolbar` and `RddFloatingWidget` components must be **descendants** of the same `RddPanelOverlay`.
 
-### `PanelOverlayRootProps`
+### `RddPanelOverlayProps`
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -54,14 +54,14 @@ function MapPanel() {
 
 ---
 
-## `PanelToolbar`
+## `RddPanelToolbar`
 
-A toolbar strip that attaches to any edge of the `PanelOverlayRoot` container. Multiple toolbars can coexist — left/right toolbars automatically inset by the height of any registered top/bottom toolbars so they never overlap.
+A toolbar strip that attaches to any edge of the `RddPanelOverlay` container. Multiple toolbars can coexist — left/right toolbars automatically inset by the height of any registered top/bottom toolbars so they never overlap.
 
 ```tsx
-<PanelToolbar position="top" variant="frosted" buttonVariant="ghost">
+<RddPanelToolbar position="top" variant="frosted" buttonVariant="ghost">
   {/* toolbar content */}
-</PanelToolbar>
+</RddPanelToolbar>
 ```
 
 ### Props
@@ -80,32 +80,32 @@ A toolbar strip that attaches to any edge of the `PanelOverlayRoot` container. M
 When you add both a `top` and a `left` toolbar, the library measures the top toolbar's height on mount and automatically insets the left toolbar so they don't overlap:
 
 ```tsx
-<PanelOverlayRoot style={{ width: '100%', height: '100%', position: 'relative' }}>
+<RddPanelOverlay style={{ width: '100%', height: '100%', position: 'relative' }}>
   <div id="map" style={{ width: '100%', height: '100%' }} />
 
   {/* Top bar — 36px high */}
-  <PanelToolbar position="top" variant="frosted">
-    <ToolbarToggle icon={<LayersIcon />} active={showLayers} onToggle={() => setShowLayers(v => !v)} title="Layers" />
-  </PanelToolbar>
+  <RddPanelToolbar position="top" variant="frosted">
+    <RddToolbarToggle icon={<LayersIcon />} active={showLayers} onToggle={() => setShowLayers(v => !v)} title="Layers" />
+  </RddPanelToolbar>
 
   {/* Left bar — top edge insets by 36px automatically */}
-  <PanelToolbar position="left">
-    <ToolbarButton icon={<ZoomInIcon />} onClick={zoomIn} title="Zoom in" />
-    <ToolbarButton icon={<ZoomOutIcon />} onClick={zoomOut} title="Zoom out" />
-  </PanelToolbar>
-</PanelOverlayRoot>
+  <RddPanelToolbar position="left">
+    <RddToolbarButton icon={<ZoomInIcon />} onClick={zoomIn} title="Zoom in" />
+    <RddToolbarButton icon={<ZoomOutIcon />} onClick={zoomOut} title="Zoom out" />
+  </RddPanelToolbar>
+</RddPanelOverlay>
 ```
 
 ---
 
 ## Toolbar primitives
 
-### `ToolbarButton`
+### `RddToolbarButton`
 
 A single action button. Clicking fires `onClick` and does not change any toggle state.
 
 ```tsx
-<ToolbarButton icon={<SaveIcon />} onClick={handleSave} title="Save" />
+<RddToolbarButton icon={<SaveIcon />} onClick={handleSave} title="Save" />
 ```
 
 | Prop | Type | Description |
@@ -116,14 +116,14 @@ A single action button. Clicking fires `onClick` and does not change any toggle 
 | `disabled?` | `boolean` | Disables the button (35% opacity). |
 | `variant?` | `ButtonVariant` | Overrides the toolbar's `buttonVariant` for this button only. |
 
-### `ToolbarToggle`
+### `RddToolbarToggle`
 
 An on/off toggle button. The caller owns the boolean state.
 
 ```tsx
 const [wrap, setWrap] = useState(false);
 
-<ToolbarToggle
+<RddToolbarToggle
   icon={<WrapIcon />}
   active={wrap}
   onToggle={() => setWrap(v => !v)}
@@ -140,47 +140,47 @@ const [wrap, setWrap] = useState(false);
 | `disabled?` | `boolean` | Disables the button. |
 | `variant?` | `ButtonVariant` | Per-button variant override. |
 
-### `PanelToolbarSeparator`
+### `RddToolbarSeparator`
 
 A thin visual divider for grouping related buttons.
 
 ```tsx
-<ToolbarButton icon={<RunIcon />} onClick={run} title="Run" />
-<PanelToolbarSeparator />
-<ToolbarButton icon={<FormatIcon />} onClick={format} title="Format" />
-<ToolbarButton icon={<WrapIcon />}  onClick={wrap}   title="Wrap" />
+<RddToolbarButton icon={<RunIcon />} onClick={run} title="Run" />
+<RddToolbarSeparator />
+<RddToolbarButton icon={<FormatIcon />} onClick={format} title="Format" />
+<RddToolbarButton icon={<WrapIcon />}  onClick={wrap}   title="Wrap" />
 ```
 
-### `ToolbarSpacer`
+### `RddToolbarSpacer`
 
 A flex push spacer that pushes subsequent items to the opposite end.
 
 ```tsx
-<PanelToolbar position="top">
-  <ToolbarButton icon={<MenuIcon />} onClick={openMenu} title="Menu" />
-  <ToolbarSpacer />                                      {/* pushes right */}
-  <ToolbarButton icon={<SettingsIcon />} onClick={openSettings} title="Settings" />
-</PanelToolbar>
+<RddPanelToolbar position="top">
+  <RddToolbarButton icon={<MenuIcon />} onClick={openMenu} title="Menu" />
+  <RddToolbarSpacer />                                      {/* pushes right */}
+  <RddToolbarButton icon={<SettingsIcon />} onClick={openSettings} title="Settings" />
+</RddPanelToolbar>
 ```
 
-### `ToolbarCenter`
+### `RddToolbarCenter`
 
 Wraps children in a centered section (uses `margin: 0 auto`).
 
 ```tsx
-<PanelToolbar position="top">
-  <ToolbarCenter>
+<RddPanelToolbar position="top">
+  <RddToolbarCenter>
     <span style={{ fontSize: 12, opacity: 0.7 }}>Map View — London</span>
-  </ToolbarCenter>
-</PanelToolbar>
+  </RddToolbarCenter>
+</RddPanelToolbar>
 ```
 
-### `ToolbarSearchInput`
+### `RddToolbarSearch`
 
 An async search box with debounced query dispatch and a portal-rendered dropdown.
 
 ```tsx
-<ToolbarSearchInput
+<RddToolbarSearch
   placeholder="Search features…"
   onSearch={async (query, signal) => {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal });
@@ -213,104 +213,85 @@ interface SearchResult {
 ### Complete toolbar example
 
 ```tsx
-<PanelToolbar position="top" variant="frosted">
-  <ToolbarToggle icon={<LayersIcon />} active={showLayers} onToggle={() => setShowLayers(v => !v)} title="Layers" />
-  <ToolbarToggle icon={<InfoIcon />}   active={showInfo}   onToggle={() => setShowInfo(v => !v)}   title="Info"   />
-  <PanelToolbarSeparator />
-  <ToolbarButton icon={<ZoomInIcon />}  onClick={zoomIn}  title="Zoom in"  />
-  <ToolbarButton icon={<ZoomOutIcon />} onClick={zoomOut} title="Zoom out" />
-  <ToolbarSpacer />
-  <ToolbarSearchInput placeholder="Search…" onSearch={search} onSelect={goTo} />
-</PanelToolbar>
+<RddPanelToolbar position="top" variant="frosted">
+  <RddToolbarToggle icon={<LayersIcon />} active={showLayers} onToggle={() => setShowLayers(v => !v)} title="Layers" />
+  <RddToolbarToggle icon={<InfoIcon />}   active={showInfo}   onToggle={() => setShowInfo(v => !v)}   title="Info"   />
+  <RddToolbarSeparator />
+  <RddToolbarButton icon={<ZoomInIcon />}  onClick={zoomIn}  title="Zoom in"  />
+  <RddToolbarButton icon={<ZoomOutIcon />} onClick={zoomOut} title="Zoom out" />
+  <RddToolbarSpacer />
+  <RddToolbarSearch placeholder="Search…" onSearch={search} onSelect={goTo} />
+</RddPanelToolbar>
 ```
 
 ---
 
-## `PanelFloatingWindow` — declarative pattern
+## `RddFloatingWidget` — declarative pattern
 
-Use `PanelFloatingWindow` when you have a **fixed, known set** of floating windows toggled by toolbar buttons. You own the open/close boolean.
+Use `RddFloatingWidget` when you have a **fixed, known set** of floating windows toggled by toolbar buttons. You own the open/close boolean — a plain `useState` is all it takes.
 
 ```tsx
+import { useState } from 'react';
 import {
-  PanelFloatingWindow,
-  usePanelFloatingWindow,
+  RddPanelOverlay,
+  RddPanelToolbar,
+  RddToolbarToggle,
+  RddFloatingWidget,
 } from 'react-dockable-desktop';
 
 function MapPanel() {
-  const layerTree = usePanelFloatingWindow();
-  const featureInfo = usePanelFloatingWindow();
+  const [showLayers, setShowLayers] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   return (
-    <PanelOverlayRoot style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <RddPanelOverlay style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div id="map" style={{ width: '100%', height: '100%' }} />
 
-      <PanelToolbar position="top" variant="frosted">
-        <ToolbarToggle
+      <RddPanelToolbar position="top" variant="frosted">
+        <RddToolbarToggle
           icon={<LayersIcon />}
-          active={layerTree.isOpen}
-          onToggle={() => layerTree.isOpen ? layerTree.close() : layerTree.open()}
+          active={showLayers}
+          onToggle={() => setShowLayers(v => !v)}
           title="Layers"
         />
-        <ToolbarToggle
+        <RddToolbarToggle
           icon={<InfoIcon />}
-          active={featureInfo.isOpen}
-          onToggle={() => featureInfo.isOpen ? featureInfo.close() : featureInfo.open()}
+          active={showInfo}
+          onToggle={() => setShowInfo(v => !v)}
           title="Feature info"
         />
-      </PanelToolbar>
+      </RddPanelToolbar>
 
-      <PanelFloatingWindow
+      <RddFloatingWidget
         id="layer-tree"
         title="Layers"
         icon={<LayersIcon />}
-        open={layerTree.isOpen}
-        onClose={layerTree.close}
+        open={showLayers}
+        onClose={() => setShowLayers(false)}
         defaultAnchor="top-right"
         defaultWidth={280}
         defaultHeight={360}
       >
         <LayerTreeContent />
-      </PanelFloatingWindow>
+      </RddFloatingWidget>
 
-      <PanelFloatingWindow
+      <RddFloatingWidget
         id="feature-info"
         title="Feature Info"
-        open={featureInfo.isOpen}
-        onClose={featureInfo.close}
+        open={showInfo}
+        onClose={() => setShowInfo(false)}
         defaultAnchor="bottom-right"
         defaultWidth={300}
         defaultHeight={200}
       >
         <FeatureInfoContent />
-      </PanelFloatingWindow>
-    </PanelOverlayRoot>
+      </RddFloatingWidget>
+    </RddPanelOverlay>
   );
 }
 ```
 
-### `usePanelFloatingWindow()`
-
-A convenience hook that manages the open/close boolean for a single `PanelFloatingWindow`. Returns a `UsePanelFloatingWindowReturn` object.
-
-```typescript
-const { isOpen, open, close } = usePanelFloatingWindow();
-```
-
-| Value | Type | Description |
-|-------|------|-------------|
-| `isOpen` | `boolean` | Current open state. |
-| `open` | `() => void` | Opens the window. |
-| `close` | `() => void` | Closes the window. |
-
-To type a variable holding the hook result, import `UsePanelFloatingWindowReturn`:
-
-```ts
-import type { UsePanelFloatingWindowReturn } from 'react-dockable-desktop';
-
-const layerTree: UsePanelFloatingWindowReturn = usePanelFloatingWindow();
-```
-
-### `PanelFloatingWindowProps`
+### `RddFloatingWidgetProps`
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -330,31 +311,31 @@ const layerTree: UsePanelFloatingWindowReturn = usePanelFloatingWindow();
 
 ---
 
-## `usePanelFloatingWindowManager` — imperative pattern
+## `useFloatingWidgets` — imperative pattern
 
 Use the manager hook when you need to spawn **N windows dynamically** from data or event handlers — for example, clicking map markers to open camera feeds, feature cards, or drill-down charts.
 
 ### The inner-component pattern
 
-`usePanelFloatingWindowManager` reads from the context provided by `PanelOverlayRoot`. The hook must be called **inside** a descendant of the root, not in the component that renders the root itself:
+`useFloatingWidgets` reads from the context provided by `RddPanelOverlay`. The hook must be called **inside** a descendant of the root, not in the component that renders the root itself:
 
 ```tsx
-// ✅ Correct — MapPanelInner is a descendant of PanelOverlayRoot
+// ✅ Correct — MapPanelInner is a descendant of RddPanelOverlay
 export function MapPanel() {
   return (
-    <PanelOverlayRoot style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <RddPanelOverlay style={{ width: '100%', height: '100%', position: 'relative' }}>
       <MapPanelInner />
-    </PanelOverlayRoot>
+    </RddPanelOverlay>
   );
 }
 
-// ❌ Wrong — usePanelFloatingWindowManager() called before PanelOverlayRoot is in the tree
+// ❌ Wrong — useFloatingWidgets() called before RddPanelOverlay is in the tree
 export function MapPanel() {
-  const floats = usePanelFloatingWindowManager(); // ctx is null here!
+  const floats = useFloatingWidgets(); // ctx is null here!
   return (
-    <PanelOverlayRoot ...>
+    <RddPanelOverlay ...>
       ...
-    </PanelOverlayRoot>
+    </RddPanelOverlay>
   );
 }
 ```
@@ -364,11 +345,11 @@ export function MapPanel() {
 ```tsx
 import { useRef, useEffect, useCallback } from 'react';
 import {
-  PanelOverlayRoot,
-  PanelToolbar,
-  ToolbarToggle,
-  usePanelFloatingWindowManager,
-  type ManagedWindowConfig,
+  RddPanelOverlay,
+  RddPanelToolbar,
+  RddToolbarToggle,
+  useFloatingWidgets,
+  type ManagedWidget,
 } from 'react-dockable-desktop';
 
 const CAMERAS = [
@@ -378,14 +359,14 @@ const CAMERAS = [
 
 export function SurveillanceMap() {
   return (
-    <PanelOverlayRoot style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <RddPanelOverlay style={{ width: '100%', height: '100%', position: 'relative' }}>
       <SurveillanceMapInner />
-    </PanelOverlayRoot>
+    </RddPanelOverlay>
   );
 }
 
 function SurveillanceMapInner() {
-  const floats = usePanelFloatingWindowManager();
+  const floats = useFloatingWidgets();
   const mapRef = useRef<HTMLDivElement>(null);
 
   // Keep a stable ref so Leaflet event handlers always see the latest manager
@@ -421,34 +402,34 @@ function SurveillanceMapInner() {
 
   return (
     <>
-      <PanelToolbar position="top" variant="frosted">
-        <ToolbarToggle
+      <RddPanelToolbar position="top" variant="frosted">
+        <RddToolbarToggle
           icon={<CameraIcon />}
           active={floats.openIds.length > 0}
           onToggle={floats.closeAll}
           title={floats.openIds.length > 0 ? 'Close all feeds' : 'No feeds open'}
         />
-      </PanelToolbar>
+      </RddPanelToolbar>
       <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
     </>
   );
 }
 ```
 
-### `PanelFloatingWindowManagerHandle` API
+### `FloatingWidgetsApi` API
 
 | Method / Property | Type | Description |
 |-------------------|------|-------------|
-| `open(id, config)` | `(id: string, config: ManagedWindowConfig) => void` | Opens a managed window. If `id` is already open, the existing window is replaced with the new config. |
+| `open(id, config)` | `(id: string, config: ManagedWidget) => void` | Opens a managed window. If `id` is already open, the existing window is replaced with the new config. |
 | `close(id)` | `(id: string) => void` | Closes and unmounts the managed window with this ID. |
 | `closeAll()` | `() => void` | Closes all currently open managed windows. |
 | `isOpen(id)` | `(id: string) => boolean` | Returns `true` if a managed window with this ID is open. |
 | `openIds` | `string[]` | Array of IDs of all currently open managed windows. |
 
-### `ManagedWindowConfig`
+### `ManagedWidget`
 
 ```typescript
-interface ManagedWindowConfig {
+interface ManagedWidget {
   title: PanelTitle;        // header text — string or i18n descriptor
   icon?: React.ReactNode;   // optional icon left of the title
   content: React.ReactNode; // window body
@@ -461,7 +442,7 @@ interface ManagedWindowConfig {
 
 ### Localised titles
 
-`title` is a `PanelTitle` — `string | PanelTitleDescriptor` — the same type
+`title` is a `PanelTitle` — a string or an `{ id, defaultMessage?, values? }` descriptor — the same type
 [`openPanel()`](./workspace-client) and [modals](./modals-and-drawers) accept. Pass a descriptor and
 the header is re-resolved on every render, so it follows a language change with no reopen:
 
@@ -502,7 +483,7 @@ marker.on('click', () => {
 
 ### Serialization note
 
-`ManagedWindowConfig.content` is a `ReactNode` — it is not JSON-serializable. If you need to persist which windows are open across page reloads, store `manager.openIds` yourself and re-call `manager.open()` on startup with content rebuilt from your own config:
+`ManagedWidget.content` is a `ReactNode` — it is not JSON-serializable. If you need to persist which windows are open across page reloads, store `manager.openIds` yourself and re-call `manager.open()` on startup with content rebuilt from your own config:
 
 ```tsx
 // On restore:
@@ -538,7 +519,7 @@ A docked window has one **pinned** edge per axis — the ones its anchor holds i
 | `bottom-left` | bottom, inline-start | `n`, `e`, `ne` |
 | `bottom-right` | bottom, inline-end | `n`, `w`, `nw` |
 
-A free-floating window is pinned by nothing, so it offers all eight. Docked resizing also stops at any `PanelToolbar` on the far side rather than running underneath it.
+A free-floating window is pinned by nothing, so it offers all eight. Docked resizing also stops at any `RddPanelToolbar` on the far side rather than running underneath it.
 
 ---
 
@@ -559,18 +540,18 @@ Each axis is independent, so a placement is a corner plus zero, one, or both str
 ### Declaring it
 
 ```tsx
-<PanelFloatingWindow
+<RddFloatingWidget
   id="timeline"
   title="Timeline"
-  open={timeline.isOpen}
-  onClose={timeline.close}
+  open={showTimeline}
+  onClose={() => setShowTimeline(false)}
   defaultAnchor="bottom-left"
   defaultStretch="width"   // spans the panel's width; height stays 120px
   defaultWidth={240}
   defaultHeight={120}
 >
   <TimelineContent />
-</PanelFloatingWindow>
+</RddFloatingWidget>
 ```
 
 `defaultWidth`/`defaultHeight` are still worth passing: a spanning axis ignores its size while spanning, and **returns to it** when released.
@@ -636,7 +617,7 @@ const [placement, setPlacement] = useState<PanelFloatPlacement>(
   () => loadSavedPlacement() ?? { anchor: 'bottom-left', stretch: 'width' }
 );
 
-<PanelFloatingWindow
+<RddFloatingWidget
   id="timeline"
   defaultAnchor={placement.anchor}
   stretch={placement.stretch}          // controlled: you are the source of truth
@@ -645,7 +626,7 @@ const [placement, setPlacement] = useState<PanelFloatPlacement>(
 />
 ```
 
-Supplying `stretch` — **including as `null`** — switches the window to controlled mode: gestures report through `onPlacementChange` instead of applying themselves, and you must echo the value back for anything to change. Omit the prop entirely for uncontrolled behaviour. This mirrors `ToolbarToggle`'s `active` and `Sidebar`'s `activeTabId`.
+Supplying `stretch` — **including as `null`** — switches the window to controlled mode: gestures report through `onPlacementChange` instead of applying themselves, and you must echo the value back for anything to change. Omit the prop entirely for uncontrolled behaviour. This mirrors `RddToolbarToggle`'s `active` and `RddSidebar`'s `activeTabId`.
 
 `onPlacementChange` reports the anchor and the stretch **together**, as one value, because a single gesture can change both: dragging a strip's left end pins its right end and stops it spanning in the same motion. Two separate callbacks would expose an intermediate state that never actually exists.
 
@@ -663,32 +644,30 @@ All exported from `'react-dockable-desktop'`:
 
 | Export | Kind | Description |
 |--------|------|-------------|
-| `PanelOverlayRoot` | Component | Overlay provider and container |
-| `PanelOverlayRootProps` | Interface | Props for `PanelOverlayRoot` |
-| `PanelToolbar` | Component | Panel-scoped toolbar strip |
-| `PanelToolbarProps` | Interface | Props for `PanelToolbar` |
-| `ToolbarButton` | Component | Single action button |
-| `ToolbarButtonProps` | Interface | — |
-| `ToolbarToggle` | Component | On/off toggle button |
-| `ToolbarToggleProps` | Interface | — |
-| `PanelToolbarSeparator` | Component | Visual divider (alias of `ToolbarSeparator`) |
-| `ToolbarSpacer` | Component | Flex push spacer |
-| `ToolbarCenter` | Component | Centered section wrapper |
-| `PanelToolbarItem` | Component | Custom control wrapper (alias of `ToolbarItem`) |
-| `ToolbarSearchInput` | Component | Debounced async search with dropdown |
-| `ToolbarSearchInputProps` | Interface | — |
+| `RddPanelOverlay` | Component | Overlay provider and container |
+| `RddPanelOverlayProps` | Interface | Props for `RddPanelOverlay` |
+| `RddPanelToolbar` | Component | Panel-scoped toolbar strip |
+| `RddPanelToolbarProps` | Interface | Props for `RddPanelToolbar` |
+| `RddToolbarButton` | Component | Single action button |
+| `RddToolbarButtonProps` | Interface | — |
+| `RddToolbarToggle` | Component | On/off toggle button |
+| `RddToolbarToggleProps` | Interface | — |
+| `RddToolbarSeparator` | Component | Visual divider |
+| `RddToolbarSpacer` | Component | Flex push spacer |
+| `RddToolbarCenter` | Component | Centered section wrapper |
+| `RddToolbarItem` | Component | Custom control wrapper |
+| `RddToolbarSearch` | Component | Debounced async search with dropdown |
+| `RddToolbarSearchProps` | Interface | — |
 | `SearchResult` | Interface | `{ id, label, description?, group?, icon? }` |
-| `PanelFloatingWindow` | Component | Declarative single floating window |
-| `PanelFloatingWindowProps` | Interface | — |
-| `usePanelFloatingWindow` | Hook | Returns `UsePanelFloatingWindowReturn` |
-| `usePanelFloatingWindowManager` | Hook | Imperative multi-window manager |
+| `RddFloatingWidget` | Component | Declarative single floating window |
+| `RddFloatingWidgetProps` | Interface | — |
+| `useFloatingWidgets` | Hook | Imperative multi-window manager |
 | `ToolbarPosition` | Type | `'top' \| 'bottom' \| 'left' \| 'right'` |
 | `FloatAnchor` | Type | `'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'` |
 | `Stretch` | Type | `'width' \| 'height' \| 'both'` — which axes span the panel |
 | `PanelFloatPlacement` | Interface | `{ anchor, stretch }` — reported by `onPlacementChange` |
-| `ManagedWindowConfig` | Interface | Config for `manager.open(id, config)` |
-| `PanelFloatingWindowManagerHandle` | Interface | Return type of `usePanelFloatingWindowManager` |
-| `UsePanelFloatingWindowReturn` | Interface | Return type of `usePanelFloatingWindow` |
+| `ManagedWidget` | Interface | Config for `manager.open(id, config)` |
+| `FloatingWidgetsApi` | Interface | Return type of `useFloatingWidgets` |
 | `ToolbarVariant` | Type | `'transparent' \| 'frosted' \| 'solid'` |
 | `ButtonVariant` | Type | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` |
 

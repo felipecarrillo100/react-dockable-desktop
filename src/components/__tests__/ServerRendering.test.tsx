@@ -9,8 +9,8 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import {
-  DockableDesktopProvider, WindowManager, Sidebar, ToastContainer, Toolbar,
-  SidePanelRenderer, ModalStackRenderer, WorkspaceClient, useColorScheme,
+  DockableDesktopProvider, RddDesktop, RddSidebar, RddToasts, RddToolbar,
+  RddSidePanels, RddModals, createWorkspace, useColorScheme,
 } from '../../index';
 
 const Mock: React.FC = () => <div>mock</div>;
@@ -20,32 +20,32 @@ describe('server rendering (no DOM)', () => {
     expect(typeof document).toBe('undefined');
   });
 
-  it('DockableDesktopProvider + WindowManager', () => {
-    const client = new WorkspaceClient({ panels: { m: { component: Mock } } });
-    const html = renderToString(<DockableDesktopProvider client={client}><WindowManager /></DockableDesktopProvider>);
+  it('DockableDesktopProvider + RddDesktop', () => {
+    const workspace = createWorkspace({ panels: { m: { component: Mock } } });
+    const html = renderToString(<DockableDesktopProvider workspace={workspace}><RddDesktop /></DockableDesktopProvider>);
     expect(html).toContain('rdd-workspace');
   });
 
-  it('WindowManager inside a Sidebar', () => {
+  it('RddDesktop inside an RddSidebar', () => {
     const html = renderToString(
       <DockableDesktopProvider>
-        <Sidebar tabs={[{ id: 't', label: 'T', icon: <span />, renderContent: () => <div /> }]}><WindowManager /></Sidebar>
+        <RddSidebar tabs={[{ id: 't', label: 'T', icon: <span />, renderContent: () => <div /> }]}><RddDesktop /></RddSidebar>
       </DockableDesktopProvider>,
     );
     expect(html).toContain('rdd-workspace');
   });
 
-  it('ToastContainer renders nothing on the server (it portals once mounted)', () => {
-    expect(renderToString(<ToastContainer />)).toBe('');
-    expect(renderToString(<ToastContainer adapter={{ show: () => {}, update: () => {}, dismiss: () => {}, Container: () => <div /> }} />)).toBe('');
+  it('RddToasts renders nothing on the server (it portals once mounted)', () => {
+    expect(renderToString(<RddToasts />)).toBe('');
+    expect(renderToString(<RddToasts adapter={{ show: () => {}, update: () => {}, dismiss: () => {}, Container: () => <div /> }} />)).toBe('');
   });
 
   it('the overlay hosts and the toolbar', () => {
     const html = renderToString(
       <DockableDesktopProvider>
-        <Toolbar items={[{ type: 'action', id: 'a', label: 'A', icon: <span />, onClick: () => {} }]} />
-        <SidePanelRenderer />
-        <ModalStackRenderer />
+        <RddToolbar items={[{ type: 'action', id: 'a', label: 'A', icon: <span />, onClick: () => {} }]} />
+        <RddSidePanels />
+        <RddModals />
       </DockableDesktopProvider>,
     );
     expect(html).toContain('rdd-toolbar-strip');

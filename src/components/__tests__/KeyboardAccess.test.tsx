@@ -36,7 +36,7 @@ const mount = (extra: React.ReactNode = null, initialState: string | null = null
   const client = new WorkspaceClient({ panels: { p: { component: Plain } }, initialState });
   act(() => {
     root = createRoot(container);
-    root.render(<DockableDesktopProvider client={client}><Probe /><WindowManager taskbarVisibility="always" />{extra}</DockableDesktopProvider>);
+    root.render(<DockableDesktopProvider workspace={client}><Probe /><WindowManager taskbarVisibility="always" />{extra}</DockableDesktopProvider>);
   });
 };
 beforeEach(() => { container = document.createElement('div'); document.body.appendChild(container); });

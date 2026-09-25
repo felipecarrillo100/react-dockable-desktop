@@ -14,9 +14,9 @@
 
 ## Design philosophy
 
-The library follows the **WorkspaceClient pattern**, inspired by TanStack QueryClient and Redux store. Configuration and imperative API live on a single client object that you create **outside the React tree**. The React provider is a thin rendering layer that binds to the client.
+The library follows the **workspace pattern**, inspired by TanStack QueryClient and Redux store. Configuration and imperative API live on a single workspace object that you create with `createWorkspace()` **outside the React tree**. The React provider is a thin rendering layer that binds to the workspace.
 
-This means you can call `client.openPanel()`, `client.saveLayout()`, `client.focusPanel()` from **anywhere** — button handlers, keyboard shortcuts, server-sent events — without needing `useRef` hacks or context access.
+This means you can call `workspace.openPanel()`, `workspace.saveLayout()`, `workspace.focusPanel()` from **anywhere** — button handlers, keyboard shortcuts, server-sent events — without needing `useRef` hacks or context access.
 
 ## Getting started
 
@@ -34,4 +34,4 @@ import 'react-dockable-desktop/styles.css';
 
 - [Installation →](./installation)
 - [Quick Start →](./quick-start)
-- [WorkspaceClient →](./workspace-client)
+- [Workspace →](./workspace-client)
