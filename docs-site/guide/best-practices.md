@@ -16,7 +16,8 @@ export const workspace = createWorkspace({
 ```
 
 ```tsx
-// ❌ Inside a component — recreated on every render
+// ❌ Inside a component — a new workspace on every render. The provider keeps the FIRST one it
+//    received and silently ignores the rest, so config in the later ones never applies.
 function App() {
   const workspace = createWorkspace({ panels: { ... } }); // Wrong!
   return <DockableDesktopProvider workspace={workspace}>...</DockableDesktopProvider>;

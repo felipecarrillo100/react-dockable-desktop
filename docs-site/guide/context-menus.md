@@ -1,6 +1,6 @@
 # Context Menus
 
-Context menus in `react-dockable-desktop` work at two levels: the workspace automatically handles right-click on panel tabs, taskbar chips, and floating window headers — and your panels can add custom items or trigger their own menus with a single function call.
+Context menus in `react-dockable-desktop` work at two levels: the workspace automatically handles right-click on panel tabs and taskbar chips (and gives a floating window a **`⋮`** menu button when its panel adds items) — and your panels can add custom items or trigger their own menus with a single function call.
 
 > **Using `DockableDesktopProvider`?** The context menu is set up automatically — you do not need to place any `<RddContextMenu>` component. Jump to [`showContextMenu()`](#imperative-trigger-—-showcontextmenu) or [`usePanelContextMenu`](#usepanelcontextmenu-hook) for your use case.
 
@@ -8,7 +8,7 @@ Context menus in `react-dockable-desktop` work at two levels: the workspace auto
 
 | Scenario | Solution |
 |----------|----------|
-| Right-click on panel tab / taskbar chip / floating header | Built-in — nothing to add |
+| Right-click on a panel tab or a taskbar chip | Built-in — nothing to add |
 | Add dynamic items to a panel's right-click tab menu | `usePanelContextMenu(items)` |
 | Trigger a menu imperatively (WebGL canvas, map, game view) | `useContextMenu()` or `useWorkspace().showContextMenu()` |
 | Context menu on a surface outside all providers | `<RddContextMenu>` — with children, or standalone with a `ref` |
@@ -22,7 +22,6 @@ Context menus in `react-dockable-desktop` work at two levels: the workspace auto
 | Docked panel tab | Right-click the tab |
 | Minimized taskbar chip | Right-click the chip |
 | Floating window header **`⋮`** button | Appears automatically when a panel has custom items |
-| Floating window anchor button | Click to toggle corner anchoring |
 
 ## `usePanelContextMenu` hook
 
@@ -52,12 +51,12 @@ function MyPanel() {
 - Items are re-read on every menu open — state-driven enable/disable updates automatically.
 - No panel ID is needed; the hook reads it from the panel's context.
 - When the panel unmounts, its items are automatically unregistered.
-- Custom items appear after the built-in system items (Float, Minimize, Close) with a separator between them.
+- Custom items appear after the built-in system items (Float, Minimize, Close) with a separator between them. A panel that can't be dragged, minimized or closed (the [locked pattern](./panel-registry#locked-pinned-panel-pattern)) has no tab menu, so its custom items don't appear there.
 - The **`⋮`** button in the floating window header appears only when custom items exist.
 
 For panels hosting WebGL canvases or other native surfaces where the browser's `contextmenu` event doesn't carry a meaningful cursor position, use `showContextMenu()` instead.
 
-## Imperative trigger — `showContextMenu` <Badge type="tip" text="Added in 4.2.1" />
+## Imperative trigger — `showContextMenu`
 
 Panels that host WebGL canvases (maps, 3D viewers, game views) cannot use `usePanelContextMenu` for a canvas-level right-click because the browser's `contextmenu` event fires on the wrapping `<div>`, not in a meaningful position relative to the canvas content. Instead, call `showContextMenu()` from `useWorkspace()` to open the shared workspace menu from any panel:
 
@@ -92,6 +91,8 @@ function MapPanel() {
 `showContextMenu` delegates to whichever context menu is provided above it — by default the one `<DockableDesktopProvider>` sets up automatically. This means a single menu instance is shared across the entire workspace, regardless of how many map panels are open.
 
 > **Which hook?** Use `useContextMenu()` when the context menu is the only thing you need. Use `useWorkspace()` when you are already calling it in the same component for panel management (`openPanel`, `focusPanel`, etc.).
+>
+> **Direction.** The menu is rendered into `<body>`, so it takes its direction from where it was opened: the event's target when you pass `event`. `workspace.showContextMenu()` also passes the workspace's own direction, which a menu opened with only `x`/`y` then uses. `useContextMenu()` passes nothing extra, so a menu it opens with only `x`/`y` follows `<html dir>` — pass `dir: 'rtl'` (or an `event`) for an RTL workspace inside an LTR page.
 
 Both `showContextMenu()` and `usePanelContextMenu()` rely on the context menu that `DockableDesktopProvider` sets up automatically. The next section explains how to provide one yourself.
 
@@ -142,7 +143,7 @@ When an `<RddContextMenu>` with children is present in the ancestor tree, `<Dock
 | Prop | Default | Description |
 |------|---------|-------------|
 | `adapter` | the built-in menu | Context menu adapter to mount. |
-| `formatMessageProvider` | — | i18n formatter forwarded to the adapter component. When using `DockableDesktopProvider`, the provider's own `formatMessage` prop is forwarded automatically. |
+| `formatMessageProvider` | — | i18n formatter forwarded to the adapter component. When using `DockableDesktopProvider`, the provider's own `formatMessage` prop is forwarded automatically — the provider **prop**, not a `formatMessage` given to `createWorkspace()`. It formats message-descriptor labels in your own items; the built-in items arrive already formatted with the workspace's formatter. |
 | `onShow` | — | Fired when the menu opens. |
 | `onHide` | — | Fired when the menu closes. |
 | All other props | — | Forwarded directly to `adapter.Component` (see [`RddContextMenuProps`](#rddcontextmenuprops)). |
@@ -176,8 +177,9 @@ type MenuProps = Omit<RddContextMenuProps, 'adapter' | 'children'>;
 
 const MyMenu = forwardRef<ContextMenuHandle, MenuProps>((props, ref) => {
   useImperativeHandle(ref, () => ({
-    show({ event, x, y, items }) {
-      // render your own menu here
+    show({ event, x, y, items, dir }) {
+      // render your own menu here; since it's portaled, give it a direction:
+      // the event target's when there is an event, else dir, else the page's
     },
   }));
   return null; // or your menu portal
@@ -192,7 +194,7 @@ const myAdapter: ContextMenuAdapter = { Component: MyMenu };
 <RddContextMenu adapter={myAdapter}>...</RddContextMenu>
 ```
 
-The adapter receives `items: ContextMenuItem[]` via `show()` and is responsible for rendering them. The built-in menu is used when no adapter is provided.
+The adapter receives `items: ContextMenuItem[]` via `show()` and is responsible for rendering them. It also receives `dir` when the caller knows the direction (a workspace always passes its own): use the event target's direction when there is an event, else `dir`, because a menu portaled to `<body>` can't inherit the workspace's direction. The built-in menu is used when no adapter is provided.
 
 ## Item type reference
 
@@ -309,14 +311,14 @@ The component renders via `createPortal` to `document.body` at `position: fixed`
 
 | Method | Description |
 |--------|-------------|
-| `show({ event?, x?, y?, items })` | Open the menu at the event's cursor position (or explicit `x`/`y`). |
+| `show({ event?, x?, y?, items, dir? })` | Open the menu at the event's cursor position (or explicit `x`/`y`). Its direction is the event target's when there is an `event`, else `dir` when given, else the page's. |
 
 ### `RddContextMenuProps`
 
 | Prop | Default | Description |
 |------|---------|-------------|
-| `theme` | `'dark'` | CSS modifier class suffix. Built-in: `'dark'`. Pass a custom string for a custom theme class. |
-| `formatMessageProvider` | — | i18n formatter for `MessageDescriptor` labels. Pass `intl.formatMessage` here, or use `DockableDesktopProvider`'s `formatMessage` prop which forwards it automatically. |
+| `theme` | `'dark'` | CSS modifier class suffix (`rdd-context-menu--{theme}`). The built-in menu styles itself from the workspace's `--rdd-*` tokens, so it follows the skin and colour scheme without one; pass a string to hook your own `.rdd-context-menu--my-theme` rules. |
+| `formatMessageProvider` | — | i18n formatter for `MessageDescriptor` labels. Pass `intl.formatMessage` here, or use `DockableDesktopProvider`'s `formatMessage` prop, which forwards it automatically (a `formatMessage` given only to `createWorkspace()` doesn't reach descriptor labels in your own items; the built-in items are formatted before they reach the menu). |
 | `onShow` | — | Fired when the menu opens. |
 | `onHide` | — | Fired when the menu closes. |
 | `onOpenChange` | — | Combined open/close callback: `(open: boolean) => void`. |

@@ -41,7 +41,7 @@ function MapPanel() {
 ```
 
 **Requirements:**
-- Must have an explicit size. Give the root element `position: relative` and a known width/height (usually `width: 100%; height: 100%` to fill the panel).
+- It fills its panel on its own (`.rdd-panel-overlay-root` is `position: relative` at 100% width and height). Give it a size only if you place it inside something smaller than the panel.
 - All `RddPanelToolbar` and `RddFloatingWidget` components must be **descendants** of the same `RddPanelOverlay`.
 
 ### `RddPanelOverlayProps`
@@ -69,7 +69,7 @@ A toolbar strip that attaches to any edge of the `RddPanelOverlay` container. Mu
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `position` | `ToolbarPosition` | — | **Required.** Which edge to attach to. One of `'top'`, `'bottom'`, `'left'`, `'right'`. |
-| `variant` | `'transparent' \| 'frosted' \| 'solid'` | `'transparent'` | Background style. `frosted` adds a blur/tint; `solid` uses the panel background color. |
+| `variant` | `'transparent' \| 'frosted' \| 'solid'` | `'transparent'` | Background style. `frosted` adds a blur/tint; `solid` uses the tab-bar background (`--rdd-bg-tab-bar`). |
 | `buttonVariant` | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` | `'ghost'` | Default button appearance inherited by all child buttons. Overridable per-button. |
 | `buttonSize` | `number` | — | Overrides the `--rdd-panel-toolbar-btn-size` CSS variable (pixels). |
 | `className` | `string` | — | Extra CSS class. |
@@ -113,7 +113,7 @@ A single action button. Clicking fires `onClick` and does not change any toggle 
 | `icon` | `ReactNode` | Button icon. Recommended: 16×16 SVG with `stroke="currentColor"`. |
 | `onClick` | `() => void` | Called on click. |
 | `title?` | `string` | Tooltip and accessible label. |
-| `disabled?` | `boolean` | Disables the button (35% opacity). |
+| `disabled?` | `boolean` | Disables the button (38% opacity). |
 | `variant?` | `ButtonVariant` | Overrides the toolbar's `buttonVariant` for this button only. |
 
 ### `RddToolbarToggle`
@@ -165,7 +165,7 @@ A flex push spacer that pushes subsequent items to the opposite end.
 
 ### `RddToolbarCenter`
 
-Wraps children in a centered section (uses `margin: 0 auto`).
+Wraps children in a section centered on the toolbar itself (absolutely positioned at 50%), independent of the widths of what is on its left and right.
 
 ```tsx
 <RddPanelToolbar position="top">
@@ -626,7 +626,7 @@ const [placement, setPlacement] = useState<PanelFloatPlacement>(
 />
 ```
 
-Supplying `stretch` — **including as `null`** — switches the window to controlled mode: gestures report through `onPlacementChange` instead of applying themselves, and you must echo the value back for anything to change. Omit the prop entirely for uncontrolled behaviour. This mirrors `RddToolbarToggle`'s `active` and `RddSidebar`'s `activeTabId`.
+Supplying `stretch` — **including as `null`** — switches the window to controlled mode: gestures report through `onPlacementChange` instead of applying themselves, and you must echo the value back for anything to change. Omit the prop entirely for uncontrolled behaviour. This matches the controlled/uncontrolled pattern of an `RddToolbar` toggle item's `active` and `RddSidebar`'s `activeTabId`.
 
 `onPlacementChange` reports the anchor and the stretch **together**, as one value, because a single gesture can change both: dragging a strip's left end pins its right end and stops it spanning in the same motion. Two separate callbacks would expose an intermediate state that never actually exists.
 

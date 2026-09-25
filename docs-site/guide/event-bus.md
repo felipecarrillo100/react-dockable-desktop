@@ -135,11 +135,11 @@ workspace.subscribe('layout:panels-excluded', data => {
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `'panel:opened'` | `{ id: string; component: string }` | A panel was opened (or restored from layout). |
+| `'panel:opened'` | `{ id: string; component: string }` | A new panel was opened with `openPanel()`. (`loadLayout()` publishes no events.) |
 | `'panel:closed'` | `{ id: string }` | A panel was closed. |
 | `'panel:minimized'` | `{ id: string }` | A panel was sent to the taskbar. |
 | `'panel:restored'` | `{ id: string }` | A minimized panel was restored. |
-| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and a dedupe redirect into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), nor resize/split-ratio drag, which has no hook yet. |
+| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and a dedupe redirect into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), split-ratio drags, floating-window moves and resizes, or toggling a floating window's maximized state. |
 | `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from `useSaveState`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
 
 Built-in events are available on typed workspaces too — they are intersected in automatically via `BuiltInEvents`.
@@ -221,7 +221,7 @@ workspace.subscribe('panel:opened', data => {
 | `useWorkspace().publish/subscribe` | Inside a panel component | Easiest for panel-to-panel communication |
 | `workspace.publish/subscribe` | Outside React (module level, event handlers) | Use the generic for type safety |
 | `workspace.onPanelOpen/Close/Minimize/Restore` | Module level, analytics, routing | Convenience wrappers; return unsubscribe |
-| `BuiltInEvents` | TypeScript event maps | Type the four built-in lifecycle events |
+| `BuiltInEvents` | TypeScript event maps | Types the six built-in events: `panel:opened`, `panel:closed`, `panel:minimized`, `panel:restored`, `layout:changed`, `layout:panels-excluded` |
 
 ## See also
 

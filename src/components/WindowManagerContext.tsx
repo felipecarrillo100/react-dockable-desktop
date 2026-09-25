@@ -468,10 +468,13 @@ export interface WorkspaceActions {
    */
   setPanelIcon: (id: string, icon: React.ReactNode | null) => void;
   /**
-   * Closes a panel, first running any registered close guards.
-   * If the panel is dirty, shows the built-in unsaved-changes confirmation dialog.
+   * Closes a panel the way its tab's × does: registered close guards run first, and a dirty panel
+   * closes only if `onConfirm` resolves `true` — without `onConfirm`, a dirty panel stays open.
+   * (The tab's own ×, which passes an `onConfirm`, is what shows the built-in unsaved-changes
+   * dialog.)
    * @param id - Panel instance ID.
-   * @param options - `force: true` bypasses guards; `onConfirm` provides a custom dialog.
+   * @param options - `force: true` bypasses guards and the dirty check; `onConfirm` is asked
+   *   whether to discard a dirty panel's changes.
    */
   requestClosePanel: (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => Promise<void>;
   /**

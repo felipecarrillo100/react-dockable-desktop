@@ -82,7 +82,7 @@ toast.promise(
 );
 ```
 
-The pending toast stays open indefinitely until the promise settles. On resolve it transitions to success; on reject it transitions to error. Both use the container's `defaultDuration` after settling.
+The pending toast stays open indefinitely until the promise settles. On resolve it transitions to success; on reject it transitions to error. The settled toast stays for the `duration` you pass in the options, or 5000ms — not the container's `defaultDuration`.
 
 ### Dedup by id
 

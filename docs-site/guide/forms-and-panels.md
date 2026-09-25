@@ -95,8 +95,8 @@ panel.setDirty(true, {
 |--------|------|-------------|
 | `title` | `string` | Header text of the confirmation dialog. |
 | `message` | `string` | Body text explaining the situation. |
-| `alert` | `string` | Optional banner shown above the message. |
-| `alertType` | `'info' \| 'warning' \| 'success' \| 'danger'` | Color scheme for the alert banner. Default: `'info'`. |
+| `alert` | `string` | Optional banner shown above the message. The banner appears only when this is set. |
+| `alertType` | `'info' \| 'warning' \| 'success' \| 'danger'` | Color scheme for the alert banner. Default: `'danger'` for this automatic unsaved-changes dialog (`RddConfirm` used on its own defaults to `'info'`). |
 
 `title` and `message` also accept localizable message descriptors (`{ id, defaultMessage, values }`) when using `formatMessage`.
 
@@ -113,7 +113,7 @@ useBeforeClose(async () => {
 });
 ```
 
-The guard is called before the dirty-state dialog. If it returns (or resolves to) `false`, the close is blocked and **no dialog is shown**. Return `true` to proceed (the dirty-state dialog fires next if the panel is dirty).
+The guard is called before the dirty-state dialog. If it returns (or resolves to) `false`, the close is blocked and **no dialog is shown**. Return `true` to proceed: in a docked or floating panel, the dirty-state dialog then fires if the panel is dirty; in a modal or drawer, a guard that returns `true` closes it straight away, without the dirty-state dialog.
 
 Call it at the top level of the component, like any hook. It always calls the latest function you pass — no dependency array — and cleans up on unmount. To register a guard only some of the time, pass `null` otherwise:
 
@@ -232,7 +232,7 @@ usePanelEvents({
 To render from it instead, read `usePanel().isActive`.
 
 ::: info What "active" means
-The active panel is determined by `focusPanel()` / user tab clicks, not by visibility. A minimized panel cannot be active. Calling `openPanel()` alone does **not** make the panel globally active — call `focusPanel(id)` if you need that.
+The active panel is determined by `openPanel()`, `focusPanel()` and the user's tab clicks, not by visibility. A minimized panel is never made active by the library itself; `focusPanel()` called on one does make it active. `openPanel()` makes the panel active unless you pass `focus: false`; `focusPanel(id)` makes an already-open one active.
 :::
 
 ### Container type changes (docked ↔ floating)
@@ -256,7 +256,7 @@ usePanelEvents({
 ```
 
 ::: tip Reading the current type
-`usePanel().containerType` is always the current type — the component re-renders when it changes, so you don't need to mirror it into state:
+`usePanel().containerType` is the current type — the component re-renders when it changes, so you don't need to mirror it into state. (While minimized, it reads `'dockable-panel'`, also for a panel that was floating; `isMinimized` tells you it is minimized.)
 
 ```ts
 const { containerType } = usePanel();

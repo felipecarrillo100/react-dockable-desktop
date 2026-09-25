@@ -167,7 +167,14 @@ That's it. No TypeScript changes, no library recompilation, no config registrati
 
 ## Dark and light variants
 
-The library automatically sets `data-color-scheme="dark"` or `"light"` on the workspace root based on system preference (or your explicit `dir`/scheme prop). You can target it with a compound selector:
+The colour scheme is **your app's** to set: put `data-color-scheme="light"` on `<html>` for light, and remove it (or set `"dark"`) for dark, which is also the default when the attribute is absent. The library never writes it on `<html>` and doesn't read the system preference — follow `prefers-color-scheme` yourself if you want to:
+
+```ts
+document.documentElement.setAttribute('data-color-scheme', 'light'); // light
+document.documentElement.removeAttribute('data-color-scheme');       // dark (the default)
+```
+
+The workspace root copies the value, so skins can target it with a compound selector:
 
 ```css
 /* Dark mode — usually your primary skin definition */
@@ -215,7 +222,7 @@ function MyMapPanel() {
 }
 ```
 
-It reads and reactively tracks the same `data-color-scheme` attribute described above — the value always matches what `[data-color-scheme="..."]` CSS selectors are currently matching.
+It reads and reactively tracks the `data-color-scheme` attribute on `<html>` described above, so it matches the library's own `[data-color-scheme]` styles as long as you set the attribute there, which is the supported place. (A `data-color-scheme` on some wrapper element isn't read, and inside the workspace the `<html>` value wins.)
 
 ## Runtime skin switching
 
@@ -370,10 +377,10 @@ Copy this into your CSS file and fill in the color values. All variable names ar
 }
 ```
 
-The `RddSidebar` component uses a separate variable set. Override these if your skin includes an `RddSidebar`:
+The `RddSidebar` component uses a separate variable set. Override these if your skin includes an `RddSidebar`. The sidebar sits outside the workspace, so these are read from `<html>`, which carries `data-rdd-skin` (set by `RddDesktop`) and your `data-color-scheme`. Target dark with the skin selector alone — nothing sets `data-color-scheme="dark"` in the default dark mode — and light with the compound selector:
 
 ```css
-[data-rdd-skin="my-skin"][data-color-scheme="dark"] {
+[data-rdd-skin="my-skin"] {  /* dark (the default) */
   --rdd-sidebar-bg:                  #1e2024;
   --rdd-sidebar-tabs-bg:             #141619;
   --rdd-sidebar-border:              rgba(255, 255, 255, 0.08);
@@ -399,6 +406,12 @@ The `RddSidebar` component uses a separate variable set. Override these if your 
   --rdd-tab-btn-active-shadow:       none;     /* inset glow: inset 0 0 12px rgba(...) */
   --rdd-tab-btn-active-glow:         none;     /* icon glow: drop-shadow(0 0 5px rgba(...)) */
   --rdd-tab-accent-bar-width:        3px;      /* set 0px to use a shape-only indicator */
+}
+
+[data-rdd-skin="my-skin"][data-color-scheme="light"] {  /* light */
+  --rdd-sidebar-bg:                  #f6f8fa;
+  --rdd-sidebar-tabs-bg:             #eaeef2;
+  /* … the same variables, light values … */
 }
 ```
 
@@ -531,7 +544,7 @@ To use your page's own font everywhere, set `--rdd-font-family: inherit` on `:ro
 
 ### `RddSidebar` component
 
-These are set by `[data-color-scheme]` globally, not by `[data-rdd-skin]`. Override them in your skin using the compound selector (e.g. `[data-rdd-skin="my-skin"][data-color-scheme="dark"]`).
+The library defines these on `:root` (dark, the default) and on `[data-color-scheme="light"]`; some built-in skins override a few of them (the active-tab and accent ones). Override them in your skin with `[data-rdd-skin="my-skin"]` for dark and `[data-rdd-skin="my-skin"][data-color-scheme="light"]` for light.
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|

@@ -1170,10 +1170,10 @@ body.rdd-dragging-active {
 }
 
 /* --- Theme Variables for Sidebar and Tabs --- */
-/* Dark is the default scheme, so its tokens are defined on :root as well. <Toolbar> and <Sidebar>
-   sit outside the workspace element, and WindowManager mirrors only a *light* scheme onto <html>
-   — so with these under [data-color-scheme="dark"] alone, the toolbar and sidebar rendered with
-   no background, border or text colour in dark mode unless the app set the attribute itself. */
+/* Dark is the default scheme, so its tokens are defined on :root as well. <RddToolbar> and
+   <RddSidebar> sit outside the workspace element and read these from <html>, where the page sets
+   data-color-scheme="light" for light and usually sets nothing for dark — so with these under
+   [data-color-scheme="dark"] alone, the toolbar and sidebar had no colours in dark mode. */
 :root,
 [data-color-scheme="dark"] {
   --rdd-sidebar-bg: #1e2024;

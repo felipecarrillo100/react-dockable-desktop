@@ -18,10 +18,12 @@ const workspace = createWorkspace(config?: WorkspaceConfig)  // → Workspace
 | `initialState` | `string \| null` | JSON string from a previous `saveLayout()`. Pass `null` or omit for an empty canvas. |
 | `formatMessage` | `MessageFormatter` | Custom i18n formatter for all built-in strings. |
 | `messages` | `Record<string, MessageDescriptor>` | Override any subset of the built-in message table (see `defaultMessages`). |
-| `dir` | `'ltr' \| 'rtl'` | Initial layout direction. If omitted, the provider's `dir` prop is used, else `'ltr'`. |
+| `dir` | `'ltr' \| 'rtl'` | Layout direction. If omitted, the provider's `dir` prop is used, else `'ltr'`. |
 | `defaultSplitRatio` | `number` | Fraction (0.1–0.9) the new panel takes when dropped on a panel's top/bottom/left/right cross target. Default: `0.5`. |
 | `defaultEdgeSplitRatio` | `number` | Fraction (0.1–0.9) the new panel takes when dropped on the workspace's outer edge. Default: `0.2`. |
 | `zIndexBase` | `number` | Starting z-index for floating windows and the library's own chrome overlays (context menu, toolbar flyout, modal stack, toast, workspace edge zones) — all shift together via `--rdd-z-base`. Set this above/below a host app's own modal z-index range to control stacking against it. Default: `1000`. |
+
+**Workspace config wins over provider props.** `dir`, `zIndexBase`, `messages` and `formatMessage` can be given here or as [`DockableDesktopProvider` props](#dockabledesktopprovider-props); when both are given, the value here is used and the provider prop is ignored — including later changes to it. One exception: message-descriptor labels in **your own** context-menu items are formatted only with the provider's `formatMessage` (the built-in items — Float, Minimize, Close… — use the workspace's), so pass `formatMessage` to the provider too if your custom items use descriptors. For a direction that changes at runtime, either leave `dir` out of `createWorkspace()` and drive the provider's `dir` prop, or call `workspace.setDirection()`.
 
 ## Imperative API
 
@@ -42,7 +44,7 @@ function OpenMapButton() {
 workspace.openPanel(id, componentKey, options?)  // open / focus a panel; a minimized one is restored where it was
 workspace.closePanel(id)                          // close immediately (no guard)
 workspace.minimizePanel(id)                       // send to taskbar
-workspace.restorePanel(id)                        // restore from taskbar
+workspace.restorePanel(id, { focus? })            // restore from taskbar (focus defaults to true)
 workspace.focusPanel(id)                          // bring to front / select tab
 ```
 
@@ -115,16 +117,43 @@ workspace.findPanelId('markdownDocument', '/notes.md')  // → the matching pane
 ```ts
 workspace.floatPanel(id, rect?)                   // detach to floating window
 workspace.dockPanel(id, targetLeafId?)            // dock back to grid
-workspace.maximizePanel(id)                       // maximize floating window (restores + floats a minimized one)
+workspace.maximizePanel(id)                       // toggle a floating window's maximized state (a minimized one is restored, floated and maximized)
 workspace.dockPanelToGroup(id, leafId, position)  // dock into a group, or split it ('center' | 'left' | 'right' | 'top' | 'bottom')
 workspace.dockPanelToWorkspaceEdge(id, side)      // dock along an outer edge of the workspace
 workspace.movePanelOrder(id, leafId, index)       // re-order a tab (or move it into another group)
 await workspace.closeLeafGroup(leafId, { onConfirm? }) // close every tab in a group, then the group
 ```
 
-The panel that was moved becomes the active one, and each of these publishes `layout:changed`.
+The panel that was moved becomes the active one. Floating, docking, docking to a group or an edge, and re-ordering each publish `layout:changed`; `closeLeafGroup` publishes it only when it removed the group (each closed tab publishes its own), and `maximizePanel` only when it restored a minimized panel — toggling a floating window's maximized state publishes nothing.
 
 `closeLeafGroup` closes each tab the way its own × does: a close guard can refuse, and a dirty tab stays open unless `onConfirm` resolves `true`. A tab that stays open keeps its group. The returned promise settles once every tab has been dealt with.
+
+### Title, icon and dirty state
+
+From outside the panel — inside it, [`usePanel()`](/guide/forms-and-panels) does the same:
+
+```ts
+workspace.updatePanelTitle(id, title)             // a string or a message descriptor
+workspace.setPanelIcon(id, icon)                  // tab, floating title bar and taskbar icon; null restores the registration's; never saved
+workspace.setPanelDirty(id, dirty, options?)      // marks unsaved changes; options customise the close confirmation
+await workspace.requestClosePanel(id, { force?, onConfirm? })
+```
+
+`requestClosePanel` closes the way a tab's × does: close guards run first, and a dirty panel closes only if `onConfirm` resolves `true` — without `onConfirm`, a dirty panel stays open. `force: true` skips both. `closePanel(id)` closes at once, with no checks.
+
+### Low-level
+
+Rarely needed from app code — the panel-side hooks (`useBeforeClose`, `useSaveState`) and the user's own drags cover them:
+
+```ts
+workspace.registerCloseGuard(id, () => boolean | Promise<boolean>)   // what useBeforeClose() does
+workspace.unregisterCloseGuard(id)
+workspace.registerStateProvider(id, () => props)                     // what useSaveState() does
+workspace.unregisterStateProvider(id)
+workspace.updateSplitSizes(path, sizes)                              // set a split's ratios
+workspace.updateFloatingPosition(id, { x?, y?, width?, height?, anchor? })
+workspace.showContextMenu({ x, y, items, event?, dir? })             // the shared menu, opened from code
+```
 
 ### Layout serialization
 
@@ -172,10 +201,11 @@ The default (`createWorkspace()` without a type parameter) accepts any string ke
 Two more built-in events, added alongside per-panel props:
 
 ```ts
-// Fires whenever something saveLayout() would capture changes — coalesces open/close/minimize/
-// restore/dedupe-redirect into one signal for autosave-style consumers. Does NOT cover a
-// useSaveState callback's value changing on its own (that's a pull, unobservable without
-// the panel notifying separately), nor resize/split-drag/dock-rearrange (no hooks yet).
+// Fires when the panels' placement changes: open, close, minimize, restore, float, dock,
+// dock to a group or an edge, re-order, and a dedupe redirect — one signal for autosave-style
+// consumers. It does NOT fire for split-divider drags, floating-window moves and resizes,
+// maximizing a floating window, title/icon/dirty changes, loadLayout(), or a useSaveState
+// value changing on its own (that's a pull, unobservable without the panel notifying separately).
 workspace.subscribe('layout:changed', () => { /* ... */ });
 
 // Fires from inside saveLayout() itself, only when that call excluded at least one panel.
@@ -229,13 +259,26 @@ import type { RddDesktopProps, TaskbarVisibility } from 'react-dockable-desktop'
 |------|------|---------|-------------|
 | `skin` | `string` | `'vscode'` | Built-in visual theme or any custom skin name. Built-ins: `vscode`, `macos`, `chrome`, `slate`, `nord`, `obsidian`, `tokyo`. See [Custom Theming →](/guide/theming). |
 | `defaultPanelIcon` | `ReactNode` | — | Fallback icon used when a panel definition has no `icon`. |
-| `taskbarVisibility` | `TaskbarVisibility` | `'autohide'` | Controls when the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows the bar only when at least one panel is minimized. `'autohide'` renders the bar as a full-screen overlay with an 8 px peek strip that expands on pointer-enter; briefly auto-expands for 2 s when a panel is minimized. |
-| `contextMenuAdapter` | `ContextMenuAdapter` | the built-in menu | Used only when no context menu is provided above `RddDesktop`. `DockableDesktopProvider` always provides one, so set `contextMenuAdapter` on the provider instead. See [Context Menus →](/guide/context-menus). |
+| `taskbarVisibility` | `TaskbarVisibility` | `'autohide'` | When the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows it only while at least one panel is minimized. `'autohide'` shows it only while at least one panel is minimized, collapsed to an 8px peek strip (12px on touch screens) at the bottom of the workspace: it expands when the pointer reaches it, collapses 400ms after the pointer leaves — never while the pointer is on it — and opens for 2s when a panel is minimized. |
 | `animations` | `boolean` | `true` | Enables the library's own transitions/animations (tab hover, dock preview, etc.). Set to `false` to disable them — scoped to only the library's own elements, never the host page's. |
 
 ```tsx
 <RddDesktop skin="nord" taskbarVisibility="autohide" defaultPanelIcon={<FolderIcon />} />
 ```
+
+## `DockableDesktopProvider` props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `workspace` | `Workspace` | a new empty workspace | The workspace to render, from `createWorkspace()`. Omit it and the provider creates one (register panels through `useWorkspace().registry`). |
+| `messages` | `Record<string, MessageDescriptor>` | — | Overrides any subset of the built-in messages. |
+| `formatMessage` | `MessageFormatter` | uses `defaultMessage` | Your i18n formatter. It is also the one that formats message-descriptor labels in your own context-menu items. |
+| `dir` | `'ltr' \| 'rtl'` | `'ltr'` | Layout direction. |
+| `zIndexBase` | `number` | `1000` | Starting z-index for floating windows and the chrome overlays (see `WorkspaceConfig.zIndexBase`). |
+| `contextMenuAdapter` | `ContextMenuAdapter` | the built-in menu | Replaces the context menu component — see [Context Menus →](/guide/context-menus). |
+| class props | `string` | — | See below. |
+
+`messages`, `formatMessage`, `dir` and `zIndexBase` given to `createWorkspace()` win over these props — see [WorkspaceConfig](#workspaceconfig) — except that message-descriptor labels in your own context-menu items always use this `formatMessage` prop.
 
 ## CSS class overrides
 

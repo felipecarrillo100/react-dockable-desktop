@@ -38,4 +38,4 @@ The package ships both ESM and CJS:
 | `import` (ESM) | `dist/index.js` |
 | `require` (CJS) | `dist/index.cjs` |
 | `types` | `dist/index.d.ts` |
-| `styles` | `dist/styles.css` |
+| `./styles.css` (subpath export — `import 'react-dockable-desktop/styles.css'`) | `dist/styles.css` |

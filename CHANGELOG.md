@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs
+- A full pass over the README and every guide against the 7.1.3 source. Corrected, among others: `RddDesktop` has no `contextMenuAdapter` prop (it is on the provider); the colour scheme is the `data-color-scheme` your app sets on `<html>` — the library doesn't detect the system preference; `dir` on `<html>` doesn't make the workspace RTL (set it on the provider), and only the sidebar and toasts follow the page's `dir`; `openPanel()` makes the panel active by default; which actions publish `layout:changed`; a modal's default size (`auto`) and a drawer's default width (400px); `{ separator: true }` menu items; the custom resizer sample; the skin selectors for sidebar variables; and the right-click surfaces.
+- Documented: the workspace's title, icon, dirty-state and low-level methods, `requestClosePanel`'s behaviour without `onConfirm`, `DockableDesktopProvider`'s full props and their precedence against `createWorkspace()` config, `registry.get()`/`getRegisteredIds()`, and `ShowContextMenuOptions.dir`.
+- A test (`DocsNames.test.ts`) keeps removed 6.x names and non-existent `RddDesktop` props out of the docs.
+
 ## [7.1.3] — 2026-09-25
 
 ### Fixed
