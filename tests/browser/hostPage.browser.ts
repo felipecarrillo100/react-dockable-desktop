@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { chromium } from 'playwright-core';
 import { inject } from 'vitest';
-import { openHarness, rectOf } from './lib';
+import { openHarness, rectOf, actions } from './lib';
 
 // The stylesheet no longer styles html, body or #root. Until 7.0 it fixed them to 100% height with
 // overflow hidden, which stopped every host page from scrolling; a full-window app now opts in
@@ -52,4 +52,53 @@ describe('host CSS can override the library\'s structural layout', () => {
     expect(Math.round((await rectOf(page, '.rdd-sidebar-strip-wrap')).width)).toBe(64);
     await close();
   });
+});
+
+// Fixed values live in the elements' classes, not inline, so host CSS wins over them (7.1.2).
+describe('host CSS can override fixed chrome values', () => {
+  it('the tab close button, the tab title width and the panel overflow', async () => {
+    const { page, close } = await openHarness();
+    await page.addStyleTag({ content: '.rdd-close-tab-x { width: 24px; height: 24px; } .rdd-workspace-tab .rdd-text-truncate { max-width: 240px; } .rdd-workspace-panel { overflow: visible; }' });
+    await page.waitForTimeout(100);
+    const got = await page.evaluate(() => ({
+      close: getComputedStyle(document.querySelector('.rdd-workspace-tab .rdd-close-tab-x')!).width,
+      title: getComputedStyle(document.querySelector('.rdd-workspace-tab .rdd-text-truncate')!).maxWidth,
+      overflow: getComputedStyle(document.querySelector('.rdd-workspace-panel')!).overflow,
+    }));
+    expect(got).toEqual({ close: '24px', title: '240px', overflow: 'visible' });
+    await close();
+  });
+
+  it('the taskbar preview title and the no-preview placeholder', async () => {
+    const { page, close } = await openHarness();
+    await page.addStyleTag({ content: '.rdd-tooltip-title-text { max-width: 200px; } .rdd-taskbar-item-preview-frame--empty { background: rgb(1, 2, 3); }' });
+    await actions(page, 'openPanel', 'np', 'nopreview', { title: 'No preview' });
+    await actions(page, 'minimizePanel', 'np');
+    await page.mouse.move(640, 798);
+    await page.waitForTimeout(400);
+    await page.locator('.rdd-taskbar-glassmorphic-item').first().hover();
+    await page.waitForSelector('.rdd-taskbar-item-tooltip');
+    const got = await page.evaluate(() => ({
+      title: getComputedStyle(document.querySelector('.rdd-tooltip-title-text')!).maxWidth,
+      frame: getComputedStyle(document.querySelector('.rdd-taskbar-item-tooltip .rdd-taskbar-item-preview-frame')!).backgroundColor,
+    }));
+    expect(got).toEqual({ title: '200px', frame: 'rgb(1, 2, 3)' });
+    await close();
+  });
+});
+
+describe('the unregistered-panel placeholder follows the colour scheme', () => {
+  for (const [scheme, rgb] of [['dark', 'rgb(220, 53, 69)'], ['light', 'rgb(185, 28, 28)']]) {
+    it(`${scheme}: border and text use --rdd-danger-color`, async () => {
+      const { page, close } = await openHarness(`cs=${scheme}`);
+      await actions(page, 'openPanel', 'u', 'not-registered', { title: 'Unregistered' });
+      await page.waitForSelector('.rdd-unregistered-panel');
+      const got = await page.evaluate(() => {
+        const cs = getComputedStyle(document.querySelector('.rdd-unregistered-panel')!);
+        return { border: cs.borderTopColor, text: cs.color };
+      });
+      expect(got).toEqual({ border: rgb, text: rgb });
+      await close();
+    });
+  }
 });

@@ -15,6 +15,10 @@
      `initial` on any ancestor — `inherit` below :root only copies this stack down. */
   --rdd-font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --rdd-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Errors the library itself shows (the unregistered-panel placeholder). */
+  --rdd-danger-color: #dc3545;
+  /* Fill of placeholder boxes (a minimized panel's thumbnail when it has no live preview). */
+  --rdd-placeholder-bg: rgba(108, 117, 125, 0.15);
   --rdd-bg-primary: #090b11;
   --rdd-bg-workspace: #0f111a;
   --rdd-bg-panel: #141722;
@@ -219,6 +223,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
 
 /* Tab Headers Bar */
@@ -374,7 +380,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 18px;
+  height: 18px;
 }
+/* Pushed to the tab's end when the tab has no header actions of its own. After the base rule, so
+   it wins over its margin-left. */
+.rdd-close-tab-x--end { margin-inline-start: auto; }
+.rdd-header-close-empty-group { cursor: pointer; }
 
 /* Always show close icon on active tab */
 .rdd-workspace-tab.rdd-active .rdd-close-tab-x {
@@ -685,6 +697,12 @@ body.rdd-resizing-col-active * {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* The resting place is here, not only in the fade-in's end state: with animations off there is
+     no keyframe, and the preview would otherwise sit on its icon. left/top are set inline. */
+  position: fixed;
+  transform: translateX(-50%) translateY(-100%);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Invisible bridge so mouse transitions smoothly to tooltip */
@@ -719,6 +737,20 @@ body.rdd-resizing-col-active * {
   margin-top: 4px;
   pointer-events: none !important;
   user-select: none !important;
+}
+/* A minimized panel with no live preview: a placeholder with the title's first letter. */
+.rdd-taskbar-item-preview-frame--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--rdd-placeholder-bg);
+  border: 1px dashed var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.15));
+}
+.rdd-taskbar-item-preview-initial {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--rdd-panel-title-color, var(--rdd-panel-text, rgba(255, 255, 255, 0.85)));
+  user-select: none;
 }
 
 .rdd-taskbar-item-preview-host {
@@ -1183,6 +1215,7 @@ body.rdd-dragging-active {
 }
 
 [data-color-scheme="light"] {
+  --rdd-danger-color: #b91c1c;
   --rdd-bg-primary: #f8f9fa;
   --rdd-bg-workspace: #f1f5f9;
   --rdd-bg-panel: #ffffff;
@@ -2671,6 +2704,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-titlebar-actions {
   display: flex;
   align-items: center;
+  gap: var(--rdd-header-button-gap, 4px);
 }
 
 /* Window custom header actions slot */
@@ -2732,11 +2766,20 @@ html.rdd-no-animations [class*="rdd-"]::after {
   align-items: center;
   justify-content: center;
   background: transparent;
-  color: #dc3545;
+  color: var(--rdd-danger-color);
+  border: 2px dashed var(--rdd-danger-color);
   font-family: var(--rdd-font-family-mono);
   padding: 1rem;
   text-align: center;
   box-sizing: border-box;
+}
+.rdd-unregistered-panel__title {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.rdd-unregistered-panel__key {
+  font-size: 0.875rem;
+  color: var(--rdd-text-secondary, #94a3b8);
 }
 
 /* Taskbar scrollable items row */
@@ -2795,6 +2838,16 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+.rdd-confirmation-message {
+  font-size: 0.9rem;
+  color: inherit;
+  line-height: 1.5;
+}
+.rdd-confirmation-divider {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.1;
 }
 
 .rdd-confirmation-alert {
@@ -3612,6 +3665,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   overflow: hidden;
   max-height: 300px;
   overflow-y: auto;
+  position: fixed; /* top/left/width are set inline */
 }
 
 .rdd-panel-toolbar-search__group {
@@ -3909,3 +3963,23 @@ html.rdd-no-animations [class*="rdd-"]::after {
   outline: var(--rdd-focus-ring, 2px solid var(--rdd-accent-color));
   outline-offset: -2px;
 }
+
+/* ── Fixed values that used to be inline styles (7.1.2) ─────────────────────────────────── */
+/* Icons drawn by the library: block, so they don't sit on the text baseline. */
+.rdd-svg-icon { display: block; }
+.rdd-workspace-tab-title {
+  max-width: 120px;
+  display: flex;
+  align-items: center;
+}
+.rdd-tooltip-title-text { max-width: 140px; }
+/* After `.rdd-workspace * { scrollbar-width: thin }`, which it must beat: the tab strip scrolls
+   with its own arrow buttons, not a scrollbar. */
+.rdd-tab-headers-container { scrollbar-width: none; }
+/* Starting place; the layout effect positions the submenu before paint. */
+.rdd-context-menu--submenu {
+  left: 0;
+  top: 0;
+}
+/* Wraps a drawer's portal without adding a box of its own. */
+.rdd-side-panel-anchor { display: contents; }

@@ -426,6 +426,13 @@ You don't need to define all variables. A skin that only sets `--rdd-accent-colo
 | `--rdd-text-primary` | `#f1f5f9` | Main body text. |
 | `--rdd-text-secondary` | `#94a3b8` | Muted / secondary text. |
 
+### Status and placeholders
+
+| Variable | Dark default | Description |
+|----------|-------------|-------------|
+| `--rdd-danger-color` | `#dc3545` (light: `#b91c1c`) | Errors the library shows itself: the border and text of the placeholder for a panel whose component isn't registered. |
+| `--rdd-placeholder-bg` | `rgba(108,117,125,0.15)` | Fill of a minimized panel's taskbar thumbnail when it has no live preview. |
+
 ### Accent
 
 | Variable | Dark default | Description |
@@ -577,6 +584,8 @@ CSS variables control colors and shadows. If your skin needs **structural change
 ```
 
 Study the built-in skins in the library source (`src/index.css`) for examples — the `macos` skin's structural overrides are particularly comprehensive.
+
+The chrome's fixed layout values — tab-bar height, close-button size, title widths, the sidebar strip's width — are in the stylesheet, not inline styles (since 7.1.2), so a rule of your own overrides them without `!important`. Import the library's stylesheet before your own; a rule with a class and a descendant (`.my-app .rdd-close-tab-x`) wins whatever the order. Only values that change as you use the workspace (sizes, positions, split ratios) are set inline.
 
 ## See also
 

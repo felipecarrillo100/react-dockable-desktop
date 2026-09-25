@@ -194,8 +194,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
         className={`rdd-context-menu rdd-context-menu--${theme} rdd-context-menu--submenu`}
         dir={dir}
         // z-index from .rdd-context-menu--submenu (+8501) — see the main menu's note below.
-        // Placed by the layout effect above before paint; these are only its starting values.
-        style={{ position: 'fixed', left: 0, top: 0 }}
+        // Placed by the layout effect above before paint (its starting left/top are in the class).
         role="menu"
         onKeyDown={handleKeyDown}
         onMouseEnter={onMouseEnter}
@@ -470,7 +469,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
           // No inline z-index: .rdd-context-menu's own `calc(var(--rdd-z-base, 1000) + 8500)`
           // owns it, so a WindowManagerProvider's zIndexBase actually shifts this menu (an
           // inline value here silently overrode it). Resolves to the same 9500 by default.
-          style={{ position: 'fixed', left: menuState.x, top: menuState.y, ...style }}
+          style={{ left: menuState.x, top: menuState.y, ...style }}
           role="menu"
           aria-orientation="vertical"
           onKeyDown={handleMenuKeyDown}

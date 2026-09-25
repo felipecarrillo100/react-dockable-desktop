@@ -13,11 +13,14 @@
  *   zb=N            zIndexBase passed to the provider
  *   grow=1          no rdd-fill-viewport on the wrapper (the workspace grows with its content)
  *   canvas=1        also opens `cv`, a panel whose canvas sits in a [data-rdd-preview-unscale] box
+ *   anim=0          animations={false} on RddDesktop
+ *   skin=NAME       skin passed to RddDesktop
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
  *
- * Also registers `titled`, a panel whose effect lists the usePanel() handle and writes its own
+ * Also registers `nopreview` (defaultOptions.disableLivePreview, so its taskbar preview is the
+ * placeholder thumbnail), and `titled`, a panel whose effect lists the usePanel() handle and writes its own
  * title and dirty flag (the naive port of a 6.x `[container]` effect, which looped in 7.0.0).
  *
  * Uses only the public 7.0 API, as an app would.
@@ -29,7 +32,7 @@ import '../../../src/index.css';
 import {
   createWorkspace, DockableDesktopProvider, RddDesktop, RddSidebar, RddToolbar,
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
-  RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, useModals, useSidePanels,
+  RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, useModals, useSidePanels, RddConfirm,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
 } from '../../../src/index';
 
@@ -97,6 +100,7 @@ const workspace = createWorkspace({
     overlay: { component: OverlayPanel },
     canvas: { component: CanvasPanel },
     titled: { component: TitledPanel },
+    nopreview: { component: ProbePanel, defaultOptions: { disableLivePreview: true } },
   },
 });
 
@@ -112,7 +116,7 @@ function Inner() {
   const showCtx = useContextMenu();
   // Exposed to the specs, which drive the workspace from outside the page.
   // eslint-disable-next-line react-hooks/immutability
-  (window as unknown as { __wm: unknown }).__wm = { state, actions, overlays, Plain };
+  (window as unknown as { __wm: unknown }).__wm = { state, actions, overlays, Plain, RddConfirm };
   useEffect(() => {
     applyScheme(); // after WindowManager's own mirroring effect, as demo/App.tsx does
     if (DIR === 'ws') actions.setDirection('rtl');
@@ -154,7 +158,7 @@ function Inner() {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative' }}>
         {TBPOS === 'left' && <RddToolbar position="left" items={items} visible={!TBHIDDEN} />}
         <RddSidebar position={SBPOS} tabs={tabs} defaultWidth={250}>
-          <RddDesktop />
+          <RddDesktop animations={q.get('anim') !== '0'} skin={q.get('skin') ?? undefined} />
         </RddSidebar>
         {TBPOS === 'right' && <RddToolbar position="right" items={items} visible={!TBHIDDEN} />}
       </div>

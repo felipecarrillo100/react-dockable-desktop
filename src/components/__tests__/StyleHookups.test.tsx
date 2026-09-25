@@ -171,8 +171,9 @@ describe('ContextMenu stacking', () => {
     const menu = document.querySelector('.rdd-context-menu:not(.rdd-context-menu--submenu)') as HTMLElement;
     expect(menu).not.toBeNull();
     expect(menu.style.zIndex).toBe('');
-    // Positioning stays inline — only stacking moved to CSS.
-    expect(menu.style.position).toBe('fixed');
+    // Stacking and position: fixed come from .rdd-context-menu; only left/top are inline (per render).
+    expect(menu.style.position).toBe('');
+    expect(menu.classList.contains('rdd-context-menu')).toBe(true);
   });
 
   it('leaves the submenu z-index to the stylesheet', () => {

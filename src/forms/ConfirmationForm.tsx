@@ -85,11 +85,11 @@ export const ConfirmationForm: React.FC<RddConfirmProps> = ({
         </div>
       )}
 
-      <div style={{ fontSize: '0.9rem', color: 'inherit', lineHeight: 1.5 }}>
+      <div className="rdd-confirmation-message">
         {resolvedMessage}
       </div>
 
-      <hr style={{ marginTop: '0.5rem', marginBottom: '0.5rem', opacity: 0.1 }} />
+      <hr className="rdd-confirmation-divider" />
 
       <div className="rdd-confirmation-actions">
         <button

@@ -85,7 +85,7 @@ const domCache = new Map<string, HTMLDivElement>();
 const hiddenContainerId = 'preserved-dom-container';
 
 const DefaultGridIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+  <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="9" rx="1" />
     <rect x="14" y="3" width="7" height="5" rx="1" />
     <rect x="14" y="12" width="7" height="9" rx="1" />
@@ -97,7 +97,7 @@ const ContextMenuIcons = {
   // Two offset equal rects — Windows "restore-down / new window" language
   float: (
     <span className="rdd-menu-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="8" width="14" height="14" rx="1"/>
         <rect x="8" y="2" width="14" height="14" rx="1"/>
       </svg>
@@ -106,7 +106,7 @@ const ContextMenuIcons = {
   // Single horizontal dash — Windows minimize language
   minimize: (
     <span className="rdd-menu-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: 'block' }}>
+      <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="4" y1="18" x2="20" y2="18"/>
       </svg>
     </span>
@@ -114,7 +114,7 @@ const ContextMenuIcons = {
   // Single inset rect — restore to normal windowed state
   restore: (
     <span className="rdd-menu-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="4" width="16" height="16" rx="1"/>
       </svg>
     </span>
@@ -122,7 +122,7 @@ const ContextMenuIcons = {
   // Near-full rect — maximize / fill workspace
   maximize: (
     <span className="rdd-menu-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="2" width="20" height="20" rx="1"/>
       </svg>
     </span>
@@ -130,7 +130,7 @@ const ContextMenuIcons = {
   // × — close
   close: (
     <span className="rdd-menu-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
     </span>
@@ -169,9 +169,9 @@ const renderPanelContent = (
       `  createWorkspace({ panels: { "${componentKey}": { component: YourComponent } } })`
     );
     return (
-      <div className="rdd-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
-        <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ {formatLabel(messages.componentUnregistered, formatMessage)}</h6>
-        <span style={{ fontSize: '0.875rem', color: 'var(--rdd-text-secondary, #94a3b8)' }}>{formatLabel({ ...messages.componentKey, values: { key: componentKey } }, formatMessage)}</span>
+      <div className="rdd-unregistered-panel">
+        <h6 className="rdd-unregistered-panel__title">⚠️ {formatLabel(messages.componentUnregistered, formatMessage)}</h6>
+        <span className="rdd-unregistered-panel__key">{formatLabel({ ...messages.componentKey, values: { key: componentKey } }, formatMessage)}</span>
       </div>
     );
   }
@@ -309,25 +309,10 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
     return (
       <div
-        className="rdd-taskbar-item-preview-frame"
-        style={{
-          width: `${displayW}px`,
-          height: `${displayH}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(108, 117, 125, 0.15)',
-          border: '1px dashed var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.15))'
-        }}
+        className="rdd-taskbar-item-preview-frame rdd-taskbar-item-preview-frame--empty"
+        style={{ width: `${displayW}px`, height: `${displayH}px` }}
       >
-        <div
-          style={{
-            fontSize: '2rem',
-            fontWeight: 600,
-            color: 'var(--rdd-panel-title-color, var(--rdd-panel-text, rgba(255, 255, 255, 0.85)))',
-            userSelect: 'none'
-          }}
-        >
+        <div className="rdd-taskbar-item-preview-initial">
           {initialChar}
         </div>
       </div>
@@ -349,10 +334,6 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
           width: `${origW}px`,
           height: `${origH}px`,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-          position: 'absolute',
-          top: 0,
-          left: 0,
           ['--rdd-preview-scale' as string]: scale
         }}
       />
@@ -687,7 +668,6 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
     <div
       data-active-panel-id={leaf.activePanelId || ''}
       className={`rdd-workspace-panel ${windowClass ?? ''}`}
-      style={{ overflow: 'hidden', position: 'relative' }}
     >
       {/* Tab Headers */}
       <div className="rdd-workspace-tab-bar">
@@ -705,7 +685,6 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
           className="rdd-tab-headers-container"
           role="tablist"
           aria-orientation="horizontal"
-          style={{ scrollbarWidth: 'none' }}
           onPointerMove={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
               onTabHover(leaf.id, 'EMPTY', leaf.panels.length, 'right');
@@ -770,7 +749,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 className={`rdd-workspace-tab ${tabFocusClass} ${sideClass}`}
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
-                <span className="rdd-text-truncate" style={{ maxWidth: '120px', display: 'flex', alignItems: 'center' }}>
+                <span className="rdd-text-truncate rdd-workspace-tab-title">
                   <span className="rdd-workspace-tab-icon">{panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon)}</span>
                   <span>
                     {formatLabel(panel.title, formatMessage)}
@@ -796,8 +775,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                     // Not a separate control: interactive content inside role="tab" is not allowed.
                     // Keyboard users close the focused tab with Delete.
                     aria-hidden="true"
-                    className="rdd-close-tab-x"
-                    style={{ width: '18px', height: '18px', ...(options?.renderHeaderActions ? {} : { marginInlineStart: 'auto' }) }}
+                    className={`rdd-close-tab-x${options?.renderHeaderActions ? '' : ' rdd-close-tab-x--end'}`}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M18 6L6 18M6 6l12 12"/>
@@ -824,7 +802,6 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             type="button"
             onClick={() => { void closeLeafGroup(leaf.id); }}
             className="rdd-close-tab-x rdd-header-close-empty-group"
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             title={formatLabel(messages.closeEmptyGroup, formatMessage)}
             aria-label={formatLabel(messages.closeEmptyGroup, formatMessage)}
           >
@@ -1999,7 +1976,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                       {panel.dirty ? ' *' : ''}
                     </span>
                   </span>
-                  <div className="rdd-titlebar-actions" style={{ gap: 'var(--rdd-header-button-gap, 4px)' }} onPointerDown={(e) => e.stopPropagation()}>
+                  <div className="rdd-titlebar-actions" onPointerDown={(e) => e.stopPropagation()}>
                     {options?.renderHeaderActions && (
                       <div className="rdd-window-header-actions">
                         {options.renderHeaderActions(w.id)}
@@ -2021,7 +1998,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                           });
                         }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+                        <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                           <circle cx="12" cy="5" r="2"/>
                           <circle cx="12" cy="12" r="2"/>
                           <circle cx="12" cy="19" r="2"/>
@@ -2117,7 +2094,6 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           <div
             ref={taskbarRef}
             className="rdd-taskbar-items-container"
-            style={{ scrollSnapType: 'x mandatory' }}
           >
             {state.minimized.map(m => {
               const regEntry = registry.get(m.component);
@@ -2225,12 +2201,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
               className="rdd-taskbar-item-tooltip"
               dir={state.dir}
               style={{
-                position: 'fixed',
                 left: `${hoveredMinimized.rect.left + hoveredMinimized.rect.width / 2}px`,
                 top: `${hoveredMinimized.rect.top - 8}px`,
-                transform: 'translateX(-50%) translateY(-100%)',
-                opacity: 1,
-                pointerEvents: 'auto',
               }}
               onPointerEnter={() => {
                 if (minimizedTooltipTimeoutRef.current) {
@@ -2285,7 +2257,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
               }}
             >
                <div className="rdd-tooltip-header-row">
-                  <span className="rdd-tooltip-title-text rdd-text-truncate" style={{ maxWidth: '140px' }}>
+                  <span className="rdd-tooltip-title-text rdd-text-truncate">
                     {formatLabel(hoveredMinimized.title, formatMessage)}
                     {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
                   </span>
