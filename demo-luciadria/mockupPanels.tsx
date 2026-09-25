@@ -340,7 +340,7 @@ export const LuciadMapPanel: React.FC<{ panelId: string }> = ({ panelId }) => {
 
   return (
     <div className="position-relative" style={{ overflow: 'hidden', width: '100%', height: "100%", backgroundColor: "orange" }}>
-      <div ref={containerRef} className="map-mini luciad" style={{ width: '100%', height: "100%", backgroundColor: "pink" }} />
+      <div ref={containerRef} className="map-mini" data-rdd-preview-unscale="" style={{ width: '100%', height: "100%", backgroundColor: "pink" }} />
       <div className="position-absolute top-0 start-0 rounded bg-black bg-opacity-75 text-info font-monospace small" style={{ width: "100%", zIndex: 10, pointerEvents: 'none' }}>
         LuciadRIA 3D Earth (EPSG:4978)
       </div>
@@ -413,7 +413,7 @@ export const MainMap: React.FC<{ panelId: string }> = () => {
 
   return (
     <div className="w-100 h-100 position-relative bg-dark" style={{ overflow: 'hidden' }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} className="mini-me luciad" />
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} className="mini-me" data-rdd-preview-unscale="" />
       <div className="position-absolute top-0 start-0 m-2 p-1 px-2 rounded bg-black bg-opacity-75 text-success font-monospace small" style={{ zIndex: 1, pointerEvents: 'none' }}>
         🗺️ Main Global Map View (EPSG:4978) [Locked Layout]
       </div>

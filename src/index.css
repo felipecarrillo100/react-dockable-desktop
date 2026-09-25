@@ -9,6 +9,11 @@
 :root {
   --rdd-styles-loaded: 1; /* sentinel — checked at mount to detect missing CSS import */
   --rdd-z-base: 1000; /* base for floating windows + all chrome overlays; override via WindowManagerProvider's zIndexBase */
+  /* Fonts for the library's own chrome — tabs, title bars, toolbar, sidebar, menus, toasts, drawers,
+     modals. Neither Outfit nor Inter is loaded by the library: load one yourself, or override this.
+     Set `--rdd-font-family: inherit` to use the host page's font everywhere. */
+  --rdd-font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --rdd-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rdd-bg-primary: #090b11;
   --rdd-bg-workspace: #0f111a;
   --rdd-bg-panel: #141722;
@@ -140,12 +145,32 @@ body,
   overflow: hidden;
 }
 
+/* The library's chrome that renders outside .rdd-workspace — the toolbar and sidebar sit beside
+   or around it, and menus, flyouts, toasts, drawers and modals are portaled to <body> — so each
+   root takes the font token itself rather than inheriting the host page's. */
+.rdd-toolbar-strip,
+.rdd-toolbar-group-flyout,
+.rdd-sidebar-tabs-strip,
+.rdd-sidebar-content-drawer,
+.rdd-toast-container,
+.rdd-side-panel,
+.rdd-modal-overlay,
+.rdd-panel-toolbar-search__dropdown {
+  font-family: var(--rdd-font-family);
+}
+
+/* Form controls don't inherit a font by default. Only the library's own controls (those with an
+   rdd- class) are told to, never the consumer's inputs and buttons inside a panel. */
+:where(button, input, select, textarea)[class*="rdd-"] {
+  font-family: inherit;
+}
+
 /* Cosmetic properties are scoped to the library's own root element only — never
    the consumer's page, html/body, or their own mount div. */
 .rdd-workspace {
   background-color: var(--rdd-bg-primary);
   color: var(--rdd-text-primary);
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--rdd-font-family);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -334,6 +359,54 @@ body,
 }
 
 /* Drag resizer split bars */
+/* Structural layout of the split grid and the sidebar. These used to be inline styles, where
+   consumer CSS could neither see nor override them. Per-render values (sizes, flex-basis,
+   visibility) stay inline. */
+.rdd-split {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.rdd-split--row { flex-direction: row; }
+.rdd-split--column { flex-direction: column; }
+.rdd-split-child {
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+/* A bar between side-by-side panes is a vertical line, dragged left/right. */
+.rdd-resizer-bar--vertical { cursor: col-resize; width: 1px; height: 100%; flex-shrink: 0; }
+/* A bar between stacked panes is a horizontal line, dragged up/down. */
+.rdd-resizer-bar--horizontal { cursor: row-resize; width: 100%; height: 1px; flex-shrink: 0; }
+
+.rdd-sidebar-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.rdd-sidebar-content {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden;
+}
+/* Collapses the tab strip by animating its width (set inline) to 0. The strip inside must not
+   clip, so the active tab's negative margin can reach into the drawer border. */
+.rdd-sidebar-strip-wrap {
+  height: 100%;
+  overflow: hidden;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.rdd-sidebar-pane {
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
 .rdd-resizer-bar {
   background-color: var(--rdd-border-panel, rgba(255, 255, 255, 0.08)) !important;
   transition: background-color 0.15s ease, transform 0.15s ease !important;
@@ -349,7 +422,7 @@ body,
 }
 
 /* Grab hit-box for columns (cursor: col-resize) */
-.rdd-resizer-bar[style*="cursor: col-resize"]::before {
+.rdd-resizer-bar--vertical::before {
   top: 0;
   bottom: 0;
   left: -3px;
@@ -359,7 +432,7 @@ body,
 
 /* Grab hit-box for rows (cursor: row-resize) — extends upward only (into safe content area),
    never downward into the tab bar of the panel below */
-.rdd-resizer-bar[style*="cursor: row-resize"]::before {
+.rdd-resizer-bar--horizontal::before {
   left: 0;
   right: 0;
   top: -8px;
@@ -375,13 +448,13 @@ body,
   z-index: 25 !important;
 }
 
-.rdd-resizer-bar[style*="cursor: col-resize"]:hover,
-.rdd-resizer-bar[style*="cursor: col-resize"].rdd-active {
+.rdd-resizer-bar--vertical:hover,
+.rdd-resizer-bar--vertical.rdd-active {
   transform: scaleX(2);
 }
 
-.rdd-resizer-bar[style*="cursor: row-resize"]:hover,
-.rdd-resizer-bar[style*="cursor: row-resize"].rdd-active {
+.rdd-resizer-bar--horizontal:hover,
+.rdd-resizer-bar--horizontal.rdd-active {
   transform: scaleY(2);
 }
 
@@ -464,6 +537,10 @@ body.rdd-resizing-col-active * {
 }
 
 .rdd-taskbar-footer-container {
+  height: 48px;
+  /* Floating windows stack at zIndexBase + n. An auto-hide taskbar is overlaid on the bottom edge,
+     so it must sit above them or a window parked there hides it; below every popup and overlay. */
+  z-index: calc(var(--rdd-z-base, 1000) + 6500);
   background-color: var(--rdd-taskbar-bg) !important;
   border-top: 1px solid var(--rdd-border-panel) !important;
   backdrop-filter: blur(12px) saturate(180%);
@@ -482,7 +559,7 @@ body.rdd-resizing-col-active * {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   padding: 0;
   text-decoration: none;
   font-size: 0.875rem;
@@ -546,12 +623,15 @@ body.rdd-resizing-col-active * {
 }
 
 .rdd-taskbar-item-tooltip {
+  /* Above floating windows, the taskbar and the toolbar flyout; below menus, modals and toasts.
+     Shifts with zIndexBase (it was a fixed inline 999999). */
+  z-index: calc(var(--rdd-z-base, 1000) + 8400);
   background: var(--rdd-bg-panel, #1e1e1e) !important;
   color: var(--rdd-text-primary, #ffffff) !important;
   padding: 8px !important;
   border-radius: 6px;
   font-size: 11px !important;
-  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-family: var(--rdd-font-family);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.1)) !important;
   animation: rdd-tooltip-fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -670,8 +750,18 @@ body.rdd-resizing-col-active * {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   background-color: var(--rdd-window-bg);
-  overflow: hidden;
   transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+/* Clips the content to the rounded corners, in place of the window itself — so the resize
+   handles, which are the window's children outside this frame, can straddle its edge. */
+.rdd-floating-window-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .rdd-floating-window.rdd-window-focused {
@@ -704,7 +794,7 @@ body.rdd-resizing-col-active * {
 }
 
 .rdd-floating-window-title {
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--rdd-font-family);
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--rdd-window-text);
@@ -747,7 +837,7 @@ body.rdd-resizing-col-active * {
   padding: 4px 0;
   min-width: 220px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--rdd-font-family);
   font-size: 13px;
   animation: rdd-context-menu-in 0.1s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
@@ -1854,6 +1944,9 @@ body.rdd-dragging-active {
 
 /* --- Modern Sidebar and Tabs UI Theme Customizations --- */
 .rdd-sidebar-content-drawer {
+  flex-grow: 0;
+  flex-shrink: 1;
+  overflow: hidden;
   background-color: var(--sidebar-bg) !important;
   color: var(--sidebar-text-title) !important;
   height: 100%;
@@ -1948,7 +2041,7 @@ body.rdd-dragging-active {
 
 /* Sidebar Header */
 .rdd-sidebar-header-title {
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1970,7 +2063,6 @@ body.rdd-dragging-active {
   position: relative;
   transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
   cursor: pointer;
-  outline: none !important;
 }
 
 /* Micro-interactions & hover tactile feedback for inactive buttons */
@@ -2327,20 +2419,23 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 
 /* 
- * Counteract scale for canvas and its siblings inside Luciad containers.
+ * Counteract scale for canvas and its siblings inside a marked container.
+ *
+ * Put `data-rdd-preview-unscale` on the element that holds a canvas-rendered view (a WebGL map,
+ * a chart).
  * 
  * When rendering a panel's mini hover-preview in the taskbar, the parent container 
  * is scaled down using CSS transform scale(var(--rdd-preview-scale)). For standard HTML UI, 
  * this works natively. However, for web maps (like WebGL / canvas-based engines such as 
- * LuciadRIA), scaling down the browser container causes the rendering canvas and its absolute 
+ * a WebGL map), scaling down the browser container causes the rendering canvas and its absolute 
  * siblings (e.g. HTML overlays, labels, shapes) to blur or offset.
  *
  * To counteract this, we apply a reverse scale transform (1 / scale) and multiply the size 
  * of the canvas and its siblings by the scale factor. This forces the map engine to render 
  * at full resolution inside the preview container without positioning glitches.
  */
-.rdd-taskbar-item-preview-host .luciad canvas,
-.rdd-taskbar-item-preview-host .luciad canvas ~ * {
+.rdd-taskbar-item-preview-host [data-rdd-preview-unscale] canvas,
+.rdd-taskbar-item-preview-host [data-rdd-preview-unscale] canvas ~ * {
   transform: scale(calc(1 / var(--rdd-preview-scale, 1))) !important;
   transform-origin: top left;
   width: calc(100% * var(--rdd-preview-scale, 1)) !important;
@@ -2560,7 +2655,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   font-size: 0.875rem;
   color: var(--rdd-text-secondary, #94a3b8);
 }
@@ -2573,7 +2668,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   align-items: center;
   justify-content: center;
   color: var(--rdd-text-secondary, #94a3b8);
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   font-size: 0.875rem;
 }
 
@@ -2587,7 +2682,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   justify-content: center;
   background: transparent;
   color: #dc3545;
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   padding: 1rem;
   text-align: center;
   box-sizing: border-box;
@@ -2624,13 +2719,15 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 /* Drag ghost tab preview (floating label while dragging) */
 .rdd-drag-ghost-tab {
+  /* Follows the pointer above everything while a tab is dragged. Shifts with zIndexBase. */
+  z-index: calc(var(--rdd-z-base, 1000) + 9300);
   position: fixed;
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid var(--rdd-accent-color, #38bdf8);
   border-left: 3px solid var(--rdd-accent-color, #38bdf8);
   border-radius: 4px;
   color: var(--rdd-accent-color, #38bdf8);
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   padding: 0.375rem 1rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   display: flex;
@@ -2793,7 +2890,6 @@ html.rdd-no-animations [class*="rdd-"]::after {
   color: var(--tab-icon-inactive);
   cursor: pointer;
   flex-shrink: 0;
-  outline: none !important;
   position: relative;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
@@ -2995,7 +3091,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: monospace;
+  font-family: var(--rdd-font-family-mono);
   font-weight: 500;
   cursor: pointer;
   border-radius: 4px;
@@ -3060,11 +3156,11 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 /* Phase 2A: Expand resizer hit area to 44px on touch devices */
 @media (pointer: coarse) {
-  .rdd-resizer-bar[style*="cursor: col-resize"]::before {
+  .rdd-resizer-bar--vertical::before {
     left: -20px;
     width: 44px;
   }
-  .rdd-resizer-bar[style*="cursor: row-resize"]::before {
+  .rdd-resizer-bar--horizontal::before {
     top: -32px;
     height: 33px; /* 32px upward into safe content area, 0px downward into tab bar */
   }
@@ -3510,7 +3606,17 @@ html.rdd-no-animations [class*="rdd-"]::after {
   border: 1px solid var(--rdd-panel-float-border, rgba(255, 255, 255, 0.1));
   box-shadow: var(--rdd-panel-float-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
   backdrop-filter: blur(8px);
+}
+
+/* Clips the content to the rounded corners, in place of the window itself — so the resize
+   handles, which are the window's children outside this frame, can straddle its edge. */
+.rdd-panel-float__frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
+  border-radius: inherit;
 }
 
 .rdd-panel-float--active {
@@ -3740,3 +3846,15 @@ html.rdd-no-animations [class*="rdd-"]::after {
 /* Toast RTL: flip icon/body order and progress bar collapse direction */
 [dir="rtl"] .rdd-toast           { flex-direction: row-reverse; }
 [dir="rtl"] .rdd-toast__progress { transform-origin: right; }
+
+/* ==========================================================================
+   KEYBOARD FOCUS
+   A visible ring on every library control reached from the keyboard (WCAG 2.4.7). Only
+   :focus-visible, so pointer clicks don't show it; only elements with an rdd- class, so the
+   consumer's own controls inside panels keep their own focus styles. Last in the file so it wins
+   ties with the controls' own rules. Override --rdd-focus-ring to restyle it.
+   ========================================================================== */
+:where([class*="rdd-"]):focus-visible {
+  outline: var(--rdd-focus-ring, 2px solid var(--rdd-accent-color));
+  outline-offset: -2px;
+}

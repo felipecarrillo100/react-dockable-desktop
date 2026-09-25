@@ -18,9 +18,7 @@ const ROOT = join(__dirname, '..', '..', '..');
 const css = readFileSync(join(ROOT, 'src', 'index.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 /** Unprefixed classes still shipped on purpose, each with the release that removes it. */
-const LEGACY_CLASSES = new Set([
-  'luciad', // taskbar-preview counter-scale for the LuciadRIA demos; replaced in 6.4, removed in 7.0
-]);
+const LEGACY_CLASSES = new Set<string>([]);
 
 /**
  * Unprefixed custom properties documented as public theming API (docs-site/guide/theming.md).

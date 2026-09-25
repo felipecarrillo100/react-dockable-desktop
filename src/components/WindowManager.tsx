@@ -5,10 +5,13 @@
  * resize handles, context menus, and taskbar docks. Exposes lifecycle event listeners.
  */
 
-import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
+import { isComputedRtl } from '../utils/rtl';
+import { trackPanelDom, restorePanelDom, forgetPanelDom } from './domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry, WindowStateContext } from './WindowManagerContext';
-import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo } from './WindowManagerContext';
+import type { LayoutNode, LayoutLeafNode, SplitDirection, DropPosition, FloatAnchor, PanelInfo, ContextMenuPredefinedMessage, MessageFormatter } from './WindowManagerContext';
+import type { PredefinedMessageKey } from './predefinedMessages';
 import type { PanelRegistryClass } from './PanelRegistry';
 import { DefaultContextMenuAdapter, ContextMenuContext } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
@@ -32,6 +35,33 @@ const findLeaf = (node: LayoutNode | null, leafId: string): LayoutLeafNode | nul
 };
 
 // DOM Element Cache for preserving contexts (WebGL map, text area etc.)
+/**
+ * Which side of a tab a dragged tab would drop on, in tab order: 'left' = before it, 'right' =
+ * after it. The pointer's half is physical, but insertion (and the RTL-mirrored indicator CSS)
+ * is logical — under RTL the physical left half means *after*.
+ */
+const tabDropSide = (tabEl: Element, clientX: number): 'left' | 'right' => {
+  const rect = tabEl.getBoundingClientRect();
+  const onPhysicalLeft = clientX - rect.left < rect.width / 2;
+  return onPhysicalLeft !== isComputedRtl(tabEl) ? 'left' : 'right';
+};
+
+/**
+ * The keyboard's right-click: the ContextMenu key, or Shift+F10. Chrome on macOS sends no
+ * `contextmenu` event for either, so the focused control handles them itself (preventing the
+ * default, so a platform that does send one doesn't open the menu twice).
+ */
+const isMenuKey = (e: React.KeyboardEvent): boolean => e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10');
+
+/** A `contextmenu` event placed at an element, for opening that element's menu from the keyboard. */
+const menuEventAt = (el: Element): React.MouseEvent => {
+  const r = el.getBoundingClientRect();
+  return new MouseEvent('contextmenu', { clientX: r.left, clientY: r.bottom, cancelable: true }) as unknown as React.MouseEvent;
+};
+
+/** A panel or group id made safe for an HTML `id` (used to link tabs to their tab panel). */
+const domIdPart = (raw: string): string => raw.replace(/[^A-Za-z0-9_-]/g, '_');
+
 const domCache = new Map<string, HTMLDivElement>();
 const hiddenContainerId = 'preserved-dom-container';
 
@@ -95,6 +125,7 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
     el.style.width = '100%';
     el.style.height = '100%';
     domCache.set(id, el);
+    trackPanelDom(id, el);
   }
   return el;
 };
@@ -104,7 +135,13 @@ const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
 // 3. Persistent DOM Container Host & Slot
 // ==========================================
 
-const renderPanelContent = (id: string, panel: PanelInfo, registry: PanelRegistryClass) => {
+const renderPanelContent = (
+  id: string,
+  panel: PanelInfo,
+  registry: PanelRegistryClass,
+  messages: Record<PredefinedMessageKey, ContextMenuPredefinedMessage>,
+  formatMessage: MessageFormatter,
+) => {
   const componentKey = panel.component;
   const registryEntry = registry.get(componentKey);
   if (!registryEntry) {
@@ -115,8 +152,8 @@ const renderPanelContent = (id: string, panel: PanelInfo, registry: PanelRegistr
     );
     return (
       <div className="rdd-unregistered-panel" style={{ border: '2px dashed #dc3545' }}>
-        <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ Component Unregistered</h6>
-        <span style={{ fontSize: '0.875rem', color: 'var(--rdd-text-secondary, #94a3b8)' }}>Key: {componentKey}</span>
+        <h6 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>⚠️ {formatLabel(messages.componentUnregistered, formatMessage)}</h6>
+        <span style={{ fontSize: '0.875rem', color: 'var(--rdd-text-secondary, #94a3b8)' }}>{formatLabel({ ...messages.componentKey, values: { key: componentKey } }, formatMessage)}</span>
       </div>
     );
   }
@@ -159,6 +196,11 @@ const getOrCreateLifecycleRegistry = (panelId: string) => {
 
 const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  // Only the active panel gets focus back after a move (see domPreservation.ts). A selector, so
+  // this wrapper re-renders only when this panel's active flag flips.
+  const isActive = useWindowManagerState(s => s.activePanelId === panelId);
+  const isActiveRef = useRef(isActive);
+  useLayoutEffect(() => { isActiveRef.current = isActive; });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -166,6 +208,7 @@ const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
     const cachedEl = getOrCreateDomCacheElement(panelId);
     host.appendChild(cachedEl);
+    restorePanelDom(panelId, { refocus: isActiveRef.current });
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (let entry of entries) {
@@ -201,6 +244,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const formatMessage = useFormatMessage();
+  const messages = usePredefinedMessages();
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   const panel = state.panels[panelId];
@@ -224,6 +268,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
     if (!cachedEl) return;
 
     host.appendChild(cachedEl);
+    restorePanelDom(panelId, { refocus: false }); // a preview shows the panel's place; it never takes focus
 
     return () => {
       let hiddenContainer = document.getElementById(hiddenContainerId);
@@ -240,7 +285,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   if (disableLivePreview) {
     const displayW = origW * scale;
     const displayH = origH * scale;
-    const rawTitle = panel?.title || regEntry?.defaultOptions?.title || 'Panel';
+    const rawTitle = panel?.title || regEntry?.defaultOptions?.title || messages.untitledPanel;
     const title = formatLabel(rawTitle, formatMessage);
     const initialChar = (Array.from(title)[0] || 'P').toUpperCase();
 
@@ -464,6 +509,7 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
     const parentSize = parentEl
       ? (isRow ? parentEl.clientWidth : parentEl.clientHeight)
       : (isRow ? 1000 : 800);
+    const rtl = isComputedRtl(parentEl);
 
     startPointerDrag({
       element: resizerEl,
@@ -476,7 +522,10 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
         { el: document.body, classes: ['rdd-resizing-active', isRow ? 'rdd-resizing-col-active' : 'rdd-resizing-row-active'] },
       ],
       onMove: (dx, dy, startSizes) => {
-        const deltaPercentage = (isRow ? dx : dy) / parentSize;
+        // A row reverses under RTL, so children[idx] is the pane to the divider's *right*: a
+        // rightward drag must shrink it. Pointer deltas are physical; sizes are in child order.
+        const sign = isRow && rtl ? -1 : 1;
+        const deltaPercentage = (isRow ? sign * dx : dy) / parentSize;
         const newSizes = [...startSizes];
         newSizes[idx] += deltaPercentage;
         newSizes[idx + 1] -= deltaPercentage;
@@ -488,26 +537,18 @@ const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightCli
   };
 
   return (
-    <div
-      style={{ display: 'flex', flexDirection: isRow ? 'row' : 'column', width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}
-    >
+    <div className={`rdd-split ${isRow ? 'rdd-split--row' : 'rdd-split--column'}`}>
       {node.children.map((child, idx) => {
         const size = node.sizes[idx] * 100;
         return (
           <React.Fragment key={idx}>
-            <div style={{ flexGrow: node.sizes[idx], flexBasis: `${size}%`, overflow: 'hidden', position: 'relative', minWidth: 0, minHeight: 0 }}>
+            <div className="rdd-split-child" style={{ flexGrow: node.sizes[idx], flexBasis: `${size}%` }}>
               <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} />
             </div>
             {idx < node.children.length - 1 && (
               <div
                 onPointerDown={(e) => handleResizerPointerDown(idx, e)}
-                style={{
-                  cursor: isRow ? 'col-resize' : 'row-resize',
-                  width: isRow ? '1px' : '100%',
-                  height: isRow ? '100%' : '1px',
-                  zIndex: 20,
-                }}
-                className="rdd-resizer-bar"
+                className={`rdd-resizer-bar ${isRow ? 'rdd-resizer-bar--vertical' : 'rdd-resizer-bar--horizontal'}`}
               />
             )}
           </React.Fragment>
@@ -538,15 +579,18 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
   const { windowClass, windowBodyClass } = useStyleClasses();
 
   const tabContainerRef = useRef<HTMLDivElement>(null);
-  const [tabScroll, setTabScroll] = useState({ left: false, right: false });
+  // Overflow tracked in reading order: `start` = tabs hidden before the first visible one, `end`
+  // = after the last. Under RTL, scrollLeft runs from 0 down to negative values, so the physical
+  // `scrollLeft > 0` test that used to be here never saw the start overflow and always the end.
+  const [tabScroll, setTabScroll] = useState({ start: false, end: false, rtl: false });
 
   const updateTabScroll = useCallback(() => {
     const el = tabContainerRef.current;
     if (!el) return;
-    setTabScroll({
-      left: el.scrollLeft > 0,
-      right: el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
-    });
+    const travelled = Math.abs(el.scrollLeft);
+    const max = el.scrollWidth - el.clientWidth;
+    const next = { start: travelled > 1, end: travelled < max - 1, rtl: isComputedRtl(el) };
+    setTabScroll(prev => (prev.start === next.start && prev.end === next.end && prev.rtl === next.rtl ? prev : next));
   }, []);
 
   useEffect(() => {
@@ -559,14 +603,62 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
     return () => { el.removeEventListener('scroll', updateTabScroll); ro.disconnect(); };
   }, [updateTabScroll]);
 
-  const scrollTabs = (dir: 'left' | 'right') => {
-    tabContainerRef.current?.scrollBy({ left: dir === 'left' ? -120 : 120, behavior: 'smooth' });
+  const scrollTabs = (toward: 'start' | 'end') => {
+    // In reading order: toward the end is +x in LTR and −x in RTL.
+    const forward = toward === 'end' ? 120 : -120;
+    tabContainerRef.current?.scrollBy({ left: tabScroll.rtl ? -forward : forward, behavior: 'smooth' });
   };
+  // The start button comes first in the DOM, so it sits on the physical left in LTR and on the
+  // physical right in RTL. Class, glyph and label follow the physical side.
+  const startSide = tabScroll.rtl ? 'right' : 'left';
+  const endSide = tabScroll.rtl ? 'left' : 'right';
+  const scrollGlyph = { left: '\u2039', right: '\u203A' } as const;
+  const scrollLabel = { left: messages.scrollTabsLeft, right: messages.scrollTabsRight } as const;
 
   const selectTab = (id: string) => {
     openPanel(id, state.panels[id].component);
     setActivePanel(id);
   };
+
+  // WAI-ARIA tabs pattern: one tab stop per group (the selected tab); the arrow keys move the
+  // selection and focus along the strip — mirrored under RTL, where the strip runs right to left.
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLElement>, id: string, closable: boolean) => {
+    if (isMenuKey(e)) {
+      e.preventDefault();
+      onTabRightClick(id, menuEventAt(e.currentTarget));
+      return;
+    }
+    const ids = leaf.panels.filter(p => state.panels[p]);
+    const i = ids.indexOf(id);
+    const step = isComputedRtl(e.currentTarget) ? -1 : 1;
+    let next: string | undefined;
+    switch (e.key) {
+      case 'ArrowRight': next = ids[(i + step + ids.length) % ids.length]; break;
+      case 'ArrowLeft': next = ids[(i - step + ids.length) % ids.length]; break;
+      case 'Home': next = ids[0]; break;
+      case 'End': next = ids[ids.length - 1]; break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        selectTab(id);
+        return;
+      case 'Delete':
+        if (!closable) return;
+        e.preventDefault();
+        onRequestClosePanel(id);
+        return;
+      default:
+        return;
+    }
+    e.preventDefault();
+    if (!next || next === id) return;
+    selectTab(next);
+    tabContainerRef.current
+      ?.querySelector<HTMLElement>(`[data-tab-id="${next.replace(/["\\]/g, '\\$&')}"]`)
+      ?.focus();
+  };
+  const tabPanelId = `rdd-tabpanel-${domIdPart(leaf.id)}`;
+  const tabIdFor = (panelId: string) => `rdd-tab-${domIdPart(panelId)}`;
 
   return (
     <div
@@ -576,18 +668,20 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
     >
       {/* Tab Headers */}
       <div className="rdd-workspace-tab-bar" style={{ minHeight: '38px' }}>
-        {tabScroll.left && (
+        {tabScroll.start && (
           <button
-            className="rdd-tab-scroll-btn rdd-tab-scroll-btn-left"
+            className={`rdd-tab-scroll-btn rdd-tab-scroll-btn-${startSide}`}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => scrollTabs('left')}
+            onClick={() => scrollTabs('start')}
             tabIndex={-1}
-            aria-label="Scroll tabs left"
-          >&#8249;</button>
+            aria-label={formatLabel(scrollLabel[startSide], formatMessage)}
+          >{scrollGlyph[startSide]}</button>
         )}
         <div
           ref={tabContainerRef}
           className="rdd-tab-headers-container"
+          role="tablist"
+          aria-orientation="horizontal"
           style={{ scrollbarWidth: 'none' }}
           onPointerMove={(e) => {
             if (state.draggedPanelId && e.target === e.currentTarget) {
@@ -623,6 +717,13 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             return (
               <div
                 key={id}
+                id={tabIdFor(id)}
+                role="tab"
+                aria-selected={isSelected}
+                aria-controls={tabPanelId}
+                aria-keyshortcuts={options?.canClose !== false ? 'Delete' : undefined}
+                tabIndex={isSelected ? 0 : -1}
+                onKeyDown={(e) => handleTabKeyDown(e, id, options?.canClose !== false)}
                 data-tab-id={id}
                 data-leaf-id={leaf.id}
                 data-tab-index={String(idx)}
@@ -635,10 +736,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 onContextMenu={(e) => onTabRightClick(id, e)}
                 onPointerMove={(e) => {
                   if (state.draggedPanelId && e.pointerType !== 'touch') {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const relativeX = e.clientX - rect.left;
-                    const side = relativeX < rect.width / 2 ? 'left' : 'right';
-                    onTabHover(leaf.id, id, idx, side);
+                    onTabHover(leaf.id, id, idx, tabDropSide(e.currentTarget, e.clientX));
                   }
                 }}
                 onPointerLeave={() => {
@@ -672,6 +770,9 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                       onRequestClosePanel(id);
                     }}
                     title={formatLabel(messages.closeTab, formatMessage)}
+                    // Not a separate control: interactive content inside role="tab" is not allowed.
+                    // Keyboard users close the focused tab with Delete.
+                    aria-hidden="true"
                     className="rdd-close-tab-x"
                     style={{ width: '18px', height: '18px', ...(options?.renderHeaderActions ? {} : { marginInlineStart: 'auto' }) }}
                   >
@@ -684,38 +785,46 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
             );
           })}
         </div>
-        {tabScroll.right && (
+        {tabScroll.end && (
           <button
-            className="rdd-tab-scroll-btn rdd-tab-scroll-btn-right"
+            className={`rdd-tab-scroll-btn rdd-tab-scroll-btn-${endSide}`}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => scrollTabs('right')}
+            onClick={() => scrollTabs('end')}
             tabIndex={-1}
-            aria-label="Scroll tabs right"
-          >&#8250;</button>
+            aria-label={formatLabel(scrollLabel[endSide], formatMessage)}
+          >{scrollGlyph[endSide]}</button>
         )}
 
         {/* Empty group close button — only visible when keepOnEmpty keeps the group alive */}
         {leaf.panels.length === 0 && leaf.keepOnEmpty && leaf.canClose !== false && (
-          <span
+          <button
+            type="button"
             onClick={() => { void closeLeafGroup(leaf.id); }}
             className="rdd-close-tab-x rdd-header-close-empty-group"
             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             title={formatLabel(messages.closeEmptyGroup, formatMessage)}
+            aria-label={formatLabel(messages.closeEmptyGroup, formatMessage)}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
-          </span>
+          </button>
         )}
       </div>
 
       {/* Tab Content Display Area */}
-      <div className={`rdd-panel-body ${windowBodyClass ?? ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div
+        id={tabPanelId}
+        role="tabpanel"
+        aria-labelledby={leaf.activePanelId ? tabIdFor(leaf.activePanelId) : undefined}
+        className={`rdd-panel-body ${windowBodyClass ?? ''}`}
+        style={{ position: 'relative', overflow: 'hidden' }}
+      >
         {leaf.activePanelId && state.panels[leaf.activePanelId] ? (
           <PreservedDOMWrapper key={leaf.activePanelId} panelId={leaf.activePanelId} />
         ) : (
           <div className="rdd-empty-leaf-placeholder">
-            <span>Empty Workspace Section</span>
+            <span>{formatLabel(messages.emptyGroup, formatMessage)}</span>
           </div>
         )}
 
@@ -846,7 +955,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     requestClosePanel(id, {
       onConfirm: (customOpts) => new Promise<boolean>((resolve) => {
         const opts = customOpts || panel?.dirtyOptions;
-        const baseTitle = panel ? formatLabel(panel.title, formatMessage) : 'Panel';
+        const baseTitle = formatLabel(panel ? panel.title : messages.untitledPanel, formatMessage);
         openModal(
           ConfirmationForm,
           {
@@ -987,8 +1096,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         const leafId = el.dataset.leafId;
         const tabIdx = parseInt(el.dataset.tabIndex || '0', 10);
         if (leafId) {
-          const rect = el.getBoundingClientRect();
-          const side = (x - rect.left) < rect.width / 2 ? 'left' : 'right';
+          const side = tabDropSide(el, x);
           setHoveredTab({ leafId, panelId: el.dataset.tabId, index: tabIdx, side });
           hoveredTabRef.current = { leafId, panelId: el.dataset.tabId, index: tabIdx, side };
           foundTab = true;
@@ -1256,6 +1364,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
     for (const cachedId of Array.from(domCache.keys())) {
       if (!keys.includes(cachedId)) {
         domCache.delete(cachedId);
+        forgetPanelDom(cachedId);
       }
     }
   }, [state.panels]);
@@ -1775,7 +1884,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             />
           ) : (
             <div className="rdd-empty-workspace-grid">
-              Grid Empty
+              {formatLabel(messages.emptyGrid, formatMessage)}
             </div>
           )}
         </div>
@@ -1842,6 +1951,10 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                   };
                 })()}
               >
+                {/* The frame clips title bar and body to the rounded corners. It is a separate
+                    element so the resize handles (siblings below) can straddle the window edge:
+                    clipping on the window itself cut off their outer half, and the corners. */}
+                <div className="rdd-floating-window-frame">
                 {/* Title Bar */}
                 <div
                   onDoubleClick={() => maximizePanel(w.id)}
@@ -1870,7 +1983,8 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                       <button
                         type="button"
                         className="rdd-custom-tab-btn rdd-btn-more-actions"
-                        title="More actions"
+                        title={formatLabel(messages.moreActions, formatMessage)}
+                        aria-label={formatLabel(messages.moreActions, formatMessage)}
                         onClick={(e) => {
                           e.stopPropagation();
                           const customItems = getPanelContextMenuItems(w.id);
@@ -1931,6 +2045,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 <div className={windowBodyClass ?? undefined} style={{ flexGrow: 1, width: '100%', overflow: 'hidden', position: 'relative', isolation: 'isolate' }}>
                   <PreservedDOMWrapper key={w.id} panelId={w.id} />
                 </div>
+                </div>
 
                 {/* 8-direction resize handles */}
                 {!isMaximized && (
@@ -1959,7 +2074,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             `rdd-taskbar-mode-${taskbarVisibility}`,
             taskbarVisibility === 'autohide' && taskbarExpanded ? 'rdd-taskbar-expanded' : '',
           ].filter(Boolean).join(' ')}
-          style={{ height: '48px', zIndex: 100 }}
           onPointerEnter={taskbarVisibility === 'autohide' ? expandTaskbar : undefined}
           onPointerLeave={taskbarVisibility === 'autohide' ? scheduleCollapseTaskbar : undefined}
         >
@@ -1968,6 +2082,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             type="button"
             onClick={() => scrollTaskbar('left')}
             className="rdd-taskbar-nav-btn"
+            aria-label={formatLabel(messages.scrollTaskbarLeft, formatMessage)}
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ◀
@@ -1983,14 +2098,23 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
               const icon = regEntry?.defaultOptions?.icon || defaultPanelIcon || DefaultGridIcon;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={m.id}
-                  onClick={() => {
-                    if (lastTaskbarPointerTypeRef.current === 'touch') return;
+                  aria-label={formatLabel(m.title, formatMessage)}
+                  onClick={(e) => {
+                    // A touch tap is handled by the long-press logic in onPointerDown. A keyboard
+                    // click (Enter / Space) has detail 0 and always restores.
+                    if (e.detail !== 0 && lastTaskbarPointerTypeRef.current === 'touch') return;
                     setHoveredMinimized(null);
                     restorePanel(m.id);
                   }}
                   onContextMenu={(e) => handleMinimizedRightClick(m.id, e)}
+                  onKeyDown={(e) => {
+                    if (!isMenuKey(e)) return;
+                    e.preventDefault();
+                    handleMinimizedRightClick(m.id, menuEventAt(e.currentTarget));
+                  }}
                   onPointerDown={(e) => {
                     lastTaskbarPointerTypeRef.current = e.pointerType;
                     if (e.pointerType !== 'touch') return;
@@ -2072,10 +2196,10 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     padding: 0
                   }}
                 >
-                  <span className="rdd-taskbar-item-icon">
+                  <span className="rdd-taskbar-item-icon" aria-hidden="true">
                     {icon}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -2091,7 +2215,6 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                 transform: 'translateX(-50%) translateY(-100%)',
                 opacity: 1,
                 pointerEvents: 'auto',
-                zIndex: 999999
               }}
               onPointerEnter={() => {
                 if (minimizedTooltipTimeoutRef.current) {
@@ -2150,19 +2273,21 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
                     {formatLabel(hoveredMinimized.title, formatMessage)}
                     {state.panels[hoveredMinimized.id]?.dirty ? ' *' : ''}
                   </span>
-                  <span
+                  <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRequestClose(hoveredMinimized.id);
                       setHoveredMinimized(null);
                     }}
                     title={formatLabel(messages.closePanel, formatMessage)}
+                    aria-label={formatLabel(messages.closePanel, formatMessage)}
                     className="rdd-tooltip-close-x"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                       <path d="M18 6L6 18M6 6l12 12"/>
                     </svg>
-                  </span>
+                  </button>
                </div>
                <PreviewDOMWrapper panelId={hoveredMinimized.id} />
             </div>,
@@ -2173,6 +2298,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
             type="button"
             onClick={() => scrollTaskbar('right')}
             className="rdd-taskbar-nav-btn"
+            aria-label={formatLabel(messages.scrollTaskbarRight, formatMessage)}
             style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
           >
             ▶
@@ -2188,7 +2314,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
             <div style={{ width: '100%', height: '100%' }} dir={state.dir}>
-              {renderPanelContent(id, panel, registry)}
+              {renderPanelContent(id, panel, registry, messages, formatMessage)}
             </div>
           </FormContainerProviderWrapper>,
           targetEl,
@@ -2214,10 +2340,9 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ skin = 'vscode', d
           style={{
             left: dragPos.x + 12,
             top: dragPos.y + 12,
-            zIndex: 100000,
           }}
         >
-          📄 {formatLabel(state.panels[state.draggedPanelId]?.title, formatMessage) || 'Tab'}
+          📄 {formatLabel(state.panels[state.draggedPanelId]?.title || messages.untitledPanel, formatMessage)}
         </div>
       )}
 

@@ -594,7 +594,7 @@ export interface SearchResult {
 
 /** Props for `<ToolbarSearchInput>`. */
 export interface ToolbarSearchInputProps {
-  /** Placeholder text shown in the expanded input field. @default 'Search…' */
+  /** Placeholder text shown in the expanded input field. @default the `searchPlaceholder` message ('Search…') */
   placeholder?: string;
   /**
    * Called with the current query and an `AbortSignal` each time the input changes (debounced).
@@ -617,7 +617,12 @@ export interface ToolbarSearchInputProps {
  *   onSelect={result => workspace.focusLayer(result.id)}
  * />
  */
-export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSelect }: ToolbarSearchInputProps): React.ReactElement {
+export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: ToolbarSearchInputProps): React.ReactElement {
+  const formatMessage = useFormatMessage();
+  const messages = usePredefinedMessages();
+  const searchLabel = formatLabel(messages.search, formatMessage);
+  const closeSearchLabel = formatLabel(messages.closeSearch, formatMessage);
+  const placeholderText = placeholder ?? formatLabel(messages.searchPlaceholder, formatMessage);
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -711,7 +716,7 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
   if (!expanded) {
     return (
       <div ref={containerRef} className="rdd-panel-toolbar-search">
-        <button type="button" className="rdd-panel-toolbar-btn" onClick={openSearch} title="Search" aria-label="Search">
+        <button type="button" className="rdd-panel-toolbar-btn" onClick={openSearch} title={searchLabel} aria-label={searchLabel}>
           {SearchIcon}
         </button>
       </div>
@@ -720,7 +725,7 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
 
   return (
     <div ref={containerRef} className="rdd-panel-toolbar-search rdd-panel-toolbar-search--open" onBlur={handleBlur}>
-      <button type="button" className="rdd-panel-toolbar-btn" onClick={closeSearch} aria-label="Close search" title="Close search">
+      <button type="button" className="rdd-panel-toolbar-btn" onClick={closeSearch} aria-label={closeSearchLabel} title={closeSearchLabel}>
         {SearchIcon}
       </button>
       <input
@@ -730,7 +735,8 @@ export function ToolbarSearchInput({ placeholder = 'Search…', onSearch, onSele
         value={query}
         onChange={handleQueryChange}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={placeholderText}
+        aria-label={searchLabel}
         autoComplete="off"
       />
       {dropdownPos && results.length > 0 && createPortal(
@@ -1378,6 +1384,9 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       onPointerUp={handleWindowPointerUp}
       onPointerCancel={handleWindowPointerCancel}
     >
+      {/* Clips header and body to the rounded corners; the resize handles are its siblings so
+          they can straddle the edge instead of being half clipped. */}
+      <div className="rdd-panel-float__frame">
       <div className="rdd-panel-float__header" onPointerDown={handleHeaderPointerDown}>
         {icon && <span className="rdd-panel-float__icon">{icon}</span>}
         <span className="rdd-panel-float__title">{formatLabel(title, formatMessage)}</span>
@@ -1393,6 +1402,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
         </button>
       </div>
       <div className="rdd-panel-float__body">{children}</div>
+      </div>
       {handleDirs.map(dir => (
         <div
           key={dir}

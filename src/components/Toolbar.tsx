@@ -10,6 +10,7 @@ import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect, us
 import { createPortal } from 'react-dom';
 import { useToolbar } from './ToolbarContext';
 import { useEscapeLayer } from '../utils/escapeStack';
+import { isComputedRtl } from '../utils/rtl';
 import type { ToolbarContextValue } from './ToolbarContext';
 
 // ==========================================
@@ -203,6 +204,7 @@ function flyoutPosition(
 function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [btnRect, setBtnRect] = useState<DOMRect | null>(null);
+  const [btnRtl, setBtnRtl] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const flyoutRef = useRef<HTMLDivElement>(null);
 
@@ -219,6 +221,9 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
     if (item.disabled) return;
     if (!isOpen && btnRef.current) {
       setBtnRect(btnRef.current.getBoundingClientRect());
+      // The strip's own computed direction decides which side it sits on — RTL may be set on
+      // <body> or a wrapper, not just <html>, and an LTR strip can sit on an RTL page.
+      setBtnRtl(isComputedRtl(btnRef.current));
     }
     setIsOpen(prev => !prev);
   };
@@ -283,7 +288,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
         <div
           ref={flyoutRef}
           className={`rdd-toolbar-group-flyout rdd-${position}`}
-          style={flyoutPosition(btnRect, position, document.documentElement.dir === 'rtl')}
+          style={flyoutPosition(btnRect, position, btnRtl)}
           role="menu"
         >
           {item.items.map((entry, i) => {
@@ -297,8 +302,10 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
                 type="button"
                 className={`rdd-toolbar-group-flyout-item${isSubActive ? ' rdd-active' : ''}`}
                 disabled={entry.disabled}
-                role="menuitem"
-                aria-pressed={isSubActive}
+                // One of a mutually exclusive set: a radio menu item. aria-pressed is not allowed
+                // on menu items.
+                role="menuitemradio"
+                aria-checked={isSubActive}
                 onClick={() => {
                   if (isControlled) {
                     item.onActiveItemChange?.(entry.id);

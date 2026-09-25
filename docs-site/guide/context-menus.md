@@ -322,8 +322,15 @@ The component renders via `createPortal` to `document.body` at `position: fixed`
 
 ## Keyboard behaviour
 
+Opening a menu moves focus to its first enabled item. The menu follows the WAI-ARIA menu pattern:
+
 | Key | Action |
 |-----|--------|
-| `Esc` | Close menu |
+| `↓` / `↑` | Next / previous item (disabled items are skipped; wraps around) |
+| `Home` / `End` | First / last item |
+| `→` (`←` under RTL), `Enter`, `Space` | Open a sub-menu and focus its first item |
+| `←` (`→` under RTL) in a sub-menu | Close it and return to its parent item |
+| `Enter` / `Space` | Activate the focused item |
+| `Esc`, `Tab` | Close the menu; focus returns to where it was before the menu opened |
 
-Full arrow-key navigation is planned for a future release.
+A sub-menu also opens on click or tap. ContextMenu and Shift+F10 on a focused tab or taskbar item open that element's menu, placed at the element.

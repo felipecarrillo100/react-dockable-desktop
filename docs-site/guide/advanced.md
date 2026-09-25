@@ -55,6 +55,8 @@ Heavy widgets (WebGL contexts, Leaflet maps, CodeMirror instances) keep their DO
 
 This is automatic and unconditional — by default, across all three transitions simultaneously, with no configuration and no integration work. The implication is that your panel components should be written to tolerate visibility changes without relying on mount/unmount cycles.
 
+Browser state moves with the DOM too (since 6.4.0). A hidden subtree normally loses its scroll offsets and its focus; the library records both while the panel is on screen and puts them back when it reappears. So a list scrolled halfway down is still there after a tab switch, a float, a dock or a minimize/restore, and the field you were typing in gets focus back — only when its panel is the active one and focus hasn't gone somewhere else meanwhile, so a panel restored in the background never takes focus.
+
 If you need to react to visibility, use the lifecycle hooks:
 
 ```ts
@@ -161,6 +163,23 @@ These v3 features are documented in the dedicated guides:
 - [Panel Lifecycle & Forms →](./forms-and-panels) — `usePanelId()`, `useFormContainer()`, lifecycle hooks
 - [Event Bus & Communication →](./event-bus) — `onPanelOpen/Close/Minimize/Restore`, typed events, state subscriptions
 - [WorkspaceClient →](./workspace-client) — `DockableDesktopProvider`, `useWindowManagerState` selectors, CSS class overrides
+
+## Keyboard and screen readers
+
+The chrome follows the WAI-ARIA Authoring Practices patterns (since 6.4.0):
+
+| Where | Keys |
+|---|---|
+| Tab strip (`role="tablist"`) | Tab reaches the selected tab. ←/→ select and focus the neighbouring tab (by screen position, so mirrored under RTL); Home/End jump to the ends; Delete closes the focused tab; ContextMenu or Shift+F10 opens its menu. |
+| Context menus | Focus moves to the first item on open. ↑/↓ move (skipping disabled items, wrapping); Home/End; → (← under RTL), Enter or Space opens a sub-menu; ← goes back; Tab or Esc closes and returns focus to where it was. |
+| Taskbar | Minimized panels are buttons: Tab reaches them, Enter restores, ContextMenu / Shift+F10 opens their menu. |
+| Toolbar, sidebar, taskbar | Buttons show a focus ring when reached from the keyboard (`:focus-visible`); restyle it with `--rdd-focus-ring`. |
+
+## Server rendering (Next.js, Remix)
+
+The chrome renders on the server: `renderToString` of `<DockableDesktopProvider>`, `<WindowManager>`, `<Sidebar>`, `<Toolbar>` and the overlay hosts works without a DOM, and hydrates without a mismatch. `<ToastContainer>` renders nothing until it is mounted on the client, and `useColorScheme()` reports `'dark'` on the server, switching to the page's real scheme once hydrated.
+
+Panel content is a different matter: it is your code, and anything that touches `window` or `document` while rendering (a map engine, an editor) must only render on the client. In Next.js, mark the file that renders the workspace `'use client'`, and load DOM-bound panels with `dynamic(() => import('./MapPanel'), { ssr: false })`.
 
 ## i18n / custom messages
 

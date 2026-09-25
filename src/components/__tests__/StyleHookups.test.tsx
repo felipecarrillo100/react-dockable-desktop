@@ -240,3 +240,80 @@ describe('maximized floating window class', () => {
     expect(win().classList.contains('rdd-maximized')).toBe(false);
   });
 });
+
+// ─── Structural layout lives in classes ───────────────────────────────────────
+// The split grid's and the sidebar's layout used to be inline styles, which consumer CSS could
+// neither see nor override. Only per-render values may stay inline.
+
+describe('structural layout is in the stylesheet, not inline', () => {
+  let container: HTMLDivElement;
+  let root: Root | null = null;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    if (root) act(() => { root!.unmount(); });
+    root = null;
+    document.body.removeChild(container);
+  });
+
+  const inlineProps = (el: Element | null) => {
+    const style = (el as HTMLElement | null)?.style;
+    return style ? Array.from({ length: style.length }, (_, i) => style[i]).sort() : [];
+  };
+
+  it('split container, children and resizer bars', () => {
+    const client = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <WindowManagerProvider client={client}>
+          <PanelProvider>
+            <WindowManager />
+          </PanelProvider>
+        </WindowManagerProvider>
+      );
+    });
+    act(() => { client.openPanel('a', 'map'); client.openPanel('b', 'map'); });
+    act(() => { client.dockPanelToWorkspaceEdge('b', 'right'); });
+    act(() => { client.dockPanelToWorkspaceEdge('a', 'bottom'); });
+
+    const splits = Array.from(container.querySelectorAll('.rdd-split'));
+    expect(splits.length).toBeGreaterThan(0);
+    for (const s of splits) {
+      expect(s.classList.contains('rdd-split--row') || s.classList.contains('rdd-split--column')).toBe(true);
+      expect(inlineProps(s)).toEqual([]);
+    }
+    for (const c of container.querySelectorAll('.rdd-split-child')) {
+      expect(inlineProps(c)).toEqual(['flex-basis', 'flex-grow']);
+    }
+    const bars = Array.from(container.querySelectorAll('.rdd-split > .rdd-resizer-bar'));
+    expect(bars.length).toBeGreaterThan(0);
+    for (const b of bars) {
+      expect(b.classList.contains('rdd-resizer-bar--vertical') || b.classList.contains('rdd-resizer-bar--horizontal')).toBe(true);
+      expect(inlineProps(b)).toEqual([]);
+    }
+    expect(inlineProps(container.querySelector('.rdd-taskbar-footer-container'))).toEqual([]);
+  });
+
+  it('sidebar layout, content, strip wrapper, pane and resizer', async () => {
+    const { Sidebar } = await import('../Sidebar');
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <Sidebar tabs={[{ id: 's1', label: 'S', icon: <span />, renderContent: () => <div /> }]} activeTabId="s1">
+          <div id="ws" />
+        </Sidebar>
+      );
+    });
+    expect(inlineProps(container.querySelector('.rdd-sidebar-layout'))).toEqual([]);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-content'))).toEqual([]);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-strip-wrap'))).toEqual(['width']);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-pane'))).toEqual(['display']);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-layout > .rdd-resizer-bar'))).toEqual([]);
+    expect(inlineProps(container.querySelector('.rdd-sidebar-content-drawer'))).toEqual(['flex-basis', 'max-width', 'min-width', 'transition']);
+  });
+});

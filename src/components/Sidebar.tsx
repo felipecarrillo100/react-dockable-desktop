@@ -19,6 +19,8 @@ import React, {
   memo,
 } from 'react';
 import { startPointerDrag } from './dragResize';
+import { isComputedRtl } from '../utils/rtl';
+import { formatLabel, useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
 
 // ==========================================
 // Types
@@ -351,15 +353,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
     // Outer div drives the collapse transition via overflow:hidden.
     // The inner rdd-sidebar-tabs-strip must NOT have overflow:hidden so the active
     // tab's negative margin can extend into the drawer border without clipping.
-    <div
-      style={{
-        width: isVisible ? '56px' : '0px',
-        height: '100%',
-        overflow: 'hidden',
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        flexShrink: 0,
-      }}
-    >
+    <div className="rdd-sidebar-strip-wrap" style={{ width: isVisible ? '56px' : '0px' }}>
       <div
         className={`rdd-sidebar-tabs-strip rdd-${position}${headerEntries.length ? ' rdd-sidebar-tabs-strip--has-header-action' : ''}${footerEntries.length ? ' rdd-sidebar-tabs-strip--has-footer-action' : ''}`}
         style={{ width: '56px', height: '100%' }}
@@ -435,6 +429,8 @@ function SidebarResizeHandle({
     // Sidebar's subtree since it's a literal DOM descendant of this one.
     onResizeStart();
 
+    const onPhysicalRight = (position === 'right') !== isComputedRtl(el);
+
     startPointerDrag({
       element: el,
       pointerId: e.pointerId,
@@ -443,8 +439,10 @@ function SidebarResizeHandle({
       captureStart: () => currentWidth,
       activeClasses,
       onMove: (dx, _dy, startWidth) => {
-        // Right sidebar: dragging left (negative dx) widens the drawer
-        const newW = position === 'right' ? startWidth - dx : startWidth + dx;
+        // The sign follows the drawer's physical edge, not the prop: the sidebar is a plain flex
+        // row, so under RTL position="left" renders on the right. A drawer on the physical right
+        // widens when dragged left (negative dx).
+        const newW = onPhysicalRight ? startWidth - dx : startWidth + dx;
         onWidthChange(Math.max(minWidth, Math.min(maxWidth, newW)));
       },
       onEnd: () => onResizeEnd(),
@@ -453,14 +451,7 @@ function SidebarResizeHandle({
 
   return (
     <div
-      className="rdd-resizer-bar"
-      style={{
-        cursor: 'col-resize',
-        width: '1px',
-        height: '100%',
-        flexShrink: 0,
-        zIndex: 20,
-      }}
+      className="rdd-resizer-bar rdd-resizer-bar--vertical"
       onPointerDown={handlePointerDown}
     />
   );
@@ -496,6 +487,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
     ref
   ) {
     const isControlled = controlledActiveTabId !== undefined;
+    const formatMessage = useFormatMessage();
+    const closeLabel = formatLabel(usePredefinedMessages().closeTooltip, formatMessage);
 
     const [width, setWidthState] = useState<number>(() => defaultWidth ?? 280);
 
@@ -657,11 +650,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           // flex-basis drives the visible width; width: 0px has no effect in flex context
           // when flex-basis is set — so we animate flex-basis, not width.
           flexBasis: isDrawerOpen ? `${width}px` : '0px',
-          flexShrink: 1,
-          flexGrow: 0,
           minWidth: isDrawerOpen ? `${minWidth}px` : '0px',
           maxWidth: isDrawerOpen ? `${maxWidth}px` : '0px',
-          overflow: 'hidden',
           // Suppressed during a resize drag via this instance's own isResizing state.
           transition: isResizing
             ? 'none'
@@ -676,15 +666,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           const onOpen = () => setActiveTabId(tab.id);
 
           return (
-            <div
-              key={tab.id}
-              style={{
-                display: isCurrent ? 'flex' : 'none',
-                flexDirection: 'column',
-                height: '100%',
-                width: '100%',
-              }}
-            >
+            <div key={tab.id} className="rdd-sidebar-pane" style={{ display: isCurrent ? 'flex' : 'none' }}>
               {/* Drawer header — tab label, plus an optional close button (showCloseButton) as
                   an extra way to collapse the sidebar; clicking the active tab icon still works too.
                   Suppressed for every tab when hideDefaultHeader is set, OR simply when renderHeader
@@ -701,8 +683,8 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
                       type="button"
                       className="rdd-sidebar-drawer-close-button"
                       onClick={handleClose}
-                      title="Close"
-                      aria-label="Close"
+                      title={closeLabel}
+                      aria-label={closeLabel}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -744,15 +726,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
 
     return (
       <SidebarContext.Provider value={sidebarContextValue}>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden',
-          }}
-        >
+        <div className="rdd-sidebar-layout">
           {position === 'left' && (
             <SidebarTabStrip
               tabs={tabs}
@@ -768,7 +742,7 @@ export const Sidebar: React.ForwardRefExoticComponent<SidebarProps & React.RefAt
           {position === 'left' && resizeHandle}
 
           {/* Workspace content — fills all remaining space */}
-          <div style={{ flex: '1 1 0%', minWidth: 0, overflow: 'hidden' }}>
+          <div className="rdd-sidebar-content">
             {children}
           </div>
 

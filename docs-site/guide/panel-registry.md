@@ -43,7 +43,7 @@ All fields are optional. They set the per-panel defaults; most can be overridden
 | `canMinimize` | `boolean` | `true` | Show or hide the minimize button. |
 | `canDrag` | `boolean` | `true` | Allow the tab to be dragged to a different leaf or position. When `false`, the panel cannot be floated via drag. |
 | `defaultAnchor` | `FloatAnchor` (`'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'`) | — (unanchored) | Every instance of this component opens pre-anchored to the given workspace corner when floated — see the `anchor` option in [WorkspaceClient](./workspace-client#openpanel-options), which this is the per-component default for. |
-| `disableLivePreview` | `boolean` | `false` | Do not render a thumbnail preview when the panel is not the active tab. |
+| `disableLivePreview` | `boolean` | `false` | Do not render a thumbnail preview when the panel is not the active tab. A canvas-rendered view (a WebGL map) that blurs in the scaled-down preview can instead be marked with `data-rdd-preview-unscale` on its container, which renders it at full resolution there. |
 | `renderHeaderActions` | `(panelId: string) => ReactNode` | — | Inject React nodes into the panel tab header (e.g. export buttons). |
 
 #### Locked / pinned panel pattern

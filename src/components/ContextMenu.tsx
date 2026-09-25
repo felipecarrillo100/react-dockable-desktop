@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useEscapeLayer } from '../utils/escapeStack';
+import { isComputedRtl } from '../utils/rtl';
 import type { ContextMenuLabel, MessageFormatter, MenuItemAction } from './contextMenuTypes';
 
 // ─── Re-export shared primitives so callers don't need contextMenuTypes.ts ───
@@ -89,7 +90,14 @@ function getCoords(
   if ('touches' in event && event.touches.length > 0) {
     return { x: event.touches[0].clientX, y: event.touches[0].clientY };
   }
-  return { x: (event as MouseEvent).clientX, y: (event as MouseEvent).clientY };
+  const mouse = event as MouseEvent;
+  // The ContextMenu key and Shift+F10 fire `contextmenu` with no pointer position (0, 0): open
+  // the menu at the focused element instead of the top-left corner of the page.
+  if (mouse.clientX === 0 && mouse.clientY === 0 && mouse.target instanceof Element) {
+    const r = mouse.target.getBoundingClientRect();
+    if (r.width || r.height) return { x: r.left, y: r.bottom };
+  }
+  return { x: mouse.clientX, y: mouse.clientY };
 }
 
 function resolveLabel(label: ContextMenuLabel, fmt?: MessageFormatter): string {
@@ -106,12 +114,47 @@ function isSubMenu(item: ContextMenuItem): item is ContextMenuSubMenu {
   return !isSeparator(item) && 'items' in item;
 }
 
+/** The enabled items of a menu element, in order. */
+const enabledItems = (menu: HTMLElement | null): HTMLElement[] =>
+  menu ? Array.from(menu.querySelectorAll<HTMLElement>(':scope > [role^="menuitem"]:not(:disabled)')) : [];
+
+/**
+ * Up/Down/Home/End focus movement within one menu (WAI-ARIA menu pattern). Returns true when the
+ * key was handled. Wraps around at either end; disabled items are skipped.
+ */
+function moveMenuFocus(menu: HTMLElement | null, key: string): boolean {
+  const items = enabledItems(menu);
+  if (items.length === 0) return false;
+  const i = items.indexOf(document.activeElement as HTMLElement);
+  let next: HTMLElement | undefined;
+  if (key === 'ArrowDown') next = items[(i + 1) % items.length];
+  else if (key === 'ArrowUp') next = items[(i - 1 + items.length) % items.length];
+  else if (key === 'Home') next = items[0];
+  else if (key === 'End') next = items[items.length - 1];
+  if (!next) return false;
+  next.focus();
+  return true;
+}
+
 // ─── Sub-menu panel (one-level deep) ─────────────────────────────────────────
+
+/** Where a submenu hangs from: the parent menu's physical edges, and the top of the item. */
+interface SubMenuAnchor {
+  menuLeft: number;
+  menuRight: number;
+  top: number;
+  /** Reading direction at the item: the submenu prefers the reading-end side. */
+  rtl: boolean;
+}
 
 interface SubMenuPanelProps {
   items: ContextMenuItem[];
-  x: number;
-  y: number;
+  /** Measures where to hang from. Called after layout and in event handlers, never in render. */
+  getAnchor: () => SubMenuAnchor | null;
+  /** Opened from the keyboard: focus its first item. */
+  autoFocus: boolean;
+  /** The key that returns to the parent item (ArrowLeft, or ArrowRight under RTL). */
+  onBack: () => void;
   theme: string;
   fmt?: MessageFormatter;
   onClose: () => void;
@@ -120,30 +163,53 @@ interface SubMenuPanelProps {
 }
 
 const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
-  ({ items, x, y, theme, fmt, onClose, onMouseEnter, onMouseLeave }, ref) => {
+  ({ items, getAnchor, autoFocus, onBack, theme, fmt, onClose, onMouseEnter, onMouseLeave }, ref) => {
+    // Placed after layout, once the panel's own width is known. It hangs off the parent menu's
+    // reading-end edge (right in LTR, left in RTL) and flips to the other edge when that side
+    // has no room — clamping it into the viewport instead is what laid it over the parent menu.
     useLayoutEffect(() => {
       const el = (ref as React.RefObject<HTMLDivElement>)?.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
+      const anchor = getAnchor();
+      if (!el || !anchor) return;
       const PAD = 8;
-      if (r.right > window.innerWidth - PAD) {
-        el.style.left = `${Math.max(PAD, window.innerWidth - r.width - PAD)}px`;
-        el.style.right = 'auto';
-      }
-      if (r.bottom > window.innerHeight - PAD) {
-        el.style.top = `${Math.max(PAD, window.innerHeight - r.height - PAD)}px`;
-      }
-      if (r.left < PAD) { el.style.left = `${PAD}px`; el.style.right = 'auto'; }
-      if (r.top < PAD) el.style.top = `${PAD}px`;
+      const GAP = 2;
+      // Layout size, not getBoundingClientRect: the entry animation scales the panel, and a
+      // scaled measurement placed a left-hanging submenu over its parent.
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      const toRight = anchor.menuRight + GAP;
+      const toLeft = anchor.menuLeft - GAP - width;
+      const fitsRight = toRight + width <= window.innerWidth - PAD;
+      const fitsLeft = toLeft >= PAD;
+      let left: number;
+      if (anchor.rtl) left = fitsLeft || !fitsRight ? toLeft : toRight;
+      else left = fitsRight || !fitsLeft ? toRight : toLeft;
+      left = Math.max(PAD, Math.min(left, window.innerWidth - width - PAD));
+      const top = Math.max(PAD, Math.min(anchor.top, window.innerHeight - height - PAD));
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
     });
+
+    useLayoutEffect(() => {
+      if (autoFocus) enabledItems((ref as React.RefObject<HTMLDivElement>)?.current)[0]?.focus();
+    }, [autoFocus, ref]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const backKey = getAnchor()?.rtl ? 'ArrowRight' : 'ArrowLeft';
+      if (e.key === backKey) { e.preventDefault(); e.stopPropagation(); onBack(); return; }
+      if (e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); onClose(); return; }
+      if (moveMenuFocus(e.currentTarget, e.key)) { e.preventDefault(); e.stopPropagation(); }
+    };
 
     return createPortal(
       <div
         ref={ref}
         className={`rdd-context-menu rdd-context-menu--${theme} rdd-context-menu--submenu`}
         // z-index from .rdd-context-menu--submenu (+8501) — see the main menu's note below.
-        style={{ position: 'fixed', left: x, top: y }}
+        // Placed by the layout effect above before paint; these are only its starting values.
+        style={{ position: 'fixed', left: 0, top: 0 }}
         role="menu"
+        onKeyDown={handleKeyDown}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
@@ -164,7 +230,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
               disabled={isDisabled}
               data-cy-action={simple.cyAction}
               onClick={() => { if (!isDisabled) { simple.action?.(); onClose(); } }}
-              role="menuitem"
+              role={showChk ? 'menuitemcheckbox' : 'menuitem'}
               aria-checked={showChk ? isChecked : undefined}
             >
               {simple.icon
@@ -211,7 +277,12 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
   ({ theme = 'dark', formatMessageProvider, onShow, onHide, onOpenChange, className, style }, ref) => {
     const [menuState, setMenuState] = useState<MenuState>(CLOSED);
     const [submenuIndex, setSubmenuIndex] = useState<number | null>(null);
+    // A submenu opened from the keyboard takes focus; one opened by hovering does not.
+    const [submenuFocus, setSubmenuFocus] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    // Where focus was when the menu opened, so closing can hand it back (WAI-ARIA menu pattern).
+    const openerRef = useRef<HTMLElement | null>(null);
+    const restoreFocusRef = useRef(false);
     const submenuPanelRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef<Map<number, HTMLButtonElement | null>>(new Map());
     const timers = useRef<{
@@ -220,6 +291,12 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     }>({ open: null, close: null });
 
     const close = React.useCallback(() => {
+      // Hand focus back to the opener only if it was inside the menu when it closed — an item's
+      // action may itself have moved focus (opened a modal, say), and that must win.
+      const active = document.activeElement;
+      restoreFocusRef.current = !!active && (
+        !!menuRef.current?.contains(active) || !!submenuPanelRef.current?.contains(active)
+      );
       setMenuState(CLOSED);
       setSubmenuIndex(null);
       timers.current.open && clearTimeout(timers.current.open);
@@ -233,6 +310,9 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     useImperativeHandle(ref, () => ({
       show({ event, x, y, items }) {
         const coords = event ? getCoords(event) : { x: x ?? 0, y: y ?? 0 };
+        openerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+          ? document.activeElement
+          : null;
         itemRefs.current.clear();
         setMenuState({ visible: true, x: coords.x, y: coords.y, items });
         setSubmenuIndex(null);
@@ -240,6 +320,20 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
         onOpenChange?.(true);
       },
     }), [onShow, onOpenChange]);
+
+    // Open: focus the first enabled item. Close: return focus to the opener if the menu had it
+    // and nothing else has taken it since.
+    useLayoutEffect(() => {
+      if (menuState.visible) {
+        enabledItems(menuRef.current)[0]?.focus();
+        return;
+      }
+      if (!restoreFocusRef.current) return;
+      restoreFocusRef.current = false;
+      const opener = openerRef.current;
+      const active = document.activeElement;
+      if (opener?.isConnected && (!active || active === document.body)) opener.focus();
+    }, [menuState.visible, menuState.items]);
 
     // Click-outside dismiss
     // Two listeners for full coverage:
@@ -287,18 +381,21 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
 
     const fmt = formatMessageProvider;
 
-    // Compute sub-menu anchor position
-    let submenuX = 0;
-    let submenuY = 0;
-    if (submenuIndex !== null) {
-      const itemEl = itemRefs.current.get(submenuIndex);
-      if (itemEl) {
-        const ir = itemEl.getBoundingClientRect();
-        const rtl = document.documentElement.dir === 'rtl';
-        submenuX = rtl ? window.innerWidth - ir.left + 2 : ir.right + 2;
-        submenuY = ir.top;
-      }
-    }
+    // Where the open sub-menu hangs from. The old computation took a distance from the right
+    // edge under RTL and then used it as `left`, so the sub-menu landed far from its menu.
+    const getSubmenuAnchor = (): SubMenuAnchor | null => {
+      const itemEl = submenuIndex === null ? null : itemRefs.current.get(submenuIndex);
+      const menuEl = menuRef.current;
+      if (!itemEl || !menuEl) return null;
+      const mr = menuEl.getBoundingClientRect();
+      return { menuLeft: mr.left, menuRight: mr.right, top: itemEl.getBoundingClientRect().top, rtl: isComputedRtl(itemEl) };
+    };
+    const backToParentItem = () => {
+      const parent = submenuIndex === null ? null : itemRefs.current.get(submenuIndex);
+      setSubmenuIndex(null);
+      setSubmenuFocus(false);
+      parent?.focus();
+    };
 
     function cancelOpenTimer() {
       if (timers.current.open) {
@@ -334,6 +431,29 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       }
     }
 
+    const openSubmenuFromKeyboard = (index: number) => {
+      cancelOpenTimer();
+      cancelCloseTimer();
+      setSubmenuFocus(true);
+      setSubmenuIndex(index);
+    };
+
+    function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+      if (e.key === 'Tab') { e.preventDefault(); close(); return; }
+      const openKey = isComputedRtl(e.currentTarget) ? 'ArrowLeft' : 'ArrowRight';
+      if (e.key === openKey) {
+        const index = Number((document.activeElement as HTMLElement | null)?.dataset.menuIndex);
+        const item = menuState.items[index];
+        if (item && isSubMenu(item) && item.items?.length) { e.preventDefault(); openSubmenuFromKeyboard(index); }
+        return;
+      }
+      if (moveMenuFocus(e.currentTarget, e.key)) {
+        e.preventDefault();
+        // Moving to another item closes an open submenu, as hovering another item does.
+        if (submenuIndex !== null) setSubmenuIndex(null);
+      }
+    }
+
     function handleItemMouseLeave(item: ContextMenuItem) {
       cancelOpenTimer();
       if (isSubMenu(item) && item.items?.length) {
@@ -352,6 +472,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
           style={{ position: 'fixed', left: menuState.x, top: menuState.y, ...style }}
           role="menu"
           aria-orientation="vertical"
+          onKeyDown={handleMenuKeyDown}
         >
           {menuState.items.map((item, i) => {
             if (isSeparator(item)) {
@@ -366,8 +487,17 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                   type="button"
                   className={`rdd-context-menu__item rdd-context-menu__item--has-submenu${submenuIndex === i ? ' rdd-context-menu__item--submenu-open' : ''}`}
                   title={item.title ? resolveLabel(item.title, fmt) : undefined}
+                  data-menu-index={i}
                   onMouseEnter={() => handleItemMouseEnter(i, item)}
                   onMouseLeave={() => handleItemMouseLeave(item)}
+                  // Click, tap, Enter or Space. A keyboard click (detail 0) moves focus in.
+                  onClick={(e) => {
+                    if (!item.items?.length) return;
+                    cancelOpenTimer();
+                    cancelCloseTimer();
+                    setSubmenuFocus(e.detail === 0);
+                    setSubmenuIndex(submenuIndex === i && e.detail !== 0 ? null : i);
+                  }}
                   role="menuitem"
                   aria-haspopup="true"
                   aria-expanded={submenuIndex === i}
@@ -388,6 +518,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
               <button
                 key={i}
                 ref={el => { itemRefs.current.set(i, el); }}
+                data-menu-index={i}
                 type="button"
                 className={`rdd-context-menu__item${isDisabled ? ' rdd-context-menu__item--disabled' : ''}`}
                 title={simple.title ? resolveLabel(simple.title, fmt) : undefined}
@@ -396,7 +527,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
                 onClick={() => { if (!isDisabled) { simple.action?.(); close(); } }}
                 onMouseEnter={() => handleItemMouseEnter(i, item)}
                 onMouseLeave={() => handleItemMouseLeave(item)}
-                role="menuitem"
+                role={showChk ? 'menuitemcheckbox' : 'menuitem'}
                 aria-checked={showChk ? isChecked : undefined}
               >
                 {simple.icon
@@ -428,8 +559,9 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
             <SubMenuPanel
               ref={submenuPanelRef}
               items={sub.items ?? []}
-              x={submenuX}
-              y={submenuY}
+              getAnchor={getSubmenuAnchor}
+              autoFocus={submenuFocus}
+              onBack={backToParentItem}
               theme={theme}
               fmt={fmt}
               onClose={close}
