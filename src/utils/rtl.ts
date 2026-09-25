@@ -27,7 +27,7 @@ export function isElementRtl(el: HTMLElement | null): boolean {
  * any ancestor, the CSS `direction` property, or the workspace's own `setDirection`.
  *
  * Use this, not `document.documentElement.dir`, wherever a pointer delta (physical) is turned into
- * a size, side or index (logical): RTL is often set on <body> or a wrapper rather than <html>, and
+ * a size, side or index (logical): RTL is often set on `<body>` or a wrapper rather than `<html>`, and
  * the workspace can be RTL on an LTR page.
  */
 export function isComputedRtl(el: Element | null | undefined): boolean {
