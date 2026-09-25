@@ -441,7 +441,7 @@ You don't need to define all variables. A skin that only sets `--rdd-accent-colo
 | `--rdd-font-family` | `'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif` | Every piece of chrome: tabs, title bars, toolbar, sidebar, menus, flyouts, toasts, drawers, modals. |
 | `--rdd-font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | Placeholders, the drag ghost and the other monospaced labels. |
 
-The library doesn't load Outfit or Inter — load one yourself, or change the stack. To use your page's own font everywhere, set `--rdd-font-family: inherit` on `:root`. Panel content inherits the workspace font; your own form controls inside a panel keep the browser's default font, as they would anywhere else.
+The library doesn't load Outfit or Inter — load one yourself, or change the stack; a stack set on any ancestor of the workspace applies. To use your page's own font everywhere, set `--rdd-font-family: inherit` on `:root`, or `--rdd-font-family: initial` on any ancestor of the workspace. (`inherit` works only on `:root`: a custom property set to `inherit` copies its parent's value, so below `:root` it just copies the Outfit stack down. `initial` leaves the property without a value, and the chrome then inherits the page's font.) Panel content inherits the workspace font; your own form controls inside a panel keep the browser's default font, as they would anywhere else.
 
 ### Tabs
 

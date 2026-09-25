@@ -73,3 +73,28 @@ describe('chrome font token', () => {
     await close();
   });
 });
+
+// A custom property set to `inherit` copies its parent's value, so `inherit` below :root just
+// copies the Outfit stack down. `initial` leaves it without a value: var() then fails, and
+// font-family falls back to inheriting from the host.
+describe('where --rdd-font-family can be set', () => {
+  const tabFont = (page: Page) => page.evaluate(() => getComputedStyle(document.querySelector('.rdd-workspace-tab')!).fontFamily);
+  it('initial on a wrapper hands the choice to the host page', async () => {
+    const { page, close } = await openHarness('font=1');
+    await page.evaluate(() => (document.querySelector('.rdd-fill-viewport') as HTMLElement).style.setProperty('--rdd-font-family', 'initial'));
+    expect(await tabFont(page)).toMatch(/Courier New/);
+    await close();
+  });
+  it('an explicit stack on a wrapper applies', async () => {
+    const { page, close } = await openHarness('font=1');
+    await page.evaluate(() => (document.querySelector('.rdd-fill-viewport') as HTMLElement).style.setProperty('--rdd-font-family', 'Georgia, serif'));
+    expect(await tabFont(page)).toMatch(/Georgia/);
+    await close();
+  });
+  it('inherit below :root does not (it copies the Outfit stack down)', async () => {
+    const { page, close } = await openHarness('font=1');
+    await page.evaluate(() => document.body.style.setProperty('--rdd-font-family', 'inherit'));
+    expect(await tabFont(page)).toMatch(/Outfit/);
+    await close();
+  });
+});

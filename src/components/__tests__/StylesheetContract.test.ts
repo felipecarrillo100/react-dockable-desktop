@@ -121,6 +121,13 @@ describe('stylesheet contract (index.css)', () => {
     expect(unprefixed).toEqual([]);
   });
 
+  it('right-to-left rules use :dir(rtl), never a [dir="rtl"] ancestor selector', () => {
+    // An ancestor selector matches any RTL ancestor, so an LTR workspace inside an RTL page was
+    // partly mirrored. :dir() follows the element's own direction, as isComputedRtl() does.
+    expect(css.match(/\[dir=["']?rtl["']?\]/g) ?? []).toEqual([]);
+    expect((css.match(/:dir\(rtl\)/g) ?? []).length).toBeGreaterThan(40);
+  });
+
   it('every @keyframes name is rdd- prefixed', () => {
     expect(parsed.keyframes.filter(name => !name.startsWith('rdd-'))).toEqual([]);
   });

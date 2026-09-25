@@ -353,10 +353,9 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
     // Outer div drives the collapse transition via overflow:hidden.
     // The inner rdd-sidebar-tabs-strip must NOT have overflow:hidden so the active
     // tab's negative margin can extend into the drawer border without clipping.
-    <div className="rdd-sidebar-strip-wrap" style={{ width: isVisible ? '56px' : '0px' }}>
+    <div className={`rdd-sidebar-strip-wrap${isVisible ? '' : ' rdd-sidebar-strip-wrap--collapsed'}`}>
       <div
         className={`rdd-sidebar-tabs-strip rdd-${position}${headerEntries.length ? ' rdd-sidebar-tabs-strip--has-header-action' : ''}${footerEntries.length ? ' rdd-sidebar-tabs-strip--has-footer-action' : ''}`}
-        style={{ width: '56px', height: '100%' }}
       >
         {headerEntries.length > 0 && (
           <div className="rdd-sidebar-header-area">

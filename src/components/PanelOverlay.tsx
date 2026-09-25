@@ -967,7 +967,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     if (neighbours.length === 0) return;
     blockStretchWarnedRef.current = true;
     console.warn(
-      `[react-dockable-desktop] PanelFloatingWindow "${id}" stretches the block axis ` +
+      `[react-dockable-desktop] RddFloatingWidget "${id}" stretches the block axis ` +
       `(stretch: "${stretch}") while ${neighbours.length} other widget(s) are anchored to the ` +
       `same side (${neighbours.join(', ')}). A block-stretched widget spans the axis that stacking ` +
       `uses to separate siblings, so it cannot stack and will overlap them — z-order decides which ` +

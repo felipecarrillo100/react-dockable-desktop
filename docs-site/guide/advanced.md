@@ -167,16 +167,17 @@ The chrome follows the WAI-ARIA Authoring Practices patterns (since 6.4.0):
 
 | Where | Keys |
 |---|---|
-| Tab strip (`role="tablist"`) | Tab reaches the selected tab. ←/→ select and focus the neighbouring tab (by screen position, so mirrored under RTL); Home/End jump to the ends; Delete closes the focused tab; ContextMenu or Shift+F10 opens its menu. |
+| Tab strip (`role="tablist"`) | Tab reaches the selected tab. ←/→ select and focus the neighbouring tab (by screen position, so mirrored under RTL); Home/End jump to the ends; Delete closes the focused tab and moves focus to the tab selected in its place (or to the workspace's active tab, when its group closed with it); ContextMenu or Shift+F10 opens its menu. |
+| Toolbar group flyout (`role="menu"`) | Enter or Space on the group button opens it with focus on the chosen item (or the first). ↑/↓ move (wrapping); Home/End; Enter or Space chooses; Esc or Tab closes and returns focus to the group button. |
 | Context menus | Focus moves to the first item on open. ↑/↓ move (skipping disabled items, wrapping); Home/End; → (← under RTL), Enter or Space opens a sub-menu; ← goes back; Tab or Esc closes and returns focus to where it was. |
 | Taskbar | Minimized panels are buttons: Tab reaches them, Enter restores, ContextMenu / Shift+F10 opens their menu. |
 | Toolbar, sidebar, taskbar | Buttons show a focus ring when reached from the keyboard (`:focus-visible`); restyle it with `--rdd-focus-ring`. |
 
 ## Server rendering (Next.js, Remix)
 
-The chrome renders on the server: `renderToString` of `<DockableDesktopProvider>`, `<RddDesktop>`, `<RddSidebar>`, `<RddToolbar>` and the overlay hosts works without a DOM, and hydrates without a mismatch. `<RddToasts>` renders nothing until it is mounted on the client, and `useColorScheme()` reports `'dark'` on the server, switching to the page's real scheme once hydrated.
+The chrome renders on the server: `renderToString` of `<DockableDesktopProvider>`, `<RddDesktop>`, `<RddSidebar>`, `<RddToolbar>` and the overlay hosts works without a DOM, and hydrates without a mismatch — with panels already open too: their tabs, window title bars and taskbar buttons are in the server HTML. `<RddToasts>` renders nothing until it is mounted on the client, and `useColorScheme()` reports `'dark'` on the server, switching to the page's real scheme once hydrated.
 
-Panel content is a different matter: it is your code, and anything that touches `window` or `document` while rendering (a map engine, an editor) must only render on the client. In Next.js, mark the file that renders the workspace `'use client'`, and load DOM-bound panels with `dynamic(() => import('./MapPanel'), { ssr: false })`.
+**Panel bodies render only on the client**, after hydration (since 7.1.1), so a panel component never runs on the server — one that touches `window` or `document` while rendering is safe. A panel *module* that touches the DOM when it is imported (some map engines do) must still be loaded on the client only: in Next.js, mark the file that renders the workspace `'use client'`, and load such panels with `dynamic(() => import('./MapPanel'), { ssr: false })`.
 
 ## i18n / custom messages
 

@@ -10,8 +10,9 @@
   --rdd-styles-loaded: 1; /* sentinel — checked at mount to detect missing CSS import */
   --rdd-z-base: 1000; /* base for floating windows + all chrome overlays; override via WindowManagerProvider's zIndexBase */
   /* Fonts for the library's own chrome — tabs, title bars, toolbar, sidebar, menus, toasts, drawers,
-     modals. Neither Outfit nor Inter is loaded by the library: load one yourself, or override this.
-     Set `--rdd-font-family: inherit` to use the host page's font everywhere. */
+     modals. Neither Outfit nor Inter is loaded by the library: load one yourself, or override this
+     (on any ancestor of the workspace). To use the host page's font: `inherit` here on :root, or
+     `initial` on any ancestor — `inherit` below :root only copies this stack down. */
   --rdd-font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --rdd-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rdd-bg-primary: #090b11;
@@ -168,6 +169,47 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* Structural layout (it was inline styles until 7.1.1, so a host rule couldn't override it). */
+.rdd-workspace {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+/* Focusable from script only (tabindex="-1"): where keyboard focus goes when the last tab it was
+   on closes. The workspace itself shows no ring. */
+.rdd-workspace:focus { outline: none; }
+.rdd-workspace-viewport {
+  flex-grow: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.rdd-workspace-grid-host {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.rdd-floating-window-body {
+  flex-grow: 1;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+/* A panel's preserved DOM: the slot it is shown in, the element kept across moves, and the
+   wrapper its content renders into. */
+.rdd-panel-dom-host,
+.rdd-panel-dom,
+.rdd-panel-content {
+  width: 100%;
+  height: 100%;
+}
+
 /* Workspace Panel Container */
 .rdd-workspace-panel {
   background-color: var(--rdd-bg-panel);
@@ -181,6 +223,7 @@
 
 /* Tab Headers Bar */
 .rdd-workspace-tab-bar {
+  min-height: 38px;
   background-color: var(--rdd-bg-tab-bar);
   border-bottom: 1px solid var(--rdd-border-panel);
   padding: 0 4px;
@@ -388,14 +431,16 @@
   min-width: 0;
   overflow: hidden;
 }
-/* Collapses the tab strip by animating its width (set inline) to 0. The strip inside must not
-   clip, so the active tab's negative margin can reach into the drawer border. */
+/* Collapses the tab strip by animating its width to 0. The strip inside must not clip, so the
+   active tab's negative margin can reach into the drawer border. */
 .rdd-sidebar-strip-wrap {
+  width: 56px;
   height: 100%;
   overflow: hidden;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
+.rdd-sidebar-strip-wrap--collapsed { width: 0; }
 .rdd-sidebar-pane {
   flex-direction: column;
   height: 100%;
@@ -567,8 +612,14 @@ body.rdd-resizing-col-active * {
 /* macOS/Win11 Glassmorphic Taskbar */
 .rdd-taskbar-glassmorphic-item {
   background: var(--rdd-taskbar-item-bg) !important;
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  /* 6px: the value that has always shown (an inline style used to override the 12px here). */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  scroll-snap-align: start;
+  width: 38px;
+  height: 38px;
+  position: relative;
+  padding: 0;
   border: 1px solid var(--rdd-taskbar-item-border) !important;
   color: var(--rdd-taskbar-item-text) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -606,9 +657,11 @@ body.rdd-resizing-col-active * {
 }
 
 @keyframes rdd-tooltip-fade-in {
+  /* Fades in from just above its resting place, so it never passes over the icon under it: a
+     click there would press on the preview and release on the icon, and neither would get it. */
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-90%);
+    transform: translateX(-50%) translateY(calc(-100% - 6px));
   }
   to {
     opacity: 1;
@@ -641,7 +694,7 @@ body.rdd-resizing-col-active * {
   top: 100%;
   left: 0;
   width: 100%;
-  height: 12px;
+  height: 8px; /* the preview sits 8px above the icon: the bridge ends exactly at its top edge */
   background: transparent;
 }
 
@@ -915,7 +968,7 @@ body.rdd-resizing-col-active * {
   opacity: 0.6;
 }
 
-[dir="rtl"] .rdd-context-menu__chevron {
+.rdd-context-menu__chevron:dir(rtl) {
   margin-left: 0;
   margin-right: auto;
   padding-left: 0;
@@ -923,7 +976,7 @@ body.rdd-resizing-col-active * {
   transform: scaleX(-1);
 }
 
-[dir="rtl"] .rdd-context-menu__checkbox {
+.rdd-context-menu__checkbox:dir(rtl) {
   margin-left: 0;
   margin-right: auto;
   padding-left: 0;
@@ -1959,6 +2012,8 @@ body.rdd-dragging-active {
 }
 
 .rdd-sidebar-tabs-strip {
+  width: 56px;
+  height: 100%;
   background-color: var(--rdd-sidebar-tabs-bg) !important;
   display: flex;
   flex-direction: column;
@@ -2406,10 +2461,10 @@ html.rdd-no-animations [class*="rdd-"]::after {
   border-style: solid;
 }
 
-[dir="rtl"] .rdd-corner-zone--top-right    { right: auto; left: 0;  }
-[dir="rtl"] .rdd-corner-zone--top-left     { left: auto;  right: 0; }
-[dir="rtl"] .rdd-corner-zone--bottom-right { right: auto; left: 0;  }
-[dir="rtl"] .rdd-corner-zone--bottom-left  { left: auto;  right: 0; }
+.rdd-corner-zone--top-right:dir(rtl)    { right: auto; left: 0;  }
+.rdd-corner-zone--top-left:dir(rtl)     { left: auto;  right: 0; }
+.rdd-corner-zone--bottom-right:dir(rtl) { right: auto; left: 0;  }
+.rdd-corner-zone--bottom-left:dir(rtl)  { left: auto;  right: 0; }
 
 
 /* 
@@ -2440,37 +2495,37 @@ html.rdd-no-animations [class*="rdd-"]::after {
    RTL (Right-to-Left) Support
    ========================================== */
 
-[dir="rtl"] .rdd-workspace-tab {
+.rdd-workspace-tab:dir(rtl) {
   border-right: none !important;
   border-left: 1px solid var(--rdd-border-panel) !important;
   padding: 0 14px 0 6px !important;
 }
 
-[dir="rtl"] .rdd-workspace-tab.rdd-drag-hover-left {
+.rdd-workspace-tab.rdd-drag-hover-left:dir(rtl) {
   box-shadow: 3px 0 0 0 var(--rdd-accent-color, #38bdf8),
               10px 0 10px -2px var(--rdd-accent-glow, rgba(56,189,248,0.35));
 }
-[dir="rtl"] .rdd-workspace-tab.rdd-drag-hover-right {
+.rdd-workspace-tab.rdd-drag-hover-right:dir(rtl) {
   box-shadow: -3px 0 0 0 var(--rdd-accent-color, #38bdf8),
               -10px 0 10px -2px var(--rdd-accent-glow, rgba(56,189,248,0.35));
 }
 
-[dir="rtl"] .rdd-workspace-tab > .rdd-text-truncate {
+.rdd-workspace-tab > .rdd-text-truncate:dir(rtl) {
   margin-right: 0 !important;
   margin-left: 12px !important;
 }
 
-[dir="rtl"] .rdd-workspace-tab-icon {
+.rdd-workspace-tab-icon:dir(rtl) {
   margin-right: 0 !important;
   margin-left: 6px !important;
 }
 
-[dir="rtl"] .rdd-tab-header-actions {
+.rdd-tab-header-actions:dir(rtl) {
   margin-left: 0 !important;
   margin-right: auto !important;
 }
 
-[dir="rtl"] .rdd-close-tab-x {
+.rdd-close-tab-x:dir(rtl) {
   margin-left: 0 !important;
   margin-right: auto !important;
 }
@@ -2478,36 +2533,36 @@ html.rdd-no-animations [class*="rdd-"]::after {
 /* Floating window title bar RTL — inherited direction:rtl on the titlebar flex container
    moves buttons (last in DOM) to the LEFT and title (first in DOM) to the RIGHT.
    No explicit row-reverse needed; only prevent the button group from reordering internally. */
-[dir="rtl"] .rdd-titlebar-actions { flex-direction: row; }
+.rdd-titlebar-actions:dir(rtl) { flex-direction: row; }
 
 /* Side Panels transitions slide-in direction */
-[dir="rtl"] .rdd-side-panel-left {
+.rdd-side-panel-left:dir(rtl) {
   left: auto !important;
   right: 0 !important;
   transform: translateX(100%) !important;
 }
-[dir="rtl"] .rdd-side-panel-left.rdd-side-panel-visible {
+.rdd-side-panel-left.rdd-side-panel-visible:dir(rtl) {
   transform: translateX(0) !important;
   border-right: none !important;
   border-left: 1px solid var(--rdd-border-panel, #3c3c3c) !important;
 }
 
-[dir="rtl"] .rdd-side-panel-right {
+.rdd-side-panel-right:dir(rtl) {
   right: auto !important;
   left: 0 !important;
   transform: translateX(-100%) !important;
 }
-[dir="rtl"] .rdd-side-panel-right.rdd-side-panel-visible {
+.rdd-side-panel-right.rdd-side-panel-visible:dir(rtl) {
   transform: translateX(0) !important;
   border-left: none !important;
   border-right: 1px solid var(--rdd-border-panel, #3c3c3c) !important;
 }
 
 /* Minimize Taskbar adjustments */
-[dir="rtl"] .rdd-taskbar-footer-container {
+.rdd-taskbar-footer-container:dir(rtl) {
   flex-direction: row-reverse !important;
 }
-[dir="rtl"] .rdd-taskbar-item-icon {
+.rdd-taskbar-item-icon:dir(rtl) {
   margin-right: 0 !important;
   margin-left: 4px !important;
 }
@@ -2516,22 +2571,22 @@ html.rdd-no-animations [class*="rdd-"]::after {
    Dots must stay on the LEFT in both LTR and RTL (real macOS behavior).
    In RTL context flex-direction:row flows items right-to-left, so
    DOM [title][buttons] → title at RIGHT, buttons at LEFT. */
-[dir="rtl"] [data-rdd-skin="macos"] .rdd-floating-window-titlebar {
+[data-rdd-skin="macos"] .rdd-floating-window-titlebar:dir(rtl) {
   flex-direction: row !important;
 }
 /* Title: pack icon+text toward the visual right (flex-start = right in RTL) */
-[dir="rtl"] [data-rdd-skin="macos"] .rdd-floating-window-titlebar .rdd-floating-window-title {
+[data-rdd-skin="macos"] .rdd-floating-window-titlebar .rdd-floating-window-title:dir(rtl) {
   justify-content: flex-start !important;
 }
 /* Button group: keep dots in correct visual order (Red → Yellow → Green, close at far left).
    direction:rtl (inherited) + flex-direction:row = right-to-left → DOM first item (more) at right,
    last item (close) at left. */
-[dir="rtl"] [data-rdd-skin="macos"] .rdd-floating-window-titlebar .rdd-titlebar-actions {
+[data-rdd-skin="macos"] .rdd-floating-window-titlebar .rdd-titlebar-actions:dir(rtl) {
   flex-direction: row !important;
 }
 
 /* Mirror close-button margins for macOS tabs under RTL */
-[dir="rtl"][data-rdd-skin="macos"] .rdd-close-tab-x {
+[data-rdd-skin="macos"] .rdd-close-tab-x:dir(rtl) {
   margin-left: 0 !important;
   margin-right: 2px !important;
 }
@@ -2541,60 +2596,60 @@ html.rdd-no-animations [class*="rdd-"]::after {
    .left strips move visually to the RIGHT and .right strips to the LEFT.
    All physical border-left/border-right and box-shadow directions must swap. */
 
-[dir="rtl"] .rdd-sidebar-tabs-strip.rdd-left {
+.rdd-sidebar-tabs-strip.rdd-left:dir(rtl) {
   border-left: 1px solid var(--rdd-sidebar-border) !important;
   border-right: none !important;
 }
-[dir="rtl"] .rdd-sidebar-tabs-strip.rdd-right {
+.rdd-sidebar-tabs-strip.rdd-right:dir(rtl) {
   border-right: 1px solid var(--rdd-sidebar-border) !important;
   border-left: none !important;
 }
 
-[dir="rtl"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
+.rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   border-left: none !important;
   border-right: var(--rdd-tab-accent-bar-width, 3px) solid var(--rdd-tab-icon-active) !important;
   margin-left: -2px !important;
   margin-right: 0 !important;
 }
-[dir="rtl"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
+.rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   border-right: none !important;
   border-left: var(--rdd-tab-accent-bar-width, 3px) solid var(--rdd-tab-icon-active) !important;
   margin-right: -2px !important;
   margin-left: 0 !important;
 }
 
-[dir="rtl"] .rdd-sidebar-content-drawer.rdd-left {
+.rdd-sidebar-content-drawer.rdd-left:dir(rtl) {
   border-left: 1px solid var(--rdd-sidebar-border) !important;
   border-right: none !important;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
 }
-[dir="rtl"] .rdd-sidebar-content-drawer.rdd-right {
+.rdd-sidebar-content-drawer.rdd-right:dir(rtl) {
   border-right: 1px solid var(--rdd-sidebar-border) !important;
   border-left: none !important;
   box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
 }
 
 /* obsidian & tokyo — flip the inset glow X offset sign */
-[dir="rtl"] [data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 8px rgba(255, 255, 255, 0.08) !important;
 }
-[dir="rtl"] [data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 8px rgba(255, 255, 255, 0.08) !important;
 }
-[dir="rtl"] [data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 12px rgba(122, 162, 247, 0.18) !important;
 }
-[dir="rtl"] [data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 12px rgba(122, 162, 247, 0.18) !important;
 }
 
 /* chrome — swap the capsule border-radius when strips change sides */
-[dir="rtl"] [data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   border-radius: 10px 0 0 10px !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
 }
-[dir="rtl"] [data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
+[data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
   border-radius: 0 10px 10px 0 !important;
   margin-right: 0 !important;
   margin-left: 0 !important;
@@ -2640,6 +2695,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
   flex-grow: 1;
   width: 100%;
   height: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Empty workspace section placeholder text */
@@ -3006,12 +3063,12 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-toolbar-group-flyout.rdd-top    { transform-origin: top left; }
 .rdd-toolbar-group-flyout.rdd-bottom { transform-origin: bottom left; }
 /* RTL: physical sides swap, so animation origin flips horizontally */
-[dir="rtl"] .rdd-toolbar-group-flyout.rdd-left   { transform-origin: top right; }
-[dir="rtl"] .rdd-toolbar-group-flyout.rdd-right  { transform-origin: top left; }
-[dir="rtl"] .rdd-toolbar-group-flyout.rdd-top    { transform-origin: top right; }
-[dir="rtl"] .rdd-toolbar-group-flyout.rdd-bottom { transform-origin: bottom right; }
+.rdd-toolbar-group-flyout.rdd-left:dir(rtl)   { transform-origin: top right; }
+.rdd-toolbar-group-flyout.rdd-right:dir(rtl)  { transform-origin: top left; }
+.rdd-toolbar-group-flyout.rdd-top:dir(rtl)    { transform-origin: top right; }
+.rdd-toolbar-group-flyout.rdd-bottom:dir(rtl) { transform-origin: bottom right; }
 
-[dir="rtl"] .rdd-toolbar-group-flyout-label {
+.rdd-toolbar-group-flyout-label:dir(rtl) {
   text-align: right;
 }
 
@@ -3731,12 +3788,12 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-panel-float-dropzone--bottom-left  { bottom: 8px; left:  8px; }
 .rdd-panel-float-dropzone--bottom-right { bottom: 8px; right: 8px; }
 
-[dir="rtl"] .rdd-panel-float-dropzone--top-right    { right: auto; left:  8px; }
-[dir="rtl"] .rdd-panel-float-dropzone--top-left     { left:  auto; right: 8px; }
-[dir="rtl"] .rdd-panel-float-dropzone--bottom-right { right: auto; left:  8px; }
-[dir="rtl"] .rdd-panel-float-dropzone--bottom-left  { left:  auto; right: 8px; }
+.rdd-panel-float-dropzone--top-right:dir(rtl)    { right: auto; left:  8px; }
+.rdd-panel-float-dropzone--top-left:dir(rtl)     { left:  auto; right: 8px; }
+.rdd-panel-float-dropzone--bottom-right:dir(rtl) { right: auto; left:  8px; }
+.rdd-panel-float-dropzone--bottom-left:dir(rtl)  { left:  auto; right: 8px; }
 
-[dir="rtl"] .rdd-panel-float__title  { text-align: right; }
+.rdd-panel-float__title:dir(rtl)  { text-align: right; }
 
 /* ── Toast ── */
 
@@ -3838,8 +3895,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
 @keyframes rdd-toast-shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* Toast RTL: flip icon/body order and progress bar collapse direction */
-[dir="rtl"] .rdd-toast           { flex-direction: row-reverse; }
-[dir="rtl"] .rdd-toast__progress { transform-origin: right; }
+.rdd-toast:dir(rtl)           { flex-direction: row-reverse; }
+.rdd-toast__progress:dir(rtl) { transform-origin: right; }
 
 /* ==========================================================================
    KEYBOARD FOCUS

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useIsClient } from '../utils/useIsClient';
 import { createPortal } from 'react-dom';
 import { formatLabel, useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
 
@@ -415,9 +416,6 @@ function ToastItem({
 
 // ─── ToastContainer ───────────────────────────────────────────────────────────
 
-const subscribeNever = () => () => {};
-const isClient = () => true;
-const isServer = () => false;
 
 function resolveOpts(
   raw: ToastOptions & { id: string },
@@ -462,7 +460,7 @@ export function ToastContainer({
   // Portals need `document.body`, which doesn't exist on the server. Render nothing there, and
   // during hydration (the server snapshot); portal on the client after that. The server's output
   // and the hydrating render then agree — both empty — so there is nothing to reconcile.
-  const mounted = useSyncExternalStore(subscribeNever, isClient, isServer);
+  const mounted = useIsClient();
   const closeLabel = formatLabel(messages.closeNotification, formatMessage);
   const queueRef  = useRef<Array<{ id: string; message: React.ReactNode; rawOpts: ToastOptions & { id: string } }>>([]);
   const toastsRef = useRef<ActiveToast[]>(toasts);

@@ -23,3 +23,48 @@ describe('taskbar preview', () => {
     await close();
   });
 });
+
+// The preview fades in while the pointer is still on its icon. It used to start 10% of its own
+// height lower than its resting place — over the whole 38px icon — so a quick click right after
+// arriving pressed on the preview and released on the icon, and neither received the click.
+describe('a click on a minimized panel\'s taskbar icon', () => {
+  async function clickIcon(dy: number, waitBeforeDown: number, hold: number) {
+    const { page, close } = await openHarness();
+    await actions(page, 'minimizePanel', 'p2');
+    await page.mouse.move(640, 798);
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => { const b = document.querySelector('.rdd-taskbar-glassmorphic-item')!.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y }; });
+    await page.mouse.move(r.x + 200, r.y + 19);
+    await page.waitForTimeout(100);
+    await page.mouse.move(r.x, r.y + dy);
+    await page.waitForTimeout(waitBeforeDown);
+    await page.mouse.down();
+    await page.waitForTimeout(hold);
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    const state = await page.evaluate(() => (window as unknown as { __wm: { state: { panels: Record<string, { state: string }> } } }).__wm.state.panels.p2.state);
+    await close();
+    return state;
+  }
+  for (const [dy, wait, hold] of [[19, 20, 30], [19, 20, 150], [6, 10, 120]] as const) {
+    it(`restores the panel when pressed ${wait}ms after arriving, ${dy}px below the icon's top, held ${hold}ms`, async () => {
+      expect(await clickIcon(dy, wait, hold)).not.toBe('minimized');
+    });
+  }
+  it('with the preview at rest, the icon itself is under its top edge', async () => {
+    const { page, close } = await openHarness();
+    await actions(page, 'minimizePanel', 'p2');
+    await page.mouse.move(640, 798);
+    await page.waitForTimeout(400);
+    const item = page.locator('.rdd-taskbar-glassmorphic-item').first();
+    await item.hover();
+    await page.waitForTimeout(500);
+    const hit = await page.evaluate(() => {
+      const b = document.querySelector('.rdd-taskbar-glassmorphic-item')!.getBoundingClientRect();
+      const e = document.elementFromPoint(b.x + b.width / 2, b.y + 2);
+      return e?.closest('.rdd-taskbar-item-tooltip') ? 'preview' : e?.closest('.rdd-taskbar-glassmorphic-item') ? 'icon' : e?.tagName;
+    });
+    expect(hit).toBe('icon');
+    await close();
+  });
+});

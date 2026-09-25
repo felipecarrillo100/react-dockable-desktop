@@ -26,6 +26,17 @@ describe('server rendering (no DOM)', () => {
     expect(html).toContain('rdd-workspace');
   });
 
+  it('RddDesktop with open panels — docked, floating and minimized — renders its chrome', () => {
+    const workspace = createWorkspace({ panels: { m: { component: Mock } } });
+    workspace.openPanel('docked', 'm', { title: 'Docked One' });
+    workspace.openPanel('float', 'm', { title: 'Float Two', initialTarget: 'floating' });
+    workspace.openPanel('mini', 'm', { title: 'Mini Three' });
+    workspace.minimizePanel('mini');
+    const html = renderToString(<DockableDesktopProvider workspace={workspace}><RddDesktop /></DockableDesktopProvider>);
+    expect(html).toContain('Docked One');
+    expect(html).toContain('Float Two');
+  });
+
   it('RddDesktop inside an RddSidebar', () => {
     const html = renderToString(
       <DockableDesktopProvider>

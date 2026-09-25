@@ -224,12 +224,9 @@ describe('SB9: visible=false collapses the tab strip', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} visible={false} />);
     });
-    // The outer wrapper div that drives the collapse transition
-    const stripWrapper = container.querySelector('[style*="width"]') as HTMLElement | null;
-    // Find the one that is 0px (collapse wrapper)
-    const allStyled = Array.from(container.querySelectorAll('[style]')) as HTMLElement[];
-    const collapsed = allStyled.find(el => el.style.width === '0px');
-    expect(collapsed).not.toBeUndefined();
+    // The outer wrapper drives the collapse transition; its 0 width comes from this class.
+    const wrap = container.querySelector('.rdd-sidebar-strip-wrap');
+    expect(wrap?.classList.contains('rdd-sidebar-strip-wrap--collapsed')).toBe(true);
   });
 
   it('strip wrapper has width 56px when visible=true (default)', () => {
@@ -238,9 +235,9 @@ describe('SB9: visible=false collapses the tab strip', () => {
       root = createRoot(container);
       root.render(<Sidebar tabs={tabs} visible={true} />);
     });
-    const allStyled = Array.from(container.querySelectorAll('[style]')) as HTMLElement[];
-    const expanded = allStyled.find(el => el.style.width === '56px');
-    expect(expanded).not.toBeUndefined();
+    const wrap = container.querySelector('.rdd-sidebar-strip-wrap');
+    expect(wrap).not.toBeNull();
+    expect(wrap!.classList.contains('rdd-sidebar-strip-wrap--collapsed')).toBe(false);
   });
 });
 
@@ -578,7 +575,7 @@ describe('SB23: stripVisible=false collapses only the strip', () => {
     const rootFlexDiv = container.children[0];
     const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.rdd-sidebar-tabs-strip')) as HTMLElement | undefined;
     expect(stripWrapper).toBeDefined();
-    expect(stripWrapper!.style.width).toBe('0px');
+    expect(stripWrapper!.classList.contains('rdd-sidebar-strip-wrap--collapsed')).toBe(true);
   });
 
   it('strip wrapper is visible (56px) when stripVisible is omitted', () => {
@@ -590,7 +587,7 @@ describe('SB23: stripVisible=false collapses only the strip', () => {
     const rootFlexDiv = container.children[0];
     const stripWrapper = Array.from(rootFlexDiv.children).find(el => el.querySelector('.rdd-sidebar-tabs-strip')) as HTMLElement | undefined;
     expect(stripWrapper).toBeDefined();
-    expect(stripWrapper!.style.width).toBe('56px');
+    expect(stripWrapper!.classList.contains('rdd-sidebar-strip-wrap--collapsed')).toBe(false);
   });
 
   it('stripVisible=false does not hide the drawer when a tab is open', () => {
