@@ -17,6 +17,9 @@
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
  *
+ * Also registers `titled`, a panel whose effect lists the usePanel() handle and writes its own
+ * title and dirty flag (the naive port of a 6.x `[container]` effect, which looped in 7.0.0).
+ *
  * Uses only the public 7.0 API, as an app would.
  */
 /* eslint-disable react-refresh/only-export-components -- a test harness entry point; never hot-reloaded */
@@ -70,6 +73,16 @@ function OverlayPanel() {
   );
 }
 
+function TitledPanel() {
+  const panel = usePanel();
+  const [doc, setDoc] = useState({ title: 'Untitled', dirty: false });
+  useEffect(() => {
+    panel.setTitle(doc.title);
+    panel.setDirty(doc.dirty);
+  }, [panel, doc.title, doc.dirty]);
+  return <button id={`rename-${panel.id}`} onClick={() => setDoc({ title: 'Renamed doc', dirty: true })}>Rename</button>;
+}
+
 function CanvasPanel() {
   return (
     <div data-rdd-preview-unscale="" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -83,6 +96,7 @@ const workspace = createWorkspace({
     probe: { component: ProbePanel },
     overlay: { component: OverlayPanel },
     canvas: { component: CanvasPanel },
+    titled: { component: TitledPanel },
   },
 });
 

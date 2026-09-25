@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createWorkspace, DockableDesktopProvider, RddDesktop, useSaveState } from '../../index';
 import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
 import { globalPanelRegistry } from '../PanelRegistry';
 import { WorkspaceClient } from '../../WorkspaceClient';
@@ -522,5 +525,36 @@ describe('activePanelId restore', () => {
     expect(snapshot.panels.live).toBeUndefined();
     // Would otherwise name a panel absent from its own snapshot.
     expect('activePanelId' in snapshot).toBe(false);
+  });
+});
+
+describe('a layout saved by 6.4.0 restores under 7.x', () => {
+  // fixtures/layout-6.4.0.json was written by saveLayout() running the 6.4.0 source (git 2d6e886),
+  // not hand-built: a split with tabs, a message-descriptor title, a floating and a maximized
+  // window, a minimized panel, and panel state reported through the 6.x registerStateProvider.
+  const saved = readFileSync(join(__dirname, 'fixtures', 'layout-6.4.0.json'), 'utf8');
+  // Reports back the props it was restored with (minus the panelId the library injects).
+  const Reporter: React.FC<Record<string, unknown>> = ({ panelId: _id, ...props }) => { useSaveState(() => props); return <div />; };
+
+  it('restores every panel where it was, and saves it back unchanged', () => {
+    const ws = createWorkspace({ panels: { map: { component: Reporter }, editor: { component: Reporter } }, initialState: saved });
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const r = createRoot(el);
+    act(() => { r.render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>); });
+    try {
+      const state = ws._core.getSnapshot();
+      expect(ws.getOpenPanelIds().sort()).toEqual(['editor-1', 'editor-2', 'editor-3', 'editor-4', 'map-1', 'map-2']);
+      expect(state.activePanelId).toBe('editor-1');
+      expect(state.panels['editor-2'].title).toEqual({ id: 'app.todo', defaultMessage: 'Todo' });
+      expect(state.panels['map-2'].state).toBe('minimized');
+      expect(state.floating.find(f => f.id === 'editor-4')?.maximized).toBe(true);
+      expect(state.floating.find(f => f.id === 'editor-3')).toMatchObject({ x: 120, y: 80, width: 420, height: 300 });
+      expect(el.querySelector('[data-tab-id="map-1"]')).not.toBeNull();
+      expect(JSON.parse(ws.saveLayout())).toEqual(JSON.parse(saved));
+    } finally {
+      act(() => r.unmount());
+      el.remove();
+    }
   });
 });

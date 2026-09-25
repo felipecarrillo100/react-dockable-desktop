@@ -9,7 +9,7 @@ import React, { forwardRef, useContext, useEffect, useLayoutEffect, useMemo, use
 import { WorkspaceClient, type WorkspaceClientConfig } from '../WorkspaceClient';
 import { WorkspaceInstanceContext } from '../components/WorkspaceInstanceContext';
 import { WindowStoreSyncContext, type MessageDescriptor, type WorkspaceState, type PanelInfo } from '../components/WindowManagerContext';
-import { useFormContainer, type CloseOptions, type ContainerType } from '../components/FormContainerContext';
+import { useFormContainer, type CloseOptions, type ContainerType, type FormContainerContract } from '../components/FormContainerContext';
 import type { DirtyStateOptions } from '../components/dirtyOptions';
 import { usePanelActions, usePanelState, type OverlayInstance, type OverlayId, type ModalOptions, type SidePanelOptions } from '../components/PanelProviderContext';
 export type { OverlayInstance, OverlayId };
@@ -75,7 +75,14 @@ function useOptionalWorkspaceState<T>(selector: (s: WorkspaceState) => T, fallba
 /** The state of a workspace panel: where it is. */
 export type PanelState = PanelInfo['state'];
 
-/** What a panel component knows about, and can do to, its own container. See {@link usePanel}. */
+/**
+ * What a panel component knows about, and can do to, its own container. See {@link usePanel}.
+ *
+ * **Identity.** `id` and the five functions (`close`, `minimize`, `setDirty`, `setTitle`,
+ * `setIcon`) never change identity for the panel's lifetime. The handle object itself changes
+ * when `containerType`, `isActive`, `isMinimized` or `isFloating` does. So don't list the handle
+ * in a dependency array: depend on the function you call, or on the values you write.
+ */
 export interface PanelHandle {
   /** This panel's instance id. */
   id: string;
@@ -95,34 +102,68 @@ export interface PanelHandle {
   setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
   /** Changes the title shown on the tab, window or modal. */
   setTitle: (title: string | MessageDescriptor) => void;
-  /** Changes the icon shown on the tab or window. */
+  /**
+   * Changes the icon shown in a modal's or drawer's header. A docked or floating panel shows the
+   * icon from its registration (`defaultOptions.icon`); there this does nothing, and warns once in
+   * development.
+   */
   setIcon: (icon: React.ReactNode) => void;
 }
 
 /**
  * The panel's own container: its id, where it is, and what it can do. Works in docked panels,
  * floating windows, modals and side drawers.
+ *
+ * The functions on the handle are stable; the handle object is not (see {@link PanelHandle}).
+ * To keep the tab title in step with a document:
+ *
+ * ```tsx
+ * const { setTitle, setDirty } = usePanel();
+ * useEffect(() => { setTitle(doc.title); setDirty(doc.dirty); }, [setTitle, setDirty, doc.title, doc.dirty]);
+ * ```
  */
 export function usePanel(): PanelHandle {
   const c = useFormContainer();
   const id = c.instanceId;
-  const info = useOptionalWorkspaceState(s => s.panels[id], undefined);
+  // Select primitives only: a selector returning the whole panel record would give a new handle
+  // on every write to the panel (title, dirty, props), including the panel's own writes.
+  const state = useOptionalWorkspaceState(s => s.panels[id]?.state, undefined);
   const isActive = useOptionalWorkspaceState(s => s.activePanelId === id, false);
-  const containerType: ContainerType = info
-    ? (info.state === 'floating' ? 'floating-window' : 'dockable-panel')
+  const containerType: ContainerType = state
+    ? (state === 'floating' ? 'floating-window' : 'dockable-panel')
     : (c.containerType ?? 'standalone');
+  // A modal's or drawer's container object changes when its title or dirty flag does, so the
+  // mutators read it through a ref and never change identity themselves.
+  const cRef = useRef(c);
+  useLayoutEffect(() => { cRef.current = c; });
+  const mutators = useMemo(() => {
+    let iconWarned = false;
+    return {
+      close: (options?: CloseOptions) => cRef.current.requestClose(options),
+      minimize: () => cRef.current.requestMinimize?.(),
+      setDirty: (dirty: boolean, options?: DirtyStateOptions) => cRef.current.setDirty(dirty, options),
+      setTitle: (title: string | MessageDescriptor) => cRef.current.setTitle(title as Parameters<FormContainerContract['setTitle']>[0]),
+      setIcon: (icon: React.ReactNode) => {
+        const setIcon = cRef.current.setIcon;
+        if (setIcon) { setIcon(icon); return; }
+        if (process.env.NODE_ENV === 'development' && !iconWarned) {
+          iconWarned = true;
+          console.warn(
+            `[react-dockable-desktop] usePanel().setIcon() has no effect in panel "${id}": a docked or ` +
+            'floating panel shows the icon from its registration (defaultOptions.icon). setIcon works in modals and drawers.'
+          );
+        }
+      },
+    };
+  }, [id]);
   return useMemo<PanelHandle>(() => ({
     id,
     containerType,
-    isActive: !!info && isActive,
-    isMinimized: info?.state === 'minimized',
-    isFloating: info?.state === 'floating',
-    close: (options) => c.requestClose(options),
-    minimize: () => c.requestMinimize?.(),
-    setDirty: (dirty, options) => c.setDirty(dirty, options),
-    setTitle: (title) => c.setTitle(title as Parameters<typeof c.setTitle>[0]),
-    setIcon: (icon) => c.setIcon?.(icon),
-  }), [c, id, containerType, info, isActive]);
+    isActive: !!state && isActive,
+    isMinimized: state === 'minimized',
+    isFloating: state === 'floating',
+    ...mutators,
+  }), [mutators, id, containerType, state, isActive]);
 }
 
 /** Lifecycle callbacks for {@link usePanelEvents}. Each is called at the moment it describes. */

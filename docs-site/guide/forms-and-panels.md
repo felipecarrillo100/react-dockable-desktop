@@ -17,6 +17,25 @@ function MyPanel() {
 
 The returned `PanelHandle` carries the panel's `id`, its live `containerType`, the flags `isActive`, `isMinimized` and `isFloating`, and the actions `close`, `minimize`, `setDirty`, `setTitle` and `setIcon`. The component re-renders when one of those values changes.
 
+**Identity.** Since 7.0.1, the five actions never change identity for the panel's lifetime. The handle object itself does change, whenever one of the four live values changes. So never list the handle in a dependency array; depend on the action you call, and on the values you write.
+
+### Updating the title and dirty flag from an effect
+
+```tsx
+function DocumentPanel({ doc }: { doc: { title: string; dirty: boolean } }) {
+  const { setTitle, setDirty } = usePanel();
+
+  useEffect(() => {
+    setTitle(doc.title);
+    setDirty(doc.dirty);
+  }, [setTitle, setDirty, doc.title, doc.dirty]);   // not [panel, …]
+
+  return <Editor doc={doc} />;
+}
+```
+
+Writing a title or dirty value the panel already has is a no-op, so an effect like this settles after one write.
+
 ## Marking unsaved changes (dirty state)
 
 Call `panel.setDirty(true)` whenever the panel has unsaved changes. When the user tries to close a dirty panel, an **`RddConfirm`** modal fires automatically. The panel closes only if the user confirms.
@@ -292,7 +311,7 @@ interface PanelHandle {
   minimize: () => void;                         // no-op for modals/drawers
   setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
   setTitle: (title: string | MessageDescriptor) => void;
-  setIcon:  (icon: React.ReactNode) => void;
+  setIcon:  (icon: React.ReactNode) => void;   // modals and drawers; a docked/floating panel uses its registration's icon
 }
 
 // Hooks — call at the top level of the panel component; each cleans up on unmount

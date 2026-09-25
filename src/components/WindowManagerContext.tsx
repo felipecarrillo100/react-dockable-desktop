@@ -10,6 +10,7 @@ import type { DirtyStateOptions } from './dirtyOptions';
 export type { DirtyStateOptions };
 import type { ContextMenuItem, ShowContextMenuOptions } from './ContextMenu';
 import { isSerializable } from './serializable';
+import { sameTitle, sameDirtyOptions } from './sameUpdate';
 
 /**
  * Structure representing localizable message descriptors used in context menus.
@@ -1413,6 +1414,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
+      if (!!panel.dirty === dirty && sameDirtyOptions(panel.dirtyOptions, options)) return prev;
       return {
         ...prev,
         panels: {
@@ -1427,6 +1429,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
+      if (sameTitle(panel.title, title)) return prev;
       return {
         ...prev,
         panels: {

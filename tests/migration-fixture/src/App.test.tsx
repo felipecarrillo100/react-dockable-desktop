@@ -29,4 +29,22 @@ describe('migration fixture', () => {
     act(() => root.unmount());
     el.remove();
   });
+
+  it('a panel whose effect lists the usePanel() handle and writes its title and dirty flag settles', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      act(() => { root.render(<App />); });
+      act(() => { workspace.openPanel('document-1', 'document'); });
+      act(() => { (el.querySelector('[data-testid="rename"]') as HTMLButtonElement).click(); });
+      expect(el.querySelector('[data-tab-id="document-1"]')!.textContent).toContain('Report.docx');
+      expect(errors.mock.calls.filter(c => String(c[0]).includes('Maximum update depth'))).toEqual([]);
+    } finally {
+      errors.mockRestore();
+      act(() => root.unmount());
+      el.remove();
+    }
+  });
 });

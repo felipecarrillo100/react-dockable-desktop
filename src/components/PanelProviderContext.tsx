@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import type { ComponentType, ReactNode } from 'react';
 import type { DirtyStateOptions } from './dirtyOptions';
 import { usePredefinedMessages } from './WindowManagerContext';
+import { sameTitle, sameDirtyOptions } from './sameUpdate';
 export type { DirtyStateOptions };
 
 /** Unique string identifier for panel/modal instances. */
@@ -116,6 +117,21 @@ let idCounter = 0;
 const generateId = (): OverlayId => `panel-${++idCounter}-${Date.now()}`;
 
 const closeHandlers = new Map<OverlayId, () => Promise<boolean>>();
+
+/** True when applying `updates` to `current` would leave every field as it is. */
+function changesNothing(current: OverlayInstance, updates: Partial<Pick<OverlayInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>): boolean {
+  if ('props' in updates && updates.props !== current.props) return false;
+  if ('dirty' in updates && !!updates.dirty !== !!current.dirty) return false;
+  if ('dirtyOptions' in updates && !sameDirtyOptions(updates.dirtyOptions, current.dirtyOptions)) return false;
+  if ('options' in updates && updates.options !== current.options) {
+    const next = updates.options as Record<string, unknown>, prev = current.options as Record<string, unknown>;
+    const keys = new Set([...Object.keys(next), ...Object.keys(prev)]);
+    for (const k of keys) {
+      if (k === 'title' ? !sameTitle(next[k] as never, prev[k] as never) : next[k] !== prev[k]) return false;
+    }
+  }
+  return true;
+}
 
 const initialState: OverlayState = {
   leftPanel: null,
@@ -262,11 +278,15 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: OverlayId,
       updates: Partial<Pick<OverlayInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>
     ) => {
-      setState(s => ({
-        leftPanel: s.leftPanel?.id === id ? { ...s.leftPanel, ...updates } : s.leftPanel,
-        rightPanel: s.rightPanel?.id === id ? { ...s.rightPanel, ...updates } : s.rightPanel,
-        modals: s.modals.map(m => m.id === id ? { ...m, ...updates } : m),
-      }));
+      setState(s => {
+        const target = s.leftPanel?.id === id ? s.leftPanel : s.rightPanel?.id === id ? s.rightPanel : s.modals.find(m => m.id === id);
+        if (!target || changesNothing(target, updates)) return s;
+        return {
+          leftPanel: s.leftPanel?.id === id ? { ...s.leftPanel, ...updates } : s.leftPanel,
+          rightPanel: s.rightPanel?.id === id ? { ...s.rightPanel, ...updates } : s.rightPanel,
+          modals: s.modals.map(m => m.id === id ? { ...m, ...updates } : m),
+        };
+      });
     },
     []
   );

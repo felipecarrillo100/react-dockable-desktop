@@ -1,0 +1,134 @@
+{
+  "version": 2,
+  "activePanelId": "editor-1",
+  "gridRoot": {
+    "type": "branch",
+    "orientation": "horizontal",
+    "sizes": [
+      0.8,
+      0.2
+    ],
+    "children": [
+      {
+        "type": "leaf",
+        "id": "group-default",
+        "panels": [
+          "map-1",
+          "editor-2"
+        ],
+        "activePanelId": "editor-2"
+      },
+      {
+        "type": "leaf",
+        "id": "group-edge-1790307709223-294",
+        "panels": [
+          "editor-1"
+        ],
+        "activePanelId": "editor-1"
+      }
+    ]
+  },
+  "floating": [
+    {
+      "x": 120,
+      "y": 80,
+      "width": 420,
+      "height": 300,
+      "id": "editor-3",
+      "z": 1001,
+      "anchor": null
+    },
+    {
+      "x": 300,
+      "y": 150,
+      "width": 450,
+      "height": 350,
+      "id": "editor-4",
+      "z": 1002,
+      "anchor": null,
+      "maximized": true
+    }
+  ],
+  "minimized": [
+    {
+      "id": "map-2",
+      "title": "Overview",
+      "component": "map"
+    }
+  ],
+  "panels": {
+    "map-1": {
+      "id": "map-1",
+      "title": "Map",
+      "component": "map",
+      "state": "docked",
+      "props": {
+        "center": [
+          4.35,
+          50.85
+        ],
+        "zoom": 7
+      },
+      "serializable": true
+    },
+    "editor-1": {
+      "id": "editor-1",
+      "title": "Notes.md",
+      "component": "editor",
+      "state": "docked",
+      "props": {
+        "file": "Notes.md"
+      },
+      "serializable": true
+    },
+    "editor-2": {
+      "id": "editor-2",
+      "title": {
+        "id": "app.todo",
+        "defaultMessage": "Todo"
+      },
+      "component": "editor",
+      "state": "docked",
+      "props": {
+        "file": "todo.txt"
+      },
+      "serializable": true
+    },
+    "editor-3": {
+      "id": "editor-3",
+      "title": "Scratch",
+      "component": "editor",
+      "state": "floating",
+      "props": {
+        "file": "scratch.txt"
+      },
+      "serializable": true
+    },
+    "map-2": {
+      "id": "map-2",
+      "title": "Overview",
+      "component": "map",
+      "state": "minimized",
+      "props": {
+        "center": [
+          0,
+          0
+        ],
+        "zoom": 7
+      },
+      "serializable": true,
+      "previousState": "docked",
+      "lastLeafId": "group-default"
+    },
+    "editor-4": {
+      "id": "editor-4",
+      "title": "Big",
+      "component": "editor",
+      "state": "floating",
+      "props": {
+        "file": "big.txt"
+      },
+      "serializable": true
+    }
+  }
+}
