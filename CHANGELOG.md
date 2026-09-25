@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.0] — 2026-09-25
+
+### Added
+- **Per-panel icons for docked and floating panels.** `usePanel().setIcon(icon)` now changes the panel's tab, floating title bar and taskbar button; until now it only worked in modals and drawers (in 7.0.1 it warned in development). `setIcon(null)` goes back to the registration's `defaultOptions.icon`. Outside the panel, the new `workspace.setPanelIcon(id, icon)` does the same.
+- `PanelInfo.icon`: the runtime icon, readable through `useWorkspaceState`. It is never saved by `saveLayout()`, and `loadLayout()` keeps it for a panel that is still open. Setting the icon a panel already has is a no-op.
+
+### Removed
+- The 7.0.1 development warning for `setIcon` in a docked or floating panel, which now works.
+
 ## [7.0.1] — 2026-09-25
 
 Fixes found by a consumer migrating a 30-file app from 6.4.0 with the 7.0.0 migration guide, and a revised guide. No API change.
@@ -481,7 +490,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.0...HEAD
+[7.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.1...v7.1.0
 [7.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.0...v7.0.1
 [7.0.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.4.0...v7.0.0
 [6.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v6.3.2...v6.4.0

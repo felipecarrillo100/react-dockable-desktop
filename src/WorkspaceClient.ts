@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { PanelRegistry } from './components/PanelRegistry';
 import type { PanelRegistryEntry } from './components/PanelRegistry';
 import { createWorkspaceCore, type WorkspaceCore } from './components/WindowManagerContext';
@@ -286,6 +286,11 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   /** Updates a panel's displayed title. */
   updatePanelTitle(id: string, title: string | MessageDescriptor): void {
     this._dispatch(a => a.updatePanelTitle(id, title));
+  }
+
+  /** Sets an open panel's tab/window/taskbar icon; `null` restores its registration's icon. Not saved by `saveLayout()`. */
+  setPanelIcon(id: string, icon: ReactNode | null): void {
+    this._dispatch(a => a.setPanelIcon(id, icon));
   }
 
   /**

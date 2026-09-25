@@ -145,6 +145,10 @@ export interface PanelInfo {
    *  key, `openPanel` focuses that existing panel instead of creating a new one — see
    *  {@link WorkspaceActions.openPanel}'s `dedupeKey` option and {@link WorkspaceActions.findPanelId}. */
   dedupeKey?: string;
+  /** Icon set at runtime with `usePanel().setIcon()` or {@link WorkspaceActions.setPanelIcon},
+   *  shown instead of the registration's `defaultOptions.icon`. Never saved by `saveLayout()`;
+   *  `loadLayout()` keeps it for a panel that is still open. */
+  icon?: React.ReactNode;
 }
 
 /**
@@ -455,6 +459,14 @@ export interface WorkspaceActions {
    * @param title - New title string or localizable message descriptor.
    */
   updatePanelTitle: (id: string, title: string | MessageDescriptor) => void;
+  /**
+   * Sets the icon shown on an open panel's tab, floating title bar and taskbar button, in place
+   * of its registration's `defaultOptions.icon`. `null` restores the registration's icon. The icon
+   * lives only in memory: `saveLayout()` never writes it.
+   * @param id - Panel instance ID.
+   * @param icon - The icon, or `null` to go back to the registration's.
+   */
+  setPanelIcon: (id: string, icon: React.ReactNode | null) => void;
   /**
    * Closes a panel, first running any registered close guards.
    * If the panel is dirty, shows the built-in unsaved-changes confirmation dialog.
@@ -1440,6 +1452,16 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     });
   };
 
+  const setPanelIcon = (id: string, icon: React.ReactNode | null) => {
+    setState(prev => {
+      const panel = prev.panels[id];
+      if (!panel) return prev;
+      const next = icon ?? undefined;
+      if (panel.icon === next) return prev;
+      return { ...prev, panels: { ...prev.panels, [id]: { ...panel, icon: next } } };
+    });
+  };
+
   const requestClosePanel = async (id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }) => {
     if (options?.force) {
       closePanel(id);
@@ -1922,7 +1944,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       const effectiveSerializable = hasDynamicValue ? isSerializable(dynamicValue) : info.serializable;
 
       if (effectiveSerializable) {
-        includedPanels[id] = hasDynamicValue ? { ...info, props: effectiveProps, serializable: effectiveSerializable } : info;
+        // The runtime icon is a React element: never part of a saved layout.
+        const { icon: _icon, ...saved } = info;
+        includedPanels[id] = hasDynamicValue ? { ...saved, props: effectiveProps, serializable: effectiveSerializable } : saved;
       } else {
         excludedIds.push(id);
       }
@@ -1974,15 +1998,24 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     try {
       const payload = parseLayoutPayload(JSON.parse(layoutJson));
       if (!payload) return false;
-      setState(prev => ({
-        ...prev,
-        gridRoot: payload.gridRoot,
-        floating: payload.floating,
-        minimized: payload.minimized,
-        panels: payload.panels,
-        draggedPanelId: null,
-        activePanelId: payload.activePanelId
-      }));
+      setState(prev => {
+        // A panel that stays open keeps its runtime icon: the component that set it isn't
+        // re-mounted, so it wouldn't set it again.
+        const panels: Record<string, PanelInfo> = {};
+        for (const [id, info] of Object.entries(payload.panels)) {
+          const was = prev.panels[id];
+          panels[id] = was?.icon !== undefined && was.component === info.component ? { ...info, icon: was.icon } : info;
+        }
+        return {
+          ...prev,
+          gridRoot: payload.gridRoot,
+          floating: payload.floating,
+          minimized: payload.minimized,
+          panels,
+          draggedPanelId: null,
+          activePanelId: payload.activePanelId
+        };
+      });
       return true;
     } catch (e) {
       console.error('Failed to parse layout configuration:', e);
@@ -2062,6 +2095,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     unregisterStateProvider,
     setPanelDirty,
     updatePanelTitle,
+    setPanelIcon,
     requestClosePanel,
     dockPanelToWorkspaceEdge,
     setActivePanel,

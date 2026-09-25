@@ -1,7 +1,7 @@
 /**
  * The 7.0 public API, used exactly as an app would: everything imported from src/index.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
@@ -351,22 +351,56 @@ describe('usePanel identity', () => {
     expect(received).toEqual({ message: 'Custom' });
   });
 
-  it('setIcon in a docked panel warns once in development (the tab icon comes from the registration)', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      let handle: PanelHandle | undefined;
-      const Probe = () => { handle = usePanel(); return null; };
-      const ws = createWorkspace({ panels: { p: { component: Probe } } });
-      render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
-      act(() => { ws.openPanel('a', 'p'); });
-      act(() => { handle!.setIcon(<span />); handle!.setIcon(<span />); });
-      const calls = warn.mock.calls.filter(c => String(c[0]).includes('setIcon'));
-      expect(calls).toHaveLength(1);
-    } finally {
-      warn.mockRestore();
-      process.env.NODE_ENV = originalEnv;
-    }
+});
+
+describe('panel icons (7.1)', () => {
+  const RegIcon = () => <i className="reg-icon" />;
+  let handle: PanelHandle | undefined;
+  const Probe = () => { handle = usePanel(); return <div />; };
+  const mount = () => {
+    const ws = createWorkspace({ panels: { p: { component: Probe, defaultOptions: { icon: <RegIcon /> } } } });
+    render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>);
+    act(() => { ws.openPanel('a', 'p', { title: 'A' }); });
+    return ws;
+  };
+  const tabIcon = () => tab('a')?.querySelector('.rdd-workspace-tab-icon');
+
+  it('usePanel().setIcon changes a docked tab, a floating title bar and a taskbar button; null restores the registration icon', () => {
+    const ws = mount();
+    expect(tabIcon()?.querySelector('.reg-icon')).not.toBeNull();
+    act(() => { handle!.setIcon(<b className="live-icon" />); });
+    expect(tabIcon()?.querySelector('.live-icon')).not.toBeNull();
+    act(() => { ws.floatPanel('a'); });
+    expect(container.querySelector('[data-window-id="a"] .rdd-window-title-icon .live-icon')).not.toBeNull();
+    act(() => { ws.minimizePanel('a'); });
+    expect(container.querySelector('.rdd-taskbar-item-icon .live-icon')).not.toBeNull();
+    act(() => { ws.restorePanel('a'); ws.dockPanel('a'); });
+    act(() => { handle!.setIcon(null); });
+    expect(tabIcon()?.querySelector('.reg-icon')).not.toBeNull();
+    expect(tabIcon()?.querySelector('.live-icon')).toBeNull();
+  });
+
+  it('workspace.setPanelIcon does the same from outside the panel', () => {
+    const ws = mount();
+    act(() => { ws.setPanelIcon('a', <b className="outside-icon" />); });
+    expect(tabIcon()?.querySelector('.outside-icon')).not.toBeNull();
+  });
+
+  it('the icon is never saved, and a loaded layout keeps it for a panel that is still open', () => {
+    const ws = mount();
+    act(() => { handle!.setIcon(<b className="live-icon" />); });
+    const saved = ws.saveLayout();
+    expect(JSON.parse(saved).panels.a).not.toHaveProperty('icon');
+    act(() => { ws.loadLayout(saved); });
+    expect(tabIcon()?.querySelector('.live-icon')).not.toBeNull();
+  });
+
+  it('setting the icon a panel already has changes nothing', () => {
+    const ws = mount();
+    const icon = <b className="live-icon" />;
+    act(() => { handle!.setIcon(icon); });
+    const before = ws._core.getSnapshot();
+    act(() => { handle!.setIcon(icon); });
+    expect(ws._core.getSnapshot()).toBe(before);
   });
 });
