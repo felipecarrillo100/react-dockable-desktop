@@ -68,3 +68,28 @@ describe('a click on a minimized panel\'s taskbar icon', () => {
     await close();
   });
 });
+
+// The preview's resting transform must be in its class, not only in the fade-in keyframe's end
+// state: with animations off there is no keyframe, and the preview would sit on its icon.
+describe('the taskbar preview with animations off (anim=0)', () => {
+  it('sits above its icon, and a quick click on the icon restores the panel', async () => {
+    const { page, close } = await openHarness('anim=0');
+    await actions(page, 'minimizePanel', 'p2');
+    await page.mouse.move(640, 798);
+    await page.waitForTimeout(400);
+    const item = page.locator('.rdd-taskbar-glassmorphic-item').first();
+    await item.hover();
+    await page.waitForSelector('.rdd-taskbar-item-tooltip');
+    const { tipBottom, iconTop, x, y } = await page.evaluate(() => {
+      const t = document.querySelector('.rdd-taskbar-item-tooltip')!.getBoundingClientRect();
+      const i = document.querySelector('.rdd-taskbar-glassmorphic-item')!.getBoundingClientRect();
+      return { tipBottom: t.bottom, iconTop: i.top, x: i.x + i.width / 2, y: i.y + i.height / 2 };
+    });
+    expect(tipBottom).toBeLessThanOrEqual(iconTop);
+    await page.mouse.click(x, y);
+    await page.waitForTimeout(300);
+    const state = await page.evaluate(() => (window as unknown as { __wm: { state: { panels: Record<string, { state: string }> } } }).__wm.state.panels.p2.state);
+    expect(state).not.toBe('minimized');
+    await close();
+  });
+});

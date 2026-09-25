@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.2] — 2026-09-25
+
+### Fixed
+- **Fixed values the library wrote as inline styles couldn't be overridden by host CSS** (an inline style beats every rule without `!important`). They are now in the elements' classes, and inline styles carry only per-render values (sizes, positions, split ratios, scale transforms, state-driven toggles). Moved: the panel's `overflow`/`position`, the tab strip's scrollbar, the tab title's and preview title's max widths, the close buttons' size and end margin, the title-bar button gap, the icons' `display`, the taskbar preview's resting place, the no-preview thumbnail and its letter, the unregistered-panel placeholder, the menus' and search dropdown's `position`, the drawer anchor, and the confirmation dialog's message and divider. New classes: `rdd-workspace-tab-title`, `rdd-close-tab-x--end`, `rdd-svg-icon`, `rdd-taskbar-item-preview-frame--empty`, `rdd-taskbar-item-preview-initial`, `rdd-unregistered-panel__title`, `rdd-unregistered-panel__key`, `rdd-side-panel-anchor`, `rdd-confirmation-message`, `rdd-confirmation-divider`. The look is unchanged — verified by comparing the computed styles of every element in 25 scenes (five configurations, including light, macOS skin, RTL and animations off) before and after.
+- **The unregistered-panel placeholder ignored the colour scheme.** Its border and text use the new `--rdd-danger-color` token (`#dc3545`; `#b91c1c` in light mode — the one intended visual change). The no-preview thumbnail's fill is the new `--rdd-placeholder-bg`.
+
+### Tests
+- A source scan fails on any JSX `style={{…}}` in the library that sets a literal value, so a new fixed inline value can't come back unnoticed.
+
 ## [7.1.1] — 2026-09-25
 
 Fixes from two consumer issue lists (13 reports, 11 distinct issues).
@@ -510,7 +519,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.2...HEAD
+[7.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.1...v7.1.2
 [7.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.0...v7.1.1
 [7.1.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.1...v7.1.0
 [7.0.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.0.0...v7.0.1

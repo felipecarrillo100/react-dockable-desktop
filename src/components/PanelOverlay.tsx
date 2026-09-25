@@ -743,7 +743,7 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolb
           className="rdd-panel-toolbar-search__dropdown"
           // z-index from .rdd-panel-toolbar-search__dropdown (+8502), not inline, so
           // zIndexBase shifts it too. Resolves to the same 9502 by default.
-          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+          style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
           onMouseDown={e => e.preventDefault()}
         >
           {Object.entries(grouped).map(([group, items]) => (

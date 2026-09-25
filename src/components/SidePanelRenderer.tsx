@@ -183,7 +183,7 @@ export interface SidePanelRendererProps {
 const SidePanelAnchor: React.FC<{ children: (containerRect: ContainerRect | null) => React.ReactNode }> = ({ children }) => {
   const anchorRef = useRef<HTMLDivElement>(null);
   const containerRect = useContainerRect(anchorRef);
-  return <div ref={anchorRef} style={{ display: 'contents' }}>{children(containerRect)}</div>;
+  return <div ref={anchorRef} className="rdd-side-panel-anchor">{children(containerRect)}</div>;
 };
 
 /**
