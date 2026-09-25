@@ -344,7 +344,7 @@ const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
 
 const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
   const state = useWindowManagerState();
-  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, minimizePanel } = useWindowManagerActions();
+  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel } = useWindowManagerActions();
 
   // ── minimize / restore ──────────────────────────────────────────────────
   const isMin = state.minimized.some(m => m.id === panelId);
@@ -425,6 +425,7 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
       return () => unregisterStateProvider(panelId);
     },
     setTitle: (title) => updatePanelTitle(panelId, title),
+    setIcon: (icon) => setPanelIcon(panelId, icon ?? null),
     instanceId: panelId,
     containerType: initialContainerTypeRef.current,
     onClose: (handler) => {
@@ -464,7 +465,7 @@ const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.
       reg.onContainerTypeChange.add(handler);
       return () => reg.onContainerTypeChange.delete(handler);
     },
-  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, minimizePanel]);
+  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel]);
 
   return (
     <FormContainerProvider value={contract}>
@@ -748,7 +749,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
                 <span className="rdd-text-truncate" style={{ maxWidth: '120px', display: 'flex', alignItems: 'center' }}>
-                  <span className="rdd-workspace-tab-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
+                  <span className="rdd-workspace-tab-icon">{panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon)}</span>
                   <span>
                     {formatLabel(panel.title, formatMessage)}
                     {panel.dirty ? ' *' : ''}
@@ -1985,7 +1986,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                   style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
                 >
                   <span className="rdd-floating-window-title">
-                    <span className="rdd-window-title-icon">{options?.icon || defaultPanelIcon || DefaultGridIcon}</span>
+                    <span className="rdd-window-title-icon">{panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon)}</span>
                     <span>
                       {formatLabel(panel.title, formatMessage)}
                       {panel.dirty ? ' *' : ''}
@@ -2113,7 +2114,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           >
             {state.minimized.map(m => {
               const regEntry = registry.get(m.component);
-              const icon = regEntry?.defaultOptions?.icon || defaultPanelIcon || DefaultGridIcon;
+              const icon = state.panels[m.id]?.icon ?? (regEntry?.defaultOptions?.icon || defaultPanelIcon || DefaultGridIcon);
 
               return (
                 <button

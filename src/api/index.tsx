@@ -103,9 +103,9 @@ export interface PanelHandle {
   /** Changes the title shown on the tab, window or modal. */
   setTitle: (title: string | MessageDescriptor) => void;
   /**
-   * Changes the icon shown in a modal's or drawer's header. A docked or floating panel shows the
-   * icon from its registration (`defaultOptions.icon`); there this does nothing, and warns once in
-   * development.
+   * Changes the icon on the panel's tab, floating title bar and taskbar button, or in a modal's or
+   * drawer's header. In a workspace panel, `null` goes back to the registration's
+   * `defaultOptions.icon`. The icon is not saved by `saveLayout()`.
    */
   setIcon: (icon: React.ReactNode) => void;
 }
@@ -136,26 +136,13 @@ export function usePanel(): PanelHandle {
   // mutators read it through a ref and never change identity themselves.
   const cRef = useRef(c);
   useLayoutEffect(() => { cRef.current = c; });
-  const mutators = useMemo(() => {
-    let iconWarned = false;
-    return {
-      close: (options?: CloseOptions) => cRef.current.requestClose(options),
-      minimize: () => cRef.current.requestMinimize?.(),
-      setDirty: (dirty: boolean, options?: DirtyStateOptions) => cRef.current.setDirty(dirty, options),
-      setTitle: (title: string | MessageDescriptor) => cRef.current.setTitle(title as Parameters<FormContainerContract['setTitle']>[0]),
-      setIcon: (icon: React.ReactNode) => {
-        const setIcon = cRef.current.setIcon;
-        if (setIcon) { setIcon(icon); return; }
-        if (process.env.NODE_ENV === 'development' && !iconWarned) {
-          iconWarned = true;
-          console.warn(
-            `[react-dockable-desktop] usePanel().setIcon() has no effect in panel "${id}": a docked or ` +
-            'floating panel shows the icon from its registration (defaultOptions.icon). setIcon works in modals and drawers.'
-          );
-        }
-      },
-    };
-  }, [id]);
+  const mutators = useMemo(() => ({
+    close: (options?: CloseOptions) => cRef.current.requestClose(options),
+    minimize: () => cRef.current.requestMinimize?.(),
+    setDirty: (dirty: boolean, options?: DirtyStateOptions) => cRef.current.setDirty(dirty, options),
+    setTitle: (title: string | MessageDescriptor) => cRef.current.setTitle(title as Parameters<FormContainerContract['setTitle']>[0]),
+    setIcon: (icon: React.ReactNode) => cRef.current.setIcon?.(icon),
+  }), [id]);
   return useMemo<PanelHandle>(() => ({
     id,
     containerType,

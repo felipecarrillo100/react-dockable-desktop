@@ -1,6 +1,6 @@
     # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.0.1-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.1.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -259,7 +259,7 @@ workspace.setDirection('ltr' | 'rtl')
 | `minimize()` | `() => void` | Minimize this panel to the taskbar; no effect in a modal or drawer |
 | `setDirty(dirty, options?)` | `(dirty: boolean, options?: DirtyStateOptions) => void` | Mark unsaved changes; triggers confirmation dialog on close |
 | `setTitle(title)` | `(title: string \| MessageDescriptor) => void` | Change the tab/window title dynamically |
-| `setIcon(icon)` | `(icon: ReactNode) => void` | Change a modal's or drawer's header icon. A docked or floating panel shows its registration's `defaultOptions.icon` |
+| `setIcon(icon)` | `(icon: ReactNode) => void` | Change the tab, floating title bar and taskbar icon (or a modal's or drawer's header icon); `null` restores the registration's `defaultOptions.icon`. Not saved by `saveLayout()` |
 
 ### ContainerType
 

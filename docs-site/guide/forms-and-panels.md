@@ -36,6 +36,20 @@ function DocumentPanel({ doc }: { doc: { title: string; dirty: boolean } }) {
 
 Writing a title or dirty value the panel already has is a no-op, so an effect like this settles after one write.
 
+## Changing the icon
+
+A panel's tab, floating title bar and taskbar button show its registration's `defaultOptions.icon`. `setIcon` replaces it for this panel instance (since 7.1); `setIcon(null)` goes back to the registration's icon. In a modal or drawer it changes the header icon.
+
+```tsx
+function BuildPanel({ status }: { status: 'running' | 'failed' | 'done' }) {
+  const { setIcon } = usePanel();
+  useEffect(() => { setIcon(<StatusIcon status={status} />); }, [setIcon, status]);
+  // ...
+}
+```
+
+Outside the panel, `workspace.setPanelIcon(id, icon)` does the same. The icon lives only in memory: `saveLayout()` never writes it, and `loadLayout()` keeps it for a panel that is still open.
+
 ## Marking unsaved changes (dirty state)
 
 Call `panel.setDirty(true)` whenever the panel has unsaved changes. When the user tries to close a dirty panel, an **`RddConfirm`** modal fires automatically. The panel closes only if the user confirms.
@@ -311,7 +325,7 @@ interface PanelHandle {
   minimize: () => void;                         // no-op for modals/drawers
   setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
   setTitle: (title: string | MessageDescriptor) => void;
-  setIcon:  (icon: React.ReactNode) => void;   // modals and drawers; a docked/floating panel uses its registration's icon
+  setIcon:  (icon: React.ReactNode) => void;   // null restores the registration's icon; not saved
 }
 
 // Hooks — call at the top level of the panel component; each cleans up on unmount
