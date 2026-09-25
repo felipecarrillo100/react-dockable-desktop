@@ -1,4 +1,4 @@
-    # React Dockable Desktop
+# React Dockable Desktop
 
 [![npm version](https://img.shields.io/badge/npm-v7.1.3-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
@@ -195,7 +195,7 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `useActiveContribution()` | `PanelContribution \| null` | Read the active panel's published contribution, to merge manually |
 | `useMergedToolbarItems(staticItems)` | `ToolbarItem[]` | `staticItems` + the active panel's contributed toolbar items, ready for `<RddToolbar items={...}>` |
 | `useMergedSidebarTabs(staticTabs)` | `SidebarTab[]` | `staticTabs` + the active panel's contributed sections as dynamic tabs, ready for `<RddSidebar tabs={...}>` |
-| `useColorScheme()` | `'dark' \| 'light'` | Reactively read the workspace's current color scheme from your own panel content |
+| `useColorScheme()` | `'dark' \| 'light'` | Reactively read the color scheme — the `data-color-scheme` your app sets on `<html>` (dark when absent) — from your own panel content |
 
 **State selectors** prevent unnecessary re-renders:
 
@@ -210,22 +210,37 @@ const panelCount = useWorkspaceState(s => Object.keys(s.panels).length);
 ## Workspace Reference
 
 ```ts
-const workspace = createWorkspace({ panels, initialState?, formatMessage?, messages?, dir? });
+const workspace = createWorkspace({
+  panels, initialState?, formatMessage?, messages?, dir?,
+  defaultSplitRatio?, defaultEdgeSplitRatio?, zIndexBase?,
+});
 
 // Panel lifecycle
-workspace.openPanel(id, component, options?)   // options: title, initialTarget, anchor
-workspace.closePanel(id)
+workspace.openPanel(id, component, options?)   // options: title, initialTarget, anchor, focus (default true), props, dedupeKey
+workspace.closePanel(id)                       // closes immediately — no guard, no dirty check
+workspace.requestClosePanel(id, { force?, onConfirm? })  // guarded close; a dirty panel closes only if onConfirm resolves true
 workspace.focusPanel(id)                       // raises floating / selects tab for docked
 workspace.floatPanel(id, rect?, anchor?)       // detach to a floating window; optional corner anchor
 workspace.dockPanel(id)                        // return floating to the grid
 workspace.minimizePanel(id)
-workspace.restorePanel(id)
-workspace.maximizePanel(id)                    // a minimized panel is restored and maximized
+workspace.restorePanel(id, { focus? })
+workspace.maximizePanel(id)                    // toggles a floating window; a minimized panel is restored and maximized
 workspace.closeLeafGroup(leafId, opts?)        // closes each tab (guards apply), then the group; returns a Promise
+
+// Placement
+workspace.dockPanelToGroup(id, leafId, position)   // position: 'top' | 'bottom' | 'left' | 'right' | 'center'
+workspace.dockPanelToWorkspaceEdge(id, side)       // 'top' | 'bottom' | 'left' | 'right'
+workspace.movePanelOrder(id, leafId, index)        // move a tab within or between groups
+
+// Title, icon and dirty state (from outside the panel; inside it, use usePanel())
+workspace.updatePanelTitle(id, title)
+workspace.setPanelIcon(id, icon)               // null restores the registration's icon; never saved
+workspace.setPanelDirty(id, dirty, options?)
 
 // Synchronous state queries (no hook needed)
 workspace.isOpen(id)                           // → boolean
 workspace.getOpenPanelIds()                    // → string[]
+workspace.findPanelId(component, dedupeKey)    // → id | null
 
 // Layout persistence
 workspace.saveLayout()                         // → JSON string
@@ -238,10 +253,15 @@ workspace.onPanelOpen(cb)
 workspace.onPanelClose(cb)
 workspace.onPanelMinimize(cb)
 workspace.onPanelRestore(cb)
+workspace.onLayoutChanged(cb)
+workspace.onPanelsExcluded(cb)                 // saveLayout() left out non-serializable panels
 
-// Direction
+// Direction and menus
 workspace.setDirection('ltr' | 'rtl')
+workspace.showContextMenu({ x, y, items })     // the shared menu, opened from code
 ```
+
+Lower-level methods (close guards, state providers, split and floating-window geometry) are listed in the [Workspace guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/workspace-client).
 
 ---
 
@@ -273,7 +293,7 @@ type ContainerType =
   | 'standalone';      // rendered outside the desktop (default / no context)
 ```
 
-Minimize/restore cycles do **not** change `containerType` or fire `onContainerTypeChange`; use `usePanelEvents({ onMinimize, onRestore })` for those.
+Minimizing and restoring don't fire `onContainerTypeChange`; use `usePanelEvents({ onMinimize, onRestore })` for those. (While minimized, a panel's `containerType` reads `'dockable-panel'` — also for a panel that was floating, which reads `'floating-window'` again once restored; check `usePanel().isMinimized` if you need to tell.)
 
 ---
 
@@ -326,7 +346,7 @@ sidePanels.openRight(PropertiesPanel, { nodeId }, { title: 'Properties', width: 
 
 ## Touch & Mobile
 
-Touch support is built in for v3.1.0+. No extra setup required:
+Touch support is built in. No extra setup required:
 
 - **Tab drag** — long-press (300ms) on any tab to start dragging; haptic feedback on supported devices
 - **Floating window drag** — long-press the titlebar, then drag
@@ -338,16 +358,16 @@ Touch support is built in for v3.1.0+. No extra setup required:
 
 ## i18n & RTL
 
-The library does **not** auto-detect direction — the consuming app owns it. Two things must be wired together:
+The library does **not** auto-detect the workspace's direction — the consuming app owns it. Two things must be wired together:
 
 ```tsx
-// 1. Keep html[dir] in sync for portals (context menu, flyout, toasts)
-//    that render into document.body and need CSS direction inheritance.
+// 1. Keep html[dir] in sync for what sits outside the workspace — RddSidebar and toasts —
+//    which take their direction from the page.
 useEffect(() => {
   document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
 }, [isRtl]);
 
-// 2. Pass dir prop to the provider — controls workspace layout engine.
+// 2. Pass dir to the provider — the workspace, and the menus and flyouts opened from it.
 <DockableDesktopProvider
   dir={isRtl ? 'rtl' : 'ltr'}
   workspace={workspace}
@@ -356,7 +376,7 @@ useEffect(() => {
 >
 ```
 
-`dir` can be `'ltr'` (default) or `'rtl'`. All layout, split directions, tab ordering, floating window controls, drop zones, sidebars, and context menus flip automatically.
+`dir` can be `'ltr'` (default) or `'rtl'`. The workspace's layout, split directions, tab ordering, floating window controls, drop zones and context menus flip automatically; the sidebars and toasts follow `html[dir]` (step 1).
 
 Direction is **independent of locale** — you can have Arabic translations with LTR layout, or RTL without locale changes.
 

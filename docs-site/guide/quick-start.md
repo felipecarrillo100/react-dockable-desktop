@@ -190,7 +190,7 @@ createRoot(document.getElementById('root')!).render(<App />);
 :::
 
 ::: tip Context menus are built-in
-Right-click context menus (on tabs, taskbar chips, and floating window headers) are built into `DockableDesktopProvider` — no extra package or component needed.
+Right-click context menus (on tabs and taskbar chips; a floating window gets a ⋮ button when its panel adds its own items) are built into `DockableDesktopProvider` — no extra package or component needed.
 :::
 
 ---

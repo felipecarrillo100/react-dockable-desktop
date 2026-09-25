@@ -25,8 +25,8 @@ export interface BuiltInEvents {
    * `openPanel` `dedupeKey` redirect. Coalesces those into one signal for autosave-style
    * consumers, so they don't need to subscribe to separate events. Does **not** cover a
    * `registerStateProvider` callback's return value changing on its own — that's a pull, there's
-   * no way to observe it changing without the panel separately notifying — nor resize/split-ratio
-   * drag, which has no hook yet.
+   * no way to observe it changing without the panel separately notifying — nor split-ratio drags,
+   * floating-window moves and resizes, or toggling a floating window's maximized state.
    */
   'layout:changed': Record<string, never>;
   /**
@@ -294,8 +294,9 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   }
 
   /**
-   * Requests that a panel close, honoring its dirty flag and any registered close guard.
-   * Resolves once the close (or user cancellation) has been resolved.
+   * Requests that a panel close, honoring any registered close guard and its dirty flag: a dirty
+   * panel closes only if `onConfirm` resolves `true` (without `onConfirm` it stays open).
+   * `force: true` skips both. Resolves once the close (or the refusal) has been decided.
    */
   requestClosePanel(id: string, options?: { force?: boolean; onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean> }): Promise<void> {
     return this._actions.requestClosePanel(id, options);

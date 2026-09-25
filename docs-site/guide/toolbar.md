@@ -70,7 +70,7 @@ Every item except `'separator'` also accepts:
 |------|------|-------------|
 | `id` | `string` | Unique key for this item. |
 | `label` | `string` | Tooltip / accessible label. |
-| `icon` | `ReactNode` | Icon displayed in the button. Recommended: 16×16 SVG, `stroke="currentColor"`. |
+| `icon` | `ReactNode` | Icon displayed in the button. Recommended: 16×16 SVG, `stroke="currentColor"`. A `'group'` item takes `defaultIcon` instead — shown until one of its sub-tools is active, whose icon then replaces it. |
 | `disabled?` | `boolean` | Disables the button; renders at 35% opacity. |
 
 ## Group items
@@ -245,7 +245,7 @@ function MapController() {
 <RddToolbar position="bottom" items={items} />   // border on the top
 ```
 
-The active accent border on radio items always faces the workspace (inward-facing edge). On a `left` toolbar, the accent bar is on the left edge of the button (flush with the workspace); on a `top` toolbar, it's on the bottom edge. On skins like `slate` and `macos` the bar is replaced entirely by a floating chip shape; on `nord` it becomes a short horizontal line drawn below the icon.
+The active accent border on radio items sits on the button's edge on the toolbar's own side: the left edge on a `left` toolbar, the right edge on a `right` one, the bottom edge on a `top` toolbar (facing the workspace) and the top edge on a `bottom` one. On skins like `slate` and `macos` the bar is replaced entirely by a floating chip shape; on `nord` it becomes a short horizontal line drawn below the icon (above it on a `bottom` toolbar).
 
 ## Theming CSS variables
 
@@ -262,7 +262,7 @@ All toolbar colors use CSS custom properties that cascade from `[data-color-sche
 | `--rdd-toolbar-btn-active-glow` | `none` | `none` | `filter` on active radio/group buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
 | `--rdd-toolbar-accent-bar-width` | `3px` | `3px` | Width of the edge accent bar on active buttons. Set to `0px` to replace the bar with a chip shape. |
 
-The accent variables are automatically overridden per skin — Nord, Tokyo Night, Obsidian, Chrome, Slate, and macOS each set their own `--rdd-tab-icon-active` and toolbar active-state tokens to match their signature visual language. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) for details on customising this in your own skin.
+The accent variables are automatically overridden per skin to match each one's visual language: Chrome, Nord, Obsidian and Tokyo Night set their own `--rdd-tab-icon-active` (Slate only in its light variant), and several skins set their own toolbar active-state tokens. See [Per-skin active state design language →](./theming#per-skin-active-state-design-language) for details on customising this in your own skin.
 
 ## See also
 

@@ -1,6 +1,6 @@
 # Modals & Side Panels
 
-`react-dockable-desktop` includes a fully integrated overlay system: a **modal stack**, a **left drawer**, and a **right drawer**. All three share the same dirty-state and close-guard machinery as regular panels.
+`react-dockable-desktop` includes a fully integrated overlay system: a **modal stack**, a **left drawer**, and a **right drawer**. All three use the same dirty-state and close-guard hooks as regular panels (`usePanel().setDirty`, `useBeforeClose`) — with one difference: in a modal or drawer, a close guard that returns `true` closes it without the dirty-state dialog.
 
 ## Setup
 
@@ -76,9 +76,9 @@ function LaunchButton() {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `string` | — | Modal header title. |
+| `title` | `PanelTitle` | — | Modal header title: a string or a message descriptor (`{ id, defaultMessage }`). |
 | `icon` | `ReactNode` | — | Icon displayed in the title bar. |
-| `size` | `'small' \| 'medium' \| 'large' \| 'fullscreen' \| 'auto'` | `'medium'` | Controls max-width of the modal. |
+| `size` | `'small' \| 'medium' \| 'large' \| 'fullscreen' \| 'auto'` | `'auto'` (sized to its content) | Controls max-width of the modal. |
 | `closable` | `boolean` | `true` | When `false`, hides the × button and disables backdrop click-to-close. |
 | `bodyPadding` | `number \| string` | `0` | CSS padding for the modal body content. Numbers are treated as pixels; strings as any CSS value/shorthand (e.g. `'10px 16px'`). Default is edge-to-edge — pass `10` to restore the pre-v6.0.0 default. |
 
@@ -106,9 +106,9 @@ const showDetails = async () => {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `string` | — | Drawer header title. |
+| `title` | `PanelTitle` | — | Drawer header title: a string or a message descriptor. |
 | `icon` | `ReactNode` | — | Icon next to the title. |
-| `width` | `number \| string` | `'320px'` | Drawer width. Numbers are treated as pixels; strings as CSS values (e.g. `'40%'`). |
+| `width` | `number \| string` | `400` (px) | Drawer width. Numbers are treated as pixels; strings as CSS values (e.g. `'40%'`). |
 | `bodyPadding` | `number \| string` | `0` | CSS padding for the panel body content. Numbers are treated as pixels; strings as any CSS value/shorthand (e.g. `'10px 16px'`). Default is edge-to-edge — pass `10` to restore the pre-v6.0.0 default. |
 
 ## Closing panels
@@ -165,10 +165,10 @@ One ESC closes one overlay — the one on top. Context menus and toolbar flyouts
 ```ts
 const id1 = modals.open(StepOneModal, {});
 // User action opens a second modal on top:
-const id2 = modals.open(RddConfirm, {
+modals.open(RddConfirm, {
   message: 'Continue to step 2?',
-  onOK:    () => { modals.close(id2); advance(); },
-  onCancel: () => modals.close(id2),
+  onOK:    () => advance(),   // RddConfirm closes itself after onOK / onCancel
+  onCancel: () => {},
 });
 ```
 
@@ -182,14 +182,14 @@ import { RddConfirm, useModals } from 'react-dockable-desktop';
 const modals = useModals();
 
 const confirm = () => {
-  const id = modals.open(RddConfirm, {
+  modals.open(RddConfirm, {
     title:    'Delete item',
     message:  'This will permanently delete the item.',
     alert:    'This cannot be undone.',
     alertType: 'danger',
     useYesNoTitles: true,
-    onOK:    () => { modals.close(id); deleteItem(); },
-    onCancel: () => modals.close(id),
+    onOK:    () => deleteItem(),   // it closes itself after either button
+    onCancel: () => {},
   });
 };
 ```
@@ -507,7 +507,7 @@ function EditorPanel() {
   usePanelContextMenu([
     { label: 'Save',   action: () => save(),   disabled: !dirty },
     { label: 'Revert', action: () => revert(), disabled: !dirty },
-    { type: 'separator' },
+    { separator: true },
     { label: 'Copy Panel Link', action: () => copyLink() },
   ]);
 

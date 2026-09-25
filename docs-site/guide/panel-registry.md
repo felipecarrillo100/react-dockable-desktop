@@ -25,25 +25,25 @@ interface PanelDefinition {
   // The library injects `panelId` as a prop automatically.
   // Components that don't declare it in their props can read `usePanel().id` instead.
   component: ComponentType<any>;
-  defaultOptions?: PanelDefaultOptions;
+  defaultOptions?: PanelRegistryEntry['defaultOptions'];
 }
 ```
 
-### PanelDefaultOptions
+### `defaultOptions`
 
-All fields are optional. They set the per-panel defaults; most can be overridden per-instance in `openPanel`.
+The type is `PanelRegistryEntry['defaultOptions']` (`PanelRegistryEntry` is exported). All fields are optional. They set the per-panel defaults; most can be overridden per-instance in `openPanel`.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `title` | `string \| MessageDescriptor` | — | Tab and window title. |
-| `icon` | `ReactNode` | — | Icon shown in the tab and taskbar. |
+| `icon` | `ReactNode` | — | Icon shown in the tab, the floating title bar and the taskbar. A single instance can change it at runtime with `usePanel().setIcon()` or `workspace.setPanelIcon()`. |
 | `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | `'docked'` | Initial placement when the panel is first opened. |
-| `favoritePosition` | `{ x, y, width, height }` | — | Default floating bounds (position + size) when the panel is first floated. All four values accept numbers (px) or CSS strings (`'50%'`). |
+| `favoritePosition` | `{ x, y, width, height }` | `{ x: 300, y: 150, width: 450, height: 350 }` | Default floating bounds (position + size) when the panel is first floated. All four values accept numbers (px) or CSS strings (`'50%'`). |
 | `canClose` | `boolean` | `true` | Show or hide the × close button. |
 | `canMinimize` | `boolean` | `true` | Show or hide the minimize button. |
 | `canDrag` | `boolean` | `true` | Allow the tab to be dragged to a different leaf or position. When `false`, the panel cannot be floated via drag. |
 | `defaultAnchor` | `FloatAnchor` (`'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'`) | — (unanchored) | Every instance of this component opens pre-anchored to the given workspace corner when floated — see the `anchor` option in [Workspace](./workspace-client#openpanel-options), which this is the per-component default for. |
-| `disableLivePreview` | `boolean` | `false` | Do not render a thumbnail preview when the panel is not the active tab. A canvas-rendered view (a WebGL map) that blurs in the scaled-down preview can instead be marked with `data-rdd-preview-unscale` on its container, which renders it at full resolution there. |
+| `disableLivePreview` | `boolean` | `false` | Show a placeholder instead of a live thumbnail in the preview that pops up when the pointer is over this panel's taskbar button (while it is minimized). A canvas-rendered view (a WebGL map) that blurs in the scaled-down preview can instead be marked with `data-rdd-preview-unscale` on its container, which renders it at full resolution there. |
 | `renderHeaderActions` | `(panelId: string) => ReactNode` | — | Inject React nodes into the panel tab header (e.g. export buttons). |
 
 #### Locked / pinned panel pattern
@@ -66,6 +66,8 @@ const workspace = createWorkspace({
 });
 ```
 
+A panel locked this way has no tab context menu (every built-in item is off), so custom items it adds with `usePanelContextMenu` don't appear on its tab.
+
 ## Imperative registration (advanced)
 
 For dynamic panel types registered after the workspace is created, use `workspace.registry.register()` — or, inside React, `useWorkspace().registry.register()`:
@@ -75,6 +77,13 @@ workspace.registry.register('live-chart', LiveChartComponent, {
   title: 'Live Chart',
   canClose: true,
 });
+```
+
+Look entries up with `get()` and list them with `getRegisteredIds()`:
+
+```ts
+workspace.registry.get('live-chart');        // → { Component, defaultOptions } | undefined
+workspace.registry.getRegisteredIds();       // → ['live-chart', …]
 ```
 
 There is no global registry: each workspace has its own, so several workspaces on one page never share panel keys.

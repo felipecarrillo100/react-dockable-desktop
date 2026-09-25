@@ -94,6 +94,7 @@ const workspace = createWorkspace({
 `startPointerDrag()` is the same pointer-capture primitive the library's own grid resizer, sidebar drawer resizer, and floating-window resize handles are built on — exported so you can build a resizable divider or handle inside your own panel content without reimplementing pointer capture, delta tracking, and cleanup.
 
 ```tsx
+import { useRef, useState } from 'react';
 import { startPointerDrag } from 'react-dockable-desktop';
 
 function ResizableSplit() {
@@ -110,7 +111,7 @@ function ResizableSplit() {
       startClientX,
       startClientY: e.clientY,
       captureStart: () => {},
-      activeClasses: [{ el: bar, classes: ['active'] }],
+      activeClasses: [{ el: bar, classes: ['rdd-active'] }],  // the library's highlight while dragging
       onMove: (dx) => {
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
@@ -122,7 +123,8 @@ function ResizableSplit() {
   return (
     <div ref={containerRef} style={{ display: 'flex', width: '100%', height: '100%' }}>
       <div style={{ flexBasis: `${ratio * 100}%` }}>{/* left pane */}</div>
-      <div onPointerDown={handlePointerDown} className="rdd-resizer-bar" />
+      {/* --vertical gives the bar its width, cursor and wider hit area */}
+      <div onPointerDown={handlePointerDown} className="rdd-resizer-bar rdd-resizer-bar--vertical" />
       <div style={{ flexBasis: `${(1 - ratio) * 100}%` }}>{/* right pane */}</div>
     </div>
   );
@@ -137,7 +139,7 @@ For a resize handle that grows/shrinks a box in up to 8 directions instead of a 
 
 See the dedicated [RTL Support →](./rtl) guide for the full wiring pattern, what flips automatically, macOS skin behaviour, and the `isElementRtl` utility.
 
-In short: pass `dir="rtl"` to `DockableDesktopProvider` **and** set `document.documentElement.dir = 'rtl'` so portals (context menu, toolbar flyout, toasts) that render into `document.body` also pick up the RTL direction via CSS inheritance.
+In short: pass `dir="rtl"` to `DockableDesktopProvider` — the workspace and the menus and flyouts opened from it follow it — **and** set `document.documentElement.dir = 'rtl'` for what sits outside the workspace and takes the page's direction: `RddSidebar` and toasts.
 
 ## Multiple providers on one page
 
@@ -202,4 +204,4 @@ function App() {
 }
 ```
 
-A `formatMessage` passed to `createWorkspace()` instead takes precedence over the provider's. To change the built-in texts themselves, pass `messages` — a partial override of `defaultMessages` — to either one. Inside React, `useMessages()` returns the effective table and `useFormatMessage()` the formatter.
+A `formatMessage` passed to `createWorkspace()` instead takes precedence over the provider's — except for message-descriptor labels in your own context-menu items, which use the provider's `formatMessage`. To change the built-in texts themselves, pass `messages` — a partial override of `defaultMessages` — to either one. Inside React, `useMessages()` returns the effective table and `useFormatMessage()` the formatter.

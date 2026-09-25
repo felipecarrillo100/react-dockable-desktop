@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/react-dockable-desktop/',
 
   head: [
-    ['link', { rel: 'icon', href: '/react-dockable-desktop/favicon.ico' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/react-dockable-desktop/logo-dark.svg' }],
   ],
 
   themeConfig: {

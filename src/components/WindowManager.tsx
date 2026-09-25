@@ -1792,8 +1792,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   const currentColorScheme = useColorScheme();
   const isClient = useIsClient();
 
-  // Mirror skin onto documentElement so components rendered outside the WindowManager div
-  // (Toolbar, Sidebar) also inherit per-skin CSS variable overrides — same pattern as data-color-scheme.
+  // Mirror the skin onto <html> so what renders outside the workspace element (RddToolbar,
+  // RddSidebar, portaled menus) also gets the skin's CSS variable overrides.
   useEffect(() => {
     if (skin) {
       document.documentElement.setAttribute('data-rdd-skin', skin);

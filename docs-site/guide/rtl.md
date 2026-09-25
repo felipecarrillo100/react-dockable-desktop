@@ -4,7 +4,7 @@
 
 ## Architecture: the app owns direction
 
-The library does **not** auto-detect direction from the DOM. Direction is the consuming app's responsibility. This keeps the library predictable and avoids the footgun where a distant `dir` attribute change unexpectedly re-renders the workspace.
+The library does **not** auto-detect the *workspace's* direction from the DOM: it comes only from the provider's `dir` prop (or `createWorkspace({ dir })`, or `setDirection()`). Direction is the consuming app's responsibility. This keeps the library predictable and avoids the footgun where a distant `dir` attribute change unexpectedly re-renders the workspace.
 
 You must wire two things:
 
@@ -24,8 +24,8 @@ import { DockableDesktopProvider } from 'react-dockable-desktop';
 function App() {
   const [isRtl, setIsRtl] = useState(false);
 
-  // Keep html[dir] in sync so portals rendered in document.body
-  // pick up direction:rtl via CSS inheritance.
+  // Keep html[dir] in sync for what sits outside the workspace and follows the page:
+  // RddSidebar, RddSecondarySidebar and toasts.
   useEffect(() => {
     document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
     return () => { document.documentElement.dir = 'ltr'; };
@@ -59,9 +59,11 @@ When `dir="rtl"` is active, the library reverses the following without any extra
 - **Toolbar flyouts** — flyout panels open on the correct side of the toolbar strip; item text right-aligns
 - **Taskbar** — minimised-window items flow right to left
 
-### Where you set `dir` doesn't matter
+### Which `dir` each part follows
 
-Each of these reads the direction the browser actually computes for the element involved (its `direction` style), so RTL works the same whether you set `dir="rtl"` on `<html>`, on `<body>`, on a wrapper element, or through the workspace's own `setDirection('rtl')`. Before 6.4.0 several of them read `document.documentElement.dir` only, and went the wrong way with any other setup.
+The workspace root always carries its own `dir` — the provider's `dir` prop, or `setDirection()`, `'ltr'` by default — so **`dir="rtl"` on `<html>`, `<body>` or a wrapper does not make the workspace RTL**. Set it on the provider. Inside the workspace, and in the menus and flyouts opened from it, everything follows the workspace's direction.
+
+What sits outside the workspace follows the page's direction: `RddSidebar` and `RddSecondarySidebar` take it from wherever you set it (`<html>`, `<body>` or a wrapper around them), and toasts — rendered into `<body>` — only from `<html>` or `<body>`. Where the library measures (the split divider, the sidebar resizer, the submenu's side, the arrow keys), it reads the direction the browser actually computes for the element involved, so each of those follows the same rule.
 
 ## Locale vs direction
 
@@ -78,12 +80,14 @@ When `skin="macos"` is active, the traffic-light buttons (close · minimize · m
 
 ## Runtime switching with `setDirection()`
 
-`workspace.setDirection('rtl')` updates the workspace's internal direction state, but **does not** update `document.documentElement.dir`. If you use this imperative API, you are responsible for keeping both in sync:
+`workspace.setDirection('rtl')` switches the workspace and the menus and flyouts opened from it. It **does not** touch `document.documentElement.dir`, which `RddSidebar` and toasts follow — set it too if they should mirror as well:
 
 ```ts
 workspace.setDirection('rtl');
-document.documentElement.dir = 'rtl';
+document.documentElement.dir = 'rtl';   // for the sidebar and toasts
 ```
+
+A `dir` given to `createWorkspace()` overrides the provider's `dir` prop for good — so if you drive direction from the provider prop, leave it out of `createWorkspace()`.
 
 In practice, driving direction from React state (as shown in the wiring example above) is simpler and less error-prone than the imperative API.
 

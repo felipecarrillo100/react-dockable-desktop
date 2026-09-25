@@ -12,9 +12,11 @@ workspace.openPanel('my-map', 'map', { initialTarget: 'docked' });
 // Floating — opens as a resizable window
 workspace.openPanel('settings', 'settings', { initialTarget: 'floating' });
 
-// Tabbed alongside an existing panel
+// 'tabbed' is the same as 'docked': both add a tab to the first group
 workspace.openPanel('log-2', 'logs', { initialTarget: 'tabbed' });
 ```
+
+To put a panel into a particular group, or split one, open it and then use `dockPanelToGroup(id, leafId, position)` or `dockPanelToWorkspaceEdge(id, side)`.
 
 If the panel ID is already open, `openPanel` focuses it instead of creating a duplicate.
 
@@ -43,7 +45,7 @@ const openIds = workspace.getOpenPanelIds();
 workspace.floatPanel('my-map');                  // detach from grid
 workspace.floatPanel('my-map', { x: 100, y: 60, width: 800, height: 600 });
 
-workspace.maximizePanel('my-map');               // fill the workspace
+workspace.maximizePanel('my-map');               // toggle: fill the workspace, or restore its size
 workspace.dockPanel('my-map');                   // return to grid
 workspace.dockPanel('my-map', 'left-leaf');      // dock to specific group
 ```
