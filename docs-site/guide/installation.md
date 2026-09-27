@@ -3,6 +3,7 @@
 ## Requirements
 
 - React `≥ 18` (the library uses `useSyncExternalStore` and other React 18 APIs)
+- A browser with CSS `color-mix()`: Chrome / Edge 111, Safari 16.2, Firefox 113 or later (all 2023).
 
 ## npm
 

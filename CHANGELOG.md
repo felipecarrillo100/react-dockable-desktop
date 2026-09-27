@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.2.0] — 2026-09-27
+
+Branding: put your company's colour and font on any built-in skin with a few CSS variables — no skin of your own needed. See [Brand your app](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#brand-your-app).
+
+### Added
+- **`--rdd-brand-accent`**: set on `:root`, it replaces the accent of every built-in skin in dark and light — tab indicators, active sidebar tabs and toolbar buttons, hover and active tints, glows, the focused window's glow, the taskbar, focus rings, the primary button. Unset, each skin keeps its own accent.
+- **`--rdd-brand-on-accent`**: the text colour on a solid accent fill (the confirmation dialog's primary button, the highlighted dock target), for light brand colours such as yellow. Default `#090b11`, as before.
+- **Per-skin fonts** through `--rdd-skin-font-family`: `vscode` uses VS Code's workbench font, `macos` San Francisco, `chrome` Google's UI fonts, `slate` Fluent's Segoe UI stack, `nord` a humanist sans (Avenir Next) and `tokyo` a monospace (JetBrains Mono); `obsidian` keeps the library stack. All are system font stacks — the library still loads no fonts — and your own `--rdd-font-family` replaces them all.
+- Theming guide: **Brand your app** — the brand variables, a per-scheme brand colour, loading your own font, following a UI framework's theme (Bootstrap, MUI, Angular Material, Tailwind, shadcn/ui), where to put a logo, and how to keep a custom skin brandable.
+
+### Changed
+- **Browser minimum**: CSS `color-mix()` — Chrome / Edge 111, Safari 16.2, Firefox 113 (all 2023). In an older browser the tinted hover and active highlights lose their colour; layout and behaviour are unaffected.
+- **The default skin's font** is VS Code's workbench stack (`-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', …`) instead of `'Outfit', 'Inter', …`, which is now the fallback for skins that set no font (`obsidian`, and custom skins). If you loaded Outfit for the library, set `--rdd-font-family` to it. In `tokyo` and `nord` the font changes too — and panel content inherits it, so in `tokyo` your panels turn monospace unless they set a font of their own.
+- **Every tint of the accent is derived from it** (`color-mix()` of `--rdd-accent-color`) instead of a hand-copied `rgba()`. With the built-in skins and no brand set, the look is unchanged except for the fixes below.
+- `vscode` light mode has an accent of its own, `#0066cc` — the blue its light-mode tokens already used. The primary button and the taskbar's peek handle, which were cyan on a light background, are that blue now. A custom skin that sets no accent gets it in light mode too.
+
+### Fixed
+- **Overriding `--rdd-accent-color` on `:root` had no effect in 6 of the 7 skins**: each skin redeclared it on the workspace element. The supported way to rebrand is now `--rdd-brand-accent`, which every skin reads first.
+- **Changing the accent left the old colour behind**: 142 hover, active and glow colours were copies of the skin's accent written as fixed `rgba()` values. They follow the accent now.
+- **Skins showed colours that weren't theirs**: the default cyan (and `#0066cc` in light mode) left in other skins — the taskbar hover glow, the dock preview and corner-snap highlights, the floating-widget drop zones, the light-mode focused-tab indicator and taskbar text, the `--rdd-sidebar-card-*` and `--rdd-sidebar-btn-front-*` tokens — now show each skin's own accent. `slate` and `tokyo` drew their active states in a blue that wasn't their accent, and `obsidian`'s panel toolbar in a violet; they use their accent now. `obsidian`'s dark-mode white glows no longer show in light mode, where its accent is black.
+
+### Tests
+- `branding.browser.ts` (real Chrome): with no brand set, the computed colours of every library element, its pseudo-elements, 7 hover states and every token, in all 7 skins × dark/light, match a 7.1.3 baseline — except exactly the fixes above; with a brand set, no trace of any original accent remains; a light brand with a dark on-accent colour is readable on the primary button.
+- `fonts.browser.ts`: each skin's font reaches every piece of chrome, and a brand font set on `:root` wins in every skin, portaled chrome included.
+- `StylesheetContract.test.ts`: every `--rdd-accent-color` reads `--rdd-brand-accent` first, nothing in the library declares a `--rdd-brand-*` variable, no accent colour is written as a literal outside its one declaration, only `:root` declares `--rdd-font-family`, and text on accent fills reads `--rdd-brand-on-accent`.
+
 ### Docs
 - A full pass over the README and every guide against the 7.1.3 source. Corrected, among others: `RddDesktop` has no `contextMenuAdapter` prop (it is on the provider); the colour scheme is the `data-color-scheme` your app sets on `<html>` — the library doesn't detect the system preference; `dir` on `<html>` doesn't make the workspace RTL (set it on the provider), and only the sidebar and toasts follow the page's `dir`; `openPanel()` makes the panel active by default; which actions publish `layout:changed`; a modal's default size (`auto`) and a drawer's default width (400px); `{ separator: true }` menu items; the custom resizer sample; the skin selectors for sidebar variables; and the right-click surfaces.
 - Documented: the workspace's title, icon, dirty-state and low-level methods, `requestClosePanel`'s behaviour without `onConfirm`, `DockableDesktopProvider`'s full props and their precedence against `createWorkspace()` config, `registry.get()`/`getRegisteredIds()`, and `ShowContextMenuOptions.dir`.
@@ -535,7 +561,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.3...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.2.0...HEAD
+[7.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.3...v7.2.0
 [7.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.2...v7.1.3
 [7.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.1...v7.1.2
 [7.1.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.0...v7.1.1

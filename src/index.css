@@ -13,8 +13,11 @@
      modals. Neither Outfit nor Inter is loaded by the library: load one yourself, or override this
      (on :root or <body> to reach everything: menus, flyouts and toasts render into <body>). To use
      the host page's font everywhere: `inherit` here on :root, or `initial` on <body>. `initial` on
-     a wrapper reaches only the chrome inside it; `inherit` below :root only copies this stack down. */
-  --rdd-font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+     a wrapper reaches only the chrome inside it; `inherit` below :root only copies this stack down.
+     A skin picks its own font through --rdd-skin-font-family, never by declaring --rdd-font-family
+     itself: that would override the consumer's :root value on the element carrying data-rdd-skin.
+     This resolves on <html>, which carries data-rdd-skin too. */
+  --rdd-font-family: var(--rdd-skin-font-family, 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif);
   --rdd-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Errors the library itself shows (the unregistered-panel placeholder). */
   --rdd-danger-color: #dc3545;
@@ -27,8 +30,12 @@
   --rdd-text-primary: #f1f5f9;
   --rdd-text-secondary: #94a3b8;
   --rdd-border-color: rgba(255, 255, 255, 0.08);
-  --rdd-accent-color: #38bdf8; /* Modern Cyan/Sky-blue accent */
-  --rdd-accent-glow: rgba(56, 189, 248, 0.15);
+  /* Branding: an app sets --rdd-brand-accent / --rdd-brand-on-accent on :root, and every skin reads
+     them first (var(--rdd-brand-accent, <skin colour>)). The library only reads them — declared
+     here or in a skin, they would override the app's value on the element carrying data-rdd-skin.
+     Every tint of the accent is a color-mix() of --rdd-accent-color, never a copied rgba(). */
+  --rdd-accent-color: var(--rdd-brand-accent, #38bdf8); /* Modern Cyan/Sky-blue accent */
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-header-button-gap: 4px; /* Configurable gap spacing between titlebar action buttons */
   /* Window skins variables */
   --rdd-window-bg: rgba(20, 22, 28, var(--rdd-window-opacity, 0.85));
@@ -647,7 +654,7 @@ body.rdd-resizing-col-active * {
 .rdd-taskbar-glassmorphic-item:hover {
   background: var(--rdd-taskbar-item-hover-bg) !important;
   border-color: var(--rdd-accent-color, #38bdf8) !important;
-  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
 /* Minimalist Taskbar Icon-Only & Premium Tooltip Rules */
@@ -1054,7 +1061,7 @@ body.rdd-resizing-col-active * {
 /* Translucent overlay preview highlighting the grid section about to split */
 .rdd-dock-preview-highlight {
   position: absolute;
-  background-color: rgba(56, 189, 248, 0.2) !important; /* neon cyan overlay */
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent) !important; /* accent overlay */
   border: 1.5px dashed var(--rdd-accent-color) !important;
   transition: all 0.1s ease-out;
   pointer-events: none;
@@ -1090,7 +1097,7 @@ body.rdd-resizing-col-active * {
 .rdd-dock-target-box--active {
   background-color: var(--rdd-accent-color) !important;
   border-color: #ffffff !important;
-  color: #090b11 !important;
+  color: var(--rdd-brand-on-accent, #090b11) !important;
   transform: scale(1.12);
   box-shadow: 0 0 12px var(--rdd-accent-color);
 }
@@ -1181,27 +1188,27 @@ body.rdd-dragging-active {
   --rdd-sidebar-border: rgba(255, 255, 255, 0.08);
   --rdd-sidebar-card-bg: rgba(255, 255, 255, 0.03);
   --rdd-sidebar-card-border: rgba(255, 255, 255, 0.08);
-  --rdd-sidebar-card-active-bg: rgba(56, 189, 248, 0.06);
-  --rdd-sidebar-card-active-border: rgba(56, 189, 248, 0.3);
+  --rdd-sidebar-card-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-sidebar-card-active-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
   --rdd-sidebar-text-title: #f8f9fa;
   --rdd-sidebar-text-muted: #8a90a0;
   --rdd-sidebar-badge-bg: #2d3139;
   --rdd-sidebar-badge-text: #b0b5c0;
-  --rdd-sidebar-btn-front-border: #38bdf8;
-  --rdd-sidebar-btn-front-text: #38bdf8;
+  --rdd-sidebar-btn-front-border: var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-text: var(--rdd-accent-color);
   --rdd-sidebar-btn-front-bg: transparent;
-  --rdd-sidebar-btn-front-hover-bg: rgba(56, 189, 248, 0.1);
-  --rdd-tab-icon-active: #38bdf8;
+  --rdd-sidebar-btn-front-hover-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-tab-icon-inactive: #9ea4b0;
   --rdd-tab-btn-active-bg: #1e2024; /* Seamless merge look */
   --rdd-sidebar-btn-hover-bg: rgba(255, 255, 255, 0.05);
-  --rdd-sidebar-card-hover-border: rgba(56, 189, 248, 0.25);
+  --rdd-sidebar-card-hover-border: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-sidebar-card-hover-bg: rgba(255, 255, 255, 0.04);
-  --rdd-sidebar-card-active-shadow: rgba(56, 189, 248, 0.08);
+  --rdd-sidebar-card-active-shadow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
   --rdd-sidebar-drawer-header-bg: rgba(0, 0, 0, 0.12);
   --rdd-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.06);
-  --rdd-toolbar-btn-radio-active-bg: rgba(56, 189, 248, 0.14);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(56, 189, 248, 0.08);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
   --rdd-toolbar-separator-color: rgba(255, 255, 255, 0.09);
   /* Sidebar active-tab design tokens */
   --rdd-tab-btn-active-width: 100%;
@@ -1216,6 +1223,8 @@ body.rdd-dragging-active {
 }
 
 [data-color-scheme="light"] {
+  /* The default skin's light-mode accent (the blue its light tokens were already drawn in). */
+  --rdd-accent-color: var(--rdd-brand-accent, #0066cc);
   --rdd-danger-color: #b91c1c;
   --rdd-bg-primary: #f8f9fa;
   --rdd-bg-workspace: #f1f5f9;
@@ -1230,27 +1239,27 @@ body.rdd-dragging-active {
   --rdd-sidebar-border: rgba(0, 0, 0, 0.08);
   --rdd-sidebar-card-bg: #ffffff;
   --rdd-sidebar-card-border: rgba(0, 0, 0, 0.08);
-  --rdd-sidebar-card-active-bg: rgba(0, 102, 204, 0.05);
-  --rdd-sidebar-card-active-border: rgba(0, 102, 204, 0.3);
+  --rdd-sidebar-card-active-bg: color-mix(in srgb, var(--rdd-accent-color) 5%, transparent);
+  --rdd-sidebar-card-active-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
   --rdd-sidebar-text-title: #212529;
   --rdd-sidebar-text-muted: #6c757d;
   --rdd-sidebar-badge-bg: #e9ecef;
   --rdd-sidebar-badge-text: #495057;
-  --rdd-sidebar-btn-front-border: #0066cc;
-  --rdd-sidebar-btn-front-text: #0066cc;
+  --rdd-sidebar-btn-front-border: var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-text: var(--rdd-accent-color);
   --rdd-sidebar-btn-front-bg: transparent;
-  --rdd-sidebar-btn-front-hover-bg: rgba(0, 102, 204, 0.08);
-  --rdd-tab-icon-active: #0066cc;
+  --rdd-sidebar-btn-front-hover-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-tab-icon-inactive: #555c66;
   --rdd-tab-btn-active-bg: #f8f9fa; /* Seamless merge look */
   --rdd-sidebar-btn-hover-bg: rgba(0, 0, 0, 0.05);
-  --rdd-sidebar-card-hover-border: rgba(0, 102, 204, 0.3);
+  --rdd-sidebar-card-hover-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
   --rdd-sidebar-card-hover-bg: rgba(0, 0, 0, 0.03);
-  --rdd-sidebar-card-active-shadow: rgba(0, 102, 204, 0.08);
+  --rdd-sidebar-card-active-shadow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
   --rdd-sidebar-drawer-header-bg: rgba(0, 0, 0, 0.04);
   --rdd-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.05);
-  --rdd-toolbar-btn-radio-active-bg: rgba(0, 102, 204, 0.1);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(0, 102, 204, 0.06);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   --rdd-toolbar-separator-color: rgba(0, 0, 0, 0.1);
   /* Light skin window overrides */
   --rdd-window-bg: rgba(243, 244, 246, var(--rdd-window-opacity, 0.9));
@@ -1285,7 +1294,7 @@ body.rdd-dragging-active {
   --rdd-close-btn-hover-color: #212529;
   --rdd-close-btn-color: #6c757d;
   --rdd-close-btn-active-color: #212529;
-  --rdd-tab-indicator-focused: #0066cc;
+  --rdd-tab-indicator-focused: var(--rdd-accent-color);
   --rdd-tab-indicator-unfocused: rgba(0, 0, 0, 0.25);
   --rdd-tab-bg-active-focused: var(--rdd-bg-panel);
   --rdd-tab-bg-active-unfocused: rgba(220, 224, 230, 0.65);
@@ -1303,7 +1312,7 @@ body.rdd-dragging-active {
   --rdd-taskbar-item-bg: rgba(255, 255, 255, 0.65);
   --rdd-taskbar-item-hover-bg: rgba(255, 255, 255, 0.85);
   --rdd-taskbar-item-border: rgba(0, 0, 0, 0.08);
-  --rdd-taskbar-item-text: #0066cc;
+  --rdd-taskbar-item-text: var(--rdd-accent-color);
   /* Light skin scrollbar theme variables */
   --rdd-scrollbar-thumb: rgba(0, 0, 0, 0.15);
   --rdd-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
@@ -1312,7 +1321,7 @@ body.rdd-dragging-active {
   --rdd-panel-card-bg: rgba(0, 0, 0, 0.03);
   --rdd-panel-card-border: rgba(0, 0, 0, 0.08);
   --rdd-panel-text: #212529;
-  --rdd-panel-title-color: #0066cc;
+  --rdd-panel-title-color: var(--rdd-accent-color);
   /* ── Panel Overlay — Toolbar (light) ── */
   --rdd-panel-toolbar-fg: rgba(0, 0, 0, 0.55);
   --rdd-panel-toolbar-fg-hover: rgba(0, 0, 0, 0.85);
@@ -1333,6 +1342,7 @@ body.rdd-dragging-active {
    SKIN 1: VS Code (Default Variables matching :root)
    -------------------------------------------------------------------------- */
 [data-rdd-skin="vscode"] {
+  --rdd-skin-font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif; /* VS Code's workbench font */
   /* Inherits everything from :root */
 }
 
@@ -1340,20 +1350,21 @@ body.rdd-dragging-active {
    SKIN 2: macOS / Glassmorphic Preset
    -------------------------------------------------------------------------- */
 [data-rdd-skin="macos"] {
+  --rdd-skin-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* San Francisco */
   --rdd-bg-workspace: #1a1a24;
   --rdd-bg-panel: rgba(30, 30, 40, 0.45);
   --rdd-bg-tab-bar: rgba(18, 18, 24, 0.3);
   --rdd-window-bg: rgba(25, 25, 35, var(--rdd-window-opacity, 0.7));
   --rdd-window-border: rgba(255, 255, 255, 0.1);
   --rdd-window-header-bg: rgba(0, 0, 0, 0.15);
-  --rdd-accent-color: #38bdf8;
-  --rdd-accent-glow: rgba(56, 189, 248, 0.25);
+  --rdd-accent-color: var(--rdd-brand-accent, #38bdf8);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-border-panel: rgba(255, 255, 255, 0.08);
   --rdd-bg-tab-inactive: transparent;
   --rdd-text-tab-inactive: #94a3b8;
   --rdd-text-tab-active: #ffffff;
   --rdd-window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-  --rdd-window-shadow-focused: 0 24px 50px rgba(56, 189, 248, 0.15);
+  --rdd-window-shadow-focused: 0 24px 50px color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-panel-card-bg: rgba(255, 255, 255, 0.03);
   --rdd-panel-card-border: rgba(255, 255, 255, 0.08);
 }
@@ -1366,19 +1377,19 @@ body.rdd-dragging-active {
   --rdd-window-bg: rgba(255, 255, 255, var(--rdd-window-opacity, 0.85));
   --rdd-window-border: rgba(0, 0, 0, 0.12);
   --rdd-window-header-bg: rgba(243, 244, 246, 0.5);
-  --rdd-accent-color: #0066cc;
-  --rdd-accent-glow: rgba(0, 102, 204, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #0066cc);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: rgba(0, 0, 0, 0.1);
   --rdd-bg-tab-inactive: transparent;
   --rdd-text-tab-inactive: #4b5563;
   --rdd-text-tab-active: #111827;
   --rdd-window-text: #111827;
   --rdd-window-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  --rdd-window-shadow-focused: 0 16px 36px rgba(0, 102, 204, 0.18);
+  --rdd-window-shadow-focused: 0 16px 36px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
   --rdd-panel-card-bg: rgba(0, 0, 0, 0.04);
   --rdd-panel-card-border: rgba(0, 0, 0, 0.08);
   --rdd-panel-text: #111827;
-  --rdd-panel-title-color: #0066cc;
+  --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-close-btn-color: #4b5563;
   --rdd-close-btn-active-color: #111827;
 }
@@ -1488,14 +1499,15 @@ body.rdd-dragging-active {
    SKIN 3: Chrome / Browser-Style Preset
    -------------------------------------------------------------------------- */
 [data-rdd-skin="chrome"] {
+  --rdd-skin-font-family: 'Google Sans Text', 'Google Sans', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif; /* Google's UI fonts */
   --rdd-bg-workspace: #202124;
   --rdd-bg-panel: #292a2d;
   --rdd-bg-tab-bar: #202124;
   --rdd-window-bg: rgba(41, 42, 45, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #3c4043;
   --rdd-window-header-bg: #202124;
-  --rdd-accent-color: #8ab4f8;
-  --rdd-accent-glow: rgba(138, 180, 248, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #8ab4f8);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: #3c4043;
   --rdd-bg-tab-inactive: #202124;
   --rdd-text-tab-inactive: #9aa0a6;
@@ -1504,9 +1516,9 @@ body.rdd-dragging-active {
   --rdd-panel-card-border: #3c4043;
   --rdd-window-text: #ffffff;
   --rdd-panel-text: #e8eaed;
-  --rdd-tab-icon-active: #8ab4f8;
-  --rdd-toolbar-btn-radio-active-bg: rgba(138, 180, 248, 0.14);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(138, 180, 248, 0.08);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
 }
 
 [data-rdd-skin="chrome"][data-color-scheme="light"] {
@@ -1516,8 +1528,8 @@ body.rdd-dragging-active {
   --rdd-window-bg: rgba(255, 255, 255, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #cbd5e1;
   --rdd-window-header-bg: #dee1e6;
-  --rdd-accent-color: #1a73e8;
-  --rdd-accent-glow: rgba(26, 115, 232, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #1a73e8);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: #dadce0;
   --rdd-bg-tab-inactive: #dee1e6;
   --rdd-text-tab-inactive: #474747;
@@ -1526,12 +1538,12 @@ body.rdd-dragging-active {
   --rdd-panel-card-border: #dadce0;
   --rdd-window-text: #1f1f1f;
   --rdd-panel-text: #1f1f1f;
-  --rdd-panel-title-color: #1a73e8;
+  --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-close-btn-color: #474747;
   --rdd-close-btn-active-color: #1f1f1f;
-  --rdd-tab-icon-active: #1a73e8;
-  --rdd-toolbar-btn-radio-active-bg: rgba(26, 115, 232, 0.12);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(26, 115, 232, 0.07);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
 }
 
 /* Chrome tab angled geometry shapes */
@@ -1552,14 +1564,15 @@ body.rdd-dragging-active {
    SKIN 4: Fluent Slate Preset
    -------------------------------------------------------------------------- */
 [data-rdd-skin="slate"] {
+  --rdd-skin-font-family: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif; /* Fluent's stack */
   --rdd-bg-workspace: #0f172a;
   --rdd-bg-panel: #1e293b;
   --rdd-bg-tab-bar: #0f172a;
   --rdd-window-bg: rgba(30, 41, 59, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #334155;
   --rdd-window-header-bg: #1e293b;
-  --rdd-accent-color: #38bdf8;
-  --rdd-accent-glow: rgba(56, 189, 248, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #38bdf8);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: #334155;
   --rdd-bg-tab-inactive: #1e293b;
   --rdd-text-tab-inactive: #64748b;
@@ -1577,8 +1590,8 @@ body.rdd-dragging-active {
   --rdd-window-bg: rgba(255, 255, 255, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #cbd5e1;
   --rdd-window-header-bg: #f8fafc;
-  --rdd-accent-color: #0078d4;
-  --rdd-accent-glow: rgba(0, 120, 212, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #0078d4);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: #e2e8f0;
   --rdd-bg-tab-inactive: #f8fafc;
   --rdd-text-tab-inactive: #475569;
@@ -1587,12 +1600,12 @@ body.rdd-dragging-active {
   --rdd-panel-card-border: #cbd5e1;
   --rdd-window-text: #0f172a;
   --rdd-panel-text: #0f172a;
-  --rdd-panel-title-color: #0078d4;
+  --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-close-btn-color: #475569;
   --rdd-close-btn-active-color: #0f172a;
-  --rdd-tab-icon-active: #0078d4;
-  --rdd-toolbar-btn-radio-active-bg: rgba(0, 120, 212, 0.10);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(0, 120, 212, 0.06);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
 }
 
 [data-rdd-skin="slate"] .rdd-workspace-tab.rdd-active::before {
@@ -1605,14 +1618,15 @@ body.rdd-dragging-active {
    SKIN 5: Nordic Frost Preset (Nord Theme)
    -------------------------------------------------------------------------- */
 [data-rdd-skin="nord"] {
+  --rdd-skin-font-family: 'Avenir Next', 'Nunito', 'Segoe UI', system-ui, sans-serif; /* no official font: a softer humanist sans */
   --rdd-bg-workspace: #2e3440;
   --rdd-bg-panel: #3b4252;
   --rdd-bg-tab-bar: #2e3440;
   --rdd-window-bg: rgba(59, 66, 82, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #434c5e;
   --rdd-window-header-bg: #2e3440;
-  --rdd-accent-color: #88c0d0;
-  --rdd-accent-glow: rgba(136, 192, 208, 0.2);
+  --rdd-accent-color: var(--rdd-brand-accent, #88c0d0);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
   --rdd-border-panel: #434c5e;
   --rdd-bg-tab-inactive: #2e3440;
   --rdd-text-tab-inactive: #d8dee9;
@@ -1620,14 +1634,14 @@ body.rdd-dragging-active {
   --rdd-panel-card-bg: #2e3440;
   --rdd-panel-card-border: #4c566a;
   --rdd-close-btn-color: #d8dee9;
-  --rdd-close-btn-active-color: #88c0d0;
-  --rdd-scrollbar-thumb: rgba(136, 192, 208, 0.25);
-  --rdd-scrollbar-thumb-hover: rgba(136, 192, 208, 0.4);
+  --rdd-close-btn-active-color: var(--rdd-accent-color);
+  --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
+  --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 40%, transparent);
   --rdd-window-text: #eceff4;
   --rdd-panel-text: #eceff4;
-  --rdd-tab-icon-active: #88c0d0;
-  --rdd-toolbar-btn-radio-active-bg: rgba(136, 192, 208, 0.14);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(136, 192, 208, 0.08);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
 }
 
 [data-rdd-skin="nord"][data-color-scheme="light"] {
@@ -1637,8 +1651,8 @@ body.rdd-dragging-active {
   --rdd-window-bg: rgba(236, 239, 244, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #d8dee9;
   --rdd-window-header-bg: #e5e9f0;
-  --rdd-accent-color: #5e81ac;
-  --rdd-accent-glow: rgba(94, 129, 172, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #5e81ac);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: #d8dee9;
   --rdd-bg-tab-inactive: #e5e9f0;
   --rdd-text-tab-inactive: #4c566a;
@@ -1646,15 +1660,15 @@ body.rdd-dragging-active {
   --rdd-panel-card-bg: #e5e9f0;
   --rdd-panel-card-border: #d8dee9;
   --rdd-close-btn-color: #4c566a;
-  --rdd-close-btn-active-color: #5e81ac;
-  --rdd-scrollbar-thumb: rgba(94, 129, 172, 0.2);
-  --rdd-scrollbar-thumb-hover: rgba(94, 129, 172, 0.35);
+  --rdd-close-btn-active-color: var(--rdd-accent-color);
+  --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent);
   --rdd-window-text: #2e3440;
   --rdd-panel-text: #2e3440;
-  --rdd-panel-title-color: #5e81ac;
-  --rdd-tab-icon-active: #5e81ac;
-  --rdd-toolbar-btn-radio-active-bg: rgba(94, 129, 172, 0.12);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(94, 129, 172, 0.07);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
 }
 
 /* --------------------------------------------------------------------------
@@ -1668,8 +1682,8 @@ body.rdd-dragging-active {
   --rdd-window-border: #1a1a1a;
   --rdd-window-border-focused: #333333;
   --rdd-window-header-bg: #000000;
-  --rdd-accent-color: #ffffff;
-  --rdd-accent-glow: rgba(255, 255, 255, 0.08);
+  --rdd-accent-color: var(--rdd-brand-accent, #ffffff);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
   --rdd-border-panel: #1a1a1a;
   --rdd-bg-tab-inactive: #000000;
   --rdd-text-tab-inactive: #737373;
@@ -1682,9 +1696,9 @@ body.rdd-dragging-active {
   --rdd-scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
   --rdd-window-text: #ffffff;
   --rdd-panel-text: #ffffff;
-  --rdd-tab-icon-active: #ffffff;
-  --rdd-toolbar-btn-radio-active-bg: rgba(255, 255, 255, 0.10);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(255, 255, 255, 0.06);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
 }
 
 [data-rdd-skin="obsidian"][data-color-scheme="light"] {
@@ -1695,8 +1709,8 @@ body.rdd-dragging-active {
   --rdd-window-border: #e5e5e5;
   --rdd-window-border-focused: #a3a3a3;
   --rdd-window-header-bg: #ffffff;
-  --rdd-accent-color: #000000;
-  --rdd-accent-glow: rgba(0, 0, 0, 0.05);
+  --rdd-accent-color: var(--rdd-brand-accent, #000000);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 5%, transparent);
   --rdd-border-panel: #eaeaea;
   --rdd-bg-tab-inactive: #ffffff;
   --rdd-text-tab-inactive: #737373;
@@ -1709,10 +1723,10 @@ body.rdd-dragging-active {
   --rdd-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
   --rdd-window-text: #000000;
   --rdd-panel-text: #000000;
-  --rdd-panel-title-color: #000000;
-  --rdd-tab-icon-active: #000000;
-  --rdd-toolbar-btn-radio-active-bg: rgba(0, 0, 0, 0.10);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(0, 0, 0, 0.06);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
 }
 
 /* Obsidian custom borderless panel elevations */
@@ -1721,7 +1735,7 @@ body.rdd-dragging-active {
   border-radius: 6px;
 }
 [data-rdd-skin="obsidian"] .rdd-floating-window.rdd-window-focused {
-  box-shadow: 0 24px 50px rgba(255, 255, 255, 0.06), 0 0 1px rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 24px 50px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent), 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent) !important;
 }
 [data-rdd-skin="obsidian"][data-color-scheme="light"] .rdd-floating-window {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1) !important;
@@ -1734,15 +1748,16 @@ body.rdd-dragging-active {
    SKIN 7: Tokyo Night Preset
    -------------------------------------------------------------------------- */
 [data-rdd-skin="tokyo"] {
+  --rdd-skin-font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* no official font: a terminal/editor feel */
   --rdd-bg-workspace: #1a1b26;
   --rdd-bg-panel: #24283c;
   --rdd-bg-tab-bar: #1f2335;
   --rdd-window-bg: rgba(36, 40, 60, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #383e5a;
-  --rdd-window-border-focused: #7aa2f7;
+  --rdd-window-border-focused: var(--rdd-accent-color);
   --rdd-window-header-bg: #1f2335;
-  --rdd-accent-color: #bb9af7;
-  --rdd-accent-glow: rgba(187, 154, 247, 0.25);
+  --rdd-accent-color: var(--rdd-brand-accent, #bb9af7);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-border-panel: #383e5a;
   --rdd-bg-tab-inactive: #1f2335;
   --rdd-text-tab-inactive: #787c99;
@@ -1750,14 +1765,14 @@ body.rdd-dragging-active {
   --rdd-panel-card-bg: #1a1b26;
   --rdd-panel-card-border: #383e5a;
   --rdd-close-btn-color: #787c99;
-  --rdd-close-btn-active-color: #7aa2f7;
-  --rdd-scrollbar-thumb: rgba(122, 162, 247, 0.25);
-  --rdd-scrollbar-thumb-hover: rgba(187, 154, 247, 0.4);
+  --rdd-close-btn-active-color: var(--rdd-accent-color);
+  --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
+  --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 40%, transparent);
   --rdd-window-text: #c0caf5;
   --rdd-panel-text: #c0caf5;
-  --rdd-tab-icon-active: #7aa2f7;
-  --rdd-toolbar-btn-radio-active-bg: rgba(122, 162, 247, 0.14);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(122, 162, 247, 0.08);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
 }
 
 [data-rdd-skin="tokyo"][data-color-scheme="light"] {
@@ -1766,10 +1781,10 @@ body.rdd-dragging-active {
   --rdd-bg-tab-bar: #d5d6db;
   --rdd-window-bg: rgba(242, 244, 248, var(--rdd-window-opacity, 1.0));
   --rdd-window-border: #b4b5b9;
-  --rdd-window-border-focused: #385af6;
+  --rdd-window-border-focused: var(--rdd-accent-color);
   --rdd-window-header-bg: #d5d6db;
-  --rdd-accent-color: #9854f1;
-  --rdd-accent-glow: rgba(152, 84, 241, 0.15);
+  --rdd-accent-color: var(--rdd-brand-accent, #9854f1);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: #b4b5b9;
   --rdd-bg-tab-inactive: #d5d6db;
   --rdd-text-tab-inactive: #565a6e;
@@ -1777,15 +1792,15 @@ body.rdd-dragging-active {
   --rdd-panel-card-bg: #e1e2e7;
   --rdd-panel-card-border: #b4b5b9;
   --rdd-close-btn-color: #565a6e;
-  --rdd-close-btn-active-color: #385af6;
-  --rdd-scrollbar-thumb: rgba(56, 90, 246, 0.2);
-  --rdd-scrollbar-thumb-hover: rgba(152, 84, 241, 0.35);
+  --rdd-close-btn-active-color: var(--rdd-accent-color);
+  --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent);
   --rdd-window-text: #383e56;
   --rdd-panel-text: #383e56;
-  --rdd-panel-title-color: #9854f1;
-  --rdd-tab-icon-active: #385af6;
-  --rdd-toolbar-btn-radio-active-bg: rgba(56, 90, 246, 0.12);
-  --rdd-toolbar-btn-toggle-active-bg: rgba(56, 90, 246, 0.07);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
 }
 
 /* ==========================================================================
@@ -1829,11 +1844,11 @@ body.rdd-dragging-active {
    slate — Fluent Pill (floating capsule, accent-tinted)
    -------------------------------------------------------------------------- */
 [data-rdd-skin="slate"] {
-  --rdd-tab-btn-active-bg: rgba(96, 165, 250, 0.14);
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
   --rdd-tab-btn-active-width: 36px;
   --rdd-tab-btn-active-radius: 8px;
   --rdd-tab-accent-bar-width: 0px;
-  --rdd-toolbar-btn-radio-active-bg: rgba(96, 165, 250, 0.14);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
   --rdd-toolbar-accent-bar-width: 0px;
 }
 [data-rdd-skin="slate"] .rdd-sidebar-tab-btn.rdd-active {
@@ -1846,8 +1861,8 @@ body.rdd-dragging-active {
   border-radius: 8px !important;
 }
 [data-rdd-skin="slate"][data-color-scheme="light"] {
-  --rdd-tab-btn-active-bg: rgba(0, 120, 212, 0.12);
-  --rdd-toolbar-btn-radio-active-bg: rgba(0, 120, 212, 0.12);
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
 }
 
 /* --------------------------------------------------------------------------
@@ -1918,78 +1933,78 @@ body.rdd-dragging-active {
    obsidian — Deep Glow (near-black fill, 2 px bar, inner glow, icon shadow)
    -------------------------------------------------------------------------- */
 [data-rdd-skin="obsidian"] {
-  --rdd-tab-btn-active-bg: rgba(255, 255, 255, 0.03);
-  --rdd-tab-btn-active-shadow: inset 0 0 12px rgba(255, 255, 255, 0.06);
-  --rdd-tab-btn-active-glow: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 3%, transparent);
+  --rdd-tab-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-tab-btn-active-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--rdd-accent-color) 50%, transparent));
   --rdd-tab-accent-bar-width: 2px;
-  --rdd-toolbar-btn-radio-active-bg: rgba(255, 255, 255, 0.03);
-  --rdd-toolbar-btn-active-shadow: inset 0 0 12px rgba(255, 255, 255, 0.06);
-  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 3%, transparent);
+  --rdd-toolbar-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--rdd-accent-color) 50%, transparent));
   --rdd-toolbar-accent-bar-width: 2px;
 }
 [data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-left .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-left .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 3px 0 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-right .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-right .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset -3px 0 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset -3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-top .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-top .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 -3px 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 -3px 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 3px 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 3px 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"][data-color-scheme="light"] {
-  --rdd-tab-btn-active-shadow: inset 0 0 12px rgba(0, 0, 0, 0.06);
-  --rdd-tab-btn-active-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
-  --rdd-toolbar-btn-active-shadow: inset 0 0 12px rgba(0, 0, 0, 0.06);
-  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+  --rdd-tab-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-tab-btn-active-glow: drop-shadow(0 0 4px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent));
+  --rdd-toolbar-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 4px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent));
 }
 
 /* --------------------------------------------------------------------------
    tokyo — Neon Pulse (accent-blue tint, vivid neon glow)
    -------------------------------------------------------------------------- */
 [data-rdd-skin="tokyo"] {
-  --rdd-tab-btn-active-bg: rgba(122, 162, 247, 0.10);
-  --rdd-tab-btn-active-shadow: inset 0 0 16px rgba(122, 162, 247, 0.12);
-  --rdd-tab-btn-active-glow: drop-shadow(0 0 6px rgba(122, 162, 247, 0.65));
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-tab-btn-active-shadow: inset 0 0 16px color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-tab-btn-active-glow: drop-shadow(0 0 6px color-mix(in srgb, var(--rdd-accent-color) 65%, transparent));
   --rdd-tab-accent-bar-width: 2px;
-  --rdd-toolbar-btn-radio-active-bg: rgba(122, 162, 247, 0.10);
-  --rdd-toolbar-btn-active-shadow: inset 0 0 16px rgba(122, 162, 247, 0.12);
-  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 6px rgba(122, 162, 247, 0.65));
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-active-shadow: inset 0 0 16px color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 6px color-mix(in srgb, var(--rdd-accent-color) 65%, transparent));
   --rdd-toolbar-accent-bar-width: 2px;
 }
 [data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-left .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-left .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 3px 0 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 3px 0 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-right .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-right .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset -3px 0 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset -3px 0 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-top .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-top .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 -3px 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 -3px 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="tokyo"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active {
-  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 3px 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 3px 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -1998,12 +2013,12 @@ body.rdd-dragging-active {
    A contained chip that floats inside the strip — not an edge-connecting bridge.
    -------------------------------------------------------------------------- */
 [data-rdd-skin="macos"] {
-  --rdd-tab-btn-active-bg: rgba(56, 189, 248, 0.2);
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
   --rdd-tab-btn-active-width: 36px;
   --rdd-tab-btn-active-radius: 10px;
   --rdd-tab-btn-active-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   --rdd-tab-accent-bar-width: 0px;
-  --rdd-toolbar-btn-radio-active-bg: rgba(56, 189, 248, 0.2);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
   --rdd-toolbar-btn-active-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   --rdd-toolbar-accent-bar-width: 0px;
 }
@@ -2017,10 +2032,10 @@ body.rdd-dragging-active {
   border-radius: 10px !important;
 }
 [data-rdd-skin="macos"][data-color-scheme="light"] {
-  --rdd-tab-btn-active-bg: rgba(0, 102, 204, 0.16);
-  --rdd-tab-btn-active-shadow: inset 0 0 0 1px rgba(0, 102, 204, 0.3);
-  --rdd-toolbar-btn-radio-active-bg: rgba(0, 102, 204, 0.16);
-  --rdd-toolbar-btn-active-shadow: inset 0 0 0 1px rgba(0, 102, 204, 0.3);
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+  --rdd-tab-btn-active-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+  --rdd-toolbar-btn-active-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
 }
 
 /* --- Modern Sidebar and Tabs UI Theme Customizations --- */
@@ -2479,7 +2494,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   height: 80px;
   border: 2px dashed var(--rdd-accent-color, #38bdf8);
   border-radius: 8px;
-  background: rgba(56, 189, 248, 0.06);
+  background: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   pointer-events: auto;
   z-index: calc(var(--rdd-z-base, 1000) + 9000);
   opacity: 0.55;
@@ -2491,7 +2506,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-corner-zone--bottom-right { bottom: 0; right: 0; }
 .rdd-corner-zone--hovered {
   opacity: 1;
-  background: rgba(56, 189, 248, 0.18);
+  background: color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
   border-style: solid;
 }
 
@@ -2665,16 +2680,16 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 /* obsidian & tokyo — flip the inset glow X offset sign */
 [data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 8px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 [data-rdd-skin="tokyo"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
-  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 12px rgba(122, 162, 247, 0.18) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 12px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent) !important;
 }
 
 /* chrome — swap the capsule border-radius when strips change sides */
@@ -3237,7 +3252,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-btn-primary {
   background: var(--rdd-accent-color, #38bdf8);
   border: 1px solid var(--rdd-accent-color, #38bdf8);
-  color: #090b11;
+  color: var(--rdd-brand-on-accent, #090b11);
 }
 
 .rdd-btn-primary:hover {
@@ -3387,23 +3402,23 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 [data-rdd-skin="slate"] {
-  --rdd-panel-toolbar-btn-active-color: #60a5fa;
-  --rdd-panel-toolbar-btn-active-bg: rgba(96, 165, 250, 0.15);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
 [data-rdd-skin="nord"] {
-  --rdd-panel-toolbar-btn-active-color: #88c0d0;
-  --rdd-panel-toolbar-btn-active-bg: rgba(136, 192, 208, 0.15);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
 [data-rdd-skin="obsidian"] {
-  --rdd-panel-toolbar-btn-active-color: #a78bfa;
-  --rdd-panel-toolbar-btn-active-bg: rgba(167, 139, 250, 0.15);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
 [data-rdd-skin="tokyo"] {
-  --rdd-panel-toolbar-btn-active-color: #7aa2f7;
-  --rdd-panel-toolbar-btn-active-bg: rgba(122, 162, 247, 0.15);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
 /* ==========================================================================
@@ -3825,7 +3840,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   height: 80px;
   border: 2px dashed var(--rdd-accent-color, #38bdf8);
   border-radius: 8px;
-  background: rgba(56, 189, 248, 0.06);
+  background: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   pointer-events: none;
   z-index: 200;
   opacity: 0.55;
@@ -3834,7 +3849,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 .rdd-panel-float-dropzone--hovered {
   opacity: 1;
-  background: rgba(56, 189, 248, 0.18);
+  background: color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
   border-style: solid;
 }
 

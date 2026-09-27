@@ -1,6 +1,6 @@
 # Custom Theming
 
-`react-dockable-desktop` ships with 7 built-in skins and a clean CSS custom-property architecture that lets you add your own without modifying any library code.
+`react-dockable-desktop` ships with 7 built-in skins and a clean CSS custom-property architecture that lets you add your own without modifying any library code. To put your company's colour and font on a built-in skin, you don't need a skin of your own at all — see [Brand your app](#brand-your-app).
 
 ## How it works
 
@@ -15,6 +15,110 @@ The `skin` prop on `<RddDesktop />` sets a `data-rdd-skin` attribute on the work
 ```
 
 All child components inherit those variables. Because `skin` is typed as `string` (not a restricted union), any name you define in CSS becomes valid — `<RddDesktop skin="my-brand" />` works immediately.
+
+## Brand your app
+
+Every built-in skin, in dark and light, takes your company's colour and font from three variables set on `:root`:
+
+```css
+:root {
+  --rdd-brand-accent: #e4002b;                 /* your brand colour */
+  --rdd-brand-on-accent: #ffffff;              /* text on a brand-coloured fill (see below) */
+  --rdd-font-family: 'Acme Sans', sans-serif;  /* your brand font */
+}
+```
+
+That's all. Leave a variable unset and the skin keeps its own value.
+
+| Variable | What follows it | Default |
+|----------|-----------------|---------|
+| `--rdd-brand-accent` | Everything a skin draws in its accent: tab indicators, the active sidebar tab and toolbar button, hover and active tints, glows, the focused window's glow, the taskbar, focus rings, the primary button. | Each skin's own accent |
+| `--rdd-brand-on-accent` | Text drawn on a solid accent fill: the confirmation dialog's primary button and the highlighted dock target while you drag. | `#090b11` |
+| `--rdd-font-family` | Every piece of chrome — tabs, title bars, toolbar, sidebar, menus, flyouts, toasts, drawers, modals — and panel content, which inherits the workspace font. | Each skin's own font |
+
+Set them on `:root` (or `<body>`), not on a wrapper around the workspace: context menus, the toolbar flyout and toasts render straight into `<body>`, so a value set on a wrapper doesn't reach them.
+
+::: tip Light brand colours
+The library can't tell whether your colour is light or dark. With a light brand colour — yellow, lime, a pale cyan — set `--rdd-brand-on-accent` to a dark colour, so text on a brand-coloured button stays readable:
+
+```css
+:root {
+  --rdd-brand-accent: #facc15;
+  --rdd-brand-on-accent: #1a1a1a;
+}
+```
+:::
+
+### A different brand colour for light mode
+
+One brand colour applies to both schemes. If yours needs a darker shade on a light background, scope a second value to the light scheme:
+
+```css
+:root                            { --rdd-brand-accent: #ff5a5f; }
+:root[data-color-scheme="light"] { --rdd-brand-accent: #d93b40; }
+```
+
+### Your brand font
+
+The library never loads a font. Load your company font the way you already do — an `@font-face` rule, a `<link>` to your font provider, your design system's font package — and name it in `--rdd-font-family`, followed by fallbacks:
+
+```css
+@font-face {
+  font-family: 'Acme Sans';
+  src: url('/fonts/acme-sans.woff2') format('woff2');
+  font-display: swap;
+}
+:root {
+  --rdd-font-family: 'Acme Sans', system-ui, sans-serif;
+}
+```
+
+To use your page's own font instead, set `--rdd-font-family: inherit` on `:root`. See [Fonts](#fonts) for the details.
+
+### Use your UI framework's theme
+
+The library doesn't depend on any UI framework, so it can't read your theme by itself — but because your framework's theme is already CSS variables on the page, pointing the brand variables at them is one line each, and the workspace then follows your theme, including when it changes at runtime:
+
+| Framework | Brand colour | Text on it | Font |
+|-----------|--------------|------------|------|
+| Bootstrap 5.3 | `var(--bs-primary)` | — | `var(--bs-body-font-family)` |
+| MUI (with `cssVariables: true` in `createTheme`) | `var(--mui-palette-primary-main)` | `var(--mui-palette-primary-contrastText)` | your `theme.typography.fontFamily` |
+| Angular Material 3 | `var(--mat-sys-primary)` | `var(--mat-sys-on-primary)` | your typography's font family |
+| Tailwind CSS v4 | a theme colour, e.g. `var(--color-indigo-600)` | — | `var(--font-sans)` |
+| shadcn/ui | `var(--primary)` — or `hsl(var(--primary))` in versions that store it as HSL numbers | `var(--primary-foreground)` (same rule) | your font |
+
+For example, with Bootstrap:
+
+```css
+:root {
+  --rdd-brand-accent: var(--bs-primary);
+  --rdd-font-family: var(--bs-body-font-family);
+}
+```
+
+The variable you point at must be defined on `:root` (or `<html>`), where the brand variables are read.
+
+### Your logo
+
+The library draws no logo of its own — where one goes is your app's decision. Two natural places:
+
+- **Your own header or toolbar content**, outside the workspace — it's your markup, so anything goes.
+- **The top of the `RddSidebar` rail**, where VS Code, Slack and Teams put theirs. `headerAction` accepts a custom render:
+
+```tsx
+<RddSidebar
+  tabs={tabs}
+  headerAction={{ render: () => <img src={logo} alt="Acme" className="acme-logo" /> }}
+>
+  <RddDesktop />
+</RddSidebar>
+```
+
+The rail is narrow, so a square mark fits better than a wide wordmark. Adjust its spacing with `--rdd-sidebar-header-area-padding-top` and `--rdd-sidebar-header-area-padding-bottom` (both `8px`).
+
+### Browser support
+
+Branding relies on CSS `color-mix()`, available since Chrome 111, Edge 111, Safari 16.2 and Firefox 113 (all 2023). In an older browser the tinted hover and active highlights lose their colour; layout and behaviour are unaffected.
 
 ## Built-in skins
 
@@ -33,6 +137,20 @@ All child components inherit those variables. Because `skin` is typed as `string
 | `tokyo` | Tokyo Night — purple accent on dark blue-gray, inspired by the popular editor theme. | Accent-tinted fill, neon glow, vivid icon drop-shadow filter |
 
 All built-in skins include both dark and light variants — see [Dark and light variants](#dark-and-light-variants) below.
+
+Each skin also brings its own font, the platform's UI font where it has a known one. They are system font stacks — the library loads none of them, so each machine uses the first one it has — and your `--rdd-font-family` replaces them all:
+
+| Skin | Font (`--rdd-skin-font-family`) |
+|------|---------------------------------|
+| `vscode` | VS Code's workbench font: `-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif` |
+| `macos` | San Francisco: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif` |
+| `chrome` | Google's UI fonts: `'Google Sans Text', 'Google Sans', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif` |
+| `slate` | Fluent's stack: `'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif` |
+| `nord` | A softer humanist sans: `'Avenir Next', 'Nunito', 'Segoe UI', system-ui, sans-serif` |
+| `obsidian` | The library's fallback stack: `'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif` |
+| `tokyo` | A terminal/editor feel: `'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
+
+Panel content inherits the workspace font, so in `tokyo` your own panels turn monospace too unless they set a font of their own.
 
 ## Per-skin active state design language
 
@@ -67,12 +185,12 @@ These CSS custom properties drive the active state shape and effects. They are d
 
 | Token | Default | Controls |
 |-------|---------|---------|
-| `--rdd-toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Fill color of the active radio/group button. |
+| `--rdd-toolbar-btn-radio-active-bg` | the accent at 14% | Fill color of the active radio/group button. |
 | `--rdd-toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. |
 | `--rdd-toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. |
 | `--rdd-toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. |
 
-Both strips share `--rdd-tab-icon-active` for the accent color — set it once and both update.
+Both strips share `--rdd-tab-icon-active` for the accent color — set it once and both update. By default it is `--rdd-accent-color` itself, so it follows a brand colour too.
 
 ### Customising the active state in your own skin
 
@@ -91,11 +209,11 @@ Only override the tokens you want to change; all others inherit their `:root` de
 
 ```css
 [data-rdd-skin="my-skin"] {
-  --rdd-tab-btn-active-bg:           rgba(255, 100, 80, 0.18);
+  --rdd-tab-btn-active-bg:           color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
   --rdd-tab-btn-active-width:        36px;
   --rdd-tab-btn-active-radius:       8px;
   --rdd-tab-accent-bar-width:        0px;
-  --rdd-toolbar-btn-radio-active-bg: rgba(255, 100, 80, 0.18);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
   --rdd-toolbar-accent-bar-width:    0px;
 }
 [data-rdd-skin="my-skin"] .rdd-sidebar-tab-btn.rdd-active {
@@ -113,10 +231,12 @@ Only override the tokens you want to change; all others inherit their `:root` de
 
 ```css
 [data-rdd-skin="my-skin"] {
-  --rdd-tab-btn-active-glow:     drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
-  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 5px rgba(255, 100, 80, 0.6));
+  --rdd-tab-btn-active-glow:     drop-shadow(0 0 5px color-mix(in srgb, var(--rdd-accent-color) 60%, transparent));
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--rdd-accent-color) 60%, transparent));
 }
 ```
+
+Writing tints as `color-mix()` of `--rdd-accent-color`, as these examples do, rather than as a fixed `rgba()`, keeps them in step with the accent — and with a brand colour, if one is set.
 
 ::: tip Keep Sidebar and Toolbar in sync
 Both components share `--rdd-tab-icon-active` for the accent color — set it once and both update. Match `--rdd-tab-accent-bar-width` to `--rdd-toolbar-accent-bar-width` (and the fill/glow tokens) so Sidebar and Toolbar always read as a consistent pair.
@@ -144,8 +264,9 @@ Create a file (e.g. `my-skin.css`) and define a block using `[data-rdd-skin]`:
   --rdd-bg-workspace:  #0d1117;
   --rdd-bg-panel:      #161b22;
   --rdd-bg-tab-bar:    #0d1117;
-  --rdd-accent-color:  #f78166;
-  --rdd-accent-glow:   rgba(247, 129, 102, 0.15);
+  --rdd-accent-color:  var(--rdd-brand-accent, #f78166);
+  --rdd-accent-glow:   color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
+  --rdd-skin-font-family: 'IBM Plex Sans', system-ui, sans-serif;
   --rdd-border-panel:  #30363d;
   --rdd-text-tab-inactive: #8b949e;
   --rdd-text-tab-active:   #f0f6fc;
@@ -156,6 +277,14 @@ Create a file (e.g. `my-skin.css`) and define a block using `[data-rdd-skin]`:
 ```
 
 You only need to override the variables you want to change. Any variable you omit inherits from the library defaults (`:root`).
+
+::: tip Let your skin take a brand, as the built-in ones do
+Three habits keep a skin brandable with [`--rdd-brand-accent`](#brand-your-app):
+
+- Declare the accent as `var(--rdd-brand-accent, <your colour>)`, never as a bare colour.
+- Write every tint of it as `color-mix(in srgb, var(--rdd-accent-color) N%, transparent)` instead of an `rgba()` of the same colour — then one accent drives them all.
+- Give your skin a font with `--rdd-skin-font-family`, never `--rdd-font-family`: declared in a skin, `--rdd-font-family` would override the one a consumer sets on `:root`. Likewise, never declare a `--rdd-brand-*` variable in a skin — those belong to the app.
+:::
 
 **Step 3 — Pass the name to `RddDesktop`**
 
@@ -180,7 +309,7 @@ The workspace root copies the value, so skins can target it with a compound sele
 /* Dark mode — usually your primary skin definition */
 [data-rdd-skin="my-brand"] {
   --rdd-bg-workspace: #0d1117;
-  --rdd-accent-color: #f78166;
+  --rdd-accent-color: var(--rdd-brand-accent, #f78166);
   /* ... */
 }
 
@@ -189,14 +318,14 @@ The workspace root copies the value, so skins can target it with a compound sele
   --rdd-bg-workspace: #ffffff;
   --rdd-bg-panel:     #f6f8fa;
   --rdd-bg-tab-bar:   #f6f8fa;
-  --rdd-accent-color: #cf222e;
+  --rdd-accent-color: var(--rdd-brand-accent, #cf222e);
   --rdd-text-tab-inactive: #57606a;
   --rdd-text-tab-active:   #1f2328;
   --rdd-window-bg:    rgba(246, 248, 250, 1.0);
   --rdd-window-border: #d0d7de;
   --rdd-window-shadow: 0 8px 24px rgba(140, 149, 159, 0.12);
   --rdd-panel-text:   #1f2328;
-  --rdd-panel-title-color: #cf222e;
+  --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-close-btn-color: #57606a;
   --rdd-close-btn-active-color: #1f2328;
 }
@@ -281,9 +410,12 @@ Copy this into your CSS file and fill in the color values. All variable names ar
   --rdd-border-color: rgba(255, 255, 255, 0.08);  /* generic border */
   --rdd-border-panel: rgba(255, 255, 255, 0.08);  /* panel border */
 
-  /* --- Accent --- */
-  --rdd-accent-color: #38bdf8;                    /* primary interactive color */
-  --rdd-accent-glow:  rgba(56, 189, 248, 0.15);  /* focus rings, halos */
+  /* --- Accent (brandable: an app's --rdd-brand-accent replaces the colour) --- */
+  --rdd-accent-color: var(--rdd-brand-accent, #38bdf8);                            /* primary interactive color */
+  --rdd-accent-glow:  color-mix(in srgb, var(--rdd-accent-color) 15%, transparent); /* focus rings, halos */
+
+  /* --- Font (an app's --rdd-font-family replaces it) --- */
+  --rdd-skin-font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   /* --- Tabs --- */
   --rdd-bg-tab-inactive:  #0c0d12;
@@ -358,8 +490,8 @@ Copy this into your CSS file and fill in the color values. All variable names ar
   --rdd-text-secondary: #6c757d;
   --rdd-border-color:  rgba(0, 0, 0, 0.08);
   --rdd-border-panel:  rgba(0, 0, 0, 0.08);
-  --rdd-accent-color:  #0066cc;
-  --rdd-accent-glow:   rgba(0, 102, 204, 0.15);
+  --rdd-accent-color:  var(--rdd-brand-accent, #0066cc);
+  --rdd-accent-glow:   color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-bg-tab-inactive:   #e9ecef;
   --rdd-text-tab-inactive: #495057;
   --rdd-text-tab-active:   #212529;
@@ -371,7 +503,7 @@ Copy this into your CSS file and fill in the color values. All variable names ar
   --rdd-window-shadow:      0 10px 30px rgba(0, 0, 0, 0.06);
   --rdd-window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
   --rdd-panel-text:         #212529;
-  --rdd-panel-title-color:  #0066cc;
+  --rdd-panel-title-color:  var(--rdd-accent-color);
   --rdd-close-btn-color:    #495057;
   --rdd-close-btn-active-color: #212529;
 }
@@ -386,17 +518,17 @@ The `RddSidebar` component uses a separate variable set. Override these if your 
   --rdd-sidebar-border:              rgba(255, 255, 255, 0.08);
   --rdd-sidebar-card-bg:             rgba(255, 255, 255, 0.03);
   --rdd-sidebar-card-border:         rgba(255, 255, 255, 0.08);
-  --rdd-sidebar-card-active-bg:      rgba(56, 189, 248, 0.06);
-  --rdd-sidebar-card-active-border:  rgba(56, 189, 248, 0.3);
+  --rdd-sidebar-card-active-bg:      color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-sidebar-card-active-border:  color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
   --rdd-sidebar-text-title:          #f8f9fa;
   --rdd-sidebar-text-muted:          #8a90a0;
   --rdd-sidebar-badge-bg:            #2d3139;
   --rdd-sidebar-badge-text:          #b0b5c0;
-  --rdd-sidebar-btn-front-border:    #38bdf8;
-  --rdd-sidebar-btn-front-text:      #38bdf8;
+  --rdd-sidebar-btn-front-border:    var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-text:      var(--rdd-accent-color);
   --rdd-sidebar-btn-front-bg:        transparent;
-  --rdd-sidebar-btn-front-hover-bg:  rgba(56, 189, 248, 0.1);
-  --rdd-tab-icon-active:             #38bdf8;
+  --rdd-sidebar-btn-front-hover-bg:  color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-tab-icon-active:             var(--rdd-accent-color);
   --rdd-tab-icon-inactive:           #9ea4b0;
   --rdd-tab-btn-active-bg:           #1e2024;  /* active tab fill */
 
@@ -416,7 +548,7 @@ The `RddSidebar` component uses a separate variable set. Override these if your 
 ```
 
 ::: tip Minimal overrides
-You don't need to define all variables. A skin that only sets `--rdd-accent-color`, `--rdd-bg-workspace`, and `--rdd-bg-panel` is perfectly valid — everything else inherits from the library default.
+You don't need to define all variables. A skin that only sets `--rdd-accent-color`, `--rdd-bg-workspace`, and `--rdd-bg-panel` is perfectly valid — the tints, the active tab icon and the sidebar's accent tokens all follow `--rdd-accent-color` by default, and everything else inherits from the library default.
 :::
 
 ## CSS variable reference
@@ -450,20 +582,23 @@ You don't need to define all variables. A skin that only sets `--rdd-accent-colo
 
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
-| `--rdd-accent-color` | `#38bdf8` | Primary interactive color — tab indicators, active borders. |
-| `--rdd-accent-glow` | `rgba(56,189,248,0.15)` | Translucent version used for focus halos. |
+| `--rdd-brand-accent` | *(unset)* | Set by your app, never by a skin: replaces every skin's accent. See [Brand your app](#brand-your-app). |
+| `--rdd-brand-on-accent` | *(unset — `#090b11`)* | Set by your app: text on a solid accent fill (the primary button, the active dock target). |
+| `--rdd-accent-color` | `var(--rdd-brand-accent, #38bdf8)` (light: `#0066cc`) | Primary interactive color — tab indicators, active borders. Every tint of it in the library is a `color-mix()` of this variable. |
+| `--rdd-accent-glow` | the accent at 15% | Translucent version used for focus halos. |
 | `--rdd-focus-ring` | `2px solid var(--rdd-accent-color)` | Outline drawn on a library control reached from the keyboard (`:focus-visible`). |
 
 ### Fonts
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `--rdd-font-family` | `'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif` | Every piece of chrome: tabs, title bars, toolbar, sidebar, menus, flyouts, toasts, drawers, modals. |
+| `--rdd-font-family` | the skin's font (`--rdd-skin-font-family`), else `'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif` | Every piece of chrome: tabs, title bars, toolbar, sidebar, menus, flyouts, toasts, drawers, modals. Set it to brand the app. |
+| `--rdd-skin-font-family` | per skin — see [Built-in skins](#built-in-skins) | A skin's own font. Set it in a skin, never `--rdd-font-family`. |
 | `--rdd-font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | Placeholders, the drag ghost and the other monospaced labels. |
 
-The library doesn't load Outfit or Inter — load one yourself, or change the stack. Set it on `:root` or `<body>` to reach everything: context menus, the toolbar flyout and toasts render straight into `<body>`, so a stack set on a wrapper around the workspace reaches only the chrome inside that wrapper.
+The library loads none of these fonts: each is a stack of system fonts, and a machine uses the first one it has. Load your own font yourself (see [Your brand font](#your-brand-font)), or change the stack. Set it on `:root` or `<body>` to reach everything: context menus, the toolbar flyout and toasts render straight into `<body>`, so a stack set on a wrapper around the workspace reaches only the chrome inside that wrapper.
 
-To use your page's own font everywhere, set `--rdd-font-family: inherit` on `:root`, or `--rdd-font-family: initial` on `<body>`. (`inherit` works only on `:root`: a custom property set to `inherit` copies its parent's value, so below `:root` it just copies the Outfit stack down. `initial` leaves the property without a value, and the chrome then inherits the page's font — on a wrapper, again, only inside it.) Panel content inherits the workspace font; your own form controls inside a panel keep the browser's default font, as they would anywhere else.
+To use your page's own font everywhere, set `--rdd-font-family: inherit` on `:root`, or `--rdd-font-family: initial` on `<body>`. (`inherit` works only on `:root`: a custom property set to `inherit` copies its parent's value, so below `:root` it just copies the skin's stack down. `initial` leaves the property without a value, and the chrome then inherits the page's font — on a wrapper, again, only inside it.) Panel content inherits the workspace font; your own form controls inside a panel keep the browser's default font, as they would anywhere else.
 
 ### Tabs
 
@@ -553,17 +688,17 @@ The library defines these on `:root` (dark, the default) and on `[data-color-sch
 | `--rdd-sidebar-border` | `rgba(255,255,255,0.08)` | Drawer edge border. |
 | `--rdd-sidebar-card-bg` | `rgba(255,255,255,0.03)` | Content card background in the drawer. |
 | `--rdd-sidebar-card-border` | `rgba(255,255,255,0.08)` | Content card border. |
-| `--rdd-sidebar-card-active-bg` | `rgba(56,189,248,0.06)` | Selected/active card background. |
-| `--rdd-sidebar-card-active-border` | `rgba(56,189,248,0.3)` | Selected/active card border. |
+| `--rdd-sidebar-card-active-bg` | the accent at 6% | Selected/active card background. |
+| `--rdd-sidebar-card-active-border` | the accent at 30% | Selected/active card border. |
 | `--rdd-sidebar-text-title` | `#f8f9fa` | Primary text inside the drawer. |
 | `--rdd-sidebar-text-muted` | `#8a90a0` | Secondary / muted text. |
 | `--rdd-sidebar-badge-bg` | `#2d3139` | Badge pill background. |
 | `--rdd-sidebar-badge-text` | `#b0b5c0` | Badge pill text. |
-| `--rdd-sidebar-btn-front-border` | `#38bdf8` | Primary action button border. |
-| `--rdd-sidebar-btn-front-text` | `#38bdf8` | Primary action button text. |
+| `--rdd-sidebar-btn-front-border` | `var(--rdd-accent-color)` | Primary action button border. |
+| `--rdd-sidebar-btn-front-text` | `var(--rdd-accent-color)` | Primary action button text. |
 | `--rdd-sidebar-btn-front-bg` | `transparent` | Primary action button background. |
-| `--rdd-sidebar-btn-front-hover-bg` | `rgba(56,189,248,0.1)` | Primary action button hover background. |
-| `--rdd-tab-icon-active` | `#38bdf8` | Active tab icon color in the strip. |
+| `--rdd-sidebar-btn-front-hover-bg` | the accent at 10% | Primary action button hover background. |
+| `--rdd-tab-icon-active` | `var(--rdd-accent-color)` | Active tab icon color in the strip. |
 | `--rdd-tab-icon-inactive` | `#9ea4b0` | Inactive tab icon color. |
 | `--rdd-tab-btn-active-bg` | `#1e2024` | Active tab button background (merges with drawer). |
 | `--rdd-tab-btn-active-width` | `100%` | Width of the active tab button. Chip skins (macos, slate) set `36px` for a contained floating shape. |
@@ -576,7 +711,7 @@ The library defines these on `:root` (dark, the default) and on `[data-color-sch
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `--rdd-toolbar-btn-radio-active-bg` | `rgba(56,189,248,0.14)` | Background tint of the active radio/group toolbar button. |
+| `--rdd-toolbar-btn-radio-active-bg` | the accent at 14% | Background tint of the active radio/group toolbar button. |
 | `--rdd-toolbar-btn-active-shadow` | `none` | `box-shadow` on active toolbar buttons. Obsidian/Tokyo override with an inset glow. |
 | `--rdd-toolbar-btn-active-glow` | `none` | `filter` on active toolbar buttons. Obsidian/Tokyo add `drop-shadow()` for icon glow. |
 | `--rdd-toolbar-accent-bar-width` | `3px` | Width of the toolbar edge accent bar. Set to `0px` for chip-shaped skins. |
