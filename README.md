@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.1.3-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.2.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -53,7 +53,7 @@ Import styles in your app entry file:
 import 'react-dockable-desktop/styles.css';
 ```
 
-**Requirements:** React ≥ 18. No other runtime dependencies.
+**Requirements:** React ≥ 18, and a browser with CSS `color-mix()` (Chrome/Edge 111, Safari 16.2, Firefox 113 or later). No other runtime dependencies.
 
 ---
 
@@ -403,7 +403,21 @@ See the [RTL Support guide](https://felipecarrillo100.github.io/react-dockable-d
 | `obsidian` | Vercel Midnight — pure black/white | Deep glow + icon drop-shadow |
 | `tokyo` | Tokyo Night — purple accent | Neon glow + vivid icon drop-shadow |
 
-All built-in skins include dark and light variants. Create your own skin by overriding CSS custom properties under a `[data-rdd-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference and the [Per-skin active state guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#per-skin-active-state-design-language) to customise the sidebar/toolbar active indicator in your own skin.
+All built-in skins include dark and light variants, and each brings its own font (the platform's UI font where it has a known one: VS Code's, San Francisco, Google's, Fluent's Segoe UI).
+
+**Branding.** Put your company's colour and font on any built-in skin — no skin of your own needed:
+
+```css
+:root {
+  --rdd-brand-accent: #e4002b;                 /* every accent use, in every skin, dark and light */
+  --rdd-brand-on-accent: #ffffff;              /* text on a brand-coloured fill — set a dark one for light brands */
+  --rdd-font-family: 'Acme Sans', sans-serif;  /* your font (the library loads none) */
+}
+```
+
+Point them at your UI framework's theme to follow it: `var(--bs-primary)` (Bootstrap), `var(--mui-palette-primary-main)` (MUI with CSS variables), `var(--mat-sys-primary)` (Angular Material 3). See [Brand your app](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#brand-your-app).
+
+Create your own skin by overriding CSS custom properties under a `[data-rdd-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference and the [Per-skin active state guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#per-skin-active-state-design-language) to customise the sidebar/toolbar active indicator in your own skin.
 
 ---
 

@@ -169,3 +169,53 @@ describe('stylesheet contract (index.css)', () => {
     expect(relative(ROOT, librarySourceFiles()[0]).startsWith('src')).toBe(true);
   });
 });
+
+// Branding (7.2.0): a consumer sets --rdd-brand-accent / --rdd-brand-on-accent on :root, and every
+// built-in skin follows. Two things make that work, and both are easy to undo by accident:
+// the library only ever *reads* the brand variables (a declaration here would override the
+// consumer's :root value on the element that carries data-rdd-skin), and each skin's accent
+// colour appears exactly once, in its --rdd-accent-color declaration.
+describe('branding contract (index.css)', () => {
+  /** Every skin accent, plus the active-state colours slate, tokyo and obsidian used before 7.2.0. */
+  const ACCENT_FAMILY = ['#38bdf8', '#0066cc', '#8ab4f8', '#1a73e8', '#0078d4', '#88c0d0', '#5e81ac', '#bb9af7', '#9854f1']
+    .map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)))
+    .concat([[96, 165, 250], [122, 162, 247], [56, 90, 246], [167, 139, 250]]);
+
+  it('every --rdd-accent-color declaration reads --rdd-brand-accent first', () => {
+    const decls = [...css.matchAll(/--rdd-accent-color\s*:\s*([^;]+);/g)].map(m => m[1].trim());
+    expect(decls.length).toBeGreaterThanOrEqual(14); // :root, the light scheme, and 6 skins × 2
+    expect(decls.filter(v => !/^var\(--rdd-brand-accent,\s*#[0-9a-f]{6}\)$/i.test(v))).toEqual([]);
+  });
+
+  it('never declares a --rdd-brand-* variable (the consumer does)', () => {
+    expect(css.match(/--rdd-brand-[\w-]+\s*:/g) ?? []).toEqual([]);
+  });
+
+  it('no accent colour is written as a literal outside its --rdd-accent-color declaration', () => {
+    const literals: string[] = [];
+    for (const m of css.matchAll(/#[0-9a-fA-F]{6}\b|rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)[^)]*\)/g)) {
+      const rgb = m[0].startsWith('#') ? [1, 3, 5].map(i => parseInt(m[0].slice(i, i + 2), 16)) : [m[1], m[2], m[3]].map(Number);
+      if (!ACCENT_FAMILY.some(a => a.every((v, i) => v === rgb[i]))) continue;
+      const before = css.slice(Math.max(0, m.index! - 60), m.index);
+      // A var() fallback — the skin's own colour inside var(--rdd-brand-accent, …), or a fallback
+      // of a variable that is always defined — is the one place a literal belongs.
+      if (/var\(--rdd-[\w-]+,\s*$/.test(before)) continue;
+      literals.push(`${m[0]} after …${before.slice(-40).replace(/\s+/g, ' ')}`);
+    }
+    expect(literals).toEqual([]);
+  });
+
+  it('only :root declares --rdd-font-family; a skin sets --rdd-skin-font-family instead', () => {
+    // A skin-level --rdd-font-family would override the consumer's :root font on the workspace.
+    const declaring = [...css.matchAll(/([^{}]+)\{[^{}]*--rdd-font-family\s*:/g)].map(m => m[1].trim());
+    expect(declaring).toEqual([':root']);
+    expect(css).toMatch(/--rdd-font-family:\s*var\(--rdd-skin-font-family,/);
+  });
+
+  it('text on a solid accent fill reads --rdd-brand-on-accent', () => {
+    for (const sel of ['.rdd-btn-primary', '.rdd-dock-target-box--active']) {
+      const body = css.match(new RegExp(`(^|\\})\\s*${sel.replace(/[.-]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[2] ?? '';
+      expect(body, sel).toMatch(/(^|[;\s])color:\s*var\(--rdd-brand-on-accent,/);
+    }
+  });
+});

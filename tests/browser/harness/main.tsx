@@ -15,6 +15,8 @@
  *   canvas=1        also opens `cv`, a panel whose canvas sits in a [data-rdd-preview-unscale] box
  *   anim=0          animations={false} on RddDesktop
  *   skin=NAME       skin passed to RddDesktop
+ *   ba=HEX, bon=HEX --rdd-brand-accent / --rdd-brand-on-accent set on :root (hex without the #)
+ *   tbx=1           toolbar also has a radio pair (group "rg": r1, r2) and a toggle that starts active
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
@@ -48,6 +50,8 @@ const SCHEME = q.get('cs') || 'dark';
 if (DIR === 'html') document.documentElement.dir = 'rtl';
 if (DIR === 'body') document.body.dir = 'rtl';
 if (q.get('font') === '1') document.body.style.fontFamily = "'Courier New'";
+if (q.get('ba')) document.documentElement.style.setProperty('--rdd-brand-accent', '#' + q.get('ba'));
+if (q.get('bon')) document.documentElement.style.setProperty('--rdd-brand-on-accent', '#' + q.get('bon'));
 const applyScheme = () => { if (SCHEME !== 'none') document.documentElement.setAttribute('data-color-scheme', SCHEME); };
 applyScheme();
 
@@ -144,6 +148,12 @@ function Inner() {
       { id: 'g1a', label: 'Sub A', icon: <Icon t="a" /> }, { id: 'g1b', label: 'Sub B', icon: <Icon t="b" /> },
     ] },
     { type: 'action', id: 'a2', label: 'Action 2', icon: <Icon t="2" />, onClick: () => {} },
+    ...(q.get('tbx') === '1' ? [
+      { type: 'separator' },
+      { type: 'radio', id: 'r1', group: 'rg', label: 'Radio 1', icon: <Icon t="r" /> },
+      { type: 'radio', id: 'r2', group: 'rg', label: 'Radio 2', icon: <Icon t="s" /> },
+      { type: 'toggle', id: 'tg', label: 'Toggle', icon: <Icon t="t" />, active: true, onToggle: () => {} },
+    ] as ToolbarItem[] : []),
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

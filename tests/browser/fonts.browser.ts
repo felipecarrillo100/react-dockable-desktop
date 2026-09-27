@@ -7,6 +7,9 @@ import { openHarness } from './lib';
 // chrome portaled to <body> (menus, flyouts, drawers, modals). Before 6.4.0 there were four
 // different stacks, and the toolbar and sidebar simply took the host page's font.
 
+/** The default (vscode) skin's font: VS Code's workbench stack. Custom skins fall back to Outfit. */
+const LIB = /^-apple-system,.*['"]Segoe WPC['"]/; // Chrome reports BlinkMacSystemFont as "system-ui"
+
 const CHROME = [
   '.rdd-workspace-tab',
   '.rdd-floating-window-title',
@@ -48,9 +51,9 @@ describe('chrome font token', () => {
     const { page, errors, close } = await openHarness('font=1');
     await openEverything(page);
     const token = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--rdd-font-family').trim());
-    expect(token).toMatch(/^['"]?Outfit/);
+    expect(token).toMatch(LIB);
     const fonts = await fontsOf(page, CHROME);
-    const wrong = Object.entries(fonts).filter(([, f]) => !/^['"]?Outfit/.test(f));
+    const wrong = Object.entries(fonts).filter(([, f]) => !LIB.test(f));
     expect(wrong).toEqual([]);
     expect(errors).toEqual([]);
     await close();
@@ -59,7 +62,7 @@ describe('chrome font token', () => {
   it("leaves the consumer's own form controls inside a panel alone", async () => {
     const { page, close } = await openHarness('font=1');
     const input = await page.evaluate(() => getComputedStyle(document.querySelector('#in-p2')!).fontFamily);
-    expect(input).not.toMatch(/Outfit/);
+    expect(input).not.toMatch(LIB);
     await close();
   });
 
@@ -75,7 +78,7 @@ describe('chrome font token', () => {
 });
 
 // A custom property set to `inherit` copies its parent's value, so `inherit` below :root just
-// copies the Outfit stack down. `initial` leaves it without a value: var() then fails, and
+// copies the library stack down. `initial` leaves it without a value: var() then fails, and
 // font-family falls back to inheriting from the host.
 describe('where --rdd-font-family can be set', () => {
   const tabFont = (page: Page) => page.evaluate(() => getComputedStyle(document.querySelector('.rdd-workspace-tab')!).fontFamily);
@@ -91,10 +94,10 @@ describe('where --rdd-font-family can be set', () => {
     expect(await tabFont(page)).toMatch(/Georgia/);
     await close();
   });
-  it('inherit below :root does not (it copies the Outfit stack down)', async () => {
+  it('inherit below :root does not (it copies the library stack down)', async () => {
     const { page, close } = await openHarness('font=1');
     await page.evaluate(() => document.body.style.setProperty('--rdd-font-family', 'inherit'));
-    expect(await tabFont(page)).toMatch(/Outfit/);
+    expect(await tabFont(page)).toMatch(LIB);
     await close();
   });
 });
@@ -122,13 +125,47 @@ describe('--rdd-font-family forms that reach portaled chrome', () => {
       await close();
     });
   }
-  it('initial on a wrapper reaches only the chrome inside it (the menu keeps the library stack)', async () => {
+  it('initial on a wrapper reaches only the chrome inside it (the menu keeps the skin stack)', async () => {
     const { page, close } = await openHarness('font=1');
     await page.evaluate(() => (document.querySelector('.rdd-fill-viewport') as HTMLElement).style.setProperty('--rdd-font-family', 'initial'));
     await openPortaled(page);
     const fonts = await fontsOf(page, ['.rdd-workspace-tab', '.rdd-context-menu']);
     expect(fonts['.rdd-workspace-tab']).toMatch(/Courier New/);
-    expect(fonts['.rdd-context-menu']).toMatch(/Outfit/);
+    expect(fonts['.rdd-context-menu']).toMatch(LIB);
     await close();
   });
+});
+
+// 7.2.0: a skin brings its own font (--rdd-skin-font-family) — the platform's known UI font where
+// there is one (vscode, macos, chrome, slate), a pick for nord and tokyo, the library stack otherwise.
+describe('skin fonts', () => {
+  for (const [skin, re] of [
+    ['vscode', LIB], ['macos', /^-apple-system,.*"SF Pro Text"/], ['chrome', /^"Google Sans Text"/],
+    ['slate', /^"Segoe UI Variable Text"/], ['nord', /^"Avenir Next"/], ['tokyo', /^"JetBrains Mono"/],
+    ['obsidian', /^Outfit/], ['my-brand', /^Outfit/], // obsidian and a custom skin that sets no font gets the library's fallback stack
+  ] as const) {
+    it(`${skin}: every chrome root uses the skin's font`, async () => {
+      const { page, close } = await openHarness(`font=1&skin=${skin}`);
+      await openEverything(page);
+      const fonts = await fontsOf(page, CHROME);
+      expect(Object.entries(fonts).filter(([, f]) => !re.test(f))).toEqual([]);
+      await close();
+    });
+  }
+});
+
+// Branding (7.2.0 guide): a company font set on :root reaches every piece of chrome in every skin,
+// including what is portaled to <body> — no skin overrides --rdd-font-family.
+describe('a brand font on :root', () => {
+  for (const skin of ['vscode', 'macos', 'chrome', 'slate', 'nord', 'obsidian', 'tokyo']) {
+    it(`${skin}: reaches every chrome root, the toast included`, async () => {
+      const { page, close } = await openHarness(`font=1&skin=${skin}`);
+      await page.evaluate(() => document.documentElement.style.setProperty('--rdd-font-family', "'Acme Sans', Georgia, serif"));
+      await page.evaluate(() => (window as unknown as { __wm: { toast: (m: string) => void } }).__wm.toast('hello'));
+      await openEverything(page);
+      const fonts = await fontsOf(page, [...CHROME, '.rdd-toast']);
+      expect(Object.entries(fonts).filter(([, f]) => !/^['"]?Acme Sans/.test(f))).toEqual([]);
+      await close();
+    });
+  }
 });
