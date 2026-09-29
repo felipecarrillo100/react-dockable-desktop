@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from 'playwright-core';
-import { openHarness, actions } from './lib';
+import { SCENES, openBase, openScene } from './scenes';
 
 // Branding (7.2.0): --rdd-brand-accent / --rdd-brand-on-accent set on :root must reach every
 // built-in skin, and with neither set every skin must render exactly as before.
@@ -11,9 +11,6 @@ import { openHarness, actions } from './lib';
 // scenes, 7 skins × dark/light, with the chrome opened. Regenerate it only for an intended visual
 // change: RDD_BRANDING_BASELINE=write npm run test:browser -- branding
 
-const SKINS = ['vscode', 'macos', 'chrome', 'slate', 'nord', 'obsidian', 'tokyo'];
-const SCHEMES = ['dark', 'light'];
-const SCENES = SKINS.flatMap(skin => SCHEMES.map(cs => ({ skin, cs })));
 const FIXTURE = join(__dirname, 'fixtures', 'branding-baseline.json');
 const WRITE = process.env.RDD_BRANDING_BASELINE === 'write';
 
@@ -21,34 +18,6 @@ type Snapshot = Record<string, Record<string, string>>;
 
 const TOKENS = [...new Set(readFileSync(join(__dirname, '..', '..', 'src', 'index.css'), 'utf8')
   .replace(/\/\*[\s\S]*?\*\//g, '').match(/--rdd-[a-z0-9-]+(?=\s*:)/g) ?? [])];
-
-/** Opens a scene with the active states on: a selected sidebar tab, radio and toggle, a focused tab, a taskbar item. */
-async function openBase(skin: string, cs: string, brand: string) {
-  const h = await openHarness(`skin=${skin}&cs=${cs}&anim=0&tbx=1&ntabs=1${brand}`);
-  const { page } = h;
-  await actions(page, 'minimizePanel', 'p2'); // a taskbar item
-  await page.click('.rdd-sidebar-tab-btn[title="Tab A"]');
-  await page.click('[aria-label="Radio 1"]');
-  await page.click('.rdd-workspace-tab:has-text("Panel One")');
-  await page.waitForTimeout(200);
-  return h;
-}
-
-async function openScene(skin: string, cs: string, brand = ''): Promise<{ page: Page; errors: string[]; close: () => Promise<void> }> {
-  const h = await openBase(skin, cs, brand);
-  const { page } = h;
-  await page.click('.rdd-toolbar-btn-group'); // the flyout
-  await page.evaluate(async () => {
-    type Open = (c: unknown, p: object, o: object) => unknown;
-    const wm = (window as unknown as { __wm: { overlays: { openLeftPanel: Open; openModal: Open }; Plain: unknown; RddConfirm: unknown; toast: (m: string) => void } }).__wm;
-    await wm.overlays.openLeftPanel(wm.Plain, {}, { title: 'Drawer' });
-    wm.overlays.openModal(wm.RddConfirm, { message: 'Sure?' }, { title: 'Modal' }); // has the primary button
-    wm.toast('hello');
-  });
-  await page.locator('#ctx').dispatchEvent('contextmenu', { clientX: 40, clientY: 40, bubbles: true });
-  await page.waitForTimeout(700);
-  return h;
-}
 
 const PROPS = ['color', 'background-color', 'background-image', 'border-top-color', 'border-right-color',
   'border-bottom-color', 'border-left-color', 'outline-color', 'box-shadow', 'fill', 'stroke'];
@@ -201,6 +170,10 @@ async function captureScene(skin: string, cs: string, brand = ''): Promise<{ sna
 function diff(base: Snapshot, snap: Snapshot): Map<string, string> {
   const out = new Map<string, string>();
   for (const key of new Set([...Object.keys(base), ...Object.keys(snap)])) {
+    // A token added since the baseline (e.g. --rdd-skin-font-family) is fine if it isn't a colour:
+    // as a background it resolves to nothing. (Its `color` probe inherits the text colour instead.)
+    if (!base[key] && key.startsWith('token ') && colours(snap[key]['background-color'] ?? '').every(c => c[3] === 0)
+      && (snap[key]['box-shadow'] ?? 'none') === 'none') continue;
     if (!base[key] || !snap[key]) { out.set(key, base[key] ? 'gone' : 'new'); continue; }
     for (const p of new Set([...Object.keys(base[key]), ...Object.keys(snap[key])])) {
       if (!sameColours(base[key][p] ?? '', snap[key][p] ?? '')) out.set(`${key} ${p}`, `${base[key][p]} -> ${snap[key][p]}`);
@@ -298,14 +271,89 @@ describe('branding: --rdd-brand-accent on :root reaches every skin', () => {
 });
 
 describe('branding: --rdd-brand-on-accent', () => {
-  it('text on a solid accent fill uses it (a light brand colour with dark text)', async () => {
-    const { page, close } = await openScene('vscode', 'dark', '&ba=facc15&bon=1a1a1a');
-    const btn = await page.evaluate(() => {
-      const cs = getComputedStyle(document.querySelector('.rdd-btn-primary')!);
-      return { bg: cs.backgroundColor, fg: cs.color };
+  // Both schemes: light mode has its own primary-button rule (white text by default), which must
+  // read the variable too — a yellow brand in light mode once got white text on yellow.
+  for (const cs of ['dark', 'light']) {
+    it(`${cs}: text on a solid accent fill uses it (a light brand colour with dark text)`, async () => {
+      const { page, close } = await openScene('vscode', cs, '&ba=facc15&bon=1a1a1a');
+      const btn = await page.evaluate(() => {
+        const s = getComputedStyle(document.querySelector('.rdd-btn-primary')!);
+        return { bg: s.backgroundColor, fg: s.color };
+      });
+      await close();
+      expect(colours(btn.bg)[0].slice(0, 3)).toEqual([250, 204, 21]);
+      expect(colours(btn.fg)[0].slice(0, 3)).toEqual([26, 26, 26]);
     });
-    await close();
-    expect(colours(btn.bg)[0].slice(0, 3)).toEqual([250, 204, 21]);
-    expect(colours(btn.fg)[0].slice(0, 3)).toEqual([26, 26, 26]);
+  }
+});
+
+// Brand surfaces (7.3.0): with --rdd-brand-surface and --rdd-brand-text set, every skin draws its
+// surfaces from those two colours — no background or text colour of any skin's own palette remains,
+// the layers stay distinct, and the text stays readable. With only one of them set, nothing changes.
+describe('branding: --rdd-brand-surface / --rdd-brand-text reach every skin', () => {
+  const BRAND = { dark: { bs: '0b1f3a', bt: 'e8eef7' }, light: { bs: 'f4f1ec', bt: '2b2620' } } as const;
+  const query = (cs: string) => `&bs=${BRAND[cs as 'dark'].bs}&bt=${BRAND[cs as 'dark'].bt}`;
+
+  /**
+   * Every skin colour a brand surface replaces: the fallbacks written inside var(--rdd--b-…, <colour>).
+   * Pure white and black are left out — they are also the neutral tints and shades every skin keeps.
+   */
+  const PALETTE = [...readFileSync(join(__dirname, '..', '..', 'src', 'index.css'), 'utf8')
+    .matchAll(/var\(--rdd--b-[\w-]+, (#[0-9a-fA-F]{6}|rgb\((\d+) (\d+) (\d+)\))\)/g)]
+    .map(m => m[1].startsWith('#') ? rgbOf(m[1]) : [+m[2], +m[3], +m[4]])
+    .filter(c => !c.every(v => v === 0) && !c.every(v => v === 255));
+
+  const luminance = (c: number[]) => {
+    const [r, g, b] = c.slice(0, 3).map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: number[], b: number[]) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  /** `top` composited over the opaque `under` (macOS panels are glass over the workspace). */
+  const over = (top: number[], under: number[]) => top.slice(0, 3).map((v, i) => v * top[3] + under[i] * (1 - top[3]));
+  const token = (snap: Snapshot, name: string) => colours(snap[`token ${name} @ws`]?.['background-color'] ?? '')[0] ?? [0, 0, 0, 0];
+
+  it('the palette the check looks for is not empty', () => {
+    expect(PALETTE.length).toBeGreaterThan(100);
   });
+
+  for (const { skin, cs } of SCENES) {
+    it(`${skin} / ${cs}`, async () => {
+      const { snap, errors } = await captureScene(skin, cs, query(cs));
+      expect(errors).toEqual([]);
+      const leftovers: string[] = [];
+      for (const [key, rec] of Object.entries(snap)) {
+        for (const [p, v] of Object.entries(rec)) {
+          for (const c of colours(v)) {
+            // Text on a solid accent fill is --rdd-brand-on-accent's, not a surface (its default,
+            // #090b11, is also the default backdrop).
+            if (/rdd-btn-primary|rdd-dock-target-box--active/.test(key) && /^(color|outline-color)$/.test(p)) continue;
+            if (c[3] > 0 && PALETTE.some(s => isRgb(c, s))) leftovers.push(`${key} ${p}: ${v}`);
+          }
+        }
+      }
+      expect(leftovers.slice(0, 20)).toEqual([]);
+
+      const workspace = token(snap, '--rdd-bg-workspace');
+      const panel = over(token(snap, '--rdd-bg-panel'), workspace);
+      const tabBar = over(token(snap, '--rdd-bg-tab-bar'), workspace);
+      const layers = [workspace.slice(0, 3), panel, tabBar].map(c => c.map(Math.round).join(','));
+      expect(new Set(layers).size, `workspace / panel / tab bar: ${layers.join(' | ')}`).toBe(3);
+      expect(contrast(token(snap, '--rdd-text-primary'), panel)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(token(snap, '--rdd-text-secondary'), panel)).toBeGreaterThanOrEqual(3);
+    }, 240_000);
+  }
+
+  // Both inputs, or neither: one alone must leave every skin exactly as unbranded.
+  for (const [skin, cs, only] of [['vscode', 'dark', 'bs'], ['nord', 'light', 'bt']] as const) {
+    it(`only ${only === 'bs' ? '--rdd-brand-surface' : '--rdd-brand-text'} set: ${skin} / ${cs} is unchanged`, async () => {
+      const baseline: Record<string, Snapshot> = JSON.parse(readFileSync(FIXTURE, 'utf8'));
+      const { snap, errors } = await captureScene(skin, cs, `&${only}=${BRAND[cs][only]}`);
+      expect(errors).toEqual([]);
+      const unexpected = [...diff(baseline[`${skin}/${cs}`], snap)].filter(([, v]) => {
+        const [before, now] = v.split(' -> ');
+        return now === undefined || !intended(before, now, skin, cs);
+      });
+      expect(lines(new Map(unexpected)).slice(0, 25)).toEqual([]);
+    }, 240_000);
+  }
 });

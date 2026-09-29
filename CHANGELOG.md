@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.0] — 2026-09-30
+
+Branding, part two: your own surfaces and corner shape on any built-in skin. See [Brand your app](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#brand-your-app).
+
+### Added
+- **`--rdd-brand-surface`** and **`--rdd-brand-text`**: set per scheme on `:root`, they replace every built-in skin's backgrounds and text — the workspace, panels, tab bar, sidebar, floating windows, modals, drawers, the taskbar, toasts, borders and muted text are all derived from the two. Set both or neither: with only one set, every skin keeps its own surfaces. A skin keeps its shape and effects (macOS's glass, Chrome's tabs, the VS Code accent bar) and each translucent surface keeps the skin's own transparency; the accent, status colours and shadows are not affected.
+- **`--rdd-radius-scale`**: multiplies every corner the library draws — `0` square, `1` each skin's own (the default), `1.5` rounder. Circles and pills stay round. It also scales the radius tokens you set yourself (`--rdd-panel-float-radius`, `--rdd-panel-toolbar-btn-radius`, `--rdd-tab-btn-active-radius`).
+- Theming guide: **Your surfaces** and **Corners** under Brand your app, and the corner habit for custom skins.
+
+### Fixed
+- **`--rdd-brand-on-accent` did not reach the primary button in light mode**, which kept its white text: a light brand colour such as yellow got white text on yellow there. The light-mode rule reads the variable now, default `#ffffff` as before. Found by the angular-dockable-desktop port.
+- **The workspace-edge drop preview was Bootstrap blue** (`#007bff`) in every skin, instead of the skin's accent — the one accent-family literal 7.2.0 missed. It follows `--rdd-accent-color` and `--rdd-brand-accent` now. It shows only while you drag a panel to a workspace edge.
+
+### Tests
+- `radius.browser.ts` (real Chrome, new): the four corner radii of every library element and pseudo-element, in all 7 skins × dark/light, match a 7.2.0 baseline with the scale unset; at `0` every scaled corner is `0px`, at `1.5` every one is 1.5× its baseline, and circles and pills are unchanged.
+- `branding.browser.ts`: with a brand surface set, no background or text colour of any skin's own palette remains anywhere — rendered, hovered or as a token — the workspace, panel and tab bar stay distinct, and text on panels meets 4.5:1 (muted text 3:1), in all 14 scenes; with only one of the two set, a skin renders exactly as unbranded. The 7.1.3 colour baseline still holds with no brand set.
+- `StylesheetContract.test.ts`: every corner length is multiplied by `--rdd-radius-scale`, and the library never declares it; every coloured surface declaration reads a derived value first, which is declared only on `:root` and valid only while both brand inputs are set; no element rule paints a colour of its own, outside status colours and macOS's window buttons.
+
 ## [7.2.0] — 2026-09-27
 
 Branding: put your company's colour and font on any built-in skin with a few CSS variables — no skin of your own needed. See [Brand your app](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#brand-your-app).
@@ -561,7 +579,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.2.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.3.0...HEAD
+[7.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.2.0...v7.3.0
 [7.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.3...v7.2.0
 [7.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.2...v7.1.3
 [7.1.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.1...v7.1.2

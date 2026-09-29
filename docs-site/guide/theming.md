@@ -18,7 +18,7 @@ All child components inherit those variables. Because `skin` is typed as `string
 
 ## Brand your app
 
-Every built-in skin, in dark and light, takes your company's colour and font from three variables set on `:root`:
+Every built-in skin, in dark and light, takes your company's colour and font from three variables set on `:root` — and, if you want them, [your surfaces](#your-surfaces) and [corner shape](#corners) from three more:
 
 ```css
 :root {
@@ -33,7 +33,7 @@ That's all. Leave a variable unset and the skin keeps its own value.
 | Variable | What follows it | Default |
 |----------|-----------------|---------|
 | `--rdd-brand-accent` | Everything a skin draws in its accent: tab indicators, the active sidebar tab and toolbar button, hover and active tints, glows, the focused window's glow, the taskbar, focus rings, the primary button. | Each skin's own accent |
-| `--rdd-brand-on-accent` | Text drawn on a solid accent fill: the confirmation dialog's primary button and the highlighted dock target while you drag. | `#090b11` |
+| `--rdd-brand-on-accent` | Text drawn on a solid accent fill: the confirmation dialog's primary button and the highlighted dock target while you drag. | `#090b11` (the primary button in light mode: `#ffffff`) |
 | `--rdd-font-family` | Every piece of chrome — tabs, title bars, toolbar, sidebar, menus, flyouts, toasts, drawers, modals — and panel content, which inherits the workspace font. | Each skin's own font |
 
 Set them on `:root` (or `<body>`), not on a wrapper around the workspace: context menus, the toolbar flyout and toasts render straight into `<body>`, so a value set on a wrapper doesn't reach them.
@@ -97,6 +97,39 @@ For example, with Bootstrap:
 ```
 
 The variable you point at must be defined on `:root` (or `<html>`), where the brand variables are read.
+
+### Your surfaces
+
+Two more variables replace a skin's backgrounds and text with your own, per scheme: `--rdd-brand-surface` (the app background) and `--rdd-brand-text` (the main text colour). The library derives every other surface from those two — panels and the workspace a few percent towards the text, the tab bar and rail a little darker, borders and muted text as mixes of the two — so layers stay distinct and text stays readable:
+
+```css
+/* dark is the default: rdd reads a missing data-color-scheme as dark */
+:root:not([data-color-scheme="light"]) {
+  --rdd-brand-surface: #0b1f3a;
+  --rdd-brand-text: #e8eef7;
+}
+:root[data-color-scheme="light"] {
+  --rdd-brand-surface: #f4f1ec;
+  --rdd-brand-text: #2b2620;
+}
+```
+
+- **Set both, or neither.** With only one of them set, every skin keeps its own surfaces — half a palette is the case most likely to be unreadable.
+- **A scheme you leave out keeps the skin's surfaces.** Brand dark only, and light mode looks as it always did.
+- **A skin keeps its shape and effects** — macOS's glass and window buttons, Chrome's tabs, the VS Code accent bar. Only the colours come from you, so with a brand surface set the skins differ by shape, not by colour. Each translucent surface (macOS panels, floating windows, modals) keeps the skin's own transparency.
+- **Not affected:** the accent (that's `--rdd-brand-accent`), status colours (errors, warnings, the toast types), and shadows.
+
+Pick a surface and a text colour with enough contrast between them — the text is used as-is on the panels. The library's own check requires 4.5:1 for the main text on panels with the two colours above.
+
+### Corners
+
+`--rdd-radius-scale` multiplies every corner the library draws:
+
+```css
+:root { --rdd-radius-scale: 0; }    /* square corners, everywhere */
+```
+
+`1` (the default) is each skin's own shape, `0` is square, `1.5` is rounder; a skin keeps its own proportions at every scale, so macOS stays rounder than VS Code. Circles and pills stay round: macOS's window buttons and the taskbar's peek handle. It also scales the three radius tokens you can set yourself (`--rdd-panel-float-radius`, `--rdd-panel-toolbar-btn-radius`, `--rdd-tab-btn-active-radius`).
 
 ### Your logo
 
@@ -279,11 +312,14 @@ Create a file (e.g. `my-skin.css`) and define a block using `[data-rdd-skin]`:
 You only need to override the variables you want to change. Any variable you omit inherits from the library defaults (`:root`).
 
 ::: tip Let your skin take a brand, as the built-in ones do
-Three habits keep a skin brandable with [`--rdd-brand-accent`](#brand-your-app):
+Four habits keep a skin brandable, as the built-in ones are:
 
 - Declare the accent as `var(--rdd-brand-accent, <your colour>)`, never as a bare colour.
 - Write every tint of it as `color-mix(in srgb, var(--rdd-accent-color) N%, transparent)` instead of an `rgba()` of the same colour — then one accent drives them all.
 - Give your skin a font with `--rdd-skin-font-family`, never `--rdd-font-family`: declared in a skin, `--rdd-font-family` would override the one a consumer sets on `:root`. Likewise, never declare a `--rdd-brand-*` variable in a skin — those belong to the app.
+- Write a corner radius your element rules add as `calc(6px * var(--rdd-radius-scale, 1))`, so [`--rdd-radius-scale`](#corners) reaches it too.
+
+A skin of your own keeps its own surfaces: [brand surfaces](#your-surfaces) recolour the built-in skins, and a custom skin is where you choose every colour yourself.
 :::
 
 **Step 3 — Pass the name to `RddDesktop`**
@@ -583,7 +619,7 @@ You don't need to define all variables. A skin that only sets `--rdd-accent-colo
 | Variable | Dark default | Description |
 |----------|-------------|-------------|
 | `--rdd-brand-accent` | *(unset)* | Set by your app, never by a skin: replaces every skin's accent. See [Brand your app](#brand-your-app). |
-| `--rdd-brand-on-accent` | *(unset — `#090b11`)* | Set by your app: text on a solid accent fill (the primary button, the active dock target). |
+| `--rdd-brand-on-accent` | *(unset — `#090b11`; primary button in light mode `#ffffff`)* | Set by your app: text on a solid accent fill (the primary button, the active dock target). |
 | `--rdd-accent-color` | `var(--rdd-brand-accent, #38bdf8)` (light: `#0066cc`) | Primary interactive color — tab indicators, active borders. Every tint of it in the library is a `color-mix()` of this variable. |
 | `--rdd-accent-glow` | the accent at 15% | Translucent version used for focus halos. |
 | `--rdd-focus-ring` | `2px solid var(--rdd-accent-color)` | Outline drawn on a library control reached from the keyboard (`:focus-visible`). |

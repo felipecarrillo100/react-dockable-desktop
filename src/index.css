@@ -6,6 +6,66 @@
  * and specialized scaling overrides for embedded web canvases.
  */
 
+/* Brand surfaces (7.3.0): each surface a skin declares reads --rdd--b-<token> first. These are
+   mixes of the application's --rdd-brand-surface and --rdd-brand-text. --rdd--b-base is the surface,
+   written as a mix with the text so that it is valid only when *both* are set; every other value is
+   built on it and has no fallback. While either input is unset they are all invalid, and every
+   surface falls back to the skin's own colour. Internal, not API — declared only here, where :root
+   resolves the brand variables. */
+:root {
+  --rdd--b-base: color-mix(in srgb, var(--rdd-brand-surface) 100%, var(--rdd-brand-text));
+  --rdd--b-bg-panel: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-bg-primary: var(--rdd--b-base);
+  --rdd--b-bg-tab-bar: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-bg-tab-hover: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 10%);
+  --rdd--b-bg-tab-inactive: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-bg-workspace: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 3%);
+  --rdd--b-border-panel: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 14%);
+  --rdd--b-close-btn-active-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-close-btn-color: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-close-btn-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-custom-btn-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-modal-curtain-bg: color-mix(in srgb, var(--rdd--b-base), black 20%);
+  --rdd--b-dock-target-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-dock-target-center-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 12%);
+  --rdd--b-modal-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-modal-close-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-placeholder-bg: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-panel-toolbar-frosted-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-panel-card-bg: color-mix(in srgb, var(--rdd--b-base), black 6%);
+  --rdd--b-panel-card-border: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 16%);
+  --rdd--b-panel-float-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-panel-text: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-side-panel-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-side-panel-close-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-sidebar-badge-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 16%);
+  --rdd--b-sidebar-badge-text: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-sidebar-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 4%);
+  --rdd--b-sidebar-card-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 8%);
+  --rdd--b-sidebar-tabs-bg: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-sidebar-text-muted: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-sidebar-text-title: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-tab-bg-active-unfocused: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 3%);
+  --rdd--b-tab-btn-active-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 9%);
+  --rdd--b-tab-icon-inactive: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-tab-text-active-focused: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-tab-text-active-unfocused: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-taskbar-bg: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-taskbar-item-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-taskbar-item-hover-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 12%);
+  --rdd--b-text-primary: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-text-secondary: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-text-tab-active: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-text-tab-hover: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-text-tab-inactive: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-toast-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 10%);
+  --rdd--b-window-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-window-border: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 14%);
+  --rdd--b-window-border-focused: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 30%);
+  --rdd--b-window-header-bg: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-window-text: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+}
+
 :root {
   --rdd-styles-loaded: 1; /* sentinel — checked at mount to detect missing CSS import */
   --rdd-z-base: 1000; /* base for floating windows + all chrome overlays; override via WindowManagerProvider's zIndexBase */
@@ -22,13 +82,13 @@
   /* Errors the library itself shows (the unregistered-panel placeholder). */
   --rdd-danger-color: #dc3545;
   /* Fill of placeholder boxes (a minimized panel's thumbnail when it has no live preview). */
-  --rdd-placeholder-bg: rgba(108, 117, 125, 0.15);
-  --rdd-bg-primary: #090b11;
-  --rdd-bg-workspace: #0f111a;
-  --rdd-bg-panel: #141722;
-  --rdd-bg-tab-bar: #0d0f16;
-  --rdd-text-primary: #f1f5f9;
-  --rdd-text-secondary: #94a3b8;
+  --rdd-placeholder-bg: color-mix(in srgb, var(--rdd--b-placeholder-bg, rgb(108 117 125)) 15%, transparent);
+  --rdd-bg-primary: var(--rdd--b-bg-primary, #090b11);
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #0f111a);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #141722);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #0d0f16);
+  --rdd-text-primary: var(--rdd--b-text-primary, #f1f5f9);
+  --rdd-text-secondary: var(--rdd--b-text-secondary, #94a3b8);
   --rdd-border-color: rgba(255, 255, 255, 0.08);
   /* Branding: an app sets --rdd-brand-accent / --rdd-brand-on-accent on :root, and every skin reads
      them first (var(--rdd-brand-accent, <skin colour>)). The library only reads them — declared
@@ -38,55 +98,55 @@
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-header-button-gap: 4px; /* Configurable gap spacing between titlebar action buttons */
   /* Window skins variables */
-  --rdd-window-bg: rgba(20, 22, 28, var(--rdd-window-opacity, 0.85));
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(20 22 28)) calc(var(--rdd-window-opacity, 0.85) * 100%), transparent);
   --rdd-window-border: rgba(255, 255, 255, 0.08);
   --rdd-window-border-focused: rgba(255, 255, 255, 0.28);
   --rdd-window-header-bg: rgba(0, 0, 0, 0.25);
-  --rdd-window-text: #f8f9fa;
+  --rdd-window-text: var(--rdd--b-window-text, #f8f9fa);
   --rdd-window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   --rdd-window-shadow-focused: 0 24px 50px rgba(0, 0, 0, 0.55);
   /* Modal theme variables */
-  --rdd-modal-curtain-bg: rgba(9, 11, 17, 0.65);
-  --rdd-modal-bg: rgba(20, 23, 34, 0.95);
+  --rdd-modal-curtain-bg: color-mix(in srgb, var(--rdd--b-modal-curtain-bg, rgb(9 11 17)) 65%, transparent);
+  --rdd-modal-bg: color-mix(in srgb, var(--rdd--b-modal-bg, rgb(20 23 34)) 95%, transparent);
   --rdd-modal-border: rgba(255, 255, 255, 0.08);
   --rdd-modal-header-bg: rgba(0, 0, 0, 0.15);
   --rdd-modal-header-border: rgba(255, 255, 255, 0.06);
-  --rdd-modal-close-hover-color: #ffffff;
-  --rdd-side-panel-bg: rgba(20, 23, 34, 0.88);
+  --rdd-modal-close-hover-color: var(--rdd--b-modal-close-hover-color, #ffffff);
+  --rdd-side-panel-bg: color-mix(in srgb, var(--rdd--b-side-panel-bg, rgb(20 23 34)) 88%, transparent);
   --rdd-side-panel-border: rgba(255, 255, 255, 0.08);
   --rdd-side-panel-header-bg: rgba(0, 0, 0, 0.15);
   --rdd-side-panel-header-border: rgba(255, 255, 255, 0.06);
-  --rdd-side-panel-close-hover-color: #ffffff;
+  --rdd-side-panel-close-hover-color: var(--rdd--b-side-panel-close-hover-color, #ffffff);
   /* Grid/Docked panel theme variables */
   --rdd-border-panel: rgba(255, 255, 255, 0.08);
-  --rdd-bg-tab-inactive: #0c0d12;
-  --rdd-text-tab-inactive: #858b99;
-  --rdd-text-tab-active: #ffffff;
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #0c0d12);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #858b99);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #ffffff);
   /* Tab and control button hover colors */
-  --rdd-bg-tab-hover: #171a22;
-  --rdd-text-tab-hover: #e2e8f0;
+  --rdd-bg-tab-hover: var(--rdd--b-bg-tab-hover, #171a22);
+  --rdd-text-tab-hover: var(--rdd--b-text-tab-hover, #e2e8f0);
   --rdd-close-btn-hover-bg: rgba(255, 255, 255, 0.12);
-  --rdd-close-btn-hover-color: #ffffff;
-  --rdd-close-btn-color: #858b99;
-  --rdd-close-btn-active-color: #e2e8f0;
+  --rdd-close-btn-hover-color: var(--rdd--b-close-btn-hover-color, #ffffff);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #858b99);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #e2e8f0);
   /* Tab focus states */
   --rdd-tab-indicator-focused: var(--rdd-accent-color, #38bdf8);
   --rdd-tab-indicator-unfocused: rgba(255, 255, 255, 0.3);
   --rdd-tab-bg-active-focused: var(--rdd-bg-panel);
-  --rdd-tab-bg-active-unfocused: rgba(20, 23, 34, 0.55);
+  --rdd-tab-bg-active-unfocused: color-mix(in srgb, var(--rdd--b-tab-bg-active-unfocused, rgb(20 23 34)) 55%, transparent);
   --rdd-tab-text-active-focused: var(--rdd-text-tab-active, #ffffff);
   --rdd-tab-text-active-unfocused: rgba(255, 255, 255, 0.65);
   --rdd-resizer-bg: rgba(255, 255, 255, 0.08);
   --rdd-custom-btn-bg: rgba(255, 255, 255, 0.03);
   --rdd-custom-btn-border: rgba(255, 255, 255, 0.05);
   --rdd-custom-btn-hover-bg: rgba(255, 255, 255, 0.12);
-  --rdd-custom-btn-hover-color: #ffffff;
+  --rdd-custom-btn-hover-color: var(--rdd--b-custom-btn-hover-color, #ffffff);
   /* Taskbar theme variables */
   --rdd-taskbar-bg: rgba(0, 0, 0, 0.75);
   --rdd-taskbar-border: rgba(255, 255, 255, 0.1);
   --rdd-taskbar-nav-color: rgba(255, 255, 255, 0.5);
-  --rdd-taskbar-item-bg: rgba(15, 23, 42, 0.6);
-  --rdd-taskbar-item-hover-bg: rgba(15, 23, 42, 0.8);
+  --rdd-taskbar-item-bg: color-mix(in srgb, var(--rdd--b-taskbar-item-bg, rgb(15 23 42)) 60%, transparent);
+  --rdd-taskbar-item-hover-bg: color-mix(in srgb, var(--rdd--b-taskbar-item-hover-bg, rgb(15 23 42)) 80%, transparent);
   --rdd-taskbar-item-border: rgba(255, 255, 255, 0.08);
   --rdd-taskbar-item-text: var(--rdd-accent-color, #38bdf8);
   /* Scrollbar theme variables */
@@ -110,7 +170,7 @@
   --rdd-panel-toolbar-btn-active-color: var(--rdd-tab-icon-active, #38bdf8);
   --rdd-panel-toolbar-separator-color: var(--rdd-toolbar-separator-color, rgba(255, 255, 255, 0.09));
   /* ── Panel Overlay — Floating Window ── */
-  --rdd-panel-float-bg: rgba(22, 24, 34, 0.92);
+  --rdd-panel-float-bg: color-mix(in srgb, var(--rdd--b-panel-float-bg, rgb(22 24 34)) 92%, transparent);
   --rdd-panel-float-border: rgba(255, 255, 255, 0.1);
   --rdd-panel-float-radius: 8px;
   --rdd-panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -383,7 +443,7 @@
   opacity: 0; /* hidden by default on inactive tabs, allows hover/active overrides */
   transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
   margin-left: 8px;
-  border-radius: 3px;
+  border-radius: calc(3px * var(--rdd-radius-scale, 1));
   color: var(--rdd-close-btn-color) !important;
   display: flex;
   align-items: center;
@@ -539,7 +599,7 @@ body.rdd-resizing-col-active * {
   font-size: 9px;
   width: 18px;
   height: 18px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -647,7 +707,7 @@ body.rdd-resizing-col-active * {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   cursor: pointer;
 }
 
@@ -696,7 +756,7 @@ body.rdd-resizing-col-active * {
   background: var(--rdd-bg-panel, #1e1e1e) !important;
   color: var(--rdd-text-primary, #ffffff) !important;
   padding: 8px !important;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
   font-size: 11px !important;
   font-family: var(--rdd-font-family);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
@@ -737,7 +797,7 @@ body.rdd-resizing-col-active * {
 
 /* Live preview thumbnail styles */
 .rdd-taskbar-item-preview-frame {
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   overflow: hidden;
   background: #000000;
   border: 1px solid var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.15));
@@ -777,7 +837,7 @@ body.rdd-resizing-col-active * {
 .rdd-tooltip-close-x {
   width: 18px;
   height: 18px;
-  border-radius: 3px;
+  border-radius: calc(3px * var(--rdd-radius-scale, 1));
   background: transparent !important;
   border: none !important;
   color: var(--rdd-close-btn-color, var(--rdd-text-secondary, #888888)) !important;
@@ -821,7 +881,7 @@ body.rdd-resizing-col-active * {
 .rdd-workspace ::-webkit-scrollbar-thumb,
 .rdd-sidebar-drawer-body::-webkit-scrollbar-thumb {
   background: var(--rdd-scrollbar-thumb);
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
 }
 .rdd-workspace ::-webkit-scrollbar-thumb:hover,
 .rdd-sidebar-drawer-body::-webkit-scrollbar-thumb:hover {
@@ -831,7 +891,7 @@ body.rdd-resizing-col-active * {
 .rdd-floating-window {
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
   border: 1px solid var(--rdd-window-border);
   box-shadow: var(--rdd-window-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(16px) saturate(180%);
@@ -920,7 +980,7 @@ body.rdd-resizing-col-active * {
   z-index: calc(var(--rdd-z-base, 1000) + 8500);
   background: var(--rdd-sidebar-bg, #1e2024);
   border: 1px solid var(--rdd-sidebar-border, rgba(255, 255, 255, 0.08));
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
   padding: 4px 0;
   min-width: 220px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -955,7 +1015,7 @@ body.rdd-resizing-col-active * {
   gap: 8px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   color: var(--rdd-sidebar-text-title, #cccccc);
   cursor: pointer;
   text-align: start;
@@ -1055,7 +1115,7 @@ body.rdd-resizing-col-active * {
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.15);
   pointer-events: none;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
 }
 
 /* Translucent overlay preview highlighting the grid section about to split */
@@ -1079,9 +1139,9 @@ body.rdd-resizing-col-active * {
 /* Visual split target buttons (top, bottom, left, right, center) */
 .rdd-dock-target-box {
   position: absolute;
-  background-color: rgba(15, 23, 42, 0.92);
+  background-color: color-mix(in srgb, var(--rdd--b-dock-target-bg, rgb(15 23 42)) 92%, transparent);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1132,7 +1192,7 @@ body.rdd-resizing-col-active * {
   top: 45px;
   width: 50px;
   height: 50px;
-  background-color: rgba(30, 41, 59, 0.95);
+  background-color: color-mix(in srgb, var(--rdd--b-dock-target-center-bg, rgb(30 41 59)) 95%, transparent);
   color: var(--rdd-accent-color);
 }
 
@@ -1183,24 +1243,24 @@ body.rdd-dragging-active {
    [data-color-scheme="dark"] alone, the toolbar and sidebar had no colours in dark mode. */
 :root,
 [data-color-scheme="dark"] {
-  --rdd-sidebar-bg: #1e2024;
-  --rdd-sidebar-tabs-bg: #141619;
+  --rdd-sidebar-bg: var(--rdd--b-sidebar-bg, #1e2024);
+  --rdd-sidebar-tabs-bg: var(--rdd--b-sidebar-tabs-bg, #141619);
   --rdd-sidebar-border: rgba(255, 255, 255, 0.08);
   --rdd-sidebar-card-bg: rgba(255, 255, 255, 0.03);
   --rdd-sidebar-card-border: rgba(255, 255, 255, 0.08);
   --rdd-sidebar-card-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   --rdd-sidebar-card-active-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
-  --rdd-sidebar-text-title: #f8f9fa;
-  --rdd-sidebar-text-muted: #8a90a0;
-  --rdd-sidebar-badge-bg: #2d3139;
-  --rdd-sidebar-badge-text: #b0b5c0;
+  --rdd-sidebar-text-title: var(--rdd--b-sidebar-text-title, #f8f9fa);
+  --rdd-sidebar-text-muted: var(--rdd--b-sidebar-text-muted, #8a90a0);
+  --rdd-sidebar-badge-bg: var(--rdd--b-sidebar-badge-bg, #2d3139);
+  --rdd-sidebar-badge-text: var(--rdd--b-sidebar-badge-text, #b0b5c0);
   --rdd-sidebar-btn-front-border: var(--rdd-accent-color);
   --rdd-sidebar-btn-front-text: var(--rdd-accent-color);
   --rdd-sidebar-btn-front-bg: transparent;
   --rdd-sidebar-btn-front-hover-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
   --rdd-tab-icon-active: var(--rdd-accent-color);
-  --rdd-tab-icon-inactive: #9ea4b0;
-  --rdd-tab-btn-active-bg: #1e2024; /* Seamless merge look */
+  --rdd-tab-icon-inactive: var(--rdd--b-tab-icon-inactive, #9ea4b0);
+  --rdd-tab-btn-active-bg: var(--rdd--b-tab-btn-active-bg, #1e2024); /* Seamless merge look */
   --rdd-sidebar-btn-hover-bg: rgba(255, 255, 255, 0.05);
   --rdd-sidebar-card-hover-border: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-sidebar-card-hover-bg: rgba(255, 255, 255, 0.04);
@@ -1226,32 +1286,32 @@ body.rdd-dragging-active {
   /* The default skin's light-mode accent (the blue its light tokens were already drawn in). */
   --rdd-accent-color: var(--rdd-brand-accent, #0066cc);
   --rdd-danger-color: #b91c1c;
-  --rdd-bg-primary: #f8f9fa;
-  --rdd-bg-workspace: #f1f5f9;
-  --rdd-bg-panel: #ffffff;
-  --rdd-bg-tab-bar: #e9ecef;
-  --rdd-text-primary: #212529;
-  --rdd-text-secondary: #6c757d;
+  --rdd-bg-primary: var(--rdd--b-bg-primary, #f8f9fa);
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #f1f5f9);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #ffffff);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #e9ecef);
+  --rdd-text-primary: var(--rdd--b-text-primary, #212529);
+  --rdd-text-secondary: var(--rdd--b-text-secondary, #6c757d);
   --rdd-border-color: rgba(0, 0, 0, 0.08);
 
-  --rdd-sidebar-bg: #f8f9fa;
-  --rdd-sidebar-tabs-bg: #e9ecef;
+  --rdd-sidebar-bg: var(--rdd--b-sidebar-bg, #f8f9fa);
+  --rdd-sidebar-tabs-bg: var(--rdd--b-sidebar-tabs-bg, #e9ecef);
   --rdd-sidebar-border: rgba(0, 0, 0, 0.08);
-  --rdd-sidebar-card-bg: #ffffff;
+  --rdd-sidebar-card-bg: var(--rdd--b-sidebar-card-bg, #ffffff);
   --rdd-sidebar-card-border: rgba(0, 0, 0, 0.08);
   --rdd-sidebar-card-active-bg: color-mix(in srgb, var(--rdd-accent-color) 5%, transparent);
   --rdd-sidebar-card-active-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
-  --rdd-sidebar-text-title: #212529;
-  --rdd-sidebar-text-muted: #6c757d;
-  --rdd-sidebar-badge-bg: #e9ecef;
-  --rdd-sidebar-badge-text: #495057;
+  --rdd-sidebar-text-title: var(--rdd--b-sidebar-text-title, #212529);
+  --rdd-sidebar-text-muted: var(--rdd--b-sidebar-text-muted, #6c757d);
+  --rdd-sidebar-badge-bg: var(--rdd--b-sidebar-badge-bg, #e9ecef);
+  --rdd-sidebar-badge-text: var(--rdd--b-sidebar-badge-text, #495057);
   --rdd-sidebar-btn-front-border: var(--rdd-accent-color);
   --rdd-sidebar-btn-front-text: var(--rdd-accent-color);
   --rdd-sidebar-btn-front-bg: transparent;
   --rdd-sidebar-btn-front-hover-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
   --rdd-tab-icon-active: var(--rdd-accent-color);
-  --rdd-tab-icon-inactive: #555c66;
-  --rdd-tab-btn-active-bg: #f8f9fa; /* Seamless merge look */
+  --rdd-tab-icon-inactive: var(--rdd--b-tab-icon-inactive, #555c66);
+  --rdd-tab-btn-active-bg: var(--rdd--b-tab-btn-active-bg, #f8f9fa); /* Seamless merge look */
   --rdd-sidebar-btn-hover-bg: rgba(0, 0, 0, 0.05);
   --rdd-sidebar-card-hover-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
   --rdd-sidebar-card-hover-bg: rgba(0, 0, 0, 0.03);
@@ -1262,11 +1322,11 @@ body.rdd-dragging-active {
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   --rdd-toolbar-separator-color: rgba(0, 0, 0, 0.1);
   /* Light skin window overrides */
-  --rdd-window-bg: rgba(243, 244, 246, var(--rdd-window-opacity, 0.9));
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(243 244 246)) calc(var(--rdd-window-opacity, 0.9) * 100%), transparent);
   --rdd-window-border: rgba(0, 0, 0, 0.08);
   --rdd-window-border-focused: rgba(0, 0, 0, 0.28);
   --rdd-window-header-bg: rgba(0, 0, 0, 0.04);
-  --rdd-window-text: #212529;
+  --rdd-window-text: var(--rdd--b-window-text, #212529);
   --rdd-window-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   --rdd-window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
   /* Light skin modal overrides */
@@ -1275,38 +1335,38 @@ body.rdd-dragging-active {
   --rdd-modal-border: rgba(0, 0, 0, 0.1);
   --rdd-modal-header-bg: rgba(0, 0, 0, 0.04);
   --rdd-modal-header-border: rgba(0, 0, 0, 0.08);
-  --rdd-modal-close-hover-color: #212529;
+  --rdd-modal-close-hover-color: var(--rdd--b-modal-close-hover-color, #212529);
   /* Light skin side panel overrides */
   --rdd-side-panel-bg: rgba(255, 255, 255, 0.97);
   --rdd-side-panel-border: rgba(0, 0, 0, 0.1);
   --rdd-side-panel-header-bg: rgba(0, 0, 0, 0.04);
   --rdd-side-panel-header-border: rgba(0, 0, 0, 0.08);
-  --rdd-side-panel-close-hover-color: #212529;
+  --rdd-side-panel-close-hover-color: var(--rdd--b-side-panel-close-hover-color, #212529);
   /* Light skin grid/docked panel overrides */
   --rdd-border-panel: rgba(0, 0, 0, 0.08);
-  --rdd-bg-tab-inactive: #e9ecef;
-  --rdd-text-tab-inactive: #495057;
-  --rdd-text-tab-active: #212529;
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #e9ecef);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #495057);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #212529);
   /* Light skin tab and control button hover colors */
-  --rdd-bg-tab-hover: #dee2e6;
-  --rdd-text-tab-hover: #212529;
+  --rdd-bg-tab-hover: var(--rdd--b-bg-tab-hover, #dee2e6);
+  --rdd-text-tab-hover: var(--rdd--b-text-tab-hover, #212529);
   --rdd-close-btn-hover-bg: rgba(0, 0, 0, 0.08);
-  --rdd-close-btn-hover-color: #212529;
-  --rdd-close-btn-color: #6c757d;
-  --rdd-close-btn-active-color: #212529;
+  --rdd-close-btn-hover-color: var(--rdd--b-close-btn-hover-color, #212529);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #6c757d);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #212529);
   --rdd-tab-indicator-focused: var(--rdd-accent-color);
   --rdd-tab-indicator-unfocused: rgba(0, 0, 0, 0.25);
   --rdd-tab-bg-active-focused: var(--rdd-bg-panel);
-  --rdd-tab-bg-active-unfocused: rgba(220, 224, 230, 0.65);
-  --rdd-tab-text-active-focused: #212529;
-  --rdd-tab-text-active-unfocused: #6c757d;
+  --rdd-tab-bg-active-unfocused: color-mix(in srgb, var(--rdd--b-tab-bg-active-unfocused, rgb(220 224 230)) 65%, transparent);
+  --rdd-tab-text-active-focused: var(--rdd--b-tab-text-active-focused, #212529);
+  --rdd-tab-text-active-unfocused: var(--rdd--b-tab-text-active-unfocused, #6c757d);
   --rdd-resizer-bg: rgba(0, 0, 0, 0.08);
   --rdd-custom-btn-bg: rgba(0, 0, 0, 0.03);
   --rdd-custom-btn-border: rgba(0, 0, 0, 0.08);
   --rdd-custom-btn-hover-bg: rgba(0, 0, 0, 0.08);
-  --rdd-custom-btn-hover-color: #212529;
+  --rdd-custom-btn-hover-color: var(--rdd--b-custom-btn-hover-color, #212529);
   /* Light skin taskbar theme variables */
-  --rdd-taskbar-bg: rgba(248, 249, 250, 0.85);
+  --rdd-taskbar-bg: color-mix(in srgb, var(--rdd--b-taskbar-bg, rgb(248 249 250)) 85%, transparent);
   --rdd-taskbar-border: rgba(0, 0, 0, 0.08);
   --rdd-taskbar-nav-color: rgba(0, 0, 0, 0.5);
   --rdd-taskbar-item-bg: rgba(255, 255, 255, 0.65);
@@ -1320,7 +1380,7 @@ body.rdd-dragging-active {
   /* Light skin mockup panel inner theme variables */
   --rdd-panel-card-bg: rgba(0, 0, 0, 0.03);
   --rdd-panel-card-border: rgba(0, 0, 0, 0.08);
-  --rdd-panel-text: #212529;
+  --rdd-panel-text: var(--rdd--b-panel-text, #212529);
   --rdd-panel-title-color: var(--rdd-accent-color);
   /* ── Panel Overlay — Toolbar (light) ── */
   --rdd-panel-toolbar-fg: rgba(0, 0, 0, 0.55);
@@ -1351,18 +1411,18 @@ body.rdd-dragging-active {
    -------------------------------------------------------------------------- */
 [data-rdd-skin="macos"] {
   --rdd-skin-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* San Francisco */
-  --rdd-bg-workspace: #1a1a24;
-  --rdd-bg-panel: rgba(30, 30, 40, 0.45);
-  --rdd-bg-tab-bar: rgba(18, 18, 24, 0.3);
-  --rdd-window-bg: rgba(25, 25, 35, var(--rdd-window-opacity, 0.7));
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #1a1a24);
+  --rdd-bg-panel: color-mix(in srgb, var(--rdd--b-bg-panel, rgb(30 30 40)) 45%, transparent);
+  --rdd-bg-tab-bar: color-mix(in srgb, var(--rdd--b-bg-tab-bar, rgb(18 18 24)) 30%, transparent);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(25 25 35)) calc(var(--rdd-window-opacity, 0.7) * 100%), transparent);
   --rdd-window-border: rgba(255, 255, 255, 0.1);
   --rdd-window-header-bg: rgba(0, 0, 0, 0.15);
   --rdd-accent-color: var(--rdd-brand-accent, #38bdf8);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-border-panel: rgba(255, 255, 255, 0.08);
   --rdd-bg-tab-inactive: transparent;
-  --rdd-text-tab-inactive: #94a3b8;
-  --rdd-text-tab-active: #ffffff;
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #94a3b8);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #ffffff);
   --rdd-window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   --rdd-window-shadow-focused: 0 24px 50px color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-panel-card-bg: rgba(255, 255, 255, 0.03);
@@ -1370,48 +1430,48 @@ body.rdd-dragging-active {
 }
 
 [data-rdd-skin="macos"][data-color-scheme="light"] {
-  --rdd-bg-primary: #f3f4f6;
-  --rdd-bg-workspace: #e5e7eb;
+  --rdd-bg-primary: var(--rdd--b-bg-primary, #f3f4f6);
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #e5e7eb);
   --rdd-bg-panel: rgba(255, 255, 255, 0.7);
-  --rdd-bg-tab-bar: rgba(229, 231, 235, 0.5);
-  --rdd-window-bg: rgba(255, 255, 255, var(--rdd-window-opacity, 0.85));
+  --rdd-bg-tab-bar: color-mix(in srgb, var(--rdd--b-bg-tab-bar, rgb(229 231 235)) 50%, transparent);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(255 255 255)) calc(var(--rdd-window-opacity, 0.85) * 100%), transparent);
   --rdd-window-border: rgba(0, 0, 0, 0.12);
-  --rdd-window-header-bg: rgba(243, 244, 246, 0.5);
+  --rdd-window-header-bg: color-mix(in srgb, var(--rdd--b-window-header-bg, rgb(243 244 246)) 50%, transparent);
   --rdd-accent-color: var(--rdd-brand-accent, #0066cc);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
   --rdd-border-panel: rgba(0, 0, 0, 0.1);
   --rdd-bg-tab-inactive: transparent;
-  --rdd-text-tab-inactive: #4b5563;
-  --rdd-text-tab-active: #111827;
-  --rdd-window-text: #111827;
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #4b5563);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #111827);
+  --rdd-window-text: var(--rdd--b-window-text, #111827);
   --rdd-window-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   --rdd-window-shadow-focused: 0 16px 36px color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
   --rdd-panel-card-bg: rgba(0, 0, 0, 0.04);
   --rdd-panel-card-border: rgba(0, 0, 0, 0.08);
-  --rdd-panel-text: #111827;
+  --rdd-panel-text: var(--rdd--b-panel-text, #111827);
   --rdd-panel-title-color: var(--rdd-accent-color);
-  --rdd-close-btn-color: #4b5563;
-  --rdd-close-btn-active-color: #111827;
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #4b5563);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #111827);
 }
 
 /* macOS structural adjustments */
 [data-rdd-skin="macos"] .rdd-floating-window {
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rdd-radius-scale, 1));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-color: var(--rdd-window-border);
 }
 [data-rdd-skin="macos"] .rdd-floating-window-titlebar {
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: calc(12px * var(--rdd-radius-scale, 1));
+  border-top-right-radius: calc(12px * var(--rdd-radius-scale, 1));
 }
 [data-rdd-skin="macos"] .rdd-workspace-panel {
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
 [data-rdd-skin="macos"] .rdd-workspace-tab {
-  border-radius: 6px !important;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1)) !important;
   margin: 4px 4px 4px 4px !important;
   height: 28px !important;
   border: 1px solid var(--rdd-border-panel) !important;
@@ -1500,47 +1560,47 @@ body.rdd-dragging-active {
    -------------------------------------------------------------------------- */
 [data-rdd-skin="chrome"] {
   --rdd-skin-font-family: 'Google Sans Text', 'Google Sans', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif; /* Google's UI fonts */
-  --rdd-bg-workspace: #202124;
-  --rdd-bg-panel: #292a2d;
-  --rdd-bg-tab-bar: #202124;
-  --rdd-window-bg: rgba(41, 42, 45, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #3c4043;
-  --rdd-window-header-bg: #202124;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #202124);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #292a2d);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #202124);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(41 42 45)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #3c4043);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #202124);
   --rdd-accent-color: var(--rdd-brand-accent, #8ab4f8);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-  --rdd-border-panel: #3c4043;
-  --rdd-bg-tab-inactive: #202124;
-  --rdd-text-tab-inactive: #9aa0a6;
-  --rdd-text-tab-active: #ffffff;
-  --rdd-panel-card-bg: #202124;
-  --rdd-panel-card-border: #3c4043;
-  --rdd-window-text: #ffffff;
-  --rdd-panel-text: #e8eaed;
+  --rdd-border-panel: var(--rdd--b-border-panel, #3c4043);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #202124);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #9aa0a6);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #ffffff);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #202124);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #3c4043);
+  --rdd-window-text: var(--rdd--b-window-text, #ffffff);
+  --rdd-panel-text: var(--rdd--b-panel-text, #e8eaed);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
 }
 
 [data-rdd-skin="chrome"][data-color-scheme="light"] {
-  --rdd-bg-workspace: #dee1e6;
-  --rdd-bg-panel: #ffffff;
-  --rdd-bg-tab-bar: #dee1e6;
-  --rdd-window-bg: rgba(255, 255, 255, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #cbd5e1;
-  --rdd-window-header-bg: #dee1e6;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #dee1e6);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #ffffff);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #dee1e6);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(255 255 255)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #cbd5e1);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #dee1e6);
   --rdd-accent-color: var(--rdd-brand-accent, #1a73e8);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-  --rdd-border-panel: #dadce0;
-  --rdd-bg-tab-inactive: #dee1e6;
-  --rdd-text-tab-inactive: #474747;
-  --rdd-text-tab-active: #1f1f1f;
-  --rdd-panel-card-bg: #f1f3f4;
-  --rdd-panel-card-border: #dadce0;
-  --rdd-window-text: #1f1f1f;
-  --rdd-panel-text: #1f1f1f;
+  --rdd-border-panel: var(--rdd--b-border-panel, #dadce0);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #dee1e6);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #474747);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #1f1f1f);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #f1f3f4);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #dadce0);
+  --rdd-window-text: var(--rdd--b-window-text, #1f1f1f);
+  --rdd-panel-text: var(--rdd--b-panel-text, #1f1f1f);
   --rdd-panel-title-color: var(--rdd-accent-color);
-  --rdd-close-btn-color: #474747;
-  --rdd-close-btn-active-color: #1f1f1f;
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #474747);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #1f1f1f);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
@@ -1565,44 +1625,44 @@ body.rdd-dragging-active {
    -------------------------------------------------------------------------- */
 [data-rdd-skin="slate"] {
   --rdd-skin-font-family: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif; /* Fluent's stack */
-  --rdd-bg-workspace: #0f172a;
-  --rdd-bg-panel: #1e293b;
-  --rdd-bg-tab-bar: #0f172a;
-  --rdd-window-bg: rgba(30, 41, 59, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #334155;
-  --rdd-window-header-bg: #1e293b;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #0f172a);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #1e293b);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #0f172a);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(30 41 59)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #334155);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #1e293b);
   --rdd-accent-color: var(--rdd-brand-accent, #38bdf8);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-  --rdd-border-panel: #334155;
-  --rdd-bg-tab-inactive: #1e293b;
-  --rdd-text-tab-inactive: #64748b;
-  --rdd-text-tab-active: #f8fafc;
-  --rdd-panel-card-bg: #0f172a;
-  --rdd-panel-card-border: #334155;
-  --rdd-window-text: #f8fafc;
-  --rdd-panel-text: #f8fafc;
+  --rdd-border-panel: var(--rdd--b-border-panel, #334155);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #1e293b);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #64748b);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #f8fafc);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #0f172a);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #334155);
+  --rdd-window-text: var(--rdd--b-window-text, #f8fafc);
+  --rdd-panel-text: var(--rdd--b-panel-text, #f8fafc);
 }
 
 [data-rdd-skin="slate"][data-color-scheme="light"] {
-  --rdd-bg-workspace: #f1f5f9;
-  --rdd-bg-panel: #ffffff;
-  --rdd-bg-tab-bar: #f1f5f9;
-  --rdd-window-bg: rgba(255, 255, 255, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #cbd5e1;
-  --rdd-window-header-bg: #f8fafc;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #f1f5f9);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #ffffff);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #f1f5f9);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(255 255 255)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #cbd5e1);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #f8fafc);
   --rdd-accent-color: var(--rdd-brand-accent, #0078d4);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-  --rdd-border-panel: #e2e8f0;
-  --rdd-bg-tab-inactive: #f8fafc;
-  --rdd-text-tab-inactive: #475569;
-  --rdd-text-tab-active: #0f172a;
-  --rdd-panel-card-bg: #f8fafc;
-  --rdd-panel-card-border: #cbd5e1;
-  --rdd-window-text: #0f172a;
-  --rdd-panel-text: #0f172a;
+  --rdd-border-panel: var(--rdd--b-border-panel, #e2e8f0);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #f8fafc);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #475569);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #0f172a);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #f8fafc);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #cbd5e1);
+  --rdd-window-text: var(--rdd--b-window-text, #0f172a);
+  --rdd-panel-text: var(--rdd--b-panel-text, #0f172a);
   --rdd-panel-title-color: var(--rdd-accent-color);
-  --rdd-close-btn-color: #475569;
-  --rdd-close-btn-active-color: #0f172a;
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #475569);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #0f172a);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
@@ -1619,52 +1679,52 @@ body.rdd-dragging-active {
    -------------------------------------------------------------------------- */
 [data-rdd-skin="nord"] {
   --rdd-skin-font-family: 'Avenir Next', 'Nunito', 'Segoe UI', system-ui, sans-serif; /* no official font: a softer humanist sans */
-  --rdd-bg-workspace: #2e3440;
-  --rdd-bg-panel: #3b4252;
-  --rdd-bg-tab-bar: #2e3440;
-  --rdd-window-bg: rgba(59, 66, 82, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #434c5e;
-  --rdd-window-header-bg: #2e3440;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #2e3440);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #3b4252);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #2e3440);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(59 66 82)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #434c5e);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #2e3440);
   --rdd-accent-color: var(--rdd-brand-accent, #88c0d0);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
-  --rdd-border-panel: #434c5e;
-  --rdd-bg-tab-inactive: #2e3440;
-  --rdd-text-tab-inactive: #d8dee9;
-  --rdd-text-tab-active: #eceff4;
-  --rdd-panel-card-bg: #2e3440;
-  --rdd-panel-card-border: #4c566a;
-  --rdd-close-btn-color: #d8dee9;
+  --rdd-border-panel: var(--rdd--b-border-panel, #434c5e);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #2e3440);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #d8dee9);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #eceff4);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #2e3440);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #4c566a);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #d8dee9);
   --rdd-close-btn-active-color: var(--rdd-accent-color);
   --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 40%, transparent);
-  --rdd-window-text: #eceff4;
-  --rdd-panel-text: #eceff4;
+  --rdd-window-text: var(--rdd--b-window-text, #eceff4);
+  --rdd-panel-text: var(--rdd--b-panel-text, #eceff4);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
 }
 
 [data-rdd-skin="nord"][data-color-scheme="light"] {
-  --rdd-bg-workspace: #e5e9f0;
-  --rdd-bg-panel: #eceff4;
-  --rdd-bg-tab-bar: #e5e9f0;
-  --rdd-window-bg: rgba(236, 239, 244, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #d8dee9;
-  --rdd-window-header-bg: #e5e9f0;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #e5e9f0);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #eceff4);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #e5e9f0);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(236 239 244)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #d8dee9);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #e5e9f0);
   --rdd-accent-color: var(--rdd-brand-accent, #5e81ac);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-  --rdd-border-panel: #d8dee9;
-  --rdd-bg-tab-inactive: #e5e9f0;
-  --rdd-text-tab-inactive: #4c566a;
-  --rdd-text-tab-active: #2e3440;
-  --rdd-panel-card-bg: #e5e9f0;
-  --rdd-panel-card-border: #d8dee9;
-  --rdd-close-btn-color: #4c566a;
+  --rdd-border-panel: var(--rdd--b-border-panel, #d8dee9);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #e5e9f0);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #4c566a);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #2e3440);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #e5e9f0);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #d8dee9);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #4c566a);
   --rdd-close-btn-active-color: var(--rdd-accent-color);
   --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
   --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent);
-  --rdd-window-text: #2e3440;
-  --rdd-panel-text: #2e3440;
+  --rdd-window-text: var(--rdd--b-window-text, #2e3440);
+  --rdd-panel-text: var(--rdd--b-panel-text, #2e3440);
   --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
@@ -1675,54 +1735,54 @@ body.rdd-dragging-active {
    SKIN 6: Midnight Obsidian Preset (Vercel Style)
    -------------------------------------------------------------------------- */
 [data-rdd-skin="obsidian"] {
-  --rdd-bg-workspace: #000000;
-  --rdd-bg-panel: #0a0a0a;
-  --rdd-bg-tab-bar: #000000;
-  --rdd-window-bg: rgba(10, 10, 10, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #1a1a1a;
-  --rdd-window-border-focused: #333333;
-  --rdd-window-header-bg: #000000;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #000000);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #0a0a0a);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #000000);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(10 10 10)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #1a1a1a);
+  --rdd-window-border-focused: var(--rdd--b-window-border-focused, #333333);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #000000);
   --rdd-accent-color: var(--rdd-brand-accent, #ffffff);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
-  --rdd-border-panel: #1a1a1a;
-  --rdd-bg-tab-inactive: #000000;
-  --rdd-text-tab-inactive: #737373;
-  --rdd-text-tab-active: #ffffff;
-  --rdd-panel-card-bg: #030303;
-  --rdd-panel-card-border: #1a1a1a;
-  --rdd-close-btn-color: #737373;
-  --rdd-close-btn-active-color: #ffffff;
+  --rdd-border-panel: var(--rdd--b-border-panel, #1a1a1a);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #000000);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #737373);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #ffffff);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #030303);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #1a1a1a);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #737373);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #ffffff);
   --rdd-scrollbar-thumb: rgba(255, 255, 255, 0.15);
   --rdd-scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
-  --rdd-window-text: #ffffff;
-  --rdd-panel-text: #ffffff;
+  --rdd-window-text: var(--rdd--b-window-text, #ffffff);
+  --rdd-panel-text: var(--rdd--b-panel-text, #ffffff);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
 }
 
 [data-rdd-skin="obsidian"][data-color-scheme="light"] {
-  --rdd-bg-workspace: #ffffff;
-  --rdd-bg-panel: #fafafa;
-  --rdd-bg-tab-bar: #ffffff;
-  --rdd-window-bg: rgba(250, 250, 250, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #e5e5e5;
-  --rdd-window-border-focused: #a3a3a3;
-  --rdd-window-header-bg: #ffffff;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #ffffff);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #fafafa);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #ffffff);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(250 250 250)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #e5e5e5);
+  --rdd-window-border-focused: var(--rdd--b-window-border-focused, #a3a3a3);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #ffffff);
   --rdd-accent-color: var(--rdd-brand-accent, #000000);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 5%, transparent);
-  --rdd-border-panel: #eaeaea;
-  --rdd-bg-tab-inactive: #ffffff;
-  --rdd-text-tab-inactive: #737373;
-  --rdd-text-tab-active: #000000;
-  --rdd-panel-card-bg: #ffffff;
-  --rdd-panel-card-border: #e5e5e5;
-  --rdd-close-btn-color: #737373;
-  --rdd-close-btn-active-color: #000000;
+  --rdd-border-panel: var(--rdd--b-border-panel, #eaeaea);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #ffffff);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #737373);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #000000);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #ffffff);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #e5e5e5);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #737373);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #000000);
   --rdd-scrollbar-thumb: rgba(0, 0, 0, 0.1);
   --rdd-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
-  --rdd-window-text: #000000;
-  --rdd-panel-text: #000000;
+  --rdd-window-text: var(--rdd--b-window-text, #000000);
+  --rdd-panel-text: var(--rdd--b-panel-text, #000000);
   --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
@@ -1732,7 +1792,7 @@ body.rdd-dragging-active {
 /* Obsidian custom borderless panel elevations */
 [data-rdd-skin="obsidian"] .rdd-floating-window {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.2) !important;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
 }
 [data-rdd-skin="obsidian"] .rdd-floating-window.rdd-window-focused {
   box-shadow: 0 24px 50px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent), 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent) !important;
@@ -1749,54 +1809,54 @@ body.rdd-dragging-active {
    -------------------------------------------------------------------------- */
 [data-rdd-skin="tokyo"] {
   --rdd-skin-font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* no official font: a terminal/editor feel */
-  --rdd-bg-workspace: #1a1b26;
-  --rdd-bg-panel: #24283c;
-  --rdd-bg-tab-bar: #1f2335;
-  --rdd-window-bg: rgba(36, 40, 60, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #383e5a;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #1a1b26);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #24283c);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #1f2335);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(36 40 60)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #383e5a);
   --rdd-window-border-focused: var(--rdd-accent-color);
-  --rdd-window-header-bg: #1f2335;
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #1f2335);
   --rdd-accent-color: var(--rdd-brand-accent, #bb9af7);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
-  --rdd-border-panel: #383e5a;
-  --rdd-bg-tab-inactive: #1f2335;
-  --rdd-text-tab-inactive: #787c99;
-  --rdd-text-tab-active: #c0caf5;
-  --rdd-panel-card-bg: #1a1b26;
-  --rdd-panel-card-border: #383e5a;
-  --rdd-close-btn-color: #787c99;
+  --rdd-border-panel: var(--rdd--b-border-panel, #383e5a);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #1f2335);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #787c99);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #c0caf5);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #1a1b26);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #383e5a);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #787c99);
   --rdd-close-btn-active-color: var(--rdd-accent-color);
   --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
   --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 40%, transparent);
-  --rdd-window-text: #c0caf5;
-  --rdd-panel-text: #c0caf5;
+  --rdd-window-text: var(--rdd--b-window-text, #c0caf5);
+  --rdd-panel-text: var(--rdd--b-panel-text, #c0caf5);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
   --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
 }
 
 [data-rdd-skin="tokyo"][data-color-scheme="light"] {
-  --rdd-bg-workspace: #e1e2e7;
-  --rdd-bg-panel: #f2f4f8;
-  --rdd-bg-tab-bar: #d5d6db;
-  --rdd-window-bg: rgba(242, 244, 248, var(--rdd-window-opacity, 1.0));
-  --rdd-window-border: #b4b5b9;
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #e1e2e7);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #f2f4f8);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #d5d6db);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(242 244 248)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #b4b5b9);
   --rdd-window-border-focused: var(--rdd-accent-color);
-  --rdd-window-header-bg: #d5d6db;
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #d5d6db);
   --rdd-accent-color: var(--rdd-brand-accent, #9854f1);
   --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-  --rdd-border-panel: #b4b5b9;
-  --rdd-bg-tab-inactive: #d5d6db;
-  --rdd-text-tab-inactive: #565a6e;
-  --rdd-text-tab-active: #383e56;
-  --rdd-panel-card-bg: #e1e2e7;
-  --rdd-panel-card-border: #b4b5b9;
-  --rdd-close-btn-color: #565a6e;
+  --rdd-border-panel: var(--rdd--b-border-panel, #b4b5b9);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #d5d6db);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #565a6e);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #383e56);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #e1e2e7);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #b4b5b9);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #565a6e);
   --rdd-close-btn-active-color: var(--rdd-accent-color);
   --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
   --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent);
-  --rdd-window-text: #383e56;
-  --rdd-panel-text: #383e56;
+  --rdd-window-text: var(--rdd--b-window-text, #383e56);
+  --rdd-panel-text: var(--rdd--b-panel-text, #383e56);
   --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
@@ -1830,11 +1890,11 @@ body.rdd-dragging-active {
   --rdd-toolbar-accent-bar-width: 2px;
 }
 [data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
-  border-radius: 0 10px 10px 0 !important;
+  border-radius: 0 calc(10px * var(--rdd-radius-scale, 1)) calc(10px * var(--rdd-radius-scale, 1)) 0 !important;
   border-left: none !important;
 }
 [data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
-  border-radius: 10px 0 0 10px !important;
+  border-radius: calc(10px * var(--rdd-radius-scale, 1)) 0 0 calc(10px * var(--rdd-radius-scale, 1)) !important;
   border-right: none !important;
   border-top: 1px solid var(--rdd-sidebar-border) !important;
   border-bottom: 1px solid var(--rdd-sidebar-border) !important;
@@ -1858,7 +1918,7 @@ body.rdd-dragging-active {
 }
 [data-rdd-skin="slate"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="slate"] .rdd-toolbar-strip .rdd-toolbar-btn-group.rdd-active {
-  border-radius: 8px !important;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1)) !important;
 }
 [data-rdd-skin="slate"][data-color-scheme="light"] {
   --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
@@ -1890,7 +1950,7 @@ body.rdd-dragging-active {
   transform: translateX(-50%);
   width: 16px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: calc(1px * var(--rdd-radius-scale, 1));
   background-color: var(--rdd-tab-icon-active);
 }
 [data-rdd-skin="nord"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
@@ -1913,7 +1973,7 @@ body.rdd-dragging-active {
   transform: translateX(-50%);
   width: 14px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: calc(1px * var(--rdd-radius-scale, 1));
   background-color: var(--rdd-tab-icon-active);
 }
 [data-rdd-skin="nord"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active::after,
@@ -1925,7 +1985,7 @@ body.rdd-dragging-active {
   transform: translateX(-50%);
   width: 14px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: calc(1px * var(--rdd-radius-scale, 1));
   background-color: var(--rdd-tab-icon-active);
 }
 
@@ -2029,7 +2089,7 @@ body.rdd-dragging-active {
 }
 [data-rdd-skin="macos"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
 [data-rdd-skin="macos"] .rdd-toolbar-strip .rdd-toolbar-btn-group.rdd-active {
-  border-radius: 10px !important;
+  border-radius: calc(10px * var(--rdd-radius-scale, 1)) !important;
 }
 [data-rdd-skin="macos"][data-color-scheme="light"] {
   --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
@@ -2155,7 +2215,7 @@ body.rdd-dragging-active {
   align-items: center;
   justify-content: center;
   border: 1px solid transparent !important;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
   background: transparent;
   color: var(--rdd-tab-icon-inactive);
   position: relative;
@@ -2176,7 +2236,7 @@ body.rdd-dragging-active {
   background-color: var(--rdd-tab-btn-active-bg) !important;
   border-top: 1px solid var(--rdd-sidebar-border) !important;
   border-bottom: 1px solid var(--rdd-sidebar-border) !important;
-  border-radius: var(--rdd-tab-btn-active-radius, 0px) !important;
+  border-radius: calc(var(--rdd-tab-btn-active-radius, 0px) * var(--rdd-radius-scale, 1)) !important;
   box-shadow: var(--rdd-tab-btn-active-shadow, none);
   filter: var(--rdd-tab-btn-active-glow, none);
   z-index: 6;
@@ -2248,7 +2308,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   background: var(--rdd-modal-bg);
   border: 1px solid var(--rdd-modal-border);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--rdd-radius-scale, 1));
   display: flex;
   flex-direction: column;
   color: var(--rdd-text-primary);
@@ -2289,7 +2349,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   transition: all 0.15s ease;
 }
 
@@ -2405,7 +2465,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   transition: all 0.15s ease;
 }
 
@@ -2442,12 +2502,12 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-workspace-edge-trigger {
   position: absolute;
   z-index: calc(var(--rdd-z-base, 1000) + 8999);
-  background-color: rgba(0, 123, 255, 0.01);
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 1%, transparent);
   transition: background-color 0.2s;
 }
 
 .rdd-workspace-edge-trigger:hover {
-  background-color: rgba(0, 123, 255, 0.12);
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
 }
 
 .rdd-edge-trigger-left {
@@ -2481,8 +2541,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-workspace-edge-preview {
   position: absolute;
   z-index: calc(var(--rdd-z-base, 1000) + 8998);
-  background-color: rgba(0, 123, 255, 0.2);
-  border: 2px dashed #007bff;
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  border: 2px dashed var(--rdd-accent-color);
   pointer-events: none;
   animation: rdd-fade-in 0.15s ease-out;
 }
@@ -2493,7 +2553,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   width: 80px;
   height: 80px;
   border: 2px dashed var(--rdd-accent-color, #38bdf8);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
   background: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   pointer-events: auto;
   z-index: calc(var(--rdd-z-base, 1000) + 9000);
@@ -2694,12 +2754,12 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 /* chrome — swap the capsule border-radius when strips change sides */
 [data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
-  border-radius: 10px 0 0 10px !important;
+  border-radius: calc(10px * var(--rdd-radius-scale, 1)) 0 0 calc(10px * var(--rdd-radius-scale, 1)) !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
 }
 [data-rdd-skin="chrome"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active:dir(rtl) {
-  border-radius: 0 10px 10px 0 !important;
+  border-radius: 0 calc(10px * var(--rdd-radius-scale, 1)) calc(10px * var(--rdd-radius-scale, 1)) 0 !important;
   margin-right: 0 !important;
   margin-left: 0 !important;
 }
@@ -2835,7 +2895,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid var(--rdd-accent-color, #38bdf8);
   border-left: 3px solid var(--rdd-accent-color, #38bdf8);
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   color: var(--rdd-accent-color, #38bdf8);
   font-family: var(--rdd-font-family-mono);
   padding: 0.375rem 1rem;
@@ -2873,7 +2933,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   margin: 0;
   padding: 0.625rem;
   font-size: 0.875rem;
-  border-radius: 0.375rem;
+  border-radius: calc(0.375rem * var(--rdd-radius-scale, 1));
 }
 
 .rdd-confirmation-alert-danger {
@@ -2929,7 +2989,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
@@ -3006,7 +3066,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   justify-content: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
   color: var(--rdd-tab-icon-inactive);
   cursor: pointer;
   flex-shrink: 0;
@@ -3033,10 +3093,10 @@ html.rdd-no-animations [class*="rdd-"]::after {
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-radio.rdd-active { border-left:   var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 6px 6px 0; }
-.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-radio.rdd-active { border-right:  var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 6px 0 0 6px; }
-.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-radio.rdd-active { border-bottom: var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 6px 6px 0 0; }
-.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active { border-top:    var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 0 6px 6px; }
+.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-radio.rdd-active { border-left:   var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)) 0; }
+.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-radio.rdd-active { border-right:  var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: calc(6px * var(--rdd-radius-scale, 1)) 0 0 calc(6px * var(--rdd-radius-scale, 1)); }
+.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-radio.rdd-active { border-bottom: var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)) 0 0; }
+.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active { border-top:    var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 0 calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)); }
 
 /* Toggle active — lighter tint, no directional border */
 .rdd-toolbar-btn-toggle.rdd-active {
@@ -3071,10 +3131,10 @@ html.rdd-no-animations [class*="rdd-"]::after {
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-group.rdd-active { border-left:   var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 6px 6px 0; }
-.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-group.rdd-active { border-right:  var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 6px 0 0 6px; }
-.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-group.rdd-active { border-bottom: var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 6px 6px 0 0; }
-.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active { border-top:    var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 0 6px 6px; }
+.rdd-toolbar-strip.rdd-left   .rdd-toolbar-btn-group.rdd-active { border-left:   var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)) 0; }
+.rdd-toolbar-strip.rdd-right  .rdd-toolbar-btn-group.rdd-active { border-right:  var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: calc(6px * var(--rdd-radius-scale, 1)) 0 0 calc(6px * var(--rdd-radius-scale, 1)); }
+.rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-group.rdd-active { border-bottom: var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)) 0 0; }
+.rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active { border-top:    var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 0 calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)); }
 
 /* Separators */
 .rdd-toolbar-strip.rdd-left .rdd-toolbar-separator,
@@ -3111,7 +3171,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   z-index: calc(var(--rdd-z-base, 1000) + 7000);
   background: var(--rdd-sidebar-bg, var(--rdd-bg-panel));
   border: 1px solid var(--rdd-sidebar-border);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
   padding: 4px;
   min-width: 168px;
   display: flex;
@@ -3147,7 +3207,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   gap: 8px;
   padding: 5px 8px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
   background: transparent;
   color: var(--rdd-sidebar-text-title, var(--rdd-text-primary));
   cursor: pointer;
@@ -3214,7 +3274,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   font-family: var(--rdd-font-family-mono);
   font-weight: 500;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   transition: all 0.15s ease;
   white-space: nowrap;
   user-select: none;
@@ -3239,14 +3299,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 [data-color-scheme="light"] .rdd-btn-outline {
-  border-color: #6c757d;
-  color: #6c757d;
+  border-color: var(--rdd--b-text-secondary, #6c757d);
+  color: var(--rdd--b-text-secondary, #6c757d);
 }
 
 [data-color-scheme="light"] .rdd-btn-outline:hover {
   background: rgba(0, 0, 0, 0.05);
-  border-color: #495057;
-  color: #495057;
+  border-color: var(--rdd--b-text-tab-inactive, #495057);
+  color: var(--rdd--b-text-tab-inactive, #495057);
 }
 
 .rdd-btn-primary {
@@ -3260,7 +3320,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 [data-color-scheme="light"] .rdd-btn-primary {
-  color: #ffffff;
+  color: var(--rdd-brand-on-accent, #ffffff);
 }
 
 /* ============================================================
@@ -3468,7 +3528,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   width: var(--rdd-panel-toolbar-btn-size, 32px);
   height: var(--rdd-panel-toolbar-btn-size, 32px);
   flex-shrink: 0;
-  border-radius: var(--rdd-panel-toolbar-btn-radius, 6px);
+  border-radius: calc(var(--rdd-panel-toolbar-btn-radius, 6px) * var(--rdd-radius-scale, 1));
   border: none;
   background: transparent;
   color: var(--rdd-panel-toolbar-fg, rgba(255, 255, 255, 0.65));
@@ -3503,7 +3563,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 /* ── Toolbar strip variants ── */
 .rdd-panel-toolbar[data-variant="frosted"] {
-  background: rgba(15, 20, 30, 0.55);
+  background: color-mix(in srgb, var(--rdd--b-panel-toolbar-frosted-bg, rgb(15 20 30)) 55%, transparent);
   backdrop-filter: blur(10px) saturate(150%);
   -webkit-backdrop-filter: blur(10px) saturate(150%);
 }
@@ -3511,7 +3571,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   background: var(--rdd-bg-tab-bar, #0d0f16);
 }
 [data-color-scheme="light"] .rdd-panel-toolbar[data-variant="frosted"] {
-  background: rgba(233, 236, 239, 0.72);
+  background: color-mix(in srgb, var(--rdd--b-panel-toolbar-frosted-bg, rgb(233 236 239)) 72%, transparent);
 }
 .rdd-panel-toolbar--top[data-variant="frosted"],
 .rdd-panel-toolbar--top[data-variant="solid"] {
@@ -3653,7 +3713,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   height: var(--rdd-panel-toolbar-btn-size, 28px);
   width: 200px;
   border: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.15));
-  border-radius: var(--rdd-panel-toolbar-btn-radius, 6px);
+  border-radius: calc(var(--rdd-panel-toolbar-btn-radius, 6px) * var(--rdd-radius-scale, 1));
   background: rgba(0, 0, 0, 0.18);
   color: inherit;
   padding: 0 8px;
@@ -3676,7 +3736,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   z-index: calc(var(--rdd-z-base, 1000) + 8502);
   background: var(--rdd-panel-float-bg, rgba(22, 24, 34, 0.95));
   border: 1px solid var(--rdd-panel-float-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--rdd-panel-float-radius, 8px);
+  border-radius: calc(var(--rdd-panel-float-radius, 8px) * var(--rdd-radius-scale, 1));
   box-shadow: var(--rdd-panel-float-shadow-active, 0 8px 28px rgba(0, 0, 0, 0.55));
   overflow: hidden;
   max-height: 300px;
@@ -3722,7 +3782,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   min-height: 60px;
   display: flex;
   flex-direction: column;
-  border-radius: var(--rdd-panel-float-radius, 8px);
+  border-radius: calc(var(--rdd-panel-float-radius, 8px) * var(--rdd-radius-scale, 1));
   background: var(--rdd-panel-float-bg, rgba(22, 24, 34, 0.92));
   border: 1px solid var(--rdd-panel-float-border, rgba(255, 255, 255, 0.1));
   box-shadow: var(--rdd-panel-float-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
@@ -3804,7 +3864,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   border: 1px solid var(--rdd-custom-btn-border, rgba(255, 255, 255, 0.05));
   color: var(--rdd-text-secondary, #94a3b8);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
   padding: 0;
   line-height: 1;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3839,7 +3899,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   width: 80px;
   height: 80px;
   border: 2px dashed var(--rdd-accent-color, #38bdf8);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
   background: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
   pointer-events: none;
   z-index: 200;
@@ -3873,7 +3933,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   --rdd-toast-success-color: #4ade80;
   --rdd-toast-warning-color: #fbbf24;
   --rdd-toast-error-color:   #f87171;
-  --rdd-toast-bg:            #2a2d32;
+  --rdd-toast-bg: var(--rdd--b-toast-bg, #2a2d32);
   --rdd-toast-border:        rgba(255, 255, 255, 0.14);
 }
 [data-color-scheme="light"] {
@@ -3881,7 +3941,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
   --rdd-toast-success-color: #15803d;
   --rdd-toast-warning-color: #b45309;
   --rdd-toast-error-color:   #b91c1c;
-  --rdd-toast-bg:            #ffffff;
+  --rdd-toast-bg: var(--rdd--b-toast-bg, #ffffff);
   --rdd-toast-border:        rgba(0, 0, 0, 0.14);
 }
 
@@ -3906,7 +3966,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-toast {
   pointer-events: all; position: relative; overflow: hidden;
   display: flex; align-items: flex-start; gap: 10px;
-  padding: 20px 14px; border-radius: 6px;
+  padding: 20px 14px; border-radius: calc(6px * var(--rdd-radius-scale, 1));
   background: var(--rdd-toast-bg, #2a2d32);
   border: 1px solid var(--rdd-toast-border, rgba(255,255,255,0.14)); border-inline-start-width: 3px;
   box-shadow: 0 8px 24px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.2);
