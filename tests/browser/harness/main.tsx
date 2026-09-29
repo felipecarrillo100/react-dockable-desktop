@@ -46,12 +46,17 @@ const SBPOS = (q.get('sb') || 'left') as 'left' | 'right';
 const TBPOS = (q.get('tbpos') || 'left') as 'left' | 'right';
 const NTABS = parseInt(q.get('ntabs') || '0', 10);
 const SCHEME = q.get('cs') || 'dark';
+// `plain=1`: probe panels without their scroll-test gradient, so the panel's own surface shows (the 7.3.0 contact sheet).
+const PLAIN = q.get('plain') === '1';
 
 if (DIR === 'html') document.documentElement.dir = 'rtl';
 if (DIR === 'body') document.body.dir = 'rtl';
 if (q.get('font') === '1') document.body.style.fontFamily = "'Courier New'";
 if (q.get('ba')) document.documentElement.style.setProperty('--rdd-brand-accent', '#' + q.get('ba'));
 if (q.get('bon')) document.documentElement.style.setProperty('--rdd-brand-on-accent', '#' + q.get('bon'));
+if (q.get('bs')) document.documentElement.style.setProperty('--rdd-brand-surface', '#' + q.get('bs'));
+if (q.get('bt')) document.documentElement.style.setProperty('--rdd-brand-text', '#' + q.get('bt'));
+if (q.get('rs')) document.documentElement.style.setProperty('--rdd-radius-scale', q.get('rs'));
 const applyScheme = () => { if (SCHEME !== 'none') document.documentElement.setAttribute('data-color-scheme', SCHEME); };
 applyScheme();
 
@@ -61,7 +66,7 @@ function ProbePanel() {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <input id={`in-${id}`} defaultValue="hello world text" style={{ margin: 4 }} />
       <div id={`sc-${id}`} className="probe-scroller" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-        <div id={`content-${id}`} style={{ height: 3000, background: 'linear-gradient(#333,#777)' }}>content {id}</div>
+        <div id={`content-${id}`} style={{ height: 3000, background: PLAIN ? undefined : 'linear-gradient(#333,#777)' }}>content {id}</div>
       </div>
     </div>
   );

@@ -213,9 +213,87 @@ describe('branding contract (index.css)', () => {
   });
 
   it('text on a solid accent fill reads --rdd-brand-on-accent', () => {
-    for (const sel of ['.rdd-btn-primary', '.rdd-dock-target-box--active']) {
-      const body = css.match(new RegExp(`(^|\\})\\s*${sel.replace(/[.-]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[2] ?? '';
+    for (const sel of ['.rdd-btn-primary', '[data-color-scheme="light"] .rdd-btn-primary', '.rdd-dock-target-box--active']) {
+      const body = css.match(new RegExp(`(^|\\})\\s*${sel.replace(/[.\-[\]="]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[2] ?? '';
       expect(body, sel).toMatch(/(^|[;\s])color:\s*var\(--rdd-brand-on-accent,/);
     }
+  });
+});
+
+// Corners (7.3.0): --rdd-radius-scale multiplies every corner the library draws. A radius written
+// as a bare length is one the scale silently misses — a consumer asks for square corners and one
+// control stays rounded. The rendered result is checked in real Chrome by radius.browser.ts.
+describe('corner contract (index.css)', () => {
+  /** Kept as they are at every scale: circles and pills stay round, a zero is a zero. */
+  const UNSCALED = /^(0|0px|50%|999px|inherit)$/;
+
+  it('every corner length is multiplied by --rdd-radius-scale', () => {
+    const bare: string[] = [];
+    for (const m of css.matchAll(/(border(?:-(?:top|bottom)-(?:left|right))?-radius)\s*:\s*([^;]+);/g)) {
+      const parts = m[2].replace(/\s*!important\s*$/, '').match(/calc\([^()]*(?:\([^()]*\)[^()]*)*\)|var\([^)]*\)|[^\s]+/g) ?? [];
+      for (const p of parts) {
+        if (UNSCALED.test(p)) continue;
+        if (/^calc\(.+ \* var\(--rdd-radius-scale, 1\)\)$/.test(p)) continue;
+        bare.push(`${m[1]}: ${m[2].trim()}`);
+        break;
+      }
+    }
+    expect(bare).toEqual([]);
+  });
+
+  it('never declares --rdd-radius-scale (the consumer does)', () => {
+    expect(css.match(/--rdd-radius-scale\s*:/g) ?? []).toEqual([]);
+  });
+});
+
+// Brand surfaces (7.3.0): every surface colour a skin declares reads --rdd--b-<token> first, which
+// derives it from the application's --rdd-brand-surface / --rdd-brand-text. A surface written as a
+// bare colour is one a brand silently misses. The rendered result is checked by branding.browser.ts.
+describe('surface contract (index.css)', () => {
+  /** Tokens that are not surfaces: status colours and shadows. */
+  const NOT_SURFACES = new Set(['danger-color', 'toast-info-color', 'toast-success-color', 'toast-warning-color',
+    'toast-error-color', 'window-shadow', 'window-shadow-focused',
+    'panel-float-shadow', 'panel-float-shadow-active', 'tab-btn-active-shadow', 'toolbar-btn-active-shadow']);
+  /** Translucent pure white or black: a neutral tint or shade, right over any surface. */
+  const NEUTRAL = /^rgba\(\s*(0|255)\s*,\s*\1\s*,\s*\1\s*,\s*0?\.\d+\s*\)$/;
+
+  it('every coloured surface declaration reads a --rdd--b-* value first', () => {
+    const bare: string[] = [];
+    for (const m of css.matchAll(/--rdd-([\w-]+)\s*:\s*([^;{}]+);/g)) {
+      const [tok, value] = [m[1], m[2].trim()];
+      if (tok.startsWith('-') || NOT_SURFACES.has(tok) || /accent|brand|--rdd--b-/.test(value) || value.startsWith('var(')) continue;
+      if (!/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(value) || NEUTRAL.test(value)) continue;
+      bare.push(`--rdd-${tok}: ${value}`);
+    }
+    expect(bare).toEqual([]);
+  });
+
+  it('no element rule paints a coloured literal, outside status colours and macOS window buttons', () => {
+    // A colour an element rule writes itself is one no token, brand or skin can reach.
+    const ALLOWED = /\.rdd-confirmation-alert-(danger|info|warning|success)$|\[data-rdd-skin="macos"\] \.rdd-btn-(close|minimize|maximize)-tab$/;
+    const bare: string[] = [];
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const sel = m[1].replace(/\s+/g, ' ').trim();
+      if (sel.startsWith('@') || /^(from|to|\d+%)/.test(sel) || ALLOWED.test(sel)) continue;
+      for (const d of m[2].matchAll(/(?:^|;)\s*([a-z-]+)\s*:\s*([^;]+)/g)) {
+        if (d[1].startsWith('--')) continue; // tokens: the surface rule above
+        // Neutral tints and shades, and a colour that is only a var() fallback, are fine.
+        const value = d[2].replace(/var\(--rdd-[\w-]+,\s*(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]*\))\)/g, 'V')
+          .replace(/rgba\(\s*(0|255)\s*,\s*\1\s*,\s*\1\s*,[^)]*\)|#(?:fff|000)(?:fff|000)?\b/gi, 'N');
+        if (/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(value)) bare.push(`${sel} { ${d[1]}: ${d[2].trim()} }`);
+      }
+    }
+    expect(bare).toEqual([]);
+  });
+
+  it('declares the --rdd--b-* values in one :root block only, each built on --rdd--b-base', () => {
+    const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(b => /--rdd--b-[\w-]+\s*:/.test(b[2]));
+    expect(blocks.map(b => b[1].trim())).toEqual([':root']);
+    const defs = [...blocks[0][2].matchAll(/(--rdd--b-[\w-]+)\s*:\s*([^;]+);/g)];
+    expect(defs.length).toBeGreaterThan(30);
+    // Built on the base, so that each is valid only while both brand inputs are set.
+    const base = defs.find(d => d[1] === '--rdd--b-base')?.[2] ?? '';
+    expect(base).toMatch(/var\(--rdd-brand-surface\).*var\(--rdd-brand-text\)/);
+    expect(defs.filter(d => d[1] !== '--rdd--b-base' && !d[2].includes('var(--rdd--b-base)')).map(d => d[1])).toEqual([]);
   });
 });

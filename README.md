@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.2.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.3.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -416,6 +416,16 @@ All built-in skins include dark and light variants, and each brings its own font
 ```
 
 Point them at your UI framework's theme to follow it: `var(--bs-primary)` (Bootstrap), `var(--mui-palette-primary-main)` (MUI with CSS variables), `var(--mat-sys-primary)` (Angular Material 3). See [Brand your app](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#brand-your-app).
+
+Your own surfaces and corner shape, too (7.3.0):
+
+```css
+:root:not([data-color-scheme="light"]) {  /* dark: the attribute's absence */
+  --rdd-brand-surface: #0b1f3a;   /* app background — panels, bars and borders are derived from it */
+  --rdd-brand-text: #e8eef7;      /* main text — set both, or neither */
+}
+:root { --rdd-radius-scale: 0; }  /* 0 square · 1 each skin's own · 1.5 rounder */
+```
 
 Create your own skin by overriding CSS custom properties under a `[data-rdd-skin="myskin"]` selector. See the [Theming Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming) for the full variable reference and the [Per-skin active state guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#per-skin-active-state-design-language) to customise the sidebar/toolbar active indicator in your own skin.
 
