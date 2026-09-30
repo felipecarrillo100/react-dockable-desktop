@@ -7,7 +7,7 @@ import { useFormatMessage, usePredefinedMessages } from '../components/WindowMan
  */
 export interface RddConfirmProps {
   /** Optional custom title text or localizable descriptor for the dialog container. */
-  title?: string | { id: string; defaultMessage?: string; values?: any };
+  title?: string | { id: string; defaultMessage?: string; values?: any } | (() => string);
   /** Main message text or localizable descriptor to display. */
   message: string | { id: string; defaultMessage?: string; values?: any };
   /** Optional auxiliary top alert notification text. */
@@ -42,7 +42,7 @@ export const ConfirmationForm: React.FC<RddConfirmProps> = ({
 
   useEffect(() => {
     if (title) {
-      const resolvedTitle = typeof title === 'string' ? title : formatMessage(title);
+      const resolvedTitle = typeof title === 'string' ? title : typeof title === 'function' ? title() : formatMessage(title);
       setTitle(resolvedTitle);
     }
     

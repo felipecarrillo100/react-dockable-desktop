@@ -181,6 +181,27 @@ The chrome renders on the server: `renderToString` of `<DockableDesktopProvider>
 
 **Panel bodies render only on the client**, after hydration (since 7.1.1), so a panel component never runs on the server — one that touches `window` or `document` while rendering is safe. A panel *module* that touches the DOM when it is imported (some map engines do) must still be loaded on the client only: in Next.js, mark the file that renders the workspace `'use client'`, and load such panels with `dynamic(() => import('./MapPanel'), { ssr: false })`.
 
+## Finding the desktop's parts from a test
+
+Every part of the desktop carries a `data-rdd-*` attribute that names what it is and whose it is (7.4.0) — the same scheme vue- and angular-dockable-desktop use:
+
+| Attribute | On | Value |
+|---|---|---|
+| `data-rdd-tab` | a tab | the panel id |
+| `data-rdd-leaf` | a tab group | the group id |
+| `data-rdd-panel` | a panel's content, docked or floating | the panel id |
+| `data-rdd-window` / `data-rdd-titlebar` | a floating window / its title bar | the panel id |
+| `data-rdd-taskbar-item` | a minimised panel's taskbar button | the panel id |
+| `data-rdd-widget` | an in-panel floating widget | the widget id |
+| `data-rdd-sidebar-tab` | a sidebar rail tab | the tab id |
+
+```ts
+await page.click('[data-rdd-tab="layers"]');
+await expect(page.locator('[data-rdd-window="layers"] [data-rdd-titlebar]')).toBeVisible();
+```
+
+The older unprefixed attributes (`data-tab-id`, `data-leaf-id`, `data-window-id`, `data-active-panel-id`, `data-cy-action`) still render; they are superseded by these and will be removed in 8.0.0.
+
 ## i18n / custom messages
 
 Pass a `formatMessage` function to translate all built-in strings. On `DockableDesktopProvider` it can change from render to render, so it follows the current locale; create the workspace once, outside the component:
@@ -203,5 +224,22 @@ function App() {
   );
 }
 ```
+
+### Translated panel titles
+
+A title — of a panel, a floating window, a drawer or a modal — can be a message descriptor, which the library translates through `formatMessage` each time it renders:
+
+```tsx
+openPanel('layers', 'layers', { title: { id: 'panel.layers', defaultMessage: 'Layers' } });
+```
+
+Don't pass a string you have already translated (`title: intl.formatMessage(…)`): it is fixed in the language that was active when the panel opened. If your translation function isn't a `formatMessage` bridge, pass a **function** instead (7.4.0). It is called each time the title is rendered, so it follows a language change whenever the desktop re-renders — which passing a new `formatMessage` to the provider on a locale change does:
+
+```tsx
+openPanel('layers', 'layers', { title: () => t('panel.layers') });
+panel.setTitle(() => t('panel.layers', { count }));
+```
+
+A function can't be saved in a layout: `saveLayout()` leaves it out, and the restored panel takes the title its type is registered with (`defaultOptions.title`, which may be a function too), or its id.
 
 A `formatMessage` passed to `createWorkspace()` instead takes precedence over the provider's — except for message-descriptor labels in your own context-menu items, which use the provider's `formatMessage`. To change the built-in texts themselves, pass `messages` — a partial override of `defaultMessages` — to either one. Inside React, `useMessages()` returns the effective table and `useFormatMessage()` the formatter.

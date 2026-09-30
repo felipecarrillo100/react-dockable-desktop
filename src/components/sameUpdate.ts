@@ -5,7 +5,7 @@
  */
 import type { DirtyStateOptions } from './dirtyOptions';
 
-type Title = string | { id: string; defaultMessage?: string; values?: Record<string, unknown> };
+type Title = string | { id: string; defaultMessage?: string; values?: Record<string, unknown> } | (() => string);
 
 function shallowEqual(a: object | undefined, b: object | undefined): boolean {
   if (a === b) return true;

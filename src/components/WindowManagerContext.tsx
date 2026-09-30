@@ -116,7 +116,7 @@ export interface PanelInfo {
   /** Unique panel identifier. */
   id: string;
   /** Plain text label or localizable message descriptor. */
-  title: string | MessageDescriptor;
+  title: string | MessageDescriptor | (() => string);
   /** String matching the component registration ID in the workspace's {@link PanelRegistry}. */
   component: string;
   /** Current workspace placement mode. */
@@ -156,7 +156,7 @@ export interface PanelInfo {
  */
 export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
   /** Override the panel tab/window title. Accepts a plain string or an i18n message descriptor. */
-  title?: string | MessageDescriptor;
+  title?: string | MessageDescriptor | (() => string);
   /** Initial placement: `'floating'`, `'docked'` (default when a grid exists), or `'tabbed'`. */
   initialTarget?: 'floating' | 'docked' | 'tabbed';
   /** Pin the new floating window to a workspace corner on creation. Has no effect when
@@ -192,7 +192,7 @@ export interface WorkspaceState {
   /** Array of active floated windows. */
   floating: FloatingWindow[];
   /** Array of minimized panels waiting in the taskbar dock. */
-  minimized: { id: string; title: string | MessageDescriptor; component: string }[];
+  minimized: { id: string; title: string | MessageDescriptor | (() => string); component: string }[];
   /** Map indexing panel metadata descriptors. */
   panels: Record<string, PanelInfo>;
   /** The ID of the panel tab currently being dragged. */
@@ -458,7 +458,7 @@ export interface WorkspaceActions {
    * @param id - Panel instance ID.
    * @param title - New title string or localizable message descriptor.
    */
-  updatePanelTitle: (id: string, title: string | MessageDescriptor) => void;
+  updatePanelTitle: (id: string, title: string | MessageDescriptor | (() => string)) => void;
   /**
    * Sets the icon shown on an open panel's tab, floating title bar and taskbar button, in place
    * of its registration's `defaultOptions.icon`. `null` restores the registration's icon. The icon
@@ -607,7 +607,7 @@ export interface SerializedLayout {
   activePanelId?: string | null;
   gridRoot: LayoutNode;
   floating: FloatingWindow[];
-  minimized: { id: string; title: string | MessageDescriptor; component: string }[];
+  minimized: { id: string; title: string | MessageDescriptor | (() => string); component: string }[];
   panels: Record<string, PanelInfo>;
 }
 
@@ -788,12 +788,33 @@ function repairLayoutTree(
   return { gridRoot: root, repairs };
 }
 
+/** The geometry a newly floated panel gets, and what a saved window's unusable geometry is repaired to. */
+const DEFAULT_FLOAT_RECT = { x: 300, y: 150, width: 450, height: 350 } as const;
+
+/**
+ * A saved window's x/y/width/height, made finite (7.4.0). A NaN, Infinity or missing number would
+ * otherwise reach the window's style — React logs "`NaN` is an invalid value for the `left` css
+ * style property" at every start-up — so each is replaced by the default a new float gets, and the
+ * repair is reported. A string (a CSS length) is kept as it is.
+ */
+function finiteGeometry(fw: any, repairs: string[]): any {
+  let out = fw;
+  for (const k of ['x', 'y', 'width', 'height'] as const) {
+    const v = fw[k];
+    if (typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v))) continue;
+    out = { ...out, [k]: DEFAULT_FLOAT_RECT[k] };
+    repairs.push(`floating window "${fw.id}" had ${k} = ${String(v)}`);
+  }
+  return out;
+}
+
 function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   if (!parsed || !parsed.gridRoot || !Array.isArray(parsed.floating) || !Array.isArray(parsed.minimized) || !parsed.panels) {
     return null;
   }
   // const version = typeof parsed.version === 'number' ? parsed.version : 0; // reserved for future migrations
-  const floating = (parsed.floating as any[]).map((fw: any) => {
+  const geometryRepairs: string[] = [];
+  const floating = (parsed.floating as any[]).map((fw: any) => finiteGeometry(fw, geometryRepairs)).map((fw: any) => {
     if ('stickyRight' in fw || 'stickyBottom' in fw) {
       const anchor: FloatAnchor | null = fw.stickyRight && fw.stickyBottom ? 'bottom-right'
         : fw.stickyRight ? 'top-right'
@@ -812,6 +833,13 @@ function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
       `[react-dockable-desktop] Repaired the saved layout on load: ${repaired.repairs.join('; ')}. ` +
       `Layouts saved by versions before 6.3.1 can contain this — dropping a lone docked panel ` +
       `onto its own group duplicated it — and the repair is applied every time it is read, so ` +
+      `saving again from this session stores the corrected layout.`
+    );
+  }
+  if (geometryRepairs.length > 0 && process.env.NODE_ENV === 'development') {
+    console.warn(
+      `[react-dockable-desktop] Repaired the saved layout on load: ${geometryRepairs.join('; ')}. ` +
+      `Each is replaced by the default a new floating window gets (${JSON.stringify(DEFAULT_FLOAT_RECT)}); ` +
       `saving again from this session stores the corrected layout.`
     );
   }
@@ -1209,7 +1237,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     const entry = registry.get(panel.component);
     if (entry?.defaultOptions?.canDrag === false) return prev;
 
-    const favPos = rect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
+    const favPos = rect || entry?.defaultOptions?.favoritePosition || DEFAULT_FLOAT_RECT;
     const cleanRoot = removePanelFromTree(prev.gridRoot, id);
     // Floating an already-floating panel re-places it rather than adding a second window.
     const otherWindows = prev.floating.filter(w => w.id !== id);
@@ -1441,7 +1469,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     });
   };
 
-  const updatePanelTitle = (id: string, title: string | MessageDescriptor) => {
+  const updatePanelTitle = (id: string, title: string | MessageDescriptor | (() => string)) => {
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -1954,6 +1982,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       if (effectiveSerializable) {
         // The runtime icon is a React element: never part of a saved layout.
         const { icon: _icon, ...saved } = info;
+        // A function title (7.4.0) can't be saved; the restored panel takes its registered default.
+        if (typeof saved.title === 'function') delete (saved as Partial<PanelInfo>).title;
         includedPanels[id] = hasDynamicValue ? { ...saved, props: effectiveProps, serializable: effectiveSerializable } : saved;
       } else {
         excludedIds.push(id);
@@ -1996,7 +2026,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       ...(activePanelId !== null ? { activePanelId } : {}),
       gridRoot,
       floating,
-      minimized,
+      minimized: minimized.map(m => (typeof m.title === 'function' ? { id: m.id, component: m.component } : m)) as SerializedLayout['minimized'],
       panels: includedPanels
     };
     return JSON.stringify(payload);
@@ -2010,15 +2040,19 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
         // A panel that stays open keeps its runtime icon: the component that set it isn't
         // re-mounted, so it wouldn't set it again.
         const panels: Record<string, PanelInfo> = {};
-        for (const [id, info] of Object.entries(payload.panels)) {
+        for (const [id, saved] of Object.entries(payload.panels)) {
+          // A panel saved without a title — it had a function title, which a layout can't hold —
+          // takes its registered default title, as a newly opened one would.
+          const info = saved.title ? saved : { ...saved, title: registry.get(saved.component)?.defaultOptions?.title || id };
           const was = prev.panels[id];
           panels[id] = was?.icon !== undefined && was.component === info.component ? { ...info, icon: was.icon } : info;
         }
+        const titleOf = (m: { id: string; title?: PanelInfo['title'] }) => m.title || panels[m.id]?.title || m.id;
         return {
           ...prev,
           gridRoot: payload.gridRoot,
           floating: payload.floating,
-          minimized: payload.minimized,
+          minimized: payload.minimized.map(m => (m.title ? m : { ...m, title: titleOf(m) })),
           panels,
           draggedPanelId: null,
           activePanelId: payload.activePanelId
@@ -2337,11 +2371,13 @@ export const useFormatMessage = (): MessageFormatter => {
  * Helper to resolve dynamic label strings or localizable descriptor objects into text.
  */
 export const formatLabel = (
-  label: string | MessageDescriptor | undefined,
+  label: string | MessageDescriptor | (() => string) | undefined,
   formatter: MessageFormatter
 ): string => {
   if (!label) return '';
   if (typeof label === 'string') return label;
+  // A thunk (7.4.0) is called each time the label is rendered, so it follows the app's own locale.
+  if (typeof label === 'function') return label();
   return formatter(label);
 };
 

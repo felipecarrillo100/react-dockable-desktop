@@ -1372,6 +1372,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     <div
       ref={windowRef}
       dir={isRtl ? 'rtl' : 'ltr'}
+      data-rdd-widget={id}
       className={[
         'rdd-panel-float',
         isActive ? 'rdd-panel-float--active' : '',

@@ -63,7 +63,7 @@ When `dir="rtl"` is active, the library reverses the following without any extra
 
 The workspace root always carries its own `dir` — the provider's `dir` prop, or `setDirection()`, `'ltr'` by default — so **`dir="rtl"` on `<html>`, `<body>` or a wrapper does not make the workspace RTL**. Set it on the provider. Inside the workspace, and in the menus and flyouts opened from it, everything follows the workspace's direction.
 
-What sits outside the workspace follows the page's direction: `RddSidebar` and `RddSecondarySidebar` take it from wherever you set it (`<html>`, `<body>` or a wrapper around them), and toasts — rendered into `<body>` — only from `<html>` or `<body>`. Where the library measures (the split divider, the sidebar resizer, the submenu's side, the arrow keys), it reads the direction the browser actually computes for the element involved, so each of those follows the same rule.
+What sits outside the workspace — `RddSidebar`, `RddSecondarySidebar` and the toasts — follows the workspace into RTL: when the workspace is right-to-left, so are they. The `dir` goes on the sidebar's own element, which wraps your content, so everything you place inside the sidebar (an `RddToolbar`, your own chrome) follows with it; a toolbar outside any sidebar follows the page. While the workspace is left-to-right they follow the page's direction, as before 7.4.0: the sidebars take it from wherever you set it (`<html>`, `<body>` or a wrapper around them), and toasts — rendered into `<body>` — from `<html>` or `<body>`. Where the library measures (the split divider, the sidebar resizer, the submenu's side, the arrow keys), it reads the direction the browser actually computes for the element involved, so each of those follows the same rule.
 
 ## Locale vs direction
 
@@ -80,11 +80,10 @@ When `skin="macos"` is active, the traffic-light buttons (close · minimize · m
 
 ## Runtime switching with `setDirection()`
 
-`workspace.setDirection('rtl')` switches the workspace and the menus and flyouts opened from it. It **does not** touch `document.documentElement.dir`, which `RddSidebar` and toasts follow — set it too if they should mirror as well:
+`workspace.setDirection('rtl')` switches the workspace, the menus and flyouts opened from it, the sidebars and the toasts (since 7.4.0 — before, the sidebar and toasts needed `document.documentElement.dir` set as well). It does not touch `document.documentElement.dir`, which your own page content follows:
 
 ```ts
-workspace.setDirection('rtl');
-document.documentElement.dir = 'rtl';   // for the sidebar and toasts
+workspace.setDirection('rtl');   // the whole desktop: workspace, sidebars, toasts, menus
 ```
 
 A `dir` given to `createWorkspace()` overrides the provider's `dir` prop for good — so if you drive direction from the provider prop, leave it out of `createWorkspace()`.

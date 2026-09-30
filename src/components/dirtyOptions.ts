@@ -13,7 +13,7 @@ export interface DirtyStateOptions {
    * Custom header title text or localizable message descriptor.
    * Replaces the default "Unsaved Changes" title.
    */
-  title?: string | MessageDescriptor;
+  title?: string | MessageDescriptor | (() => string);
 
   /**
    * Custom warning explanation text or localizable message descriptor.

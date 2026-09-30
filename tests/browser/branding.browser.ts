@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from 'playwright-core';
-import { SCENES, openBase, openScene } from './scenes';
+import { SCENES, openBase, openScene, foldFrost } from './scenes';
 
 // Branding (7.2.0): --rdd-brand-accent / --rdd-brand-on-accent set on :root must reach every
 // built-in skin, and with neither set every skin must render exactly as before.
@@ -167,7 +167,8 @@ async function captureScene(skin: string, cs: string, brand = ''): Promise<{ sna
 }
 
 /** `key prop` → "old -> new" for every colour that differs between two snapshots. */
-function diff(base: Snapshot, snap: Snapshot): Map<string, string> {
+function diff(base: Snapshot, now: Snapshot): Map<string, string> {
+  const snap = foldFrost(now, base);
   const out = new Map<string, string>();
   for (const key of new Set([...Object.keys(base), ...Object.keys(snap)])) {
     // A token added since the baseline (e.g. --rdd-skin-font-family) is fine if it isn't a colour:

@@ -20,7 +20,7 @@ import React, {
 } from 'react';
 import { startPointerDrag } from './dragResize';
 import { isComputedRtl } from '../utils/rtl';
-import { formatLabel, useFormatMessage, usePredefinedMessages } from './WindowManagerContext';
+import { formatLabel, useFormatMessage, usePredefinedMessages, WindowStateContext } from './WindowManagerContext';
 
 // ==========================================
 // Types
@@ -301,6 +301,7 @@ function renderRailEntry(
         key={entry.id}
         type="button"
         onClick={() => onTabClick(entry.id)}
+        data-rdd-sidebar-tab={entry.id}
         className={`rdd-sidebar-tab-btn${isActive ? ' rdd-active' : ''}`}
         title={entry.label}
         aria-pressed={isActive}
@@ -371,6 +372,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
                 key={tab.id}
                 type="button"
                 onClick={() => onTabClick(tab.id)}
+                data-rdd-sidebar-tab={tab.id}
                 className={`rdd-sidebar-tab-btn${isActive ? ' rdd-active' : ''}`}
                 title={tab.label}
                 aria-pressed={isActive}
@@ -485,6 +487,7 @@ export const Sidebar: React.ForwardRefExoticComponent<RddSidebarProps & React.Re
     },
     ref
   ) {
+    const workspaceDir = useContext(WindowStateContext)?.dir;
     const isControlled = controlledActiveTabId !== undefined;
     const formatMessage = useFormatMessage();
     const closeLabel = formatLabel(usePredefinedMessages().closeTooltip, formatMessage);
@@ -725,7 +728,10 @@ export const Sidebar: React.ForwardRefExoticComponent<RddSidebarProps & React.Re
 
     return (
       <SidebarContext.Provider value={sidebarContextValue}>
-        <div className="rdd-sidebar-layout">
+        {/* A sidebar is usually an ancestor of the workspace, so the workspace's own dir never
+            reached it: setDirection('rtl') mirrored the desktop beside an unmirrored rail. It now
+            follows the workspace into RTL; otherwise it inherits the page's direction, as before. */}
+        <div className="rdd-sidebar-layout" dir={workspaceDir === 'rtl' ? 'rtl' : undefined}>
           {position === 'left' && (
             <SidebarTabStrip
               tabs={tabs}

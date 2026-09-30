@@ -10,7 +10,7 @@ export interface PanelRegistryEntry {
   /** Default metadata settings configuration applied on instantiation. */
   defaultOptions?: {
     /** Tab and window headers text — plain string or i18n descriptor. */
-    title?: string | { id: string; defaultMessage?: string; values?: Record<string, string | number> };
+    title?: string | { id: string; defaultMessage?: string; values?: Record<string, string | number> } | (() => string);
     /** Icon placed next to title tags. */
     icon?: React.ReactNode;
     /** Initial mounting state inside the desktop layout grid. */

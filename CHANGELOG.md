@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.0] — 2026-09-30
+
+From a consumer's field report: fixed dropdowns inside frosted windows, direction for the sidebar and toasts, translated titles, and a quieter restore.
+
+### Added
+- **Title functions**: a panel, window, drawer or modal title can be `() => string`. It is called each time the title is rendered, so a title built with your own translation function follows a language change (for example `title: () => t('panel.layers')`) — a translated *string* is fixed in the language active when the panel opened. A function isn't saved in a layout: the restored panel takes the title its type is registered with. See [Translated panel titles](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced#translated-panel-titles).
+- **`data-rdd-*` identity attributes** on every part of the desktop — `data-rdd-tab`, `-leaf`, `-panel`, `-window`, `-titlebar`, `-taskbar-item`, `-widget` and `-sidebar-tab`, each carrying the id — the scheme vue- and angular-dockable-desktop use. The unprefixed `data-tab-id`, `data-leaf-id`, `data-window-id`, `data-active-panel-id` and `data-cy-action` still render, superseded, and go in 8.0.0.
+- **Reduced motion**: the library's own transitions and animations stop when the user has asked the system for reduced motion (`prefers-reduced-motion: reduce`), as with `animations={false}`. Your own are untouched.
+- The npm package now includes this CHANGELOG.
+
+### Fixed
+- **A `position: fixed` element inside a frosted container was positioned against the container, not the viewport** — so a dropdown, popover or date picker of yours inside a floating window, a drawer, an in-panel widget, a frosted panel toolbar or (in `macos`) a docked panel opened in the wrong place, in some skins and not others. A `backdrop-filter` makes its element the containing block for fixed content; the frost now sits on each container's `::before` (with the background it tints, where the frost saturates). What is drawn is unchanged.
+- **`setDirection('rtl')` did not mirror the sidebar or the toasts**: they followed only `document.documentElement.dir`, so a desktop switched to RTL sat beside an unmirrored rail. They follow the workspace into RTL now, and so does everything inside the sidebar (a toolbar, your own chrome); while the workspace is left-to-right they still follow the page, as before.
+- **A saved window with unusable geometry reached the window's style**: a `NaN` saved as `null`, an `Infinity` or a missing size made React log "`NaN` is an invalid value for the `left` css style property" at every start-up. Such values are replaced on load by the default a new floating window gets, with a development warning naming the window.
+
+### Tests
+- `frost.browser.ts`: a fixed child of each frosted container (7 cases, skins and schemes) lands on the viewport; a screenshot of each matches the pre-7.4.0 rendering within a small tolerance.
+- `motion.browser.ts`, `direction.browser.ts`, `identity.browser.ts`: reduced motion stops every library transition and leaves the page's; the sidebar and toasts follow `setDirection` and still follow the page while LTR; every identity attribute names the right id.
+- Unit: `TitleThunk`, `FiniteGeometry`, `DomAttributes` (no new unprefixed `data-` attribute), `PackageContents` (`npm pack` ships the CHANGELOG), and `StylesheetContract` rules for the frost and reduced motion.
+- The branding and radius baselines compare a frosted container's `::before` as its element: where it is drawn changed, what is drawn did not.
+
+### Docs
+- Theming guide: **Frosted glass and your own overlays**, **Motion**. RTL guide: the sidebar and toasts follow `setDirection`. Advanced guide: **Translated panel titles**, **Finding the desktop's parts from a test**.
+
+
 ## [7.3.0] — 2026-09-30
 
 Branding, part two: your own surfaces and corner shape on any built-in skin. See [Brand your app](https://felipecarrillo100.github.io/react-dockable-desktop/guide/theming#brand-your-app).
@@ -579,7 +604,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.3.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.0...HEAD
+[7.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.3.0...v7.4.0
 [7.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.2.0...v7.3.0
 [7.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.3...v7.2.0
 [7.1.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.2...v7.1.3

@@ -9,6 +9,7 @@
  *   tbpos=left|right, sb=left|right   toolbar / sidebar position
  *   ntabs=N         N extra tabs in the first group
  *   ov=1            panel p3 hosts a PanelOverlayRoot with an inner floating widget
+ *   pt=VARIANT      …and a top panel toolbar of that variant (frosted | solid | transparent)
  *   cs=dark|light|none   colour scheme the app sets on <html> (none = app sets nothing)
  *   zb=N            zIndexBase passed to the provider
  *   grow=1          no rdd-fill-viewport on the wrapper (the workspace grows with its content)
@@ -36,6 +37,7 @@ import {
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
   RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, RddToasts, useModals, useSidePanels, RddConfirm, toast,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
+  RddPanelToolbar, RddToolbarItem,
 } from '../../../src/index';
 
 const q = new URLSearchParams(location.search);
@@ -77,6 +79,11 @@ function OverlayPanel() {
   return (
     <RddPanelOverlay>
       <div style={{ width: '100%', height: '100%', background: '#224' }} id="ovbg" />
+      {q.get('pt') && (
+        <RddPanelToolbar position="top" variant={q.get('pt') as 'frosted'}>
+          <RddToolbarItem><span id="ptitem">tool</span></RddToolbarItem>
+        </RddPanelToolbar>
+      )}
       <RddFloatingWidget id="w1" title="Widget" open={open} onClose={() => setOpen(false)}
         defaultAnchor={(q.get('anchor') || 'top-left') as FloatAnchor} defaultWidth={220} defaultHeight={160}>
         <div id="widgetbody" style={{ padding: 6 }}>widget body</div>
