@@ -153,6 +153,16 @@ The rail is narrow, so a square mark fits better than a wide wordmark. Adjust it
 
 Branding relies on CSS `color-mix()`, available since Chrome 111, Edge 111, Safari 16.2 and Firefox 113 (all 2023). In an older browser the tinted hover and active highlights lose their colour; layout and behaviour are unaffected.
 
+## Frosted glass and your own overlays
+
+Several skins draw floating windows, drawers, overlay widgets, frosted panel toolbars and (in `macos`) docked panels as frosted glass. Since 7.4.0 the frost is drawn on each container's `::before`, never on the container itself. A `backdrop-filter` on an element makes it the containing block for `position: fixed` content, so a dropdown or popover of yours inside a frosted window used to be positioned against the window rather than the viewport — in some skins and not others. Now `position: fixed` inside any library container means the viewport, in every skin.
+
+If you write a skin of your own that frosts a container hosting content, do the same: put the `backdrop-filter` (and the background it tints) on `::before`.
+
+## Motion
+
+The library's own transitions and animations stop when the user has asked the system for reduced motion (`prefers-reduced-motion: reduce`, 7.4.0), and whenever `animations={false}` is set on `RddDesktop`. Neither touches your own transitions.
+
 ## Built-in skins
 
 ```tsx

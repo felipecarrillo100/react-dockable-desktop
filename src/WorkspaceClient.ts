@@ -284,7 +284,7 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   }
 
   /** Updates a panel's displayed title. */
-  updatePanelTitle(id: string, title: string | MessageDescriptor): void {
+  updatePanelTitle(id: string, title: string | MessageDescriptor | (() => string)): void {
     this._dispatch(a => a.updatePanelTitle(id, title));
   }
 

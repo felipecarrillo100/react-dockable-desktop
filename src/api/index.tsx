@@ -101,7 +101,7 @@ export interface PanelHandle {
   /** Marks the panel as having unsaved changes. */
   setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
   /** Changes the title shown on the tab, window or modal. */
-  setTitle: (title: string | MessageDescriptor) => void;
+  setTitle: (title: string | MessageDescriptor | (() => string)) => void;
   /**
    * Changes the icon on the panel's tab, floating title bar and taskbar button, or in a modal's or
    * drawer's header. In a workspace panel, `null` goes back to the registration's
@@ -140,7 +140,7 @@ export function usePanel(): PanelHandle {
     close: (options?: CloseOptions) => cRef.current.requestClose(options),
     minimize: () => cRef.current.requestMinimize?.(),
     setDirty: (dirty: boolean, options?: DirtyStateOptions) => cRef.current.setDirty(dirty, options),
-    setTitle: (title: string | MessageDescriptor) => cRef.current.setTitle(title as Parameters<FormContainerContract['setTitle']>[0]),
+    setTitle: (title: string | MessageDescriptor | (() => string)) => cRef.current.setTitle(title as Parameters<FormContainerContract['setTitle']>[0]),
     setIcon: (icon: React.ReactNode) => cRef.current.setIcon?.(icon),
   }), [id]);
   return useMemo<PanelHandle>(() => ({

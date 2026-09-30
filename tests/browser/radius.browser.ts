@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from 'playwright-core';
-import { SCENES, openScene } from './scenes';
+import { SCENES, openScene, FROSTED } from './scenes';
 
 // Corners (7.3.0): --rdd-radius-scale multiplies every corner the library draws — 0 square, 1 each
 // skin's own, 1.5 rounder — except circles and pills, which stay round. Unset, every corner must
@@ -39,7 +39,9 @@ function radii(page: Page): Promise<Radii> {
       }
     }
     return out;
-  }, CORNERS);
+  }, CORNERS).then(all => Object.fromEntries(Object.entries(all)
+    // A frosted container's ::before (7.4.0) takes border-radius: inherit — its corners are its element's.
+    .filter(([key]) => !(key.endsWith('::before') && FROSTED.test(key.slice(0, -8).split('>').pop() ?? '')))));
 }
 
 async function capture(skin: string, cs: string, extra = ''): Promise<{ r: Radii; errors: string[] }> {

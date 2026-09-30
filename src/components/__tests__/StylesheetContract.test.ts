@@ -297,3 +297,27 @@ describe('surface contract (index.css)', () => {
     expect(defs.filter(d => d[1] !== '--rdd--b-base' && !d[2].includes('var(--rdd--b-base)')).map(d => d[1])).toEqual([]);
   });
 });
+
+// Field report (7.4.0): containers that host consumer content never carry a filter themselves — a
+// backdrop-filter makes its element the containing block for position: fixed content — and the
+// user's reduced-motion preference is honoured. The rendered result: frost.browser.ts, motion.browser.ts.
+describe('consumer content contract (index.css)', () => {
+  const CONTENT_HOSTS = /\.rdd-(floating-window|side-panel|workspace-panel|panel-float|panel-toolbar)(\.[\w-]+|\[[^\]]+\])*$/;
+
+  it('no container that hosts consumer content carries a backdrop-filter or filter itself (only its ::before)', () => {
+    const offending: string[] = [];
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selectors = m[1].split(',').map(s => s.replace(/\s+/g, ' ').trim());
+      if (!selectors.some(s => CONTENT_HOSTS.test(s))) continue;
+      if (/(^|[;\s])(-webkit-)?(backdrop-)?filter\s*:\s*(?!none)/.test(m[2])) offending.push(selectors.join(', '));
+    }
+    expect(offending).toEqual([]);
+  });
+
+  it('honours prefers-reduced-motion for the library elements', () => {
+    const block = css.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]*?)\}\s*\}/)?.[1] ?? '';
+    expect(block).toMatch(/\[class\*="rdd-"\]/);
+    expect(block).toMatch(/transition:\s*none\s*!important/);
+    expect(block).toMatch(/animation:\s*none\s*!important/);
+  });
+});

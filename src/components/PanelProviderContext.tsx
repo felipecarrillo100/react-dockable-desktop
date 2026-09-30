@@ -20,8 +20,13 @@ export interface PanelTitleDescriptor {
   values?: Record<string, string | number>;
 }
 
-/** Union type representing either a plain string or a localizable title descriptor. */
-export type PanelTitle = string | PanelTitleDescriptor;
+/**
+ * A panel, window, drawer or modal title: a plain string, a localizable descriptor, or (7.4.0) a
+ * function returning the text — called each time the title is rendered, so a title built with the
+ * app's own translation function follows a language change. A function title is not saved in a
+ * layout: a restored panel takes its registered default title.
+ */
+export type PanelTitle = string | PanelTitleDescriptor | (() => string);
 
 /** Configuration options applied when opening a SidePanel. */
 export interface SidePanelOptions {

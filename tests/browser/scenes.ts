@@ -37,3 +37,30 @@ export async function openScene(skin: string, cs: string, brand = ''): Promise<{
   return h;
 }
 
+
+/**
+ * The containers whose frost (and background) moved onto their own ::before in 7.4.0, so a
+ * consumer's position: fixed content inside them keeps the viewport. See frost.browser.ts.
+ */
+export const FROSTED = /\.rdd-(floating-window|side-panel|panel-float|workspace-panel|panel-toolbar)(\.|:|$)/;
+
+/**
+ * A snapshot taken before 7.4.0 painted a frosted container's background on the element; from
+ * 7.4.0 it is on the element's ::before. Folds that ::before back onto its element — only where the
+ * baseline has no such pseudo-element — so the two compare as what is drawn, not where.
+ */
+export function foldFrost<T extends Record<string, Record<string, string>>>(snap: T, base: T): T {
+  const out = { ...snap } as Record<string, Record<string, string>>;
+  for (const key of Object.keys(snap)) {
+    if (!key.endsWith('::before') || base[key]) continue;
+    const el = key.slice(0, -'::before'.length);
+    if (!FROSTED.test(el.split('>').pop() ?? '') || !out[el]) continue;
+    const bg = snap[key]['background-color'];
+    // A pseudo that only frosts (a plain blur leaves the background on the element) paints nothing to fold.
+    if (bg && !/^rgba\(0, 0, 0, 0\)$|^transparent$/.test(bg)) {
+      out[el] = { ...out[el], 'background-color': bg, 'background-image': snap[key]['background-image'] ?? out[el]['background-image'] };
+    }
+    delete out[key];
+  }
+  return out as T;
+}

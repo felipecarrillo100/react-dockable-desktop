@@ -666,6 +666,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
   return (
     <div
       data-active-panel-id={leaf.activePanelId || ''}
+      data-rdd-leaf={leaf.id}
       className={`rdd-workspace-panel ${windowClass ?? ''}`}
     >
       {/* Tab Headers */}
@@ -727,6 +728,7 @@ const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDrop
                 onKeyDown={(e) => handleTabKeyDown(e, id, options?.canClose !== false)}
                 data-tab-id={id}
                 data-leaf-id={leaf.id}
+                data-rdd-tab={id}
                 data-tab-index={String(idx)}
                 onClick={() => selectTab(id)}
                 onPointerDown={(e) => {
@@ -1925,6 +1927,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
               <div
                 key={w.id}
                 data-window-id={w.id}
+                data-rdd-window={w.id}
                 dir={state.dir}
                 onPointerDownCapture={() => {
                   setActivePanel(w.id);
@@ -1983,6 +1986,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                       startDrag(w.id, e);
                     }
                   }}
+                  data-rdd-titlebar={w.id}
                   className="rdd-floating-window-titlebar rdd-cursor-move"
                   style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
                 >
@@ -2204,6 +2208,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                     }, 150);
                   }}
                   className="rdd-taskbar-glassmorphic-item"
+                  data-rdd-taskbar-item={m.id}
                 >
                   <span className="rdd-taskbar-item-icon" aria-hidden="true">
                     {icon}
@@ -2319,7 +2324,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         const targetEl = getOrCreateDomCacheElement(id);
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
-            <div className="rdd-panel-content" dir={state.dir}>
+            <div className="rdd-panel-content" data-rdd-panel={id} dir={state.dir}>
               {renderPanelContent(id, panel, registry, messages, formatMessage)}
             </div>
           </FormContainerProviderWrapper>,
