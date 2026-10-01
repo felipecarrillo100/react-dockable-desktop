@@ -6,6 +6,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.1] — 2026-10-01
+
+Fixes from a review of 7.4.0. No API changes.
+
+### Fixed
+
+- **Restored floating windows kept the wrong stacking order.** After a reload (`initialState` or
+  `loadLayout`), focusing a restored window sent it *behind* the others, and a newly floated panel
+  opened beneath them: the counter that hands out window z-indexes started from `zIndexBase`
+  instead of the highest restored one.
+- **A message placeholder used twice was replaced only once**: `'{n} of {n}'` with the default
+  formatter (no `formatMessage` passed) gave `'2 of {n}'`. Every occurrence is replaced now.
+- **The window losing focus mid-drag left the drag half alive.** After an alt-tab during a tab or
+  floating-window drag, the next click anywhere docked the panel into the zone it had been over.
+  A blur now ends the drag as a `pointercancel` does.
+- **Layout repair on load** also drops a group's panel id that the layout's `panels` doesn't have
+  (the group showed an empty body for it), and gives a split whose sizes don't match its children,
+  or aren't finite positive numbers, even sizes (a child got `flex-basis: NaN%`).
+- **`RddToolbarSearch` kept searching after it unmounted**: a pending debounce still called
+  `onSearch`, and a search in flight never saw its signal abort.
+- **One event subscriber that threw stopped delivery to the rest**, and broke the action that
+  published (a `loadLayout`, a close) halfway through. The error is logged and every subscriber
+  still runs.
+
+### Tests
+
+- `Patch741.test.ts` (stacking order after `initialState` and `loadLayout`, placeholders, layout
+  repair, the event bus), `DragBlur.test.tsx` (tab and floating-window drags, with an
+  uninterrupted drag as the control), `ToolbarSearchUnmount.test.tsx`. Each was seen failing
+  before its fix and with the fix removed.
+- `PackageContents.test.ts` no longer needs a build (CI runs the tests before `npm run build`).
+
+### Docs
+
+- `useWorkspaceState`: its reference documentation was attached to the wrong declaration and
+  never shown; it is on the hook now, with a warning that a selector must not build a new object
+  or array on each call (React stops with "Maximum update depth exceeded").
+- `RddDesktop` has reference documentation; the Toolbar guide is in the docs sidebar.
+- Titles are documented as `string | MessageDescriptor | (() => string)` everywhere (README,
+  Workspace, Panel Registry, Modals & Drawers, Panel Overlay, Forms & Panels).
+- README: `RddSidebar` and the toasts follow the workspace direction (since 7.4.0).
+- The CHANGELOG's migration-guide links point at the docs site, so they work from the npm package.
+
+### Repository
+
+- **GitHub releases are created automatically**: when CI passes on `main` with a version that has
+  no release yet, `.github/workflows/release.yml` tags the commit `vX.Y.Z` and publishes a release
+  whose notes are that version's CHANGELOG section (`scripts/release-notes.sh`). npm publishing
+  stays manual. Until now only `v4.0.0` had a tag, so the CHANGELOG's compare links were broken;
+  `scripts/backfill-releases.sh` tags and releases the earlier versions that a commit identifies.
+
 ## [7.4.0] — 2026-09-30
 
 From a consumer's field report: fixed dropdowns inside frosted windows, direction for the sidebar and toasts, translated titles, and a quieter restore.
@@ -151,7 +202,7 @@ Fixes found by a consumer migrating a 30-file app from 6.4.0 with the 7.0.0 migr
 
 ## [7.0.0] — 2026-09-25
 
-A clean break: the public API takes the names the Vue and Angular ports of this library use, the workspace becomes a store that is live before anything mounts, and the stylesheet stops styling the host page. Nothing is deprecated first — every old name is gone, so the TypeScript compiler finds every call site. **Migration guide: [docs-site/guide/migration.md](docs-site/guide/migration.md#v6-x-→-v7-0-0)** — written so it can be applied by an automated agent in one pass; this release was accepted by having an agent migrate the four demo apps and a fixture app with the guide alone.
+A clean break: the public API takes the names the Vue and Angular ports of this library use, the workspace becomes a store that is live before anything mounts, and the stylesheet stops styling the host page. Nothing is deprecated first — every old name is gone, so the TypeScript compiler finds every call site. **Migration guide: [docs-site/guide/migration.md](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration#v6-x-→-v7-0-0)** — written so it can be applied by an automated agent in one pass; this release was accepted by having an agent migrate the four demo apps and a fixture app with the guide alone.
 
 ### Breaking
 - **React 18 or later.** The peer range said 16.8; the library already relied on React 18 APIs.
@@ -522,7 +573,7 @@ All of the above is additive and backward-compatible: every new field is optiona
 ## [4.0.0] — 2026-06-16
 
 ### Breaking Changes
-- **`replace-react-contexify` peer dependency removed.** The library no longer requires or uses it. Remove the package and delete its CSS import from your entry file. All existing user code continues to work unchanged. See the [v3→v4 migration guide](docs-site/guide/migration.md).
+- **`replace-react-contexify` peer dependency removed.** The library no longer requires or uses it. Remove the package and delete its CSS import from your entry file. All existing user code continues to work unchanged. See the [v3→v4 migration guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration).
 
 ### Added
 - **Built-in `<ContextMenu>` component** — zero-dependency, portal-rendered context menu styled with design tokens. Supports simple items, separators, sub-menus (one level), checkbox items, icons, and i18n labels. Viewport-clamped, RTL-aware, Esc-to-close.
@@ -604,7 +655,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.1...HEAD
+[7.4.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.0...v7.4.1
 [7.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.3.0...v7.4.0
 [7.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.2.0...v7.3.0
 [7.2.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.1.3...v7.2.0

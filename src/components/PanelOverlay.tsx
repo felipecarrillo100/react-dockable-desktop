@@ -631,6 +631,13 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolb
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Unmounting stops the search (7.4.1): a pending debounce would still call onSearch for a
+  // toolbar that has gone, and a search in flight would never see its signal abort.
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
+
   const openSearch = (): void => {
     setExpanded(true);
     setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 0);

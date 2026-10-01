@@ -35,7 +35,7 @@ The type is `PanelRegistryEntry['defaultOptions']` (`PanelRegistryEntry` is expo
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `string \| MessageDescriptor` | — | Tab and window title. |
+| `title` | `string \| MessageDescriptor \| (() => string)` | — | Tab and window title. A function is called each time the title renders; it's also the title a restored panel takes, since a function title isn't saved in a layout. |
 | `icon` | `ReactNode` | — | Icon shown in the tab, the floating title bar and the taskbar. A single instance can change it at runtime with `usePanel().setIcon()` or `workspace.setPanelIcon()`. |
 | `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | `'docked'` | Initial placement when the panel is first opened. |
 | `favoritePosition` | `{ x, y, width, height }` | `{ x: 300, y: 150, width: 450, height: 350 }` | Default floating bounds (position + size) when the panel is first floated. All four values accept numbers (px) or CSS strings (`'50%'`). |

@@ -324,7 +324,7 @@ interface PanelHandle {
   close:    (options?: CloseOptions) => void;  // { force?: boolean }
   minimize: () => void;                         // no-op for modals/drawers
   setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
-  setTitle: (title: string | MessageDescriptor) => void;
+  setTitle: (title: string | MessageDescriptor | (() => string)) => void;
   setIcon:  (icon: React.ReactNode) => void;   // null restores the registration's icon; not saved
 }
 

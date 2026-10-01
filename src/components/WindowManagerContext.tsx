@@ -577,7 +577,15 @@ class PanelEventBus {
 
   publish(event: string, data: any) {
     if (this.listeners[event]) {
-      this.listeners[event].forEach(cb => cb(data));
+      // One subscriber that throws must not stop delivery to the rest (7.4.1), nor the action
+      // that published — loadLayout, a close — halfway through.
+      for (const cb of this.listeners[event]) {
+        try {
+          cb(data);
+        } catch (e) {
+          console.error(`[react-dockable-desktop] A subscriber to "${event}" threw:`, e);
+        }
+      }
     }
   }
 }
@@ -724,11 +732,13 @@ function resolveActivePanelId(
  * nothing asked of the application. It changes only what is *read*: `saveLayout()`'s output
  * format is untouched.
  *
- * Four repairs, in order: a panel id that appears in more than one leaf is kept in the first
- * one only; a leaf emptied by that keeps existing only if it asked to (`keepOnEmpty`); a
- * branch left with one child collapses into it, with sizes re-normalised; and a panel the
- * layout says is docked but that no leaf lists is appended to the first leaf, since "open but
- * in no group" renders nothing and cannot be reached.
+ * The repairs, in order: a leaf panel id the layout's `panels` doesn't have is dropped (7.4.1);
+ * a panel id that appears in more than one leaf is kept in the first one only; a leaf emptied
+ * by either keeps existing only if it asked to (`keepOnEmpty`); a branch left with one child
+ * collapses into it, with sizes re-normalised; a branch whose sizes don't match its children,
+ * or aren't finite positive numbers, gets even sizes (7.4.1); and a panel the layout says is
+ * docked but that no leaf lists is appended to the first leaf, since "open but in no group"
+ * renders nothing and cannot be reached.
  */
 function repairLayoutTree(
   gridRoot: LayoutNode,
@@ -740,6 +750,10 @@ function repairLayoutTree(
   const walk = (node: LayoutNode): LayoutNode | null => {
     if (node.type === 'leaf') {
       const kept = node.panels.filter(panelId => {
+        if (!panels[panelId]) {
+          repairs.push(`group "${node.id}" listed panel "${panelId}", which the layout doesn't have`);
+          return false;
+        }
         if (seen.has(panelId)) {
           repairs.push(`panel "${panelId}" was listed in more than one group`);
           return false;
@@ -758,14 +772,22 @@ function repairLayoutTree(
     const children = node.children.map(walk).filter((c): c is LayoutNode => c !== null);
     // Identity, not count: a child can survive the walk and still have been repaired inside.
     // Comparing lengths alone returned the original branch and discarded those repairs.
-    if (children.length === node.children.length && children.every((c, i) => c === node.children[i])) {
-      return node;
-    }
+    // Sizes that don't match the children, or aren't finite positive numbers, would give a child
+    // `flex-basis: NaN%` (7.4.1): such a branch gets even sizes.
+    const sizesOk = (sizes: unknown[], n: number) =>
+      Array.isArray(sizes) && sizes.length === n && sizes.every(v => typeof v === 'number' && Number.isFinite(v) && v > 0);
+    const unchanged = children.length === node.children.length && children.every((c, i) => c === node.children[i]);
+    if (unchanged && sizesOk(node.sizes, children.length)) return node;
     if (children.length === 0) return null;
     if (children.length === 1) return children[0];
-    const sizes = node.sizes.slice(0, children.length);
-    const sum = sizes.reduce((a, b) => a + b, 0) || 1;
-    return { ...node, children, sizes: sizes.map(s => s / sum) };
+    if (unchanged) {
+      repairs.push(`a split had sizes ${JSON.stringify(node.sizes)} for ${children.length} children`);
+      return { ...node, sizes: children.map(() => 1 / children.length) };
+    }
+    const kept = Array.isArray(node.sizes) ? node.sizes.slice(0, children.length) : [];
+    if (!sizesOk(kept, children.length)) return { ...node, children, sizes: children.map(() => 1 / children.length) };
+    const sum = kept.reduce((a, b) => a + b, 0);
+    return { ...node, children, sizes: kept.map(s => s / sum) };
   };
 
   let root = walk(gridRoot) || EMPTY_LEAF;
@@ -831,8 +853,8 @@ function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   if (repaired.repairs.length > 0 && process.env.NODE_ENV === 'development') {
     console.warn(
       `[react-dockable-desktop] Repaired the saved layout on load: ${repaired.repairs.join('; ')}. ` +
-      `Layouts saved by versions before 6.3.1 can contain this — dropping a lone docked panel ` +
-      `onto its own group duplicated it — and the repair is applied every time it is read, so ` +
+      `(Layouts saved by versions before 6.3.1 can list a panel twice — dropping a lone docked ` +
+      `panel onto its own group duplicated it.) The repair is applied every time it is read, so ` +
       `saving again from this session stores the corrected layout.`
     );
   }
@@ -985,7 +1007,11 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   const stateProvidersRef: { current: Record<string, () => unknown> } = { current: {} };
 
   const eventBusRef = { current: new PanelEventBus() };
-  const maxZRef = { current: effectiveZIndexBase };
+  // Seeded from the restored windows (7.4.1): starting at the base, a focused restored window was
+  // given a z below the others and dropped behind them, and a new float opened beneath them.
+  const topZ = (floating: FloatingWindow[]): number =>
+    floating.reduce((top, w) => (Number.isFinite(w.z) && w.z > top ? w.z : top), effectiveZIndexBase);
+  const maxZRef = { current: topZ(state.floating) };
 
   const subscribe = (event: string, callback: (data: any) => void) => {
     return eventBusRef.current.subscribe(event, callback);
@@ -1324,7 +1350,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     setState(prev => {
       const exists = prev.panels[resolvedId];
       const entry = registry.get(component);
-      const title = options?.title || options?.title || entry?.defaultOptions?.title || resolvedId;
+      const title = options?.title || entry?.defaultOptions?.title || resolvedId;
       const target = options?.initialTarget || entry?.defaultOptions?.initialTarget || 'docked';
       const favPos = entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
       const activePanelId = shouldFocus ? resolvedId : prev.activePanelId;
@@ -2036,6 +2062,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     try {
       const payload = parseLayoutPayload(JSON.parse(layoutJson));
       if (!payload) return false;
+      maxZRef.current = Math.max(maxZRef.current, topZ(payload.floating));
       setState(prev => {
         // A panel that stays open keeps its runtime icon: the component that set it isn't
         // re-mounted, so it wouldn't set it again.
@@ -2213,16 +2240,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   }, [effectiveDir, actions]);
 
 
-  const defaultFormatMessage: MessageFormatter = (msg) => {
-    let text = msg.defaultMessage || msg.id;
-    if (msg.values) {
-      Object.entries(msg.values).forEach(([key, value]) => {
-        text = text.replace(`{${key}}`, String(value));
-      });
-    }
-    return text;
-  };
-
   const styleClasses = useMemo(() => ({
     modalClass,
     modalBodyClass,
@@ -2275,11 +2292,20 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   );
 };
 
+const noopSubscribe = (_cb: () => void): (() => void) => () => {};
+
 /**
  * The live workspace state. The component re-renders whenever it changes — or, given a selector,
  * only when the selected value changes.
  *
  * For reads without a subscription, call the workspace's `isOpen()` or `getOpenPanelIds()`.
+ *
+ * The selector must return a value that stays the same while the state does — a primitive, or a
+ * part of the state as it is (`s => s.panels[id]`). A selector that builds a new object or array
+ * on each call (`s => ({ n: s.floating.length })`, `s => s.floating.map(...)`) is a new value
+ * every time React asks, and React stops with "Maximum update depth exceeded". Select the parts
+ * separately, or
+ * derive the object with `useMemo` from what you selected.
  *
  * @returns The current workspace state, or the selector's result.
  * @throws Error if used outside `<DockableDesktopProvider>`.
@@ -2291,8 +2317,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
  * }
  * ```
  */
-const noopSubscribe = (_cb: () => void): (() => void) => () => {};
-
 export function useWindowManagerState(): WorkspaceState;
 export function useWindowManagerState<T>(selector: (state: WorkspaceState) => T): T;
 export function useWindowManagerState<T>(selector?: (state: WorkspaceState) => T): WorkspaceState | T {
@@ -2352,19 +2376,23 @@ export const useWindowManagerActionsInternal = (): InternalWindowActions => {
 };
 
 /**
+ * @internal The formatter used when the app passes none: the descriptor's `defaultMessage` (or its
+ * id) with each `{key}` replaced by its value — every occurrence (7.4.1; it replaced only the first).
+ */
+export const defaultFormatMessage: MessageFormatter = (msg) => {
+  let text = msg.defaultMessage || msg.id;
+  if (msg.values) {
+    for (const [key, value] of Object.entries(msg.values)) text = text.split(`{${key}}`).join(String(value));
+  }
+  return text;
+};
+
+/**
  * React hook to retrieve the active i18n formatter.
  */
 export const useFormatMessage = (): MessageFormatter => {
   const formatter = useContext(WindowI18nContext);
-  return formatter || ((msg) => {
-    let text = msg.defaultMessage || msg.id;
-    if (msg.values) {
-      Object.entries(msg.values).forEach(([key, value]) => {
-        text = text.replace(`{${key}}`, String(value));
-      });
-    }
-    return text;
-  });
+  return formatter || defaultFormatMessage;
 };
 
 /**

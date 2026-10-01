@@ -76,7 +76,7 @@ function LaunchButton() {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `PanelTitle` | — | Modal header title: a string or a message descriptor (`{ id, defaultMessage }`). |
+| `title` | `PanelTitle` | — | Modal header title: a string, a message descriptor (`{ id, defaultMessage }`) or a function returning a string. |
 | `icon` | `ReactNode` | — | Icon displayed in the title bar. |
 | `size` | `'small' \| 'medium' \| 'large' \| 'fullscreen' \| 'auto'` | `'auto'` (sized to its content) | Controls max-width of the modal. |
 | `closable` | `boolean` | `true` | When `false`, hides the × button and disables backdrop click-to-close. |
@@ -106,7 +106,7 @@ const showDetails = async () => {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `PanelTitle` | — | Drawer header title: a string or a message descriptor. |
+| `title` | `PanelTitle` | — | Drawer header title: a string, a message descriptor or a function returning a string. |
 | `icon` | `ReactNode` | — | Icon next to the title. |
 | `width` | `number \| string` | `400` (px) | Drawer width. Numbers are treated as pixels; strings as CSS values (e.g. `'40%'`). |
 | `bodyPadding` | `number \| string` | `0` | CSS padding for the panel body content. Numbers are treated as pixels; strings as any CSS value/shorthand (e.g. `'10px 16px'`). Default is edge-to-edge — pass `10` to restore the pre-v6.0.0 default. |
