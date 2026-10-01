@@ -52,7 +52,7 @@ workspace.focusPanel(id)                          // bring to front / select tab
 
 | Option | Type | Description |
 |---|---|---|
-| `title` | `string \| MessageDescriptor` | Overrides the panel tab/window title. |
+| `title` | `string \| MessageDescriptor \| (() => string)` | Overrides the panel tab/window title. A function is called each time the title renders, and isn't saved in a layout. |
 | `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | Initial placement. Defaults to `'docked'` when a grid exists. |
 | `anchor` | `FloatAnchor \| null` | Pin a new floating window to a workspace corner. No effect when docked/tabbed. |
 | `focus` | `boolean` | Set `activePanelId` to this panel. Default `true`. |

@@ -1,0 +1,44 @@
+name: GitHub Release
+
+# After CI passes on main: if package.json names a version that has no GitHub release yet, tag
+# that commit vX.Y.Z and publish a release whose notes are the version's CHANGELOG section.
+# npm publishing stays manual — this workflow never runs `npm publish`.
+
+on:
+  workflow_run:
+    workflows: ["Deploy Pages"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the commit CI tested
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Create the release if this version has none
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already has a release — nothing to do."
+            exit 0
+          fi
+          bash scripts/release-notes.sh "$VERSION" > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no '## [$VERSION]' section — add one, or no release is made."
+            exit 1
+          fi
+          PRERELEASE=""
+          case "$VERSION" in *-*) PRERELEASE="--prerelease" ;; esac
+          gh release create "$TAG" --target "$SHA" --title "$TAG" --notes-file notes.md $PRERELEASE

@@ -940,6 +940,24 @@ export interface RddDesktopProps {
   animations?: boolean;
 }
 
+/**
+ * The desktop itself: the docked grid of tab groups, the floating windows, the taskbar of
+ * minimized panels, and the drop targets while a panel is dragged. Render it inside
+ * `<DockableDesktopProvider>`, in a container that gives it a size (`rdd-fill-viewport` fills the
+ * page), and import `react-dockable-desktop/styles.css` once.
+ *
+ * Exported as `RddDesktop`.
+ *
+ * @example
+ * ```tsx
+ * <DockableDesktopProvider workspace={workspace}>
+ *   <div className="rdd-fill-viewport">
+ *     <RddDesktop skin="vscode" taskbarVisibility="autohide" />
+ *   </div>
+ *   <RddModals />
+ * </DockableDesktopProvider>
+ * ```
+ */
 export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', animations = true }) => {
   // The context menu comes from <DockableDesktopProvider contextMenuAdapter={…}>. This built-in
   // fallback only renders when no provider supplies one (the library's own tests).
@@ -1127,6 +1145,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     setHoveredTab(null);
     hoveredTabRef.current = null;
     setActiveEdgeDrop(null);
+    setActiveCornerAnchor(null);
   };
 
   const flipRtl = (pos: DropPosition): DropPosition => {
@@ -1222,6 +1241,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
+          window.removeEventListener('blur', onCancel);
 
           if (dragStarted) {
             executeDrop(id, me);
@@ -1237,12 +1257,15 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
+          window.removeEventListener('blur', onCancel);
           if (dragStarted) clearDragState();
         };
 
         el.addEventListener('pointermove', onMove);
         el.addEventListener('pointerup', onEnd);
         el.addEventListener('pointercancel', onCancel);
+        // The window losing focus ends the drag, as a pointercancel would (7.4.1).
+        window.addEventListener('blur', onCancel);
       }, LONG_PRESS_MS);
 
       el.addEventListener('pointermove', onPreMove);
@@ -1268,6 +1291,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onEnd);
         window.removeEventListener('pointercancel', onCancel);
+        window.removeEventListener('blur', onCancel);
         if (dragStarted) executeDrop(id, me);
       };
 
@@ -1276,6 +1300,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onEnd);
         window.removeEventListener('pointercancel', onCancel);
+        window.removeEventListener('blur', onCancel);
         if (dragStarted) clearDragState();
       };
 
@@ -1283,6 +1308,10 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onEnd);
       window.addEventListener('pointercancel', onCancel);
+      // The window losing focus (an alt-tab, an iframe taking it) ends the drag, as a
+      // pointercancel would (7.4.1): the listeners, the hovered zone and the body class all go,
+      // so the next click can't drop the panel into the zone it was over.
+      window.addEventListener('blur', onCancel);
     }
   };
 
@@ -1634,6 +1663,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
+          window.removeEventListener('blur', onCancel);
           executeFWDrop();
         };
 
@@ -1643,12 +1673,15 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           el.removeEventListener('pointermove', onMove);
           el.removeEventListener('pointerup', onEnd);
           el.removeEventListener('pointercancel', onCancel);
+          window.removeEventListener('blur', onCancel);
           clearDragState();
         };
 
         el.addEventListener('pointermove', onMove);
         el.addEventListener('pointerup', onEnd);
         el.addEventListener('pointercancel', onCancel);
+        // The window losing focus ends the drag, as a pointercancel would (7.4.1).
+        window.addEventListener('blur', onCancel);
       }, LONG_PRESS_MS);
 
       el.addEventListener('pointermove', onPreMove);
@@ -1676,6 +1709,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onEnd);
         window.removeEventListener('pointercancel', onCancel);
+        window.removeEventListener('blur', onCancel);
         if (dragStarted) executeFWDrop();
       };
 
@@ -1684,6 +1718,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onEnd);
         window.removeEventListener('pointercancel', onCancel);
+        window.removeEventListener('blur', onCancel);
         if (dragStarted) clearDragState();
       };
 
@@ -1691,6 +1726,9 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onEnd);
       window.addEventListener('pointercancel', onCancel);
+      // The window losing focus ends the drag, as a pointercancel would (7.4.1): the next click
+      // can't dock the window into the zone it was over.
+      window.addEventListener('blur', onCancel);
     }
   };
 

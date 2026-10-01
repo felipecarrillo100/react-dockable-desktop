@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.4.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.4.1-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -278,7 +278,7 @@ Lower-level methods (close guards, state providers, split and floating-window ge
 | `close(options?)` | `(options?: CloseOptions) => void` | Request the container to close; respects dirty state and close guards (`{ force: true }` skips them) |
 | `minimize()` | `() => void` | Minimize this panel to the taskbar; no effect in a modal or drawer |
 | `setDirty(dirty, options?)` | `(dirty: boolean, options?: DirtyStateOptions) => void` | Mark unsaved changes; triggers confirmation dialog on close |
-| `setTitle(title)` | `(title: string \| MessageDescriptor) => void` | Change the tab/window title dynamically |
+| `setTitle(title)` | `(title: string \| MessageDescriptor \| (() => string)) => void` | Change the tab/window title dynamically |
 | `setIcon(icon)` | `(icon: ReactNode) => void` | Change the tab, floating title bar and taskbar icon (or a modal's or drawer's header icon); `null` restores the registration's `defaultOptions.icon`. Not saved by `saveLayout()` |
 
 ### ContainerType
@@ -361,8 +361,7 @@ Touch support is built in. No extra setup required:
 The library does **not** auto-detect the workspace's direction — the consuming app owns it. Two things must be wired together:
 
 ```tsx
-// 1. Keep html[dir] in sync for what sits outside the workspace — RddSidebar and toasts —
-//    which take their direction from the page.
+// 1. Keep html[dir] in sync for the rest of your page (your own chrome around the desktop).
 useEffect(() => {
   document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
 }, [isRtl]);
@@ -376,7 +375,7 @@ useEffect(() => {
 >
 ```
 
-`dir` can be `'ltr'` (default) or `'rtl'`. The workspace's layout, split directions, tab ordering, floating window controls, drop zones and context menus flip automatically; the sidebars and toasts follow `html[dir]` (step 1).
+`dir` can be `'ltr'` (default) or `'rtl'`. The workspace's layout, split directions, tab ordering, floating window controls, drop zones and context menus flip automatically; so do `RddSidebar` (with everything inside it) and the toasts (since 7.4.0). While the workspace is left-to-right those two follow the page's `dir`.
 
 Direction is **independent of locale** — you can have Arabic translations with LTR layout, or RTL without locale changes.
 

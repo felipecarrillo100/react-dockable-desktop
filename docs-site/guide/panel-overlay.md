@@ -296,7 +296,7 @@ function MapPanel() {
 | Prop | Type | Description |
 |------|------|-------------|
 | `id` | `string` | Unique identifier. Used as the key in z-order and stack tracking. |
-| `title` | `PanelTitle` | Text shown in the window header bar. A plain string, or an i18n message descriptor — see [Localised titles](#localised-titles). |
+| `title` | `PanelTitle` | Text shown in the window header bar. A plain string, an i18n message descriptor, or a function returning a string — see [Localised titles](#localised-titles). |
 | `icon?` | `ReactNode` | Optional icon shown to the left of the title in the header. Recommended: 12–14 px SVG with `stroke="currentColor"`. |
 | `open` | `boolean` | Mounts/unmounts the window. |
 | `onClose` | `() => void` | Called when the user clicks the × button; you must set `open` to `false` in response. |
