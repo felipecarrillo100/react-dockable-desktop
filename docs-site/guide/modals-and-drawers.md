@@ -238,7 +238,7 @@ const sidebarRef = useRef<SidebarHandle>(null);
 |------|------|----------|-------------|
 | `id` | `string` | ✓ | Unique key for this tab. |
 | `label` | `string` | ✓ | Tooltip / accessible label for the tab icon button. |
-| `icon` | `ReactNode` | — | Icon displayed in the tab strip. Required unless `hidden` is true. |
+| `icon` | `ReactNode` | — | Icon displayed in the tab strip. Required unless `hidden` is true. Pass it no size: rail icons follow `--rdd-chrome-icon-size` (`22px`). |
 | `renderContent` | `(tabId, onClose, onOpen) => ReactNode` | ✓ | Returns the drawer content. `onClose` collapses the drawer; `onOpen` expands it to this tab. |
 | `eagerMount` | `boolean` | — | Mount immediately on sidebar render (before the user clicks). Implies `preserveState: true`. Use when other parts of the app need to interact with the panel before the user opens it. |
 | `preserveState` | `boolean` | — | Keep the component alive in the DOM behind `display: none` when closed, instead of unmounting it. |
