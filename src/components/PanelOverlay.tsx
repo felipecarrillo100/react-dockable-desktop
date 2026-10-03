@@ -392,7 +392,7 @@ export interface RddPanelToolbarProps {
   variant?: ToolbarVariant;
   /** Default button style inherited by `ToolbarButton` and `ToolbarToggle` children. @default 'ghost' */
   buttonVariant?: ButtonVariant;
-  /** Icon size in pixels for all buttons in this toolbar. Falls back to CSS default when unset. */
+  /** Button size in pixels for all buttons in this toolbar (sets `--rdd-panel-toolbar-btn-size`). The icon inside follows `--rdd-panel-toolbar-icon-size`. Falls back to the stylesheet when unset. */
   buttonSize?: number;
   style?: React.CSSProperties;
   className?: string;
@@ -484,7 +484,7 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
 
 /** Props for `<RddToolbarButton>`. */
 export interface RddToolbarButtonProps {
-  /** Button icon — typically a small SVG component. */
+  /** Button icon: an SVG, an icon component or an icon-font glyph. Pass no size: the library sizes it with `--rdd-panel-toolbar-icon-size`. */
   icon: React.ReactNode;
   /** Click handler. */
   onClick(): void;
@@ -516,7 +516,7 @@ export function ToolbarButton({ icon, onClick, disabled, title, variant }: RddTo
 
 /** Props for `<RddToolbarToggle>`. */
 export interface RddToolbarToggleProps {
-  /** Button icon — typically a small SVG component. */
+  /** Button icon: an SVG, an icon component or an icon-font glyph. Pass no size: the library sizes it with `--rdd-panel-toolbar-icon-size`. */
   icon: React.ReactNode;
   /** Whether the toggle is in the active/pressed state. Sets `aria-pressed` automatically. */
   active: boolean;

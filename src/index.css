@@ -166,9 +166,26 @@
   --rdd-panel-toolbar-fg: rgba(255, 255, 255, 0.65);
   --rdd-panel-toolbar-fg-hover: rgba(255, 255, 255, 0.95);
   --rdd-panel-toolbar-btn-hover-bg: var(--rdd-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
-  --rdd-panel-toolbar-btn-active-bg: var(--rdd-toolbar-btn-radio-active-bg, rgba(56, 189, 248, 0.14));
-  --rdd-panel-toolbar-btn-active-color: var(--rdd-tab-icon-active, #38bdf8);
+  /* "On" is a solid accent chip with a white icon, the same in every buttonVariant: the toolbar
+     floats over panel content the library can't see, so a tint can't be relied on to show. In dark
+     the accent is deepened (65 % accent, 35 % black) so the white icon and the chip both clear 3:1
+     for bright accents; the light scheme uses the plain accent. */
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 65%, #000000);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-brand-on-accent, #ffffff);
+  /* buttonVariant="soft": each button gets its own near-opaque chip (the floating-widget surface)
+     with a hairline edge, so it reads over light, dark or busy content without any shadow. */
+  --rdd-panel-toolbar-btn-bg: var(--rdd-panel-float-bg);
+  --rdd-panel-toolbar-btn-bg-hover: color-mix(in srgb, var(--rdd-panel-float-bg), var(--rdd-panel-toolbar-fg-hover) 14%);
+  --rdd-panel-toolbar-btn-border: 1px solid var(--rdd-panel-float-border);
   --rdd-panel-toolbar-separator-color: var(--rdd-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+  /* Icon sizes. The library sizes the icon inside its own buttons, whatever icon library the app
+     uses: icon fonts follow font-size, SVG icons follow width/height. Apps pass no size. */
+  --rdd-panel-toolbar-icon-size: 20px;
+  --rdd-chrome-icon-size: 22px;
+  /* Workspace toolbar toggle "on": it sits on known chrome next to radio buttons, so a tint plus an
+     accent edge and an accent icon (--rdd-toolbar-btn-toggle-active-bg is set per scheme and skin). */
+  --rdd-toolbar-btn-toggle-active-color: var(--rdd-tab-icon-active);
+  --rdd-toolbar-btn-toggle-active-border: var(--rdd-tab-icon-active);
   /* ── Panel Overlay — Floating Window ── */
   --rdd-panel-float-bg: color-mix(in srgb, var(--rdd--b-panel-float-bg, rgb(22 24 34)) 92%, transparent);
   --rdd-panel-float-border: rgba(255, 255, 255, 0.1);
@@ -1317,7 +1334,7 @@ body.rdd-dragging-active {
   --rdd-sidebar-drawer-header-bg: rgba(0, 0, 0, 0.12);
   --rdd-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.06);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
   --rdd-toolbar-separator-color: rgba(255, 255, 255, 0.09);
   /* Sidebar active-tab design tokens */
   --rdd-tab-btn-active-width: 100%;
@@ -1368,7 +1385,7 @@ body.rdd-dragging-active {
   --rdd-sidebar-drawer-header-bg: rgba(0, 0, 0, 0.04);
   --rdd-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.05);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
   --rdd-toolbar-separator-color: rgba(0, 0, 0, 0.1);
   /* Light skin window overrides */
   --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(243 244 246)) calc(var(--rdd-window-opacity, 0.9) * 100%), transparent);
@@ -1435,6 +1452,7 @@ body.rdd-dragging-active {
   --rdd-panel-toolbar-fg: rgba(0, 0, 0, 0.55);
   --rdd-panel-toolbar-fg-hover: rgba(0, 0, 0, 0.85);
   --rdd-panel-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --rdd-panel-toolbar-btn-active-bg: var(--rdd-accent-color);
   --rdd-panel-toolbar-separator-color: rgba(0, 0, 0, 0.1);
   /* ── Panel Overlay — Floating Window (light) ── */
   --rdd-panel-float-bg: rgba(255, 255, 255, 0.96);
@@ -1631,7 +1649,7 @@ body.rdd-dragging-active {
   --rdd-panel-text: var(--rdd--b-panel-text, #e8eaed);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
 }
 
 [data-rdd-skin="chrome"][data-color-scheme="light"] {
@@ -1656,7 +1674,7 @@ body.rdd-dragging-active {
   --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #1f1f1f);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
 }
 
 /* Chrome tab angled geometry shapes */
@@ -1718,7 +1736,7 @@ body.rdd-dragging-active {
   --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #0f172a);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
 }
 
 [data-rdd-skin="slate"] .rdd-workspace-tab.rdd-active::before {
@@ -1754,7 +1772,7 @@ body.rdd-dragging-active {
   --rdd-panel-text: var(--rdd--b-panel-text, #eceff4);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
 }
 
 [data-rdd-skin="nord"][data-color-scheme="light"] {
@@ -1781,7 +1799,7 @@ body.rdd-dragging-active {
   --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
 }
 
 /* --------------------------------------------------------------------------
@@ -1811,7 +1829,7 @@ body.rdd-dragging-active {
   --rdd-panel-text: var(--rdd--b-panel-text, #ffffff);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
 }
 
 [data-rdd-skin="obsidian"][data-color-scheme="light"] {
@@ -1839,7 +1857,7 @@ body.rdd-dragging-active {
   --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
 }
 
 /* Obsidian custom borderless panel elevations */
@@ -1885,7 +1903,7 @@ body.rdd-dragging-active {
   --rdd-panel-text: var(--rdd--b-panel-text, #c0caf5);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
 }
 
 [data-rdd-skin="tokyo"][data-color-scheme="light"] {
@@ -1913,7 +1931,7 @@ body.rdd-dragging-active {
   --rdd-panel-title-color: var(--rdd-accent-color);
   --rdd-tab-icon-active: var(--rdd-accent-color);
   --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
-  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 7%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
 }
 
 /* ==========================================================================
@@ -2274,6 +2292,16 @@ body.rdd-dragging-active {
   position: relative;
   transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
   cursor: pointer;
+  font-size: var(--rdd-chrome-icon-size, 22px);
+  line-height: 1;
+}
+
+/* Icons in rail buttons: SVG icons follow the chrome icon size whatever their own width/height
+   attributes say; icon fonts follow the font-size above. An inline style size still wins. */
+.rdd-sidebar-tab-btn svg {
+  width: var(--rdd-chrome-icon-size, 22px);
+  height: var(--rdd-chrome-icon-size, 22px);
+  flex-shrink: 0;
 }
 
 /* Micro-interactions & hover tactile feedback for inactive buttons */
@@ -3138,6 +3166,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
   flex-shrink: 0;
   position: relative;
   transition: color 0.15s ease, background-color 0.15s ease;
+  font-size: var(--rdd-chrome-icon-size, 22px);
+  line-height: 1;
+}
+
+.rdd-toolbar-btn svg {
+  width: var(--rdd-chrome-icon-size, 22px);
+  height: var(--rdd-chrome-icon-size, 22px);
+  flex-shrink: 0;
 }
 
 .rdd-toolbar-btn:hover:not(:disabled) {
@@ -3164,10 +3200,11 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-toolbar-strip.rdd-top    .rdd-toolbar-btn-radio.rdd-active { border-bottom: var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)) 0 0; }
 .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active { border-top:    var(--rdd-toolbar-accent-bar-width, 3px) solid var(--rdd-tab-icon-active); border-radius: 0 0 calc(6px * var(--rdd-radius-scale, 1)) calc(6px * var(--rdd-radius-scale, 1)); }
 
-/* Toggle active — lighter tint, no directional border */
+/* Toggle active — accent tint, accent edge and accent icon; no directional bar (that marks radios) */
 .rdd-toolbar-btn-toggle.rdd-active {
-  color: var(--rdd-tab-icon-active);
+  color: var(--rdd-toolbar-btn-toggle-active-color);
   background-color: var(--rdd-toolbar-btn-toggle-active-bg);
+  border-color: var(--rdd-toolbar-btn-toggle-active-border);
 }
 
 /* Group button — corner triangle indicator shows a sub-tool family */
@@ -3519,32 +3556,12 @@ html.rdd-no-animations [class*="rdd-"]::after {
    PANEL OVERLAY — Per-skin token overrides
    ========================================================================== */
 
-[data-rdd-skin="vscode"] {
+[data-rdd-skin="vscode"]:not([data-color-scheme="light"]) {
   --rdd-panel-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.12);
 }
 
-[data-rdd-skin="macos"] {
+[data-rdd-skin="macos"]:not([data-color-scheme="light"]) {
   --rdd-panel-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.18);
-}
-
-[data-rdd-skin="slate"] {
-  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
-  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-}
-
-[data-rdd-skin="nord"] {
-  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
-  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-}
-
-[data-rdd-skin="obsidian"] {
-  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
-  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
-}
-
-[data-rdd-skin="tokyo"] {
-  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
-  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
 /* ==========================================================================
@@ -3601,6 +3618,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
   cursor: pointer;
   padding: 0;
   transition: background 0.12s ease, color 0.12s ease, transform 0.1s ease, border-color 0.12s ease;
+  font-size: var(--rdd-panel-toolbar-icon-size, 20px);
+  line-height: 1;
+}
+
+.rdd-panel-toolbar-btn svg {
+  width: var(--rdd-panel-toolbar-icon-size, 20px);
+  height: var(--rdd-panel-toolbar-icon-size, 20px);
+  flex-shrink: 0;
 }
 
 .rdd-panel-toolbar-btn:hover:not(:disabled) {
@@ -3611,15 +3636,6 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 .rdd-panel-toolbar-btn:active:not(:disabled) {
   transform: scale(0.94);
-}
-
-.rdd-panel-toolbar-btn--active {
-  background: var(--rdd-panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.14));
-  color: var(--rdd-panel-toolbar-btn-active-color, #38bdf8);
-}
-
-.rdd-panel-toolbar-btn--active:hover:not(:disabled) {
-  background: var(--rdd-panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.22));
 }
 
 .rdd-panel-toolbar-btn:disabled {
@@ -3658,22 +3674,15 @@ html.rdd-no-animations [class*="rdd-"]::after {
 
 /* ── Button variants — toolbar-level default ── */
 
-/* soft */
+/* soft — a chip per button: near-opaque surface plus hairline edge, readable over any content */
 .rdd-panel-toolbar[data-btn-variant="soft"] .rdd-panel-toolbar-btn,
 .rdd-panel-toolbar-btn[data-variant="soft"] {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--rdd-panel-toolbar-btn-bg);
+  border: var(--rdd-panel-toolbar-btn-border);
 }
 .rdd-panel-toolbar[data-btn-variant="soft"] .rdd-panel-toolbar-btn:hover:not(:disabled),
 .rdd-panel-toolbar-btn[data-variant="soft"]:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-}
-[data-color-scheme="light"] .rdd-panel-toolbar[data-btn-variant="soft"] .rdd-panel-toolbar-btn,
-[data-color-scheme="light"] .rdd-panel-toolbar-btn[data-variant="soft"] {
-  background: rgba(0, 0, 0, 0.04);
-}
-[data-color-scheme="light"] .rdd-panel-toolbar[data-btn-variant="soft"] .rdd-panel-toolbar-btn:hover:not(:disabled),
-[data-color-scheme="light"] .rdd-panel-toolbar-btn[data-variant="soft"]:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--rdd-panel-toolbar-btn-bg-hover);
 }
 
 /* outlined */
@@ -3695,14 +3704,28 @@ html.rdd-no-animations [class*="rdd-"]::after {
 /* filled */
 .rdd-panel-toolbar[data-btn-variant="filled"] .rdd-panel-toolbar-btn,
 .rdd-panel-toolbar-btn[data-variant="filled"] {
-  background: var(--rdd-panel-toolbar-btn-active-bg, rgba(56, 189, 248, 0.2));
-  color: var(--rdd-panel-toolbar-btn-active-color, #38bdf8);
-  border: 1px solid var(--rdd-panel-toolbar-btn-active-color, #38bdf8);
+  background: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  color: var(--rdd-accent-color);
+  border: 1px solid var(--rdd-accent-color);
 }
 .rdd-panel-toolbar[data-btn-variant="filled"] .rdd-panel-toolbar-btn:hover:not(:disabled),
 .rdd-panel-toolbar-btn[data-variant="filled"]:hover:not(:disabled) {
-  background: var(--rdd-panel-toolbar-btn-active-color, #38bdf8);
-  color: #000;
+  background: color-mix(in srgb, var(--rdd-accent-color) 32%, transparent);
+}
+
+/* ── "On" state (ToolbarToggle active) ──
+   Declared after the variants, at a specificity that beats them, so "on" looks the same in every
+   buttonVariant: solid accent chip, on-accent icon. A skin or app restyles it with the two tokens. */
+.rdd-panel-toolbar .rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active,
+.rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active {
+  background: var(--rdd-panel-toolbar-btn-active-bg);
+  color: var(--rdd-panel-toolbar-btn-active-color);
+  border-color: transparent;
+}
+.rdd-panel-toolbar .rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active:hover:not(:disabled),
+.rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--rdd-panel-toolbar-btn-active-bg) 86%, var(--rdd-panel-toolbar-btn-active-color));
+  color: var(--rdd-panel-toolbar-btn-active-color);
   border-color: transparent;
 }
 
