@@ -943,6 +943,7 @@ function AppContent({ locale = 'en', onLocaleChange, rtlLayout = false, setRtlLa
                 <NavDropdown.Item onClick={spawnFloatingWindow}>🪟 Spawn Help Window</NavDropdown.Item>
                 <NavDropdown.Item onClick={() => ws.openPanel('rtlshowcase-main', 'rtlShowcase')}>🔄 RTL Content Showcase</NavDropdown.Item>
                 <NavDropdown.Item onClick={() => ws.openPanel('markdown-main', 'markdownEditor')}>📄 Markdown Editor</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => ws.openPanel('toolbarbuttons-main', 'toolbarButtons')}>🎛️ Toolbar Buttons</NavDropdown.Item>
                 <NavDropdown.Item onClick={() => ws.openPanel(`markdown-${Date.now()}`, 'markdownEditor')}>📄+ New Markdown Editor Instance</NavDropdown.Item>
               </NavDropdownMenu>
              {/* Elements dropdown showing active windows, with limit N + Show All */}

@@ -71,7 +71,7 @@ A toolbar strip that attaches to any edge of the `RddPanelOverlay` container. Mu
 | `position` | `ToolbarPosition` | — | **Required.** Which edge to attach to. One of `'top'`, `'bottom'`, `'left'`, `'right'`. |
 | `variant` | `'transparent' \| 'frosted' \| 'solid'` | `'transparent'` | Background style. `frosted` adds a blur/tint; `solid` uses the tab-bar background (`--rdd-bg-tab-bar`). |
 | `buttonVariant` | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` | `'ghost'` | Default button appearance inherited by all child buttons. Overridable per-button. |
-| `buttonSize` | `number` | — | Overrides the `--rdd-panel-toolbar-btn-size` CSS variable (pixels). |
+| `buttonSize` | `number` | — | Button size in pixels; overrides `--rdd-panel-toolbar-btn-size`. The icon inside follows `--rdd-panel-toolbar-icon-size`, not this prop. |
 | `className` | `string` | — | Extra CSS class. |
 | `style` | `React.CSSProperties` | — | Inline styles merged after position styles. |
 
@@ -97,6 +97,95 @@ When you add both a `top` and a `left` toolbar, the library measures the top too
 ```
 
 ---
+
+## Styling toolbar buttons
+
+The library owns the whole button: its size, the size and colour of the icon inside it, its hover, disabled and "on" states, the keyboard focus ring and `aria-pressed`. Your app supplies only the icon, from any icon library, and passes **no size**.
+
+### Icon size
+
+| Token | Default | Sizes |
+|---|---|---|
+| `--rdd-panel-toolbar-icon-size` | `20px` | icons in `RddPanelToolbar` buttons and toggles |
+| `--rdd-chrome-icon-size` | `22px` | icons in the workspace toolbar and the sidebar rail |
+
+Icon fonts (Bootstrap Icons, Font Awesome's webfont, Material Symbols) follow the button's `font-size`. SVG icons follow the token's width and height, even when the SVG carries its own `width`/`height` attributes (as icon components with a `size` prop usually render). An inline `style` width or height still wins, so don't set one. An icon drawn as a CSS mask or background on a `<span>` needs `width: 1em; height: 1em` in your own CSS to follow the size.
+
+Keep the icon a few pixels smaller than the button: at least about 5px on each side. 22px in a 32px button is the largest comfortable fit.
+
+### Button variants and states
+
+`buttonVariant` sets the look of a button that is **off**. The "on" look is the same in every variant, so a toggled-on button reads as on wherever it is.
+
+| `buttonVariant` | Off | Use it for |
+|---|---|---|
+| `ghost` (default) | icon only, no background | toolbars on a plain, known background, or with a `frosted`/`solid` strip |
+| `soft` | its own near-opaque chip with a hairline edge | toolbars over panel content you don't control: canvases, video, images, charts, maps |
+| `outlined` | a thin outline | dense toolbars that need visible button bounds |
+| `filled` | an accent-tinted chip with an accent edge | toolbars that should carry the brand colour at rest |
+
+When a toolbar floats over content you don't control, use `buttonVariant="soft"` or a `frosted`/`solid` strip. Don't add shadows to the icons: the chip or the strip is what keeps them readable.
+
+### Colour tokens
+
+| Token | Paints | Default |
+|---|---|---|
+| `--rdd-panel-toolbar-fg` / `-fg-hover` | icon colour when off / on hover | translucent white (dark), translucent black (light) |
+| `--rdd-panel-toolbar-btn-hover-bg` | hover background | translucent white or black |
+| `--rdd-panel-toolbar-btn-bg` / `-bg-hover` / `-border` | the `soft` chip | the floating-widget surface, a hairline edge |
+| `--rdd-panel-toolbar-btn-active-bg` | **"on" background** | the accent, deepened 35% toward black in dark |
+| `--rdd-panel-toolbar-btn-active-color` | **"on" icon colour** | `--rdd-brand-on-accent`, else white |
+| `--rdd-panel-toolbar-btn-size` / `-radius` | button size and corner radius | `32px` / `6px` |
+
+The default "on" look clears WCAG's 3:1 non-text contrast, for the icon and for the chip against the panel, with bright and dark accents alike. If you change it, keep that bar in mind.
+
+### Make the "on" look your own
+
+Set the tokens on `:root` to change every panel toolbar, on a skin selector to change one skin, or on a toolbar's `className` to change one toolbar. Load your stylesheet after the library's, so your values win.
+
+A calmer tint, with a white icon in dark and an accent icon in light. It is softer, but weaker over busy content:
+
+```css
+[data-color-scheme="dark"] {
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 34%, transparent);
+  --rdd-panel-toolbar-btn-active-color: #ffffff;
+}
+[data-color-scheme="light"] {
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-accent-color);
+}
+```
+
+A neutral "pressed key", with no accent at all:
+
+```css
+[data-color-scheme="dark"]  { --rdd-panel-toolbar-btn-active-bg: #e8eaef; --rdd-panel-toolbar-btn-active-color: #0d0f16; }
+[data-color-scheme="light"] { --rdd-panel-toolbar-btn-active-bg: #1f2430; --rdd-panel-toolbar-btn-active-color: #ffffff; }
+```
+
+The plain accent with a dark icon, in both schemes:
+
+```css
+:root {
+  --rdd-panel-toolbar-btn-active-bg: var(--rdd-accent-color);
+  --rdd-panel-toolbar-btn-active-color: #090b11;
+}
+```
+
+One toolbar in its own colour, leaving the rest alone:
+
+```css
+.inspector-toolbar {
+  --rdd-panel-toolbar-btn-active-bg: #7c3aed;
+  --rdd-panel-toolbar-btn-active-color: #ffffff;
+}
+```
+
+```tsx
+<RddPanelToolbar position="top" className="inspector-toolbar">…</RddPanelToolbar>
+```
+
+To recolour every "on" state in every skin at once, set your brand instead: `--rdd-brand-accent` and `--rdd-brand-on-accent` on `:root` (see [Theming](./theming.md)).
 
 ## Toolbar primitives
 

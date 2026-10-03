@@ -25,6 +25,7 @@ import {
 import type { ContextMenuItem } from '../src/index';
 import PanelManagerForm from './PanelManagerForm';
 import MarkdownEditorPanel from './MarkdownEditorPanel';
+import { ToolbarButtonsPanel } from './ToolbarButtonsPanel';
 import { workspace } from './workspace';
 import Editor from '@monaco-editor/react';
 import L from 'leaflet';
@@ -1720,6 +1721,11 @@ export const RTLShowcasePanel: React.FC = () => {
 
 // Register all panels
 export function registerDemoPanels() {
+    workspace.registry.register('toolbarButtons', ToolbarButtonsPanel, {
+        title: 'Toolbar Buttons',
+        icon: '🎛️',
+        initialTarget: 'docked',
+    });
     workspace.registry.register('mainMap', MainMap, {
         title: 'Main Map',
         icon: '🗺️',
