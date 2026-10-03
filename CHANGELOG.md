@@ -6,6 +6,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.5.0] — 2026-10-04
+
+Toolbar buttons: the library now sizes the icon inside its own buttons, and a toggle that is on
+can be told from one that is off at a glance, on chrome and over panel content alike. No props were
+added or removed; everything new is a CSS custom property.
+
+### Added
+
+- **Icon size tokens.** `--rdd-panel-toolbar-icon-size` (`20px`) sizes icons in `RddPanelToolbar`
+  buttons and toggles; `--rdd-chrome-icon-size` (`22px`) sizes them in the workspace toolbar and
+  the sidebar rail. Icon fonts follow the button's `font-size`; SVG icons follow the token's
+  width and height, even when the SVG has its own `width`/`height` attributes. Apps no longer pass
+  a size to each icon.
+- **`soft` chip tokens**: `--rdd-panel-toolbar-btn-bg`, `--rdd-panel-toolbar-btn-bg-hover`,
+  `--rdd-panel-toolbar-btn-border`.
+- **Workspace toolbar toggle tokens**: `--rdd-toolbar-btn-toggle-active-color` and
+  `--rdd-toolbar-btn-toggle-active-border`, so its "on" icon and edge no longer have to follow the
+  sidebar tab colour.
+
+### Changed
+
+- **Panel toolbar "on" state** is a solid chip with a white icon, the same in every
+  `buttonVariant`: in dark the accent mixed 65% with black, in light the plain accent. The icon is
+  `--rdd-brand-on-accent` when a brand sets it. It clears WCAG's 3:1 non-text contrast with bright
+  and dark accents. Before, it was a 14–15% accent tint.
+- **`buttonVariant="soft"`** is a near-opaque chip (the floating-widget surface) with a hairline
+  edge, readable over panel content you don't control. Before, it was a 6% (dark) / 4% (light)
+  wash that disappeared over busy content.
+- **Workspace toolbar toggle "on"**: the accent tint goes from 6–8% to 22% (dark) / 16% (light) in
+  every skin, with a 1px accent edge and the accent icon.
+- **Icons in toolbar and rail buttons are larger by default**: 20px in panel toolbars and 22px in
+  the workspace toolbar and rail, where they used to render at whatever size the app gave them.
+
+### Fixed
+
+- **`filled` toggles looked the same on and off**: its resting look used the active colours. It
+  now rests on an accent tint with an accent edge, and "on" is the solid chip.
+- **vscode and macos painted a white hover tint in light mode** on panel toolbar buttons; it now
+  applies in dark only.
+- **`buttonSize` was documented as the icon size.** It sets the button size; the icon follows
+  `--rdd-panel-toolbar-icon-size`.
+
+### Upgrading
+
+- Remove per-icon sizes inside toolbar and rail buttons (`size={16}`, `fontSize`, inline
+  `width`/`height`): set `--rdd-panel-toolbar-icon-size` / `--rdd-chrome-icon-size` instead. An
+  inline `style` size still wins over the tokens.
+- If you added shadows to keep toolbar icons readable over panel content, remove them and use
+  `buttonVariant="soft"` or a `frosted`/`solid` toolbar.
+- If you overrode `--rdd-panel-toolbar-btn-active-color` or `-active-bg` to make "on" visible,
+  check whether you still need to: the default is visible in every variant now. To restyle it, see
+  [Styling toolbar buttons](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay#styling-toolbar-buttons).
+- To get the old look back, set the tokens to their previous values, e.g.
+  `--rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent)`.
+
+### Docs
+
+- Panel Overlay guide: new "Styling toolbar buttons" section (what the library owns, icon sizes,
+  variants, colour tokens, recipes for your own "on" look); corrected `buttonSize`.
+- Toolbar guide: token table updated for the new toggle defaults and tokens.
+- Sidebar (Modals & Drawers guide): rail icons follow `--rdd-chrome-icon-size`.
+
+### Demo
+
+- Spawn Tools → Toolbar Buttons: every `buttonVariant` in every state over light, dark and busy
+  content, with icon-size sliders.
+
 ## [7.4.1] — 2026-10-01
 
 Fixes from a review of 7.4.0. No API changes.
@@ -655,7 +722,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.5.0...HEAD
+[7.5.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.1...v7.5.0
 [7.4.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.0...v7.4.1
 [7.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.3.0...v7.4.0
 [7.3.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.2.0...v7.3.0

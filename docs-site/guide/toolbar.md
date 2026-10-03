@@ -255,7 +255,10 @@ All toolbar colors use CSS custom properties that cascade from `[data-color-sche
 |----------|-------|------|-------------|
 | `--rdd-toolbar-btn-hover-bg` | `rgba(0,0,0,.05)` | `rgba(255,255,255,.06)` | Button hover background. |
 | `--rdd-toolbar-btn-radio-active-bg` | `rgba(0,102,204,.1)` | `rgba(56,189,248,.14)` | Radio active button background tint. |
-| `--rdd-toolbar-btn-toggle-active-bg` | `rgba(0,102,204,.06)` | `rgba(56,189,248,.08)` | Toggle active button background tint. |
+| `--rdd-toolbar-btn-toggle-active-bg` | accent at 16% | accent at 22% | Background of a toggle that is on. |
+| `--rdd-toolbar-btn-toggle-active-color` | `--rdd-tab-icon-active` | `--rdd-tab-icon-active` | Icon of a toggle that is on. |
+| `--rdd-toolbar-btn-toggle-active-border` | `--rdd-tab-icon-active` | `--rdd-tab-icon-active` | 1px edge of a toggle that is on. |
+| `--rdd-chrome-icon-size` | `22px` | `22px` | Icon size in toolbar buttons (and the sidebar rail). Icon fonts follow it as `font-size`, SVG icons as width and height; pass your icons no size. |
 | `--rdd-toolbar-separator-color` | `rgba(0,0,0,.1)` | `rgba(255,255,255,.09)` | Separator line color. |
 | `--rdd-tab-icon-active` | `#0066cc` | `#38bdf8` | Accent color for active radio button icon and border. Shared with the sidebar strip. |
 | `--rdd-toolbar-btn-active-shadow` | `none` | `none` | `box-shadow` on active radio/group buttons. Obsidian/Tokyo override with an inset ambient glow. |
