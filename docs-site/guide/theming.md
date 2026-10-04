@@ -632,7 +632,8 @@ You don't need to define all variables. A skin that only sets `--rdd-accent-colo
 | `--rdd-brand-on-accent` | *(unset — `#090b11`; primary button in light mode `#ffffff`)* | Set by your app: text on a solid accent fill (the primary button, the active dock target). |
 | `--rdd-accent-color` | `var(--rdd-brand-accent, #38bdf8)` (light: `#0066cc`) | Primary interactive color — tab indicators, active borders. Every tint of it in the library is a `color-mix()` of this variable. |
 | `--rdd-accent-glow` | the accent at 15% | Translucent version used for focus halos. |
-| `--rdd-focus-ring` | `2px solid var(--rdd-accent-color)` | Outline drawn on a library control reached from the keyboard (`:focus-visible`). |
+| `--rdd-focus-ring` | `2px solid var(--rdd-accent-color)` | Outline drawn on a library control reached from the keyboard (`:focus-visible`). Read with that fallback rather than declared, so it follows the skin's (or your brand's) accent wherever it is drawn. |
+| `--rdd-context-menu-focus-ring` | `var(--rdd-focus-ring)` | Outline on a context-menu item that has keyboard focus. |
 
 ### Fonts
 

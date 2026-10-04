@@ -6,6 +6,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.6.0] — 2026-10-04
+
+Context menus open with nothing highlighted, the same every time.
+
+### Changed
+
+- **A context menu opens with focus on the menu itself, no item highlighted.** It used to focus
+  its first item, and whether the browser then drew a focus ring depended on the user's previous
+  interaction: a menu opened from script (a map library's right-click calling `showContextMenu`,
+  say) showed a ring after a page load or a key press and none after a mouse click. ↓ reaches the
+  first item and ↑ the last, so keyboard use is unchanged but for that one key press.
+- **Menus opened from the keyboard still start on their first item**: the library's own (the
+  ContextMenu key or Shift+F10 on a tab or taskbar item, Enter or Space on a window's ⋮ button),
+  a keyboard `contextmenu` event, and any menu shown with `initialFocus: 'first-item'`.
+
+### Added
+
+- **`initialFocus?: 'menu' | 'first-item'`** on `showContextMenu` / `ShowContextMenuOptions`
+  (`useContextMenu()`, `useWorkspace().showContextMenu`, a `ContextMenuHandle`). A custom
+  `ContextMenuAdapter` receives it too.
+- **`--rdd-context-menu-focus-ring`**: the outline on a menu item with keyboard focus, by default
+  `--rdd-focus-ring` (the skin's accent). `--rdd-focus-ring` is now documented with the theming
+  tokens; both are read with a fallback rather than declared, so they follow the skin's or your
+  brand's accent.
+
+### Fixed
+
+- **↑ from a menu with nothing highlighted went to the second-to-last item**; it goes to the last.
+- **A submenu opened by hovering took focus** when an earlier submenu had been opened from the
+  keyboard; a hover-opened submenu never takes focus now.
+- **The focused menu element drew the global focus ring**; it draws none, and items draw the
+  skin's ring rather than the browser's default.
+
+### Upgrading
+
+- Nothing to change for menus opened with the mouse or from script: they now open with no item
+  highlighted. If you open a menu from your own keyboard shortcut, pass
+  `initialFocus: 'first-item'` (or the keyboard `contextmenu` event) so it starts on an item.
+- Tests that expected the first item to have focus right after `showContextMenu` should press ↓
+  first, or open the menu with `initialFocus: 'first-item'`.
+
+### Tests
+
+- `KeyboardAccess.test.tsx`: the menu itself is focused on open; ↓/↑ from it; `initialFocus`;
+  keyboard and mouse `contextmenu` events; the Menu key and a right-click on a tab; a hover-opened
+  submenu after a keyboard-opened one. Each new test was seen failing with its part of the fix
+  removed. The old "focuses the first enabled item" test passed vacuously (its label helper read
+  the first label inside whatever had focus) and is replaced.
+- The branding browser baseline (`tests/browser/fixtures/branding-baseline.json`) is regenerated
+  for 7.5.0's intended toolbar changes (toggle "on" colours and edge, the new tokens, the
+  vscode/macos light-mode hover), which 7.5.0 shipped without refreshing it. No context-menu
+  colour changed.
+
+### Docs
+
+- Context Menus guide: initial focus, the option, the adapter and `ContextMenuHandle` signatures,
+  keyboard behaviour, the focus ring token. Advanced guide keyboard table; Theming token table.
+
 ## [7.5.0] — 2026-10-04
 
 Toolbar buttons: the library now sizes the icon inside its own buttons, and a toggle that is on
@@ -722,7 +780,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.5.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.0...HEAD
+[7.6.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.5.0...v7.6.0
 [7.5.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.1...v7.5.0
 [7.4.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.0...v7.4.1
 [7.4.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.3.0...v7.4.0

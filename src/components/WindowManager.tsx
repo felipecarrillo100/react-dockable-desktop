@@ -53,11 +53,24 @@ const tabDropSide = (tabEl: Element, clientX: number): 'left' | 'right' => {
  */
 const isMenuKey = (e: React.KeyboardEvent): boolean => e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10');
 
+/** Events made by `menuEventAt`: their menu was opened from the keyboard, so it opens on its first item. */
+const keyboardMenuEvents = new WeakSet<object>();
+
 /** A `contextmenu` event placed at an element, for opening that element's menu from the keyboard. */
 const menuEventAt = (el: Element): React.MouseEvent => {
   const r = el.getBoundingClientRect();
-  return new MouseEvent('contextmenu', { clientX: r.left, clientY: r.bottom, cancelable: true }) as unknown as React.MouseEvent;
+  const event = new MouseEvent('contextmenu', { clientX: r.left, clientY: r.bottom, cancelable: true });
+  keyboardMenuEvents.add(event);
+  return event as unknown as React.MouseEvent;
 };
+
+/**
+ * The menu's initial focus for one of the library's own menus: the first item when it was opened
+ * from the keyboard (the Menu key or Shift+F10 via `menuEventAt`, or Enter/Space on a button,
+ * whose click has `detail` 0), else the default — the menu itself, nothing highlighted.
+ */
+const initialFocusFor = (e: React.MouseEvent): 'first-item' | undefined =>
+  keyboardMenuEvents.has(e) || (e.type === 'click' && e.detail === 0) ? 'first-item' : undefined;
 
 /**
  * After a tab closed from the keyboard, keep focus in the workspace instead of letting it drop to
@@ -1355,7 +1368,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
     showContextMenu({
       event: e,
-      items: finalItems
+      items: finalItems,
+      initialFocus: initialFocusFor(e),
     });
   };
 
@@ -1369,6 +1383,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       || registry.get(panel?.component ?? '')?.defaultOptions?.canDrag !== false;
     showContextMenu({
       event: e,
+      initialFocus: initialFocusFor(e),
       items: [
         {
           label: formatLabel(messages.restorePanel, formatMessage),
@@ -2053,7 +2068,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
                           if (customItems.length === 0) return;
                           showContextMenu({
                             event: e,
-                            items: customItems
+                            items: customItems,
+                            initialFocus: initialFocusFor(e),
                           });
                         }}
                       >
