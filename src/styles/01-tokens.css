@@ -1,0 +1,200 @@
+/*
+ * @file index.css
+ * @description Core stylesheet for the react-dockable-desktop layout engine.
+ * Contains the styling variables for design system tokens (Nord, Tokyo Night, macOS skins),
+ * layout splits, resizers, floating window shadows, sidebars, modal rendering,
+ * and specialized scaling overrides for embedded web canvases.
+ */
+
+/* Brand surfaces (7.3.0): each surface a skin declares reads --rdd--b-<token> first. These are
+   mixes of the application's --rdd-brand-surface and --rdd-brand-text. --rdd--b-base is the surface,
+   written as a mix with the text so that it is valid only when *both* are set; every other value is
+   built on it and has no fallback. While either input is unset they are all invalid, and every
+   surface falls back to the skin's own colour. Internal, not API — declared only here, where :root
+   resolves the brand variables. */
+:root {
+  --rdd--b-base: color-mix(in srgb, var(--rdd-brand-surface) 100%, var(--rdd-brand-text));
+  --rdd--b-bg-panel: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-bg-primary: var(--rdd--b-base);
+  --rdd--b-bg-tab-bar: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-bg-tab-hover: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 10%);
+  --rdd--b-bg-tab-inactive: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-bg-workspace: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 3%);
+  --rdd--b-border-panel: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 14%);
+  --rdd--b-close-btn-active-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-close-btn-color: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-close-btn-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-custom-btn-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-modal-curtain-bg: color-mix(in srgb, var(--rdd--b-base), black 20%);
+  --rdd--b-dock-target-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-dock-target-center-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 12%);
+  --rdd--b-modal-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-modal-close-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-placeholder-bg: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-panel-toolbar-frosted-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-panel-card-bg: color-mix(in srgb, var(--rdd--b-base), black 6%);
+  --rdd--b-panel-card-border: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 16%);
+  --rdd--b-panel-float-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-panel-text: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-side-panel-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-side-panel-close-hover-color: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-sidebar-badge-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 16%);
+  --rdd--b-sidebar-badge-text: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-sidebar-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 4%);
+  --rdd--b-sidebar-card-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 8%);
+  --rdd--b-sidebar-tabs-bg: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-sidebar-text-muted: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-sidebar-text-title: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-tab-bg-active-unfocused: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 3%);
+  --rdd--b-tab-btn-active-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 9%);
+  --rdd--b-tab-icon-inactive: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-tab-text-active-focused: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-tab-text-active-unfocused: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-taskbar-bg: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-taskbar-item-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-taskbar-item-hover-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 12%);
+  --rdd--b-text-primary: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-text-secondary: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-text-tab-active: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-text-tab-hover: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+  --rdd--b-text-tab-inactive: color-mix(in srgb, var(--rdd-brand-text) 62%, var(--rdd--b-base));
+  --rdd--b-toast-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 10%);
+  --rdd--b-window-bg: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 6%);
+  --rdd--b-window-border: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 14%);
+  --rdd--b-window-border-focused: color-mix(in srgb, var(--rdd--b-base), var(--rdd-brand-text) 30%);
+  --rdd--b-window-header-bg: color-mix(in srgb, var(--rdd--b-base), black 10%);
+  --rdd--b-window-text: color-mix(in srgb, var(--rdd-brand-text) 100%, var(--rdd--b-base));
+}
+
+:root {
+  --rdd-styles-loaded: 1; /* sentinel — checked at mount to detect missing CSS import */
+  --rdd-z-base: 1000; /* base for floating windows + all chrome overlays; override via WindowManagerProvider's zIndexBase */
+  /* Fonts for the library's own chrome — tabs, title bars, toolbar, sidebar, menus, toasts, drawers,
+     modals. Neither Outfit nor Inter is loaded by the library: load one yourself, or override this
+     (on :root or <body> to reach everything: menus, flyouts and toasts render into <body>). To use
+     the host page's font everywhere: `inherit` here on :root, or `initial` on <body>. `initial` on
+     a wrapper reaches only the chrome inside it; `inherit` below :root only copies this stack down.
+     A skin picks its own font through --rdd-skin-font-family, never by declaring --rdd-font-family
+     itself: that would override the consumer's :root value on the element carrying data-rdd-skin.
+     This resolves on <html>, which carries data-rdd-skin too. */
+  --rdd-font-family: var(--rdd-skin-font-family, 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif);
+  --rdd-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Errors the library itself shows (the unregistered-panel placeholder). */
+  --rdd-danger-color: #dc3545;
+  /* Fill of placeholder boxes (a minimized panel's thumbnail when it has no live preview). */
+  --rdd-placeholder-bg: color-mix(in srgb, var(--rdd--b-placeholder-bg, rgb(108 117 125)) 15%, transparent);
+  --rdd-bg-primary: var(--rdd--b-bg-primary, #090b11);
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #0f111a);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #141722);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #0d0f16);
+  --rdd-text-primary: var(--rdd--b-text-primary, #f1f5f9);
+  --rdd-text-secondary: var(--rdd--b-text-secondary, #94a3b8);
+  --rdd-border-color: rgba(255, 255, 255, 0.08);
+  /* Branding: an app sets --rdd-brand-accent / --rdd-brand-on-accent on :root, and every skin reads
+     them first (var(--rdd-brand-accent, <skin colour>)). The library only reads them — declared
+     here or in a skin, they would override the app's value on the element carrying data-rdd-skin.
+     Every tint of the accent is a color-mix() of --rdd-accent-color, never a copied rgba(). */
+  --rdd-accent-color: var(--rdd-brand-accent, #38bdf8); /* Modern Cyan/Sky-blue accent */
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
+  --rdd-header-button-gap: 4px; /* Configurable gap spacing between titlebar action buttons */
+  /* Window skins variables */
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(20 22 28)) calc(var(--rdd-window-opacity, 0.85) * 100%), transparent);
+  --rdd-window-border: rgba(255, 255, 255, 0.08);
+  --rdd-window-border-focused: rgba(255, 255, 255, 0.28);
+  --rdd-window-header-bg: rgba(0, 0, 0, 0.25);
+  --rdd-window-text: var(--rdd--b-window-text, #f8f9fa);
+  --rdd-window-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --rdd-window-shadow-focused: 0 24px 50px rgba(0, 0, 0, 0.55);
+  /* Modal theme variables */
+  --rdd-modal-curtain-bg: color-mix(in srgb, var(--rdd--b-modal-curtain-bg, rgb(9 11 17)) 65%, transparent);
+  --rdd-modal-bg: color-mix(in srgb, var(--rdd--b-modal-bg, rgb(20 23 34)) 95%, transparent);
+  --rdd-modal-border: rgba(255, 255, 255, 0.08);
+  --rdd-modal-header-bg: rgba(0, 0, 0, 0.15);
+  --rdd-modal-header-border: rgba(255, 255, 255, 0.06);
+  --rdd-modal-close-hover-color: var(--rdd--b-modal-close-hover-color, #ffffff);
+  --rdd-side-panel-bg: color-mix(in srgb, var(--rdd--b-side-panel-bg, rgb(20 23 34)) 88%, transparent);
+  --rdd-side-panel-border: rgba(255, 255, 255, 0.08);
+  --rdd-side-panel-header-bg: rgba(0, 0, 0, 0.15);
+  --rdd-side-panel-header-border: rgba(255, 255, 255, 0.06);
+  --rdd-side-panel-close-hover-color: var(--rdd--b-side-panel-close-hover-color, #ffffff);
+  /* Grid/Docked panel theme variables */
+  --rdd-border-panel: rgba(255, 255, 255, 0.08);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #0c0d12);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #858b99);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #ffffff);
+  /* Tab and control button hover colors */
+  --rdd-bg-tab-hover: var(--rdd--b-bg-tab-hover, #171a22);
+  --rdd-text-tab-hover: var(--rdd--b-text-tab-hover, #e2e8f0);
+  --rdd-close-btn-hover-bg: rgba(255, 255, 255, 0.12);
+  --rdd-close-btn-hover-color: var(--rdd--b-close-btn-hover-color, #ffffff);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #858b99);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #e2e8f0);
+  /* Tab focus states */
+  --rdd-tab-indicator-focused: var(--rdd-accent-color, #38bdf8);
+  --rdd-tab-indicator-unfocused: rgba(255, 255, 255, 0.3);
+  --rdd-tab-bg-active-focused: var(--rdd-bg-panel);
+  --rdd-tab-bg-active-unfocused: color-mix(in srgb, var(--rdd--b-tab-bg-active-unfocused, rgb(20 23 34)) 55%, transparent);
+  --rdd-tab-text-active-focused: var(--rdd-text-tab-active, #ffffff);
+  --rdd-tab-text-active-unfocused: rgba(255, 255, 255, 0.65);
+  --rdd-resizer-bg: rgba(255, 255, 255, 0.08);
+  --rdd-custom-btn-bg: rgba(255, 255, 255, 0.03);
+  --rdd-custom-btn-border: rgba(255, 255, 255, 0.05);
+  --rdd-custom-btn-hover-bg: rgba(255, 255, 255, 0.12);
+  --rdd-custom-btn-hover-color: var(--rdd--b-custom-btn-hover-color, #ffffff);
+  /* Taskbar theme variables */
+  --rdd-taskbar-bg: rgba(0, 0, 0, 0.75);
+  --rdd-taskbar-border: rgba(255, 255, 255, 0.1);
+  --rdd-taskbar-nav-color: rgba(255, 255, 255, 0.5);
+  --rdd-taskbar-item-bg: color-mix(in srgb, var(--rdd--b-taskbar-item-bg, rgb(15 23 42)) 60%, transparent);
+  --rdd-taskbar-item-hover-bg: color-mix(in srgb, var(--rdd--b-taskbar-item-hover-bg, rgb(15 23 42)) 80%, transparent);
+  --rdd-taskbar-item-border: rgba(255, 255, 255, 0.08);
+  --rdd-taskbar-item-text: var(--rdd-accent-color, #38bdf8);
+  /* Scrollbar theme variables */
+  --rdd-scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --rdd-scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  --rdd-scrollbar-track: rgba(255, 255, 255, 0.01);
+  /* Mockup Panel inner theme variables */
+  --rdd-panel-card-bg: rgba(0, 0, 0, 0.2);
+  --rdd-panel-card-border: rgba(255, 255, 255, 0.1);
+  --rdd-panel-text: var(--rdd-text-primary);
+  --rdd-panel-title-color: var(--rdd-accent-color, #38bdf8);
+  /* ── Panel Overlay — Toolbar ── */
+  --rdd-panel-toolbar-padding: 8px;
+  --rdd-panel-toolbar-gap: 4px;
+  --rdd-panel-toolbar-btn-size: 32px;
+  --rdd-panel-toolbar-btn-radius: 6px;
+  --rdd-panel-toolbar-fg: rgba(255, 255, 255, 0.65);
+  --rdd-panel-toolbar-fg-hover: rgba(255, 255, 255, 0.95);
+  --rdd-panel-toolbar-btn-hover-bg: var(--rdd-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
+  /* "On" is a solid accent chip with a white icon, the same in every buttonVariant: the toolbar
+     floats over panel content the library can't see, so a tint can't be relied on to show. In dark
+     the accent is deepened (65 % accent, 35 % black) so the white icon and the chip both clear 3:1
+     for bright accents; the light scheme uses the plain accent. */
+  --rdd-panel-toolbar-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 65%, #000000);
+  --rdd-panel-toolbar-btn-active-color: var(--rdd-brand-on-accent, #ffffff);
+  /* buttonVariant="soft": each button gets its own near-opaque chip (the floating-widget surface)
+     with a hairline edge, so it reads over light, dark or busy content without any shadow. */
+  --rdd-panel-toolbar-btn-bg: var(--rdd-panel-float-bg);
+  --rdd-panel-toolbar-btn-bg-hover: color-mix(in srgb, var(--rdd-panel-float-bg), var(--rdd-panel-toolbar-fg-hover) 14%);
+  --rdd-panel-toolbar-btn-border: 1px solid var(--rdd-panel-float-border);
+  --rdd-panel-toolbar-separator-color: var(--rdd-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+  /* Icon sizes. The library sizes the icon inside its own buttons, whatever icon library the app
+     uses: icon fonts follow font-size, SVG icons follow width/height. Apps pass no size. */
+  --rdd-panel-toolbar-icon-size: 20px;
+  --rdd-chrome-icon-size: 22px;
+  /* Workspace toolbar toggle "on": it sits on known chrome next to radio buttons, so a tint plus an
+     accent edge and an accent icon (--rdd-toolbar-btn-toggle-active-bg is set per scheme and skin). */
+  --rdd-toolbar-btn-toggle-active-color: var(--rdd-tab-icon-active);
+  --rdd-toolbar-btn-toggle-active-border: var(--rdd-tab-icon-active);
+  /* ── Panel Overlay — Floating Window ── */
+  --rdd-panel-float-bg: color-mix(in srgb, var(--rdd--b-panel-float-bg, rgb(22 24 34)) 92%, transparent);
+  --rdd-panel-float-border: rgba(255, 255, 255, 0.1);
+  --rdd-panel-float-radius: 8px;
+  --rdd-panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --rdd-panel-float-shadow-active: 0 8px 28px rgba(0, 0, 0, 0.55);
+  --rdd-panel-float-header-bg: var(--rdd-window-header-bg, rgba(0, 0, 0, 0.25));
+  --rdd-panel-float-header-bg-active: var(--rdd-window-header-bg, rgba(0, 0, 0, 0.25));
+  --rdd-panel-float-title-color: var(--rdd-window-text, #f8f9fa);
+  --rdd-panel-float-title-color-active: var(--rdd-window-text, #f8f9fa);
+}
+

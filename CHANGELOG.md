@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.6.1] — 2026-10-04
+
+Internal restructuring. No behaviour, API or visual change.
+
+### Internal
+
+- **The large source files are split into modules**, mirroring vue- and angular-dockable-desktop:
+  - `src/types.ts`: the layout, state and action types.
+  - `src/core/`: `workspaceCore.ts` (the workspace store), `layoutTree.ts`, `serialize.ts`,
+    `eventBus.ts`, `messages.ts`, `stretch.ts`, `panelOverlayGeometry.ts`. None depends on React.
+  - `src/components/workspace/`: the workspace view (`LeafGroup`, `WorkspaceGrid`,
+    `FloatingWindows`, `Taskbar`, `WorkspaceZones`, `panelMount`, the drag, menu and size hooks).
+  - `src/components/panelOverlay/`: the overlay root, toolbar, search, floating widget and hooks.
+
+  `WindowManager.tsx` (2,420 lines → 502), `WindowManagerContext.tsx` (2,475 → 321) and
+  `PanelOverlay.tsx` (1,497 → 18) keep every export they had, re-exporting what moved, so every
+  import path still works. Code was moved, not rewritten: the published API (157 exported names) is
+  unchanged, and the unit, browser and visual-baseline suites pass untouched.
+- **The stylesheet is built from area files.** `src/styles/NN-area.css` (tokens, base, tabs, grid,
+  taskbar, floating windows, context menu, drop zones, one file per skin, sidebar, modals, drawers,
+  RTL, toolbar, panel overlay, toasts, focus…) are concatenated in file-name order into
+  `src/index.css`, which is generated and committed, and published as `dist/styles.css`. The
+  published stylesheet is byte-identical to 7.6.0 apart from a header comment. To change a style,
+  edit the area file and run `npm run css` (or `npm run css:watch`); `npm run css:check` and a
+  unit test fail if `src/index.css` is out of date.
+
 ## [7.6.0] — 2026-10-04
 
 Context menus open with nothing highlighted, the same every time.
@@ -780,7 +806,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.1...HEAD
+[7.6.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.0...v7.6.1
 [7.6.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.5.0...v7.6.0
 [7.5.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.1...v7.5.0
 [7.4.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.0...v7.4.1

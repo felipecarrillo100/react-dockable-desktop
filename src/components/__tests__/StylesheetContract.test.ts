@@ -1,5 +1,7 @@
 /**
- * Static checks on `src/index.css` (shipped verbatim as `dist/styles.css`).
+ * Static checks on `src/index.css` (shipped verbatim as `dist/styles.css`). Since 7.6.1 that file
+ * is generated from the area files in `src/styles/` by `scripts/build-css.mjs`; the first test
+ * fails when it has not been regenerated after an edit.
  *
  * jsdom never loads the stylesheet, so no rendering test can see a rule that matches nothing, or
  * a class that collides with the host page's CSS. Three shipped defects were exactly that: the
@@ -13,9 +15,18 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = join(__dirname, '..', '..', '..');
 const css = readFileSync(join(ROOT, 'src', 'index.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+describe('generated stylesheet', () => {
+  it('src/index.css is exactly what src/styles/*.css give (run `npm run css` after an edit)', () => {
+    const run = spawnSync(process.execPath, [join(ROOT, 'scripts', 'build-css.mjs'), '--check'], { encoding: 'utf8' });
+    expect(run.stderr.trim()).toBe('');
+    expect(run.status).toBe(0);
+  });
+});
 
 /** Unprefixed classes still shipped on purpose, each with the release that removes it. */
 const LEGACY_CLASSES = new Set<string>([]);

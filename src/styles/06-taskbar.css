@@ -1,0 +1,240 @@
+/* Taskbar Sibling Footer Styling */
+/* ── autohide mode: absolute overlay, collapses to peek strip ── */
+.rdd-taskbar-footer-container.rdd-taskbar-mode-autohide {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(calc(100% - 8px));
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rdd-taskbar-footer-container.rdd-taskbar-mode-autohide.rdd-taskbar-expanded {
+  transform: translateY(0);
+}
+
+.rdd-taskbar-peek-handle {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--rdd-accent-color, #38bdf8);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.rdd-taskbar-footer-container.rdd-taskbar-mode-autohide.rdd-taskbar-expanded .rdd-taskbar-peek-handle {
+  opacity: 0;
+}
+
+@media (pointer: coarse) {
+  .rdd-taskbar-footer-container.rdd-taskbar-mode-autohide {
+    transform: translateY(calc(100% - 12px));
+  }
+}
+
+.rdd-taskbar-footer-container {
+  height: 48px;
+  /* Floating windows stack at zIndexBase + n. An auto-hide taskbar is overlaid on the bottom edge,
+     so it must sit above them or a window parked there hides it; below every popup and overlay. */
+  z-index: calc(var(--rdd-z-base, 1000) + 6500);
+  background-color: var(--rdd-taskbar-bg) !important;
+  border-top: 1px solid var(--rdd-border-panel) !important;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.rdd-taskbar-nav-btn {
+  color: var(--rdd-taskbar-nav-color) !important;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--rdd-font-family-mono);
+  padding: 0;
+  text-decoration: none;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.rdd-taskbar-nav-btn:hover {
+  color: var(--rdd-accent-color) !important;
+}
+
+/* macOS/Win11 Glassmorphic Taskbar */
+.rdd-taskbar-glassmorphic-item {
+  background: var(--rdd-taskbar-item-bg) !important;
+  /* 6px: the value that has always shown (an inline style used to override the 12px here). */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  scroll-snap-align: start;
+  width: 38px;
+  height: 38px;
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--rdd-taskbar-item-border) !important;
+  color: var(--rdd-taskbar-item-text) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
+  cursor: pointer;
+}
+
+.rdd-taskbar-glassmorphic-item:hover {
+  background: var(--rdd-taskbar-item-hover-bg) !important;
+  border-color: var(--rdd-accent-color, #38bdf8) !important;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
+}
+
+/* Minimalist Taskbar Icon-Only & Premium Tooltip Rules */
+.rdd-taskbar-item-icon {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rdd-taskbar-item-icon svg,
+.rdd-taskbar-item-icon img {
+  width: 22px !important;
+  height: 22px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+  object-fit: contain;
+  display: block;
+}
+
+@keyframes rdd-tooltip-fade-in {
+  /* Fades in from just above its resting place, so it never passes over the icon under it: a
+     click there would press on the preview and release on the icon, and neither would get it. */
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(calc(-100% - 6px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%);
+  }
+}
+
+.rdd-taskbar-item-tooltip {
+  /* Above floating windows, the taskbar and the toolbar flyout; below menus, modals and toasts.
+     Shifts with zIndexBase (it was a fixed inline 999999). */
+  z-index: calc(var(--rdd-z-base, 1000) + 8400);
+  background: var(--rdd-bg-panel, #1e1e1e) !important;
+  color: var(--rdd-text-primary, #ffffff) !important;
+  padding: 8px !important;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
+  font-size: 11px !important;
+  font-family: var(--rdd-font-family);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.1)) !important;
+  animation: rdd-tooltip-fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  /* The resting place is here, not only in the fade-in's end state: with animations off there is
+     no keyframe, and the preview would otherwise sit on its icon. left/top are set inline. */
+  position: fixed;
+  transform: translateX(-50%) translateY(-100%);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Invisible bridge so mouse transitions smoothly to tooltip */
+.rdd-taskbar-item-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 8px; /* the preview sits 8px above the icon: the bridge ends exactly at its top edge */
+  background: transparent;
+}
+
+.rdd-taskbar-item-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--rdd-bg-panel, #1e1e1e) transparent transparent transparent;
+}
+
+/* Live preview thumbnail styles */
+.rdd-taskbar-item-preview-frame {
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
+  overflow: hidden;
+  background: #000000;
+  border: 1px solid var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.15));
+  position: relative;
+  margin-top: 4px;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+/* A minimized panel with no live preview: a placeholder with the title's first letter. */
+.rdd-taskbar-item-preview-frame--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--rdd-placeholder-bg);
+  border: 1px dashed var(--rdd-taskbar-item-border, rgba(255, 255, 255, 0.15));
+}
+.rdd-taskbar-item-preview-initial {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--rdd-panel-title-color, var(--rdd-panel-text, rgba(255, 255, 255, 0.85)));
+  user-select: none;
+}
+
+.rdd-taskbar-item-preview-host {
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.rdd-taskbar-item-preview-host * {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+
+
+.rdd-tooltip-close-x {
+  width: 18px;
+  height: 18px;
+  border-radius: calc(3px * var(--rdd-radius-scale, 1));
+  background: transparent !important;
+  border: none !important;
+  color: var(--rdd-close-btn-color, var(--rdd-text-secondary, #888888)) !important;
+  cursor: pointer;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.75;
+}
+
+.rdd-tooltip-close-x:hover {
+  background: var(--rdd-close-btn-hover-bg) !important;
+  color: var(--rdd-close-btn-hover-color) !important;
+  opacity: 1 !important;
+}
+

@@ -395,7 +395,7 @@ const SidebarTabStrip = memo(function SidebarTabStrip({
 // ==========================================
 // SidebarResizeHandle (internal sub-component)
 // Encapsulates all pointer-capture drag logic.
-// Identical interaction pattern to the panel grid resizer in WindowManager.tsx.
+// Identical interaction pattern to the panel grid resizer in workspace/WorkspaceGrid.tsx.
 // ==========================================
 
 interface SidebarResizeHandleProps {

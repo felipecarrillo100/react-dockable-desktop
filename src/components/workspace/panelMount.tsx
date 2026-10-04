@@ -1,0 +1,351 @@
+/**
+ * @file panelMount.tsx
+ * @description Where panels live: the DOM cache that keeps a panel's DOM alive across moves, the slots that place it (in a tab, a window, a taskbar preview), its lifecycle events and form container. The module-level caches here are the single instance every slot shares.
+ */
+import React, { useRef, useEffect, useLayoutEffect } from 'react';
+import { trackPanelDom, restorePanelDom } from '../domPreservation';
+import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
+import type { PanelInfo, MessageDescriptor, MessageFormatter } from '../../types';
+import type { MessageKey } from '../predefinedMessages';
+import type { PanelRegistry } from '../PanelRegistry';
+import { FormContainerProvider } from '../FormContainerContext';
+import type { FormContainerContract, ContainerType } from '../FormContainerContext';
+
+export const domCache: Map<string, HTMLDivElement> = new Map<string, HTMLDivElement>();
+export const hiddenContainerId = 'preserved-dom-container';
+
+export const getOrCreateDomCacheElement = (id: string): HTMLDivElement => {
+  let el = domCache.get(id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'rdd-panel-dom';
+    domCache.set(id, el);
+    trackPanelDom(id, el);
+  }
+  return el;
+};
+
+
+// ==========================================
+// 3. Persistent DOM Container Host & Slot
+// ==========================================
+
+export const renderPanelContent = (
+  id: string,
+  panel: PanelInfo,
+  registry: PanelRegistry,
+  messages: Record<MessageKey, MessageDescriptor>,
+  formatMessage: MessageFormatter,
+): React.ReactNode => {
+  const componentKey = panel.component;
+  const registryEntry = registry.get(componentKey);
+  if (!registryEntry) {
+    console.warn(
+      `[react-dockable-desktop] Panel "${id}" references component key "${componentKey}" ` +
+      `which is not registered. Add it to the workspace's panels:\n` +
+      `  createWorkspace({ panels: { "${componentKey}": { component: YourComponent } } })`
+    );
+    return (
+      <div className="rdd-unregistered-panel">
+        <h6 className="rdd-unregistered-panel__title">⚠️ {formatLabel(messages.componentUnregistered, formatMessage)}</h6>
+        <span className="rdd-unregistered-panel__key">{formatLabel({ ...messages.componentKey, values: { key: componentKey } }, formatMessage)}</span>
+      </div>
+    );
+  }
+  const Component = registryEntry.Component;
+  // Props spread first, panelId second — a caller-supplied prop of the same name can never
+  // shadow the injected id. Matches ModalStackRenderer/SidePanelRenderer's spread order exactly.
+  return <Component {...(panel.props ?? {})} panelId={id} />;
+};
+
+export const activePanelDimensions: Map<string, { width: number; height: number }> = new Map<string, { width: number; height: number }>();
+
+export interface PanelLifecycleRegistry {
+  onClose: Set<() => void>;
+  onMinimize: Set<() => void>;
+  onRestore: Set<() => void>;
+  onResize: Set<(w: number, h: number) => void>;
+  onActivate: Set<() => void>;
+  onDeactivate: Set<() => void>;
+  onContainerTypeChange: Set<(type: ContainerType) => void>;
+}
+
+export const panelLifecycleRegistry: Map<string, PanelLifecycleRegistry> = new Map<string, PanelLifecycleRegistry>();
+
+export const getOrCreateLifecycleRegistry = (panelId: string): PanelLifecycleRegistry => {
+  let entry = panelLifecycleRegistry.get(panelId);
+  if (!entry) {
+    entry = {
+      onClose: new Set(),
+      onMinimize: new Set(),
+      onRestore: new Set(),
+      onResize: new Set(),
+      onActivate: new Set(),
+      onDeactivate: new Set(),
+      onContainerTypeChange: new Set(),
+    };
+    panelLifecycleRegistry.set(panelId, entry);
+  }
+  return entry;
+};
+
+export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  // Only the active panel gets focus back after a move (see domPreservation.ts). A selector, so
+  // this wrapper re-renders only when this panel's active flag flips.
+  const isActive = useWindowManagerState(s => s.activePanelId === panelId);
+  const isActiveRef = useRef(isActive);
+  useLayoutEffect(() => { isActiveRef.current = isActive; });
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const cachedEl = getOrCreateDomCacheElement(panelId);
+    host.appendChild(cachedEl);
+    restorePanelDom(panelId, { refocus: isActiveRef.current });
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          activePanelDimensions.set(panelId, { width, height });
+          const lifecycle = panelLifecycleRegistry.get(panelId);
+          if (lifecycle) {
+            lifecycle.onResize.forEach(h => h(width, height));
+          }
+        }
+      }
+    });
+    resizeObserver.observe(host);
+
+    return () => {
+      resizeObserver.disconnect();
+      let hiddenContainer = document.getElementById(hiddenContainerId);
+      if (!hiddenContainer) {
+        hiddenContainer = document.createElement('div');
+        hiddenContainer.id = hiddenContainerId;
+        hiddenContainer.style.display = 'none';
+        document.body.appendChild(hiddenContainer);
+      }
+      hiddenContainer.appendChild(cachedEl);
+    };
+  }, [panelId]);
+
+  return <div ref={hostRef} className="rdd-panel-dom-host" />;
+};
+
+export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const state = useWindowManagerState();
+  const registry = useRegistry();
+  const formatMessage = useFormatMessage();
+  const messages = usePredefinedMessages();
+  const hostRef = useRef<HTMLDivElement | null>(null);
+
+  const panel = state.panels[panelId];
+  const regEntry = panel ? registry.get(panel.component) : null;
+  const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || false;
+
+  const lastSize = activePanelDimensions.get(panelId) || { width: 800, height: 500 };
+  const origW = lastSize.width;
+  const origH = lastSize.height;
+  const maxW = 220;
+  const maxH = 140;
+  const scale = Math.min(maxW / origW, maxH / origH);
+
+  useEffect(() => {
+    if (disableLivePreview) return;
+
+    const host = hostRef.current;
+    if (!host) return;
+
+    const cachedEl = domCache.get(panelId);
+    if (!cachedEl) return;
+
+    host.appendChild(cachedEl);
+    restorePanelDom(panelId, { refocus: false }); // a preview shows the panel's place; it never takes focus
+
+    return () => {
+      let hiddenContainer = document.getElementById(hiddenContainerId);
+      if (!hiddenContainer) {
+        hiddenContainer = document.createElement('div');
+        hiddenContainer.id = hiddenContainerId;
+        hiddenContainer.style.display = 'none';
+        document.body.appendChild(hiddenContainer);
+      }
+      hiddenContainer.appendChild(cachedEl);
+    };
+  }, [panelId, disableLivePreview]);
+
+  if (disableLivePreview) {
+    const displayW = origW * scale;
+    const displayH = origH * scale;
+    const rawTitle = panel?.title || regEntry?.defaultOptions?.title || messages.untitledPanel;
+    const title = formatLabel(rawTitle, formatMessage);
+    const initialChar = (Array.from(title)[0] || 'P').toUpperCase();
+
+    return (
+      <div
+        className="rdd-taskbar-item-preview-frame rdd-taskbar-item-preview-frame--empty"
+        style={{ width: `${displayW}px`, height: `${displayH}px` }}
+      >
+        <div className="rdd-taskbar-item-preview-initial">
+          {initialChar}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rdd-taskbar-item-preview-frame"
+      style={{
+        width: `${origW * scale}px`,
+        height: `${origH * scale}px`,
+      }}
+    >
+      <div
+        ref={hostRef}
+        className="rdd-taskbar-item-preview-host"
+        style={{
+          width: `${origW}px`,
+          height: `${origH}px`,
+          transform: `scale(${scale})`,
+          ['--rdd-preview-scale' as string]: scale
+        }}
+      />
+    </div>
+  );
+};
+
+export const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
+  const state = useWindowManagerState();
+  const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel } = useWindowManagerActions();
+
+  // ── minimize / restore ──────────────────────────────────────────────────
+  const isMin = state.minimized.some(m => m.id === panelId);
+  const prevMinRef = useRef(isMin);
+
+  useEffect(() => {
+    const entry = panelLifecycleRegistry.get(panelId);
+    if (!entry) return;
+
+    if (isMin && !prevMinRef.current) {
+      entry.onMinimize.forEach(h => h());
+    } else if (!isMin && prevMinRef.current) {
+      entry.onRestore.forEach(h => h());
+    }
+    prevMinRef.current = isMin;
+  }, [isMin, panelId]);
+
+  // ── activate / deactivate ───────────────────────────────────────────────
+  const isActive = state.activePanelId === panelId;
+  const prevActiveRef = useRef(isActive);
+
+  useEffect(() => {
+    const wasActive = prevActiveRef.current;
+    prevActiveRef.current = isActive; // always sync the ref, even if no handler is registered yet
+    const entry = panelLifecycleRegistry.get(panelId);
+    if (!entry) return;
+
+    if (isActive && !wasActive) {
+      entry.onActivate.forEach(h => h());
+    } else if (!isActive && wasActive) {
+      entry.onDeactivate.forEach(h => h());
+    }
+  }, [isActive, panelId]);
+
+  // ── container-type change ───────────────────────────────────────────────
+  const rawPanelState = state.panels[panelId]?.state;
+  const derivedContainerType: ContainerType =
+    rawPanelState === 'floating' ? 'floating-window' : 'dockable-panel';
+  const prevContainerTypeRef = useRef(derivedContainerType);
+
+  useEffect(() => {
+    if (rawPanelState === 'minimized') return; // minimize/restore is onMinimize's domain; intentionally skip ref update
+    const prevType = prevContainerTypeRef.current;
+    prevContainerTypeRef.current = derivedContainerType; // always sync, even if no handler registered yet
+    const entry = panelLifecycleRegistry.get(panelId);
+    if (!entry) return;
+
+    if (derivedContainerType !== prevType) {
+      entry.onContainerTypeChange.forEach(h => h(derivedContainerType));
+    }
+  }, [derivedContainerType, rawPanelState, panelId]);
+
+  // ── cleanup: fire onDeactivate (if active) then onClose ─────────────────
+  useEffect(() => {
+    return () => {
+      const entry = panelLifecycleRegistry.get(panelId);
+      if (entry) {
+        if (prevActiveRef.current) entry.onDeactivate.forEach(h => h());
+        entry.onClose.forEach(h => h());
+        panelLifecycleRegistry.delete(panelId);
+      }
+    };
+  }, [panelId]);
+
+  // Capture the container type at mount so the static `containerType` field is
+  // correct ('dockable-panel' or 'floating-window') rather than the default 'standalone'.
+  const initialContainerTypeRef = useRef<ContainerType>(derivedContainerType);
+
+  const contract = React.useMemo<FormContainerContract>(() => ({
+    requestClose: (options) => requestClosePanel(panelId, options),
+    setDirty: (dirty, options) => setPanelDirty(panelId, dirty, options),
+    onCloseRequested: (handler) => {
+      registerCloseGuard(panelId, handler);
+      return () => unregisterCloseGuard(panelId);
+    },
+    registerStateProvider: (getState) => {
+      registerStateProvider(panelId, getState);
+      return () => unregisterStateProvider(panelId);
+    },
+    setTitle: (title) => updatePanelTitle(panelId, title),
+    setIcon: (icon) => setPanelIcon(panelId, icon ?? null),
+    instanceId: panelId,
+    containerType: initialContainerTypeRef.current,
+    onClose: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onClose.add(handler);
+      return () => reg.onClose.delete(handler);
+    },
+    onMinimize: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onMinimize.add(handler);
+      return () => reg.onMinimize.delete(handler);
+    },
+    onRestore: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onRestore.add(handler);
+      return () => reg.onRestore.delete(handler);
+    },
+    onResize: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onResize.add(handler);
+      return () => reg.onResize.delete(handler);
+    },
+    requestMinimize: () => minimizePanel(panelId),
+    getDimensions: () => activePanelDimensions.get(panelId) ?? null,
+    onActivate: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onActivate.add(handler);
+      return () => reg.onActivate.delete(handler);
+    },
+    onDeactivate: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onDeactivate.add(handler);
+      return () => reg.onDeactivate.delete(handler);
+    },
+    onContainerTypeChange: (handler) => {
+      const reg = getOrCreateLifecycleRegistry(panelId);
+      reg.onContainerTypeChange.add(handler);
+      return () => reg.onContainerTypeChange.delete(handler);
+    },
+  }), [panelId, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel]);
+
+  return (
+    <FormContainerProvider value={contract}>
+      {children}
+    </FormContainerProvider>
+  );
+};

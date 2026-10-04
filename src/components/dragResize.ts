@@ -88,9 +88,9 @@ export interface ResizeConstraints {
  * rather than one "container bound" — a resize toward the fixed edge (e/s) is
  * naturally bounded by a maximum dimension, while a resize toward the moving edge
  * (w/n) is naturally bounded by a minimum position, and the two calling sites this
- * was extracted from need different subsets of these (see WindowManager.tsx's
+ * was extracted from need different subsets of these (see workspace/floatingWindowDrag.ts's
  * `startResize`, which omits all four and lets a window grow unbounded and be
- * dragged fully off-screen, vs. PanelOverlay.tsx's `handleResizePointerDown`, which
+ * dragged fully off-screen, vs. panelOverlay/FloatingWidget.tsx's `handleResizePointerDown`, which
  * supplies all four to keep windows within their container).
  */
 export function computeResizedRect(dir: ResizeDir, dx: number, dy: number, start: ResizeRect, constraints: ResizeConstraints): ResizeRect {

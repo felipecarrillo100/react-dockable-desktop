@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { FloatAnchor } from './WindowManagerContext';
+import type { FloatAnchor } from '../types';
 
 /**
  * Represents a registered component configuration template inside the panel catalog registry.

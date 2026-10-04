@@ -1,4 +1,4 @@
-import type { FloatAnchor } from './WindowManagerContext';
+import type { FloatAnchor } from '../types';
 
 /**
  * Mirrors a physical workspace corner to its horizontal opposite.

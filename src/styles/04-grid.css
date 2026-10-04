@@ -1,0 +1,116 @@
+/* Drag resizer split bars */
+/* Structural layout of the split grid and the sidebar. These used to be inline styles, where
+   consumer CSS could neither see nor override them. Per-render values (sizes, flex-basis,
+   visibility) stay inline. */
+.rdd-split {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.rdd-split--row { flex-direction: row; }
+.rdd-split--column { flex-direction: column; }
+.rdd-split-child {
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+/* A bar between side-by-side panes is a vertical line, dragged left/right. */
+.rdd-resizer-bar--vertical { cursor: col-resize; width: 1px; height: 100%; flex-shrink: 0; }
+/* A bar between stacked panes is a horizontal line, dragged up/down. */
+.rdd-resizer-bar--horizontal { cursor: row-resize; width: 100%; height: 1px; flex-shrink: 0; }
+
+.rdd-sidebar-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.rdd-sidebar-content {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden;
+}
+/* Collapses the tab strip by animating its width to 0. The strip inside must not clip, so the
+   active tab's negative margin can reach into the drawer border. */
+.rdd-sidebar-strip-wrap {
+  width: 56px;
+  height: 100%;
+  overflow: hidden;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.rdd-sidebar-strip-wrap--collapsed { width: 0; }
+.rdd-sidebar-pane {
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+.rdd-resizer-bar {
+  background-color: var(--rdd-border-panel, rgba(255, 255, 255, 0.08)) !important;
+  transition: background-color 0.15s ease, transform 0.15s ease !important;
+  position: relative;
+  z-index: 21;
+}
+
+/* Invisible 8px hit-box overlay to make grabbing easy */
+.rdd-resizer-bar::before {
+  content: '';
+  position: absolute;
+  z-index: 22;
+}
+
+/* Grab hit-box for columns (cursor: col-resize) */
+.rdd-resizer-bar--vertical::before {
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 8px;
+  height: 100%;
+}
+
+/* Grab hit-box for rows (cursor: row-resize) — extends upward only (into safe content area),
+   never downward into the tab bar of the panel below */
+.rdd-resizer-bar--horizontal::before {
+  left: 0;
+  right: 0;
+  top: -8px;
+  height: 9px;
+  width: 100%;
+}
+
+/* Highlight state (on hover or active drag) */
+.rdd-resizer-bar:hover,
+.rdd-resizer-bar.rdd-active {
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent) !important;
+  box-shadow: none !important;
+  z-index: 25 !important;
+}
+
+.rdd-resizer-bar--vertical:hover,
+.rdd-resizer-bar--vertical.rdd-active {
+  transform: scaleX(2);
+}
+
+.rdd-resizer-bar--horizontal:hover,
+.rdd-resizer-bar--horizontal.rdd-active {
+  transform: scaleY(2);
+}
+
+/* Global body cursor overrides during active resize drag to prevent cursor flickering */
+body.rdd-resizing-active {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+body.rdd-resizing-row-active,
+body.rdd-resizing-row-active * {
+  cursor: row-resize !important;
+}
+body.rdd-resizing-col-active,
+body.rdd-resizing-col-active * {
+  cursor: col-resize !important;
+}
+

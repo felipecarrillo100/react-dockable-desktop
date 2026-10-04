@@ -1,0 +1,312 @@
+/* ==========================================================================
+   PANEL OVERLAY — Per-skin token overrides
+   ========================================================================== */
+
+[data-rdd-skin="vscode"]:not([data-color-scheme="light"]) {
+  --rdd-panel-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.12);
+}
+
+[data-rdd-skin="macos"]:not([data-color-scheme="light"]) {
+  --rdd-panel-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.18);
+}
+
+/* ==========================================================================
+   PANEL OVERLAY — PanelToolbar + PanelFloatingWindow
+   ========================================================================== */
+
+/* ── Root container ── */
+.rdd-panel-overlay-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Toolbar container ── */
+.rdd-panel-toolbar {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: var(--rdd-panel-toolbar-gap, 4px);
+  padding: var(--rdd-panel-toolbar-padding, 8px);
+  box-sizing: border-box;
+}
+
+.rdd-panel-toolbar--top,
+.rdd-panel-toolbar--bottom {
+  flex-direction: row;
+}
+
+.rdd-panel-toolbar--left,
+.rdd-panel-toolbar--right {
+  flex-direction: column;
+}
+
+/* Restore pointer-events on every direct child */
+.rdd-panel-toolbar > * {
+  pointer-events: auto;
+}
+
+/* ── Toolbar button (shared by ToolbarButton + ToolbarToggle) ── */
+.rdd-panel-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rdd-panel-toolbar-btn-size, 32px);
+  height: var(--rdd-panel-toolbar-btn-size, 32px);
+  flex-shrink: 0;
+  border-radius: calc(var(--rdd-panel-toolbar-btn-radius, 6px) * var(--rdd-radius-scale, 1));
+  border: none;
+  background: transparent;
+  color: var(--rdd-panel-toolbar-fg, rgba(255, 255, 255, 0.65));
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.1s ease, border-color 0.12s ease;
+  font-size: var(--rdd-panel-toolbar-icon-size, 20px);
+  line-height: 1;
+}
+
+.rdd-panel-toolbar-btn svg {
+  width: var(--rdd-panel-toolbar-icon-size, 20px);
+  height: var(--rdd-panel-toolbar-icon-size, 20px);
+  flex-shrink: 0;
+}
+
+.rdd-panel-toolbar-btn:hover:not(:disabled) {
+  background: var(--rdd-panel-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.15));
+  color: var(--rdd-panel-toolbar-fg-hover, rgba(255, 255, 255, 0.95));
+  transform: scale(1.07);
+}
+
+.rdd-panel-toolbar-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.rdd-panel-toolbar-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* ── Toolbar strip variants ── */
+.rdd-panel-toolbar[data-variant="frosted"]::before {
+  background: color-mix(in srgb, var(--rdd--b-panel-toolbar-frosted-bg, rgb(15 20 30)) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+.rdd-panel-toolbar[data-variant="solid"] {
+  background: var(--rdd-bg-tab-bar, #0d0f16);
+}
+[data-color-scheme="light"] .rdd-panel-toolbar[data-variant="frosted"]::before {
+  background: color-mix(in srgb, var(--rdd--b-panel-toolbar-frosted-bg, rgb(233 236 239)) 72%, transparent);
+}
+.rdd-panel-toolbar--top[data-variant="frosted"],
+.rdd-panel-toolbar--top[data-variant="solid"] {
+  border-bottom: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+.rdd-panel-toolbar--bottom[data-variant="frosted"],
+.rdd-panel-toolbar--bottom[data-variant="solid"] {
+  border-top: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+.rdd-panel-toolbar--left[data-variant="frosted"],
+.rdd-panel-toolbar--left[data-variant="solid"] {
+  border-right: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+.rdd-panel-toolbar--right[data-variant="frosted"],
+.rdd-panel-toolbar--right[data-variant="solid"] {
+  border-left: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+}
+
+/* ── Button variants — toolbar-level default ── */
+
+/* soft — a chip per button: near-opaque surface plus hairline edge, readable over any content */
+.rdd-panel-toolbar[data-btn-variant="soft"] .rdd-panel-toolbar-btn,
+.rdd-panel-toolbar-btn[data-variant="soft"] {
+  background: var(--rdd-panel-toolbar-btn-bg);
+  border: var(--rdd-panel-toolbar-btn-border);
+}
+.rdd-panel-toolbar[data-btn-variant="soft"] .rdd-panel-toolbar-btn:hover:not(:disabled),
+.rdd-panel-toolbar-btn[data-variant="soft"]:hover:not(:disabled) {
+  background: var(--rdd-panel-toolbar-btn-bg-hover);
+}
+
+/* outlined */
+.rdd-panel-toolbar[data-btn-variant="outlined"] .rdd-panel-toolbar-btn,
+.rdd-panel-toolbar-btn[data-variant="outlined"] {
+  border: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.18));
+}
+.rdd-panel-toolbar[data-btn-variant="outlined"] .rdd-panel-toolbar-btn:hover:not(:disabled),
+.rdd-panel-toolbar-btn[data-variant="outlined"]:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.38);
+}
+[data-color-scheme="light"] .rdd-panel-toolbar[data-btn-variant="outlined"] .rdd-panel-toolbar-btn:hover:not(:disabled),
+[data-color-scheme="light"] .rdd-panel-toolbar-btn[data-variant="outlined"]:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+/* filled */
+.rdd-panel-toolbar[data-btn-variant="filled"] .rdd-panel-toolbar-btn,
+.rdd-panel-toolbar-btn[data-variant="filled"] {
+  background: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  color: var(--rdd-accent-color);
+  border: 1px solid var(--rdd-accent-color);
+}
+.rdd-panel-toolbar[data-btn-variant="filled"] .rdd-panel-toolbar-btn:hover:not(:disabled),
+.rdd-panel-toolbar-btn[data-variant="filled"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--rdd-accent-color) 32%, transparent);
+}
+
+/* ── "On" state (ToolbarToggle active) ──
+   Declared after the variants, at a specificity that beats them, so "on" looks the same in every
+   buttonVariant: solid accent chip, on-accent icon. A skin or app restyles it with the two tokens. */
+.rdd-panel-toolbar .rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active,
+.rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active {
+  background: var(--rdd-panel-toolbar-btn-active-bg);
+  color: var(--rdd-panel-toolbar-btn-active-color);
+  border-color: transparent;
+}
+.rdd-panel-toolbar .rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active:hover:not(:disabled),
+.rdd-panel-toolbar-btn.rdd-panel-toolbar-btn--active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--rdd-panel-toolbar-btn-active-bg) 86%, var(--rdd-panel-toolbar-btn-active-color));
+  color: var(--rdd-panel-toolbar-btn-active-color);
+  border-color: transparent;
+}
+
+/* ── Separator ── */
+.rdd-panel-toolbar__sep {
+  flex-shrink: 0;
+  background: var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.09));
+  align-self: center;
+}
+
+.rdd-panel-toolbar--top .rdd-panel-toolbar__sep,
+.rdd-panel-toolbar--bottom .rdd-panel-toolbar__sep {
+  width: 1px;
+  height: 18px;
+}
+
+.rdd-panel-toolbar--left .rdd-panel-toolbar__sep,
+.rdd-panel-toolbar--right .rdd-panel-toolbar__sep {
+  height: 1px;
+  width: 18px;
+}
+
+/* ── Spacer — pushes subsequent items to the opposite end ── */
+.rdd-panel-toolbar__spacer {
+  flex: 1;
+  pointer-events: none;
+}
+
+/* ── ToolbarItem wrapper (restores pointer-events for custom controls) ── */
+.rdd-panel-toolbar__item {
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+/* ── ToolbarCenter — absolutely centered, independent of left/right widths ── */
+.rdd-panel-toolbar__center {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--rdd-panel-toolbar-gap, 4px);
+  pointer-events: none;
+}
+.rdd-panel-toolbar__center > * {
+  pointer-events: auto;
+}
+/* Horizontal toolbars: center horizontally */
+.rdd-panel-toolbar--top .rdd-panel-toolbar__center,
+.rdd-panel-toolbar--bottom .rdd-panel-toolbar__center {
+  flex-direction: row;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* Vertical toolbars: center vertically */
+.rdd-panel-toolbar--left .rdd-panel-toolbar__center,
+.rdd-panel-toolbar--right .rdd-panel-toolbar__center {
+  flex-direction: column;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ── ToolbarSearchInput ── */
+.rdd-panel-toolbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rdd-panel-toolbar-search__input {
+  height: var(--rdd-panel-toolbar-btn-size, 28px);
+  width: 200px;
+  border: 1px solid var(--rdd-panel-toolbar-separator-color, rgba(255, 255, 255, 0.15));
+  border-radius: calc(var(--rdd-panel-toolbar-btn-radius, 6px) * var(--rdd-radius-scale, 1));
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  padding: 0 8px;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.rdd-panel-toolbar-search__input::placeholder {
+  opacity: 0.45;
+}
+
+.rdd-panel-toolbar-search__input:focus {
+  border-color: var(--rdd-panel-toolbar-btn-active-color, #38bdf8);
+}
+
+.rdd-panel-toolbar-search__dropdown {
+  /* Shifts with --rdd-z-base like every other chrome overlay; above the context menu
+     (+8500/+8501) since it's opened from a toolbar that can sit under one. */
+  z-index: calc(var(--rdd-z-base, 1000) + 8502);
+  background: var(--rdd-panel-float-bg, rgba(22, 24, 34, 0.95));
+  border: 1px solid var(--rdd-panel-float-border, rgba(255, 255, 255, 0.1));
+  border-radius: calc(var(--rdd-panel-float-radius, 8px) * var(--rdd-radius-scale, 1));
+  box-shadow: var(--rdd-panel-float-shadow-active, 0 8px 28px rgba(0, 0, 0, 0.55));
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+  position: fixed; /* top/left/width are set inline */
+}
+
+.rdd-panel-toolbar-search__group {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.45;
+}
+
+.rdd-panel-toolbar-search__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.rdd-panel-toolbar-search__item:hover {
+  background: var(--rdd-panel-toolbar-btn-hover-bg, rgba(255, 255, 255, 0.08));
+}
+
+.rdd-panel-toolbar-search__item-icon { flex-shrink: 0; opacity: 0.7; }
+.rdd-panel-toolbar-search__item-label { flex: 1; }
+.rdd-panel-toolbar-search__item-desc { opacity: 0.45; font-size: 11px; }
+

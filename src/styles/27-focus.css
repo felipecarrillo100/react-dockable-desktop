@@ -1,0 +1,31 @@
+/* ==========================================================================
+   KEYBOARD FOCUS
+   A visible ring on every library control reached from the keyboard (WCAG 2.4.7). Only
+   :focus-visible, so pointer clicks don't show it; only elements with an rdd- class, so the
+   consumer's own controls inside panels keep their own focus styles. Last in the file so it wins
+   ties with the controls' own rules. Override --rdd-focus-ring to restyle it.
+   ========================================================================== */
+:where([class*="rdd-"]):focus-visible {
+  outline: var(--rdd-focus-ring, 2px solid var(--rdd-accent-color));
+  outline-offset: -2px;
+}
+
+/* ── Fixed values that used to be inline styles (7.1.2) ─────────────────────────────────── */
+/* Icons drawn by the library: block, so they don't sit on the text baseline. */
+.rdd-svg-icon { display: block; }
+.rdd-workspace-tab-title {
+  max-width: 120px;
+  display: flex;
+  align-items: center;
+}
+.rdd-tooltip-title-text { max-width: 140px; }
+/* After `.rdd-workspace * { scrollbar-width: thin }`, which it must beat: the tab strip scrolls
+   with its own arrow buttons, not a scrollbar. */
+.rdd-tab-headers-container { scrollbar-width: none; }
+/* Starting place; the layout effect positions the submenu before paint. */
+.rdd-context-menu--submenu {
+  left: 0;
+  top: 0;
+}
+/* Wraps a drawer's portal without adding a box of its own. */
+.rdd-side-panel-anchor { display: contents; }

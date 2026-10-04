@@ -1,0 +1,241 @@
+/* ==========================================================================
+   FRAMEWORK-AGNOSTIC UTILITY CLASSES
+   (replaces Bootstrap utility class dependencies)
+   ========================================================================== */
+
+/* Text truncation (equivalent to Bootstrap .rdd-text-truncate) */
+.rdd-text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Floating window titlebar button group */
+.rdd-titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rdd-header-button-gap, 4px);
+}
+
+/* Window custom header actions slot */
+.rdd-window-header-actions {
+  display: flex;
+  align-items: center;
+  margin-inline-end: 0.25rem;
+  gap: var(--rdd-header-button-gap, 4px);
+}
+
+/* Tab header custom actions slot */
+.rdd-tab-header-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  margin-inline-end: 0.25rem;
+  gap: var(--rdd-header-button-gap, 4px);
+}
+
+/* Panel body (tab content area / floating window content area) */
+.rdd-panel-body {
+  flex-grow: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Empty workspace section placeholder text */
+.rdd-empty-leaf-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--rdd-font-family-mono);
+  font-size: 0.875rem;
+  color: var(--rdd-text-secondary, #94a3b8);
+}
+
+/* Empty workspace grid (no panels loaded) */
+.rdd-empty-workspace-grid {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rdd-text-secondary, #94a3b8);
+  font-family: var(--rdd-font-family-mono);
+  font-size: 0.875rem;
+}
+
+/* Unregistered component error panel */
+.rdd-unregistered-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--rdd-danger-color);
+  border: 2px dashed var(--rdd-danger-color);
+  font-family: var(--rdd-font-family-mono);
+  padding: 1rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+.rdd-unregistered-panel__title {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.rdd-unregistered-panel__key {
+  font-size: 0.875rem;
+  color: var(--rdd-text-secondary, #94a3b8);
+}
+
+/* Taskbar scrollable items row */
+.rdd-taskbar-items-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  overflow-x: auto;
+  align-items: center;
+  margin: 0 0.5rem;
+  padding: 2px 4px;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  max-width: 800px;
+}
+
+.rdd-taskbar-items-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tooltip header row (title + close button) */
+.rdd-tooltip-header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+/* Drag ghost tab preview (floating label while dragging) */
+.rdd-drag-ghost-tab {
+  /* Follows the pointer above everything while a tab is dragged. Shifts with zIndexBase. */
+  z-index: calc(var(--rdd-z-base, 1000) + 9300);
+  position: fixed;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--rdd-accent-color, #38bdf8);
+  border-left: 3px solid var(--rdd-accent-color, #38bdf8);
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
+  color: var(--rdd-accent-color, #38bdf8);
+  font-family: var(--rdd-font-family-mono);
+  padding: 0.375rem 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ConfirmationForm component styles */
+.rdd-confirmation-form-body {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.rdd-confirmation-message {
+  font-size: 0.9rem;
+  color: inherit;
+  line-height: 1.5;
+}
+.rdd-confirmation-divider {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.1;
+}
+
+.rdd-confirmation-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.625rem;
+  font-size: 0.875rem;
+  border-radius: calc(0.375rem * var(--rdd-radius-scale, 1));
+}
+
+.rdd-confirmation-alert-danger {
+  background: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: #f87171;
+}
+
+.rdd-confirmation-alert-info {
+  background: rgba(13, 202, 240, 0.15);
+  border: 1px solid rgba(13, 202, 240, 0.3);
+  color: #67e8f9;
+}
+
+.rdd-confirmation-alert-warning {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #fbbf24;
+}
+
+.rdd-confirmation-alert-success {
+  background: rgba(25, 135, 84, 0.15);
+  border: 1px solid rgba(25, 135, 84, 0.3);
+  color: #4ade80;
+}
+
+.rdd-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Sidebar drawer header */
+.rdd-sidebar-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rdd-sidebar-border, rgba(255, 255, 255, 0.08));
+  padding: 0 0.75rem;
+  flex-shrink: 0;
+  background: var(--rdd-sidebar-drawer-header-bg);
+  min-height: 38px;
+}
+
+/* Optional close button (showCloseButton) — an extra way to collapse the sidebar besides
+   clicking the active tab's own icon again. */
+.rdd-sidebar-drawer-close-button {
+  background: transparent;
+  border: none;
+  color: var(--rdd-sidebar-text-muted, var(--rdd-text-secondary));
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(4px * var(--rdd-radius-scale, 1));
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.rdd-sidebar-drawer-close-button:hover {
+  background-color: var(--rdd-sidebar-btn-hover-bg);
+  color: var(--rdd-sidebar-text-title);
+}
+
+/* Sidebar drawer content body */
+.rdd-sidebar-drawer-body {
+  flex-grow: 1;
+  overflow: auto;
+}
+

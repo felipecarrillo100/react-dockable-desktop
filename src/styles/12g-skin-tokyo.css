@@ -1,0 +1,59 @@
+/* --------------------------------------------------------------------------
+   SKIN 7: Tokyo Night Preset
+   -------------------------------------------------------------------------- */
+[data-rdd-skin="tokyo"] {
+  --rdd-skin-font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* no official font: a terminal/editor feel */
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #1a1b26);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #24283c);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #1f2335);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(36 40 60)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #383e5a);
+  --rdd-window-border-focused: var(--rdd-accent-color);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #1f2335);
+  --rdd-accent-color: var(--rdd-brand-accent, #bb9af7);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
+  --rdd-border-panel: var(--rdd--b-border-panel, #383e5a);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #1f2335);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #787c99);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #c0caf5);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #1a1b26);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #383e5a);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #787c99);
+  --rdd-close-btn-active-color: var(--rdd-accent-color);
+  --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
+  --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 40%, transparent);
+  --rdd-window-text: var(--rdd--b-window-text, #c0caf5);
+  --rdd-panel-text: var(--rdd--b-panel-text, #c0caf5);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
+}
+
+[data-rdd-skin="tokyo"][data-color-scheme="light"] {
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #e1e2e7);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #f2f4f8);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #d5d6db);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(242 244 248)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #b4b5b9);
+  --rdd-window-border-focused: var(--rdd-accent-color);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #d5d6db);
+  --rdd-accent-color: var(--rdd-brand-accent, #9854f1);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
+  --rdd-border-panel: var(--rdd--b-border-panel, #b4b5b9);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #d5d6db);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #565a6e);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #383e56);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #e1e2e7);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #b4b5b9);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #565a6e);
+  --rdd-close-btn-active-color: var(--rdd-accent-color);
+  --rdd-scrollbar-thumb: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  --rdd-scrollbar-thumb-hover: color-mix(in srgb, var(--rdd-accent-color) 35%, transparent);
+  --rdd-window-text: var(--rdd--b-window-text, #383e56);
+  --rdd-panel-text: var(--rdd--b-panel-text, #383e56);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+}
+

@@ -1,0 +1,169 @@
+/* --- Modern Sidebar and Tabs UI Theme Customizations --- */
+.rdd-sidebar-content-drawer {
+  flex-grow: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  background-color: var(--rdd-sidebar-bg) !important;
+  color: var(--rdd-sidebar-text-title) !important;
+  height: 100%;
+}
+
+/* Position-specific drawer border and shadow alignment */
+.rdd-sidebar-content-drawer.rdd-left {
+  border-right: 1px solid var(--rdd-sidebar-border) !important;
+  border-left: none !important;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
+}
+.rdd-sidebar-content-drawer.rdd-right {
+  border-left: 1px solid var(--rdd-sidebar-border) !important;
+  border-right: none !important;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+}
+
+.rdd-sidebar-tabs-strip {
+  width: 56px;
+  height: 100%;
+  background-color: var(--rdd-sidebar-tabs-bg) !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 38px; /* Perfectly aligned to match the 38px height of the drawer header bar — only
+                         relevant when a tab is the first item; see the modifier rule below. */
+  padding-bottom: 12px;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+/* When a headerAction is present, it owns its own top/bottom spacing (see
+   .rdd-sidebar-header-area below) — the strip's own alignment padding no longer applies. */
+.rdd-sidebar-tabs-strip.rdd-sidebar-tabs-strip--has-header-action {
+  padding-top: 0;
+}
+
+/* When a footerAction is present, it owns its own bottom spacing (see .rdd-sidebar-footer-area
+   below) — the strip's own bottom padding no longer applies. */
+.rdd-sidebar-tabs-strip.rdd-sidebar-tabs-strip--has-footer-action {
+  padding-bottom: 0;
+}
+
+/* Wraps `headerAction` — independent of .rdd-sidebar-tabs-list's own gap, so a consumer can
+   tune spacing/effective height around their button(s) (default, custom-rendered, or a mix with
+   real tabs) without touching inter-tab spacing. Layout-only values, so no light/dark variant is
+   needed. Column + gap so multiple entries stack — visually identical to before for the single-
+   entry case. */
+.rdd-sidebar-header-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  /* Floor matching .rdd-sidebar-tab-btn's own intrinsic 44px — without it, a lone active tab
+     (width: var(--rdd-tab-btn-active-width, 100%)) has no stable sibling to size this shrink-to-fit
+     container against, so its 100% resolves against nothing and collapses to its icon's size. */
+  min-width: 44px;
+  padding-top: var(--rdd-sidebar-header-area-padding-top, 8px);
+  padding-bottom: var(--rdd-sidebar-header-area-padding-bottom, 8px);
+}
+
+/* Mirror of .rdd-sidebar-header-area for `footerAction` — pinned to the bottom of the strip via
+   .rdd-sidebar-tabs-list's flex: 1 below. */
+.rdd-sidebar-footer-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 44px;
+  padding-top: var(--rdd-sidebar-footer-area-padding-top, 8px);
+  padding-bottom: var(--rdd-sidebar-footer-area-padding-bottom, 8px);
+}
+
+/* Wraps the tabs only — owns the gap that used to live on .rdd-sidebar-tabs-strip itself.
+   flex: 1 absorbs remaining space so a following .rdd-sidebar-footer-area is pushed to the
+   bottom of the strip regardless of tab count. */
+.rdd-sidebar-tabs-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+/* Position-specific tab strip border alignment */
+.rdd-sidebar-tabs-strip.rdd-left {
+  border-right: 1px solid var(--rdd-sidebar-border) !important;
+  border-left: none !important;
+}
+.rdd-sidebar-tabs-strip.rdd-right {
+  border-left: 1px solid var(--rdd-sidebar-border) !important;
+  border-right: none !important;
+}
+
+/* Sidebar Header */
+.rdd-sidebar-header-title {
+  font-family: var(--rdd-font-family-mono);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--rdd-sidebar-text-title);
+  font-size: 0.85rem;
+}
+
+/* Tab Button with real tabbed integration */
+.rdd-sidebar-tab-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent !important;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
+  background: transparent;
+  color: var(--rdd-tab-icon-inactive);
+  position: relative;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+  font-size: var(--rdd-chrome-icon-size, 22px);
+  line-height: 1;
+}
+
+/* Icons in rail buttons: SVG icons follow the chrome icon size whatever their own width/height
+   attributes say; icon fonts follow the font-size above. An inline style size still wins. */
+.rdd-sidebar-tab-btn svg {
+  width: var(--rdd-chrome-icon-size, 22px);
+  height: var(--rdd-chrome-icon-size, 22px);
+  flex-shrink: 0;
+}
+
+/* Micro-interactions & hover tactile feedback for inactive buttons */
+.rdd-sidebar-tab-btn:not(.rdd-active):hover {
+  color: var(--rdd-sidebar-text-title);
+  background-color: var(--rdd-sidebar-btn-hover-bg) !important;
+  transform: scale(1.05);
+}
+
+.rdd-sidebar-tab-btn.rdd-active {
+  width: var(--rdd-tab-btn-active-width, 100%) !important;
+  color: var(--rdd-tab-icon-active) !important;
+  background-color: var(--rdd-tab-btn-active-bg) !important;
+  border-top: 1px solid var(--rdd-sidebar-border) !important;
+  border-bottom: 1px solid var(--rdd-sidebar-border) !important;
+  border-radius: calc(var(--rdd-tab-btn-active-radius, 0px) * var(--rdd-radius-scale, 1)) !important;
+  box-shadow: var(--rdd-tab-btn-active-shadow, none);
+  filter: var(--rdd-tab-btn-active-glow, none);
+  z-index: 6;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Position-specific active button border & margin alignments */
+.rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
+  border-left: var(--rdd-tab-accent-bar-width, 3px) solid var(--rdd-tab-icon-active) !important;
+  border-right: none !important;
+  margin-right: -2px !important;
+  margin-left: 0 !important;
+}
+.rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
+  border-left: none !important;
+  border-right: var(--rdd-tab-accent-bar-width, 3px) solid var(--rdd-tab-icon-active) !important;
+  margin-left: -2px !important;
+  margin-right: 0 !important;
+}
+

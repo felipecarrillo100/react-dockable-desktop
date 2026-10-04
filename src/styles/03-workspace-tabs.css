@@ -1,0 +1,193 @@
+/* Workspace Panel Container */
+.rdd-workspace-panel {
+  background-color: var(--rdd-bg-panel);
+  border: 1px solid var(--rdd-border-panel);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Tab Headers Bar */
+.rdd-workspace-tab-bar {
+  min-height: 38px;
+  background-color: var(--rdd-bg-tab-bar);
+  border-bottom: 1px solid var(--rdd-border-panel);
+  padding: 0 4px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Tab Headers Container */
+.rdd-tab-headers-container {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  padding-top: 4px;
+  padding-left: 6px;
+  position: relative;
+  z-index: 26; /* above resizer ::before (22) and resizer hover (25) — tabs always win */
+  margin-bottom: -1px;
+  flex-grow: 1;
+  overflow-x: auto;
+}
+
+/* Tab bar scroll arrow buttons — appear when tabs overflow */
+.rdd-tab-scroll-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--rdd-bg-tab-inactive);
+  border: none;
+  border-right: 1px solid var(--rdd-border-panel);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--rdd-text-tab-inactive);
+  padding: 0;
+  z-index: 27;
+  user-select: none;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.rdd-tab-scroll-btn:hover {
+  color: var(--rdd-text-primary);
+  background: var(--rdd-bg-tab-hover, var(--rdd-bg-drop-hover, rgba(255,255,255,0.08)));
+}
+
+.rdd-tab-scroll-btn-right {
+  border-right: none;
+  border-left: 1px solid var(--rdd-border-panel);
+}
+
+/* Premium Tab styling (VS Code Style) */
+.rdd-workspace-tab {
+  position: relative;
+  background-color: var(--rdd-bg-tab-inactive) !important; /* VS Code dark background for inactive tabs */
+  color: var(--rdd-text-tab-inactive) !important; /* Clear readable gray */
+  border: none !important;
+  border-inline-end: 1px solid var(--rdd-border-panel) !important; /* crisp separator, on the reading-end side */
+  padding: 0 6px 0 14px !important;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  border-radius: 0 !important; /* Square edges */
+  margin-right: 0 !important; /* No gaps between tabs */
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  height: 35px; /* VS Code standard height */
+  box-sizing: border-box;
+  flex-shrink: 1;
+  min-width: 80px; /* compress before scrolling kicks in */
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.rdd-workspace-tab > .rdd-text-truncate {
+  margin-right: 12px;
+}
+
+/* Remove original after element separator */
+.rdd-workspace-tab:not(.rdd-active):not(:last-child)::after {
+  display: none !important;
+}
+
+.rdd-workspace-tab:hover {
+  background-color: var(--rdd-bg-tab-hover) !important;
+  color: var(--rdd-text-tab-hover) !important;
+}
+
+/* Active tab (focused) */
+.rdd-workspace-tab.rdd-active.rdd-workspace-tab-active-focused {
+  background-color: var(--rdd-tab-bg-active-focused) !important;
+  color: var(--rdd-tab-text-active-focused) !important;
+  font-weight: 500;
+  border-inline-end: 1px solid var(--rdd-border-panel) !important;
+  z-index: 2;
+}
+
+.rdd-workspace-tab.rdd-active.rdd-workspace-tab-active-focused::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--rdd-tab-indicator-focused) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 1px 4px var(--rdd-accent-glow);
+}
+
+/* Active tab (unfocused/inactive group) */
+.rdd-workspace-tab.rdd-active.rdd-workspace-tab-active-unfocused {
+  background-color: var(--rdd-tab-bg-active-unfocused) !important;
+  color: var(--rdd-tab-text-active-unfocused) !important;
+  font-weight: 500;
+  border-inline-end: 1px solid var(--rdd-border-panel) !important;
+  z-index: 2;
+}
+
+.rdd-workspace-tab.rdd-active.rdd-workspace-tab-active-unfocused::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--rdd-tab-indicator-unfocused) !important;
+  border-radius: 0 !important;
+}
+
+.rdd-workspace-tab-inactive {
+  color: var(--rdd-close-btn-color) !important;
+}
+
+.rdd-workspace-tab-inactive:hover {
+  color: var(--rdd-text-tab-hover) !important;
+}
+
+/* Tab close button (VS Code style visibility) */
+.rdd-close-tab-x {
+  opacity: 0; /* hidden by default on inactive tabs, allows hover/active overrides */
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  margin-left: 8px;
+  border-radius: calc(3px * var(--rdd-radius-scale, 1));
+  color: var(--rdd-close-btn-color) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+/* Pushed to the tab's end when the tab has no header actions of its own. After the base rule, so
+   it wins over its margin-left. */
+.rdd-close-tab-x--end { margin-inline-start: auto; }
+.rdd-header-close-empty-group { cursor: pointer; }
+
+/* Always show close icon on active tab */
+.rdd-workspace-tab.rdd-active .rdd-close-tab-x {
+  opacity: 0.75 !important;
+  color: var(--rdd-close-btn-active-color) !important;
+}
+
+/* Show close icon on hover of any tab */
+.rdd-workspace-tab:hover .rdd-close-tab-x {
+  opacity: 0.75 !important;
+  color: var(--rdd-close-btn-active-color) !important;
+}
+
+/* Hover style on the close icon itself (VS Code dark rounded background) */
+.rdd-close-tab-x:hover {
+  opacity: 1 !important;
+  background-color: var(--rdd-close-btn-hover-bg) !important;
+  color: var(--rdd-close-btn-hover-color) !important;
+}
+
