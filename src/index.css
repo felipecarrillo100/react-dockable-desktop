@@ -855,6 +855,9 @@ body.rdd-resizing-col-active * {
 .rdd-tooltip-close-x {
   width: 18px;
   height: 18px;
+  /* A <button>: without this the browser's own padding (1px 6px) comes out of the 18px, and the
+     12px icon was drawn 6px wide on any page without a CSS reset (7.6.2). */
+  padding: 0;
   border-radius: calc(3px * var(--rdd-radius-scale, 1));
   background: transparent !important;
   border: none !important;
@@ -866,6 +869,10 @@ body.rdd-resizing-col-active * {
   align-items: center;
   justify-content: center;
   opacity: 0.75;
+}
+
+.rdd-tooltip-close-x svg {
+  flex-shrink: 0;
 }
 
 .rdd-tooltip-close-x:hover {
@@ -2307,6 +2314,8 @@ body.rdd-dragging-active {
   cursor: pointer;
   font-size: var(--rdd-chrome-icon-size, 22px);
   line-height: 1;
+  /* The icon is centred by flex; the browser's button padding must not eat into the box (7.6.2). */
+  padding: 0;
 }
 
 /* Icons in rail buttons: SVG icons follow the chrome icon size whatever their own width/height
@@ -3181,6 +3190,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
   transition: color 0.15s ease, background-color 0.15s ease;
   font-size: var(--rdd-chrome-icon-size, 22px);
   line-height: 1;
+  /* The icon is centred by flex; the browser's button padding must not eat into the box (7.6.2). */
+  padding: 0;
 }
 
 .rdd-toolbar-btn svg {

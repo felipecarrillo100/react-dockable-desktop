@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.6.2] — 2026-10-04
+
+### Fixed
+
+- **The taskbar preview's close button drew its × at half width** on a page without a CSS reset
+  (a plain MUI app, Bootstrap, or no framework at all). The button is a `<button>`, so it kept the
+  browser's own padding (`1px 6px` in Chrome), and with the library's `border-box` sizing that
+  padding came out of its 18px: the 12px icon was drawn 6px wide. It now sets `padding: 0`, and
+  its icon no longer shrinks.
+- **Workspace toolbar and sidebar rail buttons relied on the same browser padding.** It did not
+  show at the default icon size, but it capped the icon at 24px (toolbar) and 32px (rail), so a
+  `--rdd-chrome-icon-size` above 24px squeezed toolbar icons. They set `padding: 0` too. Nothing
+  changes on a page that already resets button padding.
+
+### Tests
+
+- `hostPage.browser.ts`: on the harness page, which has no CSS reset, the preview's × draws its
+  icon at 12×12, and toolbar and rail buttons have no padding and fit a 28px icon. Each assertion
+  was seen failing without its `padding: 0`.
+
 ## [7.6.1] — 2026-10-04
 
 Internal restructuring. No behaviour, API or visual change.
@@ -806,7 +826,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.2...HEAD
+[7.6.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.1...v7.6.2
 [7.6.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.0...v7.6.1
 [7.6.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.5.0...v7.6.0
 [7.5.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.4.1...v7.5.0

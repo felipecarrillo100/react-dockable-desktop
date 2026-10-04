@@ -219,6 +219,9 @@
 .rdd-tooltip-close-x {
   width: 18px;
   height: 18px;
+  /* A <button>: without this the browser's own padding (1px 6px) comes out of the 18px, and the
+     12px icon was drawn 6px wide on any page without a CSS reset (7.6.2). */
+  padding: 0;
   border-radius: calc(3px * var(--rdd-radius-scale, 1));
   background: transparent !important;
   border: none !important;
@@ -230,6 +233,10 @@
   align-items: center;
   justify-content: center;
   opacity: 0.75;
+}
+
+.rdd-tooltip-close-x svg {
+  flex-shrink: 0;
 }
 
 .rdd-tooltip-close-x:hover {
