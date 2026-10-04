@@ -1,0 +1,54 @@
+/* --------------------------------------------------------------------------
+   SKIN 4: Fluent Slate Preset
+   -------------------------------------------------------------------------- */
+[data-rdd-skin="slate"] {
+  --rdd-skin-font-family: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif; /* Fluent's stack */
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #0f172a);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #1e293b);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #0f172a);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(30 41 59)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #334155);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #1e293b);
+  --rdd-accent-color: var(--rdd-brand-accent, #38bdf8);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
+  --rdd-border-panel: var(--rdd--b-border-panel, #334155);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #1e293b);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #64748b);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #f8fafc);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #0f172a);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #334155);
+  --rdd-window-text: var(--rdd--b-window-text, #f8fafc);
+  --rdd-panel-text: var(--rdd--b-panel-text, #f8fafc);
+}
+
+[data-rdd-skin="slate"][data-color-scheme="light"] {
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #f1f5f9);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #ffffff);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #f1f5f9);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(255 255 255)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #cbd5e1);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #f8fafc);
+  --rdd-accent-color: var(--rdd-brand-accent, #0078d4);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
+  --rdd-border-panel: var(--rdd--b-border-panel, #e2e8f0);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #f8fafc);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #475569);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #0f172a);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #f8fafc);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #cbd5e1);
+  --rdd-window-text: var(--rdd--b-window-text, #0f172a);
+  --rdd-panel-text: var(--rdd--b-panel-text, #0f172a);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #475569);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #0f172a);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+}
+
+[data-rdd-skin="slate"] .rdd-workspace-tab.rdd-active::before {
+  top: auto !important;
+  bottom: 0 !important;
+  height: 3px !important;
+}
+

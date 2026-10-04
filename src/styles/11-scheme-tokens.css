@@ -1,0 +1,159 @@
+/* --- Theme Variables for Sidebar and Tabs --- */
+/* Dark is the default scheme, so its tokens are defined on :root as well. <RddToolbar> and
+   <RddSidebar> sit outside the workspace element and read these from <html>, where the page sets
+   data-color-scheme="light" for light and usually sets nothing for dark — so with these under
+   [data-color-scheme="dark"] alone, the toolbar and sidebar had no colours in dark mode. */
+:root,
+[data-color-scheme="dark"] {
+  --rdd-sidebar-bg: var(--rdd--b-sidebar-bg, #1e2024);
+  --rdd-sidebar-tabs-bg: var(--rdd--b-sidebar-tabs-bg, #141619);
+  --rdd-sidebar-border: rgba(255, 255, 255, 0.08);
+  --rdd-sidebar-card-bg: rgba(255, 255, 255, 0.03);
+  --rdd-sidebar-card-border: rgba(255, 255, 255, 0.08);
+  --rdd-sidebar-card-active-bg: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-sidebar-card-active-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
+  --rdd-sidebar-text-title: var(--rdd--b-sidebar-text-title, #f8f9fa);
+  --rdd-sidebar-text-muted: var(--rdd--b-sidebar-text-muted, #8a90a0);
+  --rdd-sidebar-badge-bg: var(--rdd--b-sidebar-badge-bg, #2d3139);
+  --rdd-sidebar-badge-text: var(--rdd--b-sidebar-badge-text, #b0b5c0);
+  --rdd-sidebar-btn-front-border: var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-text: var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-bg: transparent;
+  --rdd-sidebar-btn-front-hover-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-tab-icon-inactive: var(--rdd--b-tab-icon-inactive, #9ea4b0);
+  --rdd-tab-btn-active-bg: var(--rdd--b-tab-btn-active-bg, #1e2024); /* Seamless merge look */
+  --rdd-sidebar-btn-hover-bg: rgba(255, 255, 255, 0.05);
+  --rdd-sidebar-card-hover-border: color-mix(in srgb, var(--rdd-accent-color) 25%, transparent);
+  --rdd-sidebar-card-hover-bg: rgba(255, 255, 255, 0.04);
+  --rdd-sidebar-card-active-shadow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-sidebar-drawer-header-bg: rgba(0, 0, 0, 0.12);
+  --rdd-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.06);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 14%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
+  --rdd-toolbar-separator-color: rgba(255, 255, 255, 0.09);
+  /* Sidebar active-tab design tokens */
+  --rdd-tab-btn-active-width: 100%;
+  --rdd-tab-btn-active-radius: 0px;
+  --rdd-tab-btn-active-shadow: none;
+  --rdd-tab-btn-active-glow: none;
+  --rdd-tab-accent-bar-width: 3px;
+  /* Toolbar active-button design tokens */
+  --rdd-toolbar-btn-active-shadow: none;
+  --rdd-toolbar-btn-active-glow: none;
+  --rdd-toolbar-accent-bar-width: 3px;
+}
+
+[data-color-scheme="light"] {
+  /* The default skin's light-mode accent (the blue its light tokens were already drawn in). */
+  --rdd-accent-color: var(--rdd-brand-accent, #0066cc);
+  --rdd-danger-color: #b91c1c;
+  --rdd-bg-primary: var(--rdd--b-bg-primary, #f8f9fa);
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #f1f5f9);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #ffffff);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #e9ecef);
+  --rdd-text-primary: var(--rdd--b-text-primary, #212529);
+  --rdd-text-secondary: var(--rdd--b-text-secondary, #6c757d);
+  --rdd-border-color: rgba(0, 0, 0, 0.08);
+
+  --rdd-sidebar-bg: var(--rdd--b-sidebar-bg, #f8f9fa);
+  --rdd-sidebar-tabs-bg: var(--rdd--b-sidebar-tabs-bg, #e9ecef);
+  --rdd-sidebar-border: rgba(0, 0, 0, 0.08);
+  --rdd-sidebar-card-bg: var(--rdd--b-sidebar-card-bg, #ffffff);
+  --rdd-sidebar-card-border: rgba(0, 0, 0, 0.08);
+  --rdd-sidebar-card-active-bg: color-mix(in srgb, var(--rdd-accent-color) 5%, transparent);
+  --rdd-sidebar-card-active-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
+  --rdd-sidebar-text-title: var(--rdd--b-sidebar-text-title, #212529);
+  --rdd-sidebar-text-muted: var(--rdd--b-sidebar-text-muted, #6c757d);
+  --rdd-sidebar-badge-bg: var(--rdd--b-sidebar-badge-bg, #e9ecef);
+  --rdd-sidebar-badge-text: var(--rdd--b-sidebar-badge-text, #495057);
+  --rdd-sidebar-btn-front-border: var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-text: var(--rdd-accent-color);
+  --rdd-sidebar-btn-front-bg: transparent;
+  --rdd-sidebar-btn-front-hover-bg: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-tab-icon-inactive: var(--rdd--b-tab-icon-inactive, #555c66);
+  --rdd-tab-btn-active-bg: var(--rdd--b-tab-btn-active-bg, #f8f9fa); /* Seamless merge look */
+  --rdd-sidebar-btn-hover-bg: rgba(0, 0, 0, 0.05);
+  --rdd-sidebar-card-hover-border: color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
+  --rdd-sidebar-card-hover-bg: rgba(0, 0, 0, 0.03);
+  --rdd-sidebar-card-active-shadow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-sidebar-drawer-header-bg: rgba(0, 0, 0, 0.04);
+  --rdd-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.05);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+  --rdd-toolbar-separator-color: rgba(0, 0, 0, 0.1);
+  /* Light skin window overrides */
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(243 244 246)) calc(var(--rdd-window-opacity, 0.9) * 100%), transparent);
+  --rdd-window-border: rgba(0, 0, 0, 0.08);
+  --rdd-window-border-focused: rgba(0, 0, 0, 0.28);
+  --rdd-window-header-bg: rgba(0, 0, 0, 0.04);
+  --rdd-window-text: var(--rdd--b-window-text, #212529);
+  --rdd-window-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  --rdd-window-shadow-focused: 0 16px 36px rgba(0, 0, 0, 0.12);
+  /* Light skin modal overrides */
+  --rdd-modal-curtain-bg: rgba(0, 0, 0, 0.5);
+  --rdd-modal-bg: rgba(255, 255, 255, 0.97);
+  --rdd-modal-border: rgba(0, 0, 0, 0.1);
+  --rdd-modal-header-bg: rgba(0, 0, 0, 0.04);
+  --rdd-modal-header-border: rgba(0, 0, 0, 0.08);
+  --rdd-modal-close-hover-color: var(--rdd--b-modal-close-hover-color, #212529);
+  /* Light skin side panel overrides */
+  --rdd-side-panel-bg: rgba(255, 255, 255, 0.97);
+  --rdd-side-panel-border: rgba(0, 0, 0, 0.1);
+  --rdd-side-panel-header-bg: rgba(0, 0, 0, 0.04);
+  --rdd-side-panel-header-border: rgba(0, 0, 0, 0.08);
+  --rdd-side-panel-close-hover-color: var(--rdd--b-side-panel-close-hover-color, #212529);
+  /* Light skin grid/docked panel overrides */
+  --rdd-border-panel: rgba(0, 0, 0, 0.08);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #e9ecef);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #495057);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #212529);
+  /* Light skin tab and control button hover colors */
+  --rdd-bg-tab-hover: var(--rdd--b-bg-tab-hover, #dee2e6);
+  --rdd-text-tab-hover: var(--rdd--b-text-tab-hover, #212529);
+  --rdd-close-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --rdd-close-btn-hover-color: var(--rdd--b-close-btn-hover-color, #212529);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #6c757d);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #212529);
+  --rdd-tab-indicator-focused: var(--rdd-accent-color);
+  --rdd-tab-indicator-unfocused: rgba(0, 0, 0, 0.25);
+  --rdd-tab-bg-active-focused: var(--rdd-bg-panel);
+  --rdd-tab-bg-active-unfocused: color-mix(in srgb, var(--rdd--b-tab-bg-active-unfocused, rgb(220 224 230)) 65%, transparent);
+  --rdd-tab-text-active-focused: var(--rdd--b-tab-text-active-focused, #212529);
+  --rdd-tab-text-active-unfocused: var(--rdd--b-tab-text-active-unfocused, #6c757d);
+  --rdd-resizer-bg: rgba(0, 0, 0, 0.08);
+  --rdd-custom-btn-bg: rgba(0, 0, 0, 0.03);
+  --rdd-custom-btn-border: rgba(0, 0, 0, 0.08);
+  --rdd-custom-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --rdd-custom-btn-hover-color: var(--rdd--b-custom-btn-hover-color, #212529);
+  /* Light skin taskbar theme variables */
+  --rdd-taskbar-bg: color-mix(in srgb, var(--rdd--b-taskbar-bg, rgb(248 249 250)) 85%, transparent);
+  --rdd-taskbar-border: rgba(0, 0, 0, 0.08);
+  --rdd-taskbar-nav-color: rgba(0, 0, 0, 0.5);
+  --rdd-taskbar-item-bg: rgba(255, 255, 255, 0.65);
+  --rdd-taskbar-item-hover-bg: rgba(255, 255, 255, 0.85);
+  --rdd-taskbar-item-border: rgba(0, 0, 0, 0.08);
+  --rdd-taskbar-item-text: var(--rdd-accent-color);
+  /* Light skin scrollbar theme variables */
+  --rdd-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --rdd-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --rdd-scrollbar-track: rgba(0, 0, 0, 0.02);
+  /* Light skin mockup panel inner theme variables */
+  --rdd-panel-card-bg: rgba(0, 0, 0, 0.03);
+  --rdd-panel-card-border: rgba(0, 0, 0, 0.08);
+  --rdd-panel-text: var(--rdd--b-panel-text, #212529);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  /* ── Panel Overlay — Toolbar (light) ── */
+  --rdd-panel-toolbar-fg: rgba(0, 0, 0, 0.55);
+  --rdd-panel-toolbar-fg-hover: rgba(0, 0, 0, 0.85);
+  --rdd-panel-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --rdd-panel-toolbar-btn-active-bg: var(--rdd-accent-color);
+  --rdd-panel-toolbar-separator-color: rgba(0, 0, 0, 0.1);
+  /* ── Panel Overlay — Floating Window (light) ── */
+  --rdd-panel-float-bg: rgba(255, 255, 255, 0.96);
+  --rdd-panel-float-border: rgba(0, 0, 0, 0.1);
+  --rdd-panel-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --rdd-panel-float-shadow-active: 0 8px 28px rgba(0, 0, 0, 0.2);
+}
+

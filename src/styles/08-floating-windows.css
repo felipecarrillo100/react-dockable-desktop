@@ -1,0 +1,122 @@
+/* Frosted glass sits on a ::before, never on the container itself (7.4.0). A backdrop-filter
+   makes its element the containing block for position: fixed descendants, so a consumer's fixed
+   dropdown inside a frosted window, drawer, panel or panel toolbar was positioned against the container — and
+   which containers were frosted depended on the skin. The pseudo-element is not an ancestor of the
+   content, so the content keeps the viewport. Where the frost saturates, the container's background
+   moves to the same pseudo, after the filter, as it was on the element: saturate() does not commute
+   with the tint (a plain blur does, so the overlay widget keeps its own background).
+   isolation keeps the z-index: -1 pseudo inside the container, below its content. */
+.rdd-floating-window,
+.rdd-side-panel,
+.rdd-panel-float,
+.rdd-panel-toolbar[data-variant="frosted"],
+[data-rdd-skin="macos"] .rdd-workspace-panel {
+  isolation: isolate;
+}
+.rdd-floating-window::before,
+.rdd-side-panel::before,
+.rdd-panel-float::before,
+.rdd-panel-toolbar[data-variant="frosted"]::before,
+[data-rdd-skin="macos"] .rdd-workspace-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.rdd-floating-window::before { background-color: var(--rdd-window-bg); }
+.rdd-side-panel::before { background: var(--rdd-side-panel-bg); }
+[data-rdd-skin="macos"] .rdd-workspace-panel::before { background-color: var(--rdd-bg-panel); }
+/* The background ran under the container's 1px border too: so does the pseudo (a maximized
+   window has no border; a frosted panel toolbar has one on its inner edge). */
+.rdd-floating-window::before,
+[data-rdd-skin="macos"] .rdd-workspace-panel::before {
+  inset: -1px;
+}
+.rdd-panel-toolbar--top[data-variant="frosted"]::before { bottom: -1px; }
+.rdd-panel-toolbar--bottom[data-variant="frosted"]::before { top: -1px; }
+.rdd-panel-toolbar--left[data-variant="frosted"]::before { right: -1px; }
+.rdd-panel-toolbar--right[data-variant="frosted"]::before { left: -1px; }
+.rdd-floating-window.rdd-maximized::before {
+  inset: 0;
+}
+/* The docked panel's own background is on its ::before only in macOS, the skin that frosts it. */
+[data-rdd-skin="macos"] .rdd-workspace-panel {
+  background-color: transparent;
+}
+
+.rdd-floating-window {
+  display: flex;
+  flex-direction: column;
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
+  border: 1px solid var(--rdd-window-border);
+  box-shadow: var(--rdd-window-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.rdd-floating-window::before {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+/* Clips the content to the rounded corners, in place of the window itself — so the resize
+   handles, which are the window's children outside this frame, can straddle its edge. */
+.rdd-floating-window-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.rdd-floating-window.rdd-window-focused {
+  box-shadow: var(--rdd-window-shadow-focused), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: var(--rdd-window-border-focused);
+}
+
+/* Dim only titlebar when window is unfocused to keep panel content opaque */
+.rdd-floating-window:not(.rdd-window-focused) .rdd-floating-window-titlebar {
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
+.rdd-floating-window.rdd-maximized {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+
+.rdd-floating-window-titlebar {
+  padding: 8px 14px;
+  background-color: var(--rdd-window-header-bg);
+  border-bottom: 1px solid var(--rdd-window-border);
+  min-height: 38px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rdd-floating-window-title {
+  font-family: var(--rdd-font-family);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--rdd-window-text);
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-inline-end: 0.5rem;
+}
+
+.rdd-cursor-move {
+  cursor: grab;
+}
+.rdd-cursor-move:active {
+  cursor: grabbing;
+}
+

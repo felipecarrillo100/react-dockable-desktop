@@ -1,0 +1,42 @@
+/* --------------------------------------------------------------------------
+   obsidian — Deep Glow (near-black fill, 2 px bar, inner glow, icon shadow)
+   -------------------------------------------------------------------------- */
+[data-rdd-skin="obsidian"] {
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 3%, transparent);
+  --rdd-tab-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-tab-btn-active-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--rdd-accent-color) 50%, transparent));
+  --rdd-tab-accent-bar-width: 2px;
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 3%, transparent);
+  --rdd-toolbar-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--rdd-accent-color) 50%, transparent));
+  --rdd-toolbar-accent-bar-width: 2px;
+}
+[data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-left .rdd-sidebar-tab-btn.rdd-active {
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset 3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
+}
+[data-rdd-skin="obsidian"] .rdd-sidebar-tabs-strip.rdd-right .rdd-sidebar-tab-btn.rdd-active {
+  box-shadow: var(--rdd-tab-btn-active-shadow), inset -3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
+}
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-left .rdd-toolbar-btn-radio.rdd-active,
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-left .rdd-toolbar-btn-group.rdd-active {
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
+}
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-right .rdd-toolbar-btn-radio.rdd-active,
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-right .rdd-toolbar-btn-group.rdd-active {
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset -3px 0 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
+}
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-top .rdd-toolbar-btn-radio.rdd-active,
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-top .rdd-toolbar-btn-group.rdd-active {
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 -3px 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
+}
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-radio.rdd-active,
+[data-rdd-skin="obsidian"] .rdd-toolbar-strip.rdd-bottom .rdd-toolbar-btn-group.rdd-active {
+  box-shadow: var(--rdd-toolbar-btn-active-shadow), inset 0 3px 8px color-mix(in srgb, var(--rdd-accent-color) 8%, transparent) !important;
+}
+[data-rdd-skin="obsidian"][data-color-scheme="light"] {
+  --rdd-tab-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-tab-btn-active-glow: drop-shadow(0 0 4px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent));
+  --rdd-toolbar-btn-active-shadow: inset 0 0 12px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  --rdd-toolbar-btn-active-glow: drop-shadow(0 0 4px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent));
+}
+

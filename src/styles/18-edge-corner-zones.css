@@ -1,0 +1,78 @@
+/* Outer Workspace Edge Drop Zones */
+.rdd-workspace-edge-trigger {
+  position: absolute;
+  z-index: calc(var(--rdd-z-base, 1000) + 8999);
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 1%, transparent);
+  transition: background-color 0.2s;
+}
+
+.rdd-workspace-edge-trigger:hover {
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 12%, transparent);
+}
+
+.rdd-edge-trigger-left {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+}
+
+.rdd-edge-trigger-right {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+}
+
+.rdd-edge-trigger-top {
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 10px; /* thin strip — keeps clear of tab bar (38px tall) */
+}
+
+.rdd-edge-trigger-bottom {
+  bottom: 0;
+  left: 24px;
+  right: 24px;
+  height: 24px;
+}
+
+.rdd-workspace-edge-preview {
+  position: absolute;
+  z-index: calc(var(--rdd-z-base, 1000) + 8998);
+  background-color: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  border: 2px dashed var(--rdd-accent-color);
+  pointer-events: none;
+  animation: rdd-fade-in 0.15s ease-out;
+}
+
+/* Workspace corner anchor drop zones */
+.rdd-corner-zone {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border: 2px dashed var(--rdd-accent-color, #38bdf8);
+  border-radius: calc(8px * var(--rdd-radius-scale, 1));
+  background: color-mix(in srgb, var(--rdd-accent-color) 6%, transparent);
+  pointer-events: auto;
+  z-index: calc(var(--rdd-z-base, 1000) + 9000);
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease, border-style 0.15s ease;
+}
+.rdd-corner-zone--top-left     { top: 0;    left: 0;  }
+.rdd-corner-zone--top-right    { top: 0;    right: 0; }
+.rdd-corner-zone--bottom-left  { bottom: 0; left: 0;  }
+.rdd-corner-zone--bottom-right { bottom: 0; right: 0; }
+.rdd-corner-zone--hovered {
+  opacity: 1;
+  background: color-mix(in srgb, var(--rdd-accent-color) 18%, transparent);
+  border-style: solid;
+}
+
+.rdd-corner-zone--top-right:dir(rtl)    { right: auto; left: 0;  }
+.rdd-corner-zone--top-left:dir(rtl)     { left: auto;  right: 0; }
+.rdd-corner-zone--bottom-right:dir(rtl) { right: auto; left: 0;  }
+.rdd-corner-zone--bottom-left:dir(rtl)  { left: auto;  right: 0; }
+
+

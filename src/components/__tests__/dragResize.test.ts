@@ -1,8 +1,8 @@
 /**
  * Tests for dragResize.ts's computeResizedRect — locking in that the shared function
  * exactly reproduces both call sites' original, independently-derived math:
- * - DR1-DR4: WindowManager.tsx's startResize style (minW/minH only, no maxW/maxH/minX/minY)
- * - DR5-DR8: PanelOverlay.tsx's handleResizePointerDown style (all four constraints)
+ * - DR1-DR4: workspace/floatingWindowDrag.ts's startResize style (minW/minH only, no maxW/maxH/minX/minY)
+ * - DR5-DR8: panelOverlay/FloatingWidget.tsx's handleResizePointerDown style (all four constraints)
  * - DR9: corner directions combine both axes independently
  */
 import { describe, it, expect } from 'vitest';

@@ -3,7 +3,7 @@
  * @description Type definitions for customizing automatic close warning overlays.
  */
 
-import type { MessageDescriptor } from './WindowManagerContext';
+import type { MessageDescriptor } from '../types';
 
 /**
  * Represents custom configuration options applied to the automatic unsaved changes modal.

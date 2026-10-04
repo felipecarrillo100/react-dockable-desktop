@@ -1,0 +1,24 @@
+/* 
+ * Counteract scale for canvas and its siblings inside a marked container.
+ *
+ * Put `data-rdd-preview-unscale` on the element that holds a canvas-rendered view (a WebGL map,
+ * a chart).
+ * 
+ * When rendering a panel's mini hover-preview in the taskbar, the parent container 
+ * is scaled down using CSS transform scale(var(--rdd-preview-scale)). For standard HTML UI, 
+ * this works natively. However, for web maps (like WebGL / canvas-based engines such as 
+ * a WebGL map), scaling down the browser container causes the rendering canvas and its absolute 
+ * siblings (e.g. HTML overlays, labels, shapes) to blur or offset.
+ *
+ * To counteract this, we apply a reverse scale transform (1 / scale) and multiply the size 
+ * of the canvas and its siblings by the scale factor. This forces the map engine to render 
+ * at full resolution inside the preview container without positioning glitches.
+ */
+.rdd-taskbar-item-preview-host [data-rdd-preview-unscale] canvas,
+.rdd-taskbar-item-preview-host [data-rdd-preview-unscale] canvas ~ * {
+  transform: scale(calc(1 / var(--rdd-preview-scale, 1))) !important;
+  transform-origin: top left;
+  width: calc(100% * var(--rdd-preview-scale, 1)) !important;
+  height: calc(100% * var(--rdd-preview-scale, 1)) !important;
+}
+

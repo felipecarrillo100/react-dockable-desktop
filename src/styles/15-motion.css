@@ -1,0 +1,40 @@
+/* Animations are on by default. `animations={false}` on <WindowManager /> adds
+   `rdd-no-animations` to the workspace root and mirrors it onto <html> (so
+   portaled elements — ContextMenu, Toast, Toolbar's flyout — are covered too).
+   Scoped to only the library's own elements ([class*="rdd-"]) via the new
+   unified prefix — this never touches the consumer's own transitions/animations
+   elsewhere on the page, in either state. */
+.rdd-no-animations [class*="rdd-"],
+.rdd-no-animations [class*="rdd-"]::before,
+.rdd-no-animations [class*="rdd-"]::after,
+html.rdd-no-animations [class*="rdd-"],
+html.rdd-no-animations [class*="rdd-"]::before,
+html.rdd-no-animations [class*="rdd-"]::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* The same when the user has asked the system for less motion (7.4.0): the library's own
+   transitions and animations stop, whatever `animations` says. The consumer's own are untouched,
+   exactly as above. */
+@media (prefers-reduced-motion: reduce) {
+  [class*="rdd-"],
+  [class*="rdd-"]::before,
+  [class*="rdd-"]::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+
+
+@keyframes rdd-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rdd-scale-up {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+

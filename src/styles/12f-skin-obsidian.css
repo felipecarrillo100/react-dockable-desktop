@@ -1,0 +1,73 @@
+/* --------------------------------------------------------------------------
+   SKIN 6: Midnight Obsidian Preset (Vercel Style)
+   -------------------------------------------------------------------------- */
+[data-rdd-skin="obsidian"] {
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #000000);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #0a0a0a);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #000000);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(10 10 10)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #1a1a1a);
+  --rdd-window-border-focused: var(--rdd--b-window-border-focused, #333333);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #000000);
+  --rdd-accent-color: var(--rdd-brand-accent, #ffffff);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 8%, transparent);
+  --rdd-border-panel: var(--rdd--b-border-panel, #1a1a1a);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #000000);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #737373);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #ffffff);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #030303);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #1a1a1a);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #737373);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #ffffff);
+  --rdd-scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --rdd-scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
+  --rdd-window-text: var(--rdd--b-window-text, #ffffff);
+  --rdd-panel-text: var(--rdd--b-panel-text, #ffffff);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 22%, transparent);
+}
+
+[data-rdd-skin="obsidian"][data-color-scheme="light"] {
+  --rdd-bg-workspace: var(--rdd--b-bg-workspace, #ffffff);
+  --rdd-bg-panel: var(--rdd--b-bg-panel, #fafafa);
+  --rdd-bg-tab-bar: var(--rdd--b-bg-tab-bar, #ffffff);
+  --rdd-window-bg: color-mix(in srgb, var(--rdd--b-window-bg, rgb(250 250 250)) calc(var(--rdd-window-opacity, 1.0) * 100%), transparent);
+  --rdd-window-border: var(--rdd--b-window-border, #e5e5e5);
+  --rdd-window-border-focused: var(--rdd--b-window-border-focused, #a3a3a3);
+  --rdd-window-header-bg: var(--rdd--b-window-header-bg, #ffffff);
+  --rdd-accent-color: var(--rdd-brand-accent, #000000);
+  --rdd-accent-glow: color-mix(in srgb, var(--rdd-accent-color) 5%, transparent);
+  --rdd-border-panel: var(--rdd--b-border-panel, #eaeaea);
+  --rdd-bg-tab-inactive: var(--rdd--b-bg-tab-inactive, #ffffff);
+  --rdd-text-tab-inactive: var(--rdd--b-text-tab-inactive, #737373);
+  --rdd-text-tab-active: var(--rdd--b-text-tab-active, #000000);
+  --rdd-panel-card-bg: var(--rdd--b-panel-card-bg, #ffffff);
+  --rdd-panel-card-border: var(--rdd--b-panel-card-border, #e5e5e5);
+  --rdd-close-btn-color: var(--rdd--b-close-btn-color, #737373);
+  --rdd-close-btn-active-color: var(--rdd--b-close-btn-active-color, #000000);
+  --rdd-scrollbar-thumb: rgba(0, 0, 0, 0.1);
+  --rdd-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --rdd-window-text: var(--rdd--b-window-text, #000000);
+  --rdd-panel-text: var(--rdd--b-panel-text, #000000);
+  --rdd-panel-title-color: var(--rdd-accent-color);
+  --rdd-tab-icon-active: var(--rdd-accent-color);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 10%, transparent);
+  --rdd-toolbar-btn-toggle-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+}
+
+/* Obsidian custom borderless panel elevations */
+[data-rdd-skin="obsidian"] .rdd-floating-window {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  border-radius: calc(6px * var(--rdd-radius-scale, 1));
+}
+[data-rdd-skin="obsidian"] .rdd-floating-window.rdd-window-focused {
+  box-shadow: 0 24px 50px color-mix(in srgb, var(--rdd-accent-color) 6%, transparent), 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 40%, transparent) !important;
+}
+[data-rdd-skin="obsidian"][data-color-scheme="light"] .rdd-floating-window {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1) !important;
+}
+[data-rdd-skin="obsidian"][data-color-scheme="light"] .rdd-floating-window.rdd-window-focused {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.2) !important;
+}
+

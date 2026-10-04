@@ -1,0 +1,31 @@
+/* --------------------------------------------------------------------------
+   macos — Glass Chip (full-round floating chip, accent fill + white ring)
+   Inspired by macOS app icon strip conventions: Xcode, Logic Pro, System Settings.
+   A contained chip that floats inside the strip — not an edge-connecting bridge.
+   -------------------------------------------------------------------------- */
+[data-rdd-skin="macos"] {
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  --rdd-tab-btn-active-width: 36px;
+  --rdd-tab-btn-active-radius: 10px;
+  --rdd-tab-btn-active-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  --rdd-tab-accent-bar-width: 0px;
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 20%, transparent);
+  --rdd-toolbar-btn-active-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  --rdd-toolbar-accent-bar-width: 0px;
+}
+[data-rdd-skin="macos"] .rdd-sidebar-tab-btn.rdd-active {
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  margin: 0 !important;
+}
+[data-rdd-skin="macos"] .rdd-toolbar-strip .rdd-toolbar-btn-radio.rdd-active,
+[data-rdd-skin="macos"] .rdd-toolbar-strip .rdd-toolbar-btn-group.rdd-active {
+  border-radius: calc(10px * var(--rdd-radius-scale, 1)) !important;
+}
+[data-rdd-skin="macos"][data-color-scheme="light"] {
+  --rdd-tab-btn-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+  --rdd-tab-btn-active-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
+  --rdd-toolbar-btn-radio-active-bg: color-mix(in srgb, var(--rdd-accent-color) 16%, transparent);
+  --rdd-toolbar-btn-active-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rdd-accent-color) 30%, transparent);
+}
+

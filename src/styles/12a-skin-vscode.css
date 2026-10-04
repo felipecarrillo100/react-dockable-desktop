@@ -1,0 +1,12 @@
+/* ==========================================================================
+   MULTI-THEME PRESETS (SKINS) DEFINITIONS
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   SKIN 1: VS Code (Default Variables matching :root)
+   -------------------------------------------------------------------------- */
+[data-rdd-skin="vscode"] {
+  --rdd-skin-font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif; /* VS Code's workbench font */
+  /* Inherits everything from :root */
+}
+
