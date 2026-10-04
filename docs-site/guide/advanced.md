@@ -171,7 +171,7 @@ The chrome follows the WAI-ARIA Authoring Practices patterns (since 6.4.0):
 |---|---|
 | Tab strip (`role="tablist"`) | Tab reaches the selected tab. ←/→ select and focus the neighbouring tab (by screen position, so mirrored under RTL); Home/End jump to the ends; Delete closes the focused tab and moves focus to the tab selected in its place (or to the workspace's active tab, when its group closed with it); ContextMenu or Shift+F10 opens its menu. |
 | Toolbar group flyout (`role="menu"`) | Enter or Space on the group button opens it with focus on the chosen item (or the first). ↑/↓ move (wrapping); Home/End; Enter or Space chooses; Esc or Tab closes and returns focus to the group button. |
-| Context menus | Focus moves to the first item on open. ↑/↓ move (skipping disabled items, wrapping); Home/End; → (← under RTL), Enter or Space opens a sub-menu; ← goes back; Tab or Esc closes and returns focus to where it was. |
+| Context menus | Focus moves into the menu on open, with no item highlighted (opened from the keyboard, it starts on the first item). ↑/↓ move (skipping disabled items, wrapping); Home/End; → (← under RTL), Enter or Space opens a sub-menu; ← goes back; Tab or Esc closes and returns focus to where it was. |
 | Taskbar | Minimized panels are buttons: Tab reaches them, Enter restores, ContextMenu / Shift+F10 opens their menu. |
 | Toolbar, sidebar, taskbar | Buttons show a focus ring when reached from the keyboard (`:focus-visible`); restyle it with `--rdd-focus-ring`. |
 

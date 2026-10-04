@@ -10,7 +10,8 @@ export const enabledItems = (menu: HTMLElement | null): HTMLElement[] =>
 
 /**
  * Up/Down/Home/End focus movement within one menu (WAI-ARIA menu pattern). Returns true when the
- * key was handled. Wraps around at either end; disabled items are skipped.
+ * key was handled. Wraps around at either end; disabled items are skipped. From the menu element
+ * itself (nothing highlighted), ArrowDown reaches the first item and ArrowUp the last.
  */
 export function moveMenuFocus(menu: HTMLElement | null, key: string): boolean {
   const items = enabledItems(menu);
@@ -18,7 +19,8 @@ export function moveMenuFocus(menu: HTMLElement | null, key: string): boolean {
   const i = items.indexOf(document.activeElement as HTMLElement);
   let next: HTMLElement | undefined;
   if (key === 'ArrowDown') next = items[(i + 1) % items.length];
-  else if (key === 'ArrowUp') next = items[(i - 1 + items.length) % items.length];
+  // With the menu itself focused (i = -1, nothing highlighted yet) ArrowUp goes to the last item.
+  else if (key === 'ArrowUp') next = items[i < 0 ? items.length - 1 : (i - 1 + items.length) % items.length];
   else if (key === 'Home') next = items[0];
   else if (key === 'End') next = items[items.length - 1];
   if (!next) return false;

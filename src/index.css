@@ -1108,6 +1108,18 @@ body.rdd-resizing-col-active * {
   background-color: var(--rdd-toolbar-btn-radio-active-bg, rgba(9, 71, 113, 0.35));
 }
 
+/* Focus. A menu opens with focus on the menu itself and nothing highlighted, so the menu element
+   draws no ring (the global :focus-visible rule would otherwise outline it). A menu item that has
+   keyboard focus draws the skin's ring, never the browser's default. Restyle it with
+   --rdd-context-menu-focus-ring, or every library ring at once with --rdd-focus-ring. */
+.rdd-context-menu.rdd-context-menu:focus-visible {
+  outline: none;
+}
+.rdd-context-menu__item.rdd-context-menu__item:focus-visible {
+  outline: var(--rdd-context-menu-focus-ring, var(--rdd-focus-ring, 2px solid var(--rdd-accent-color)));
+  outline-offset: -2px;
+}
+
 .rdd-context-menu__icon {
   width: 16px;
   min-width: 16px;

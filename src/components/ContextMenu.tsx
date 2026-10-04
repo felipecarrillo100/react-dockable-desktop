@@ -61,6 +61,15 @@ export interface ShowContextMenuOptions {
    * opened without an event. The menu is portaled to `<body>`, so it can't inherit either.
    */
   dir?: 'ltr' | 'rtl';
+  /**
+   * Where focus goes when the menu opens. `'menu'` (the default) focuses the menu itself, with no
+   * item highlighted: ArrowDown then reaches the first item and ArrowUp the last. `'first-item'`
+   * focuses the first enabled item, for a menu opened from the keyboard. When this is left out, a
+   * keyboard `contextmenu` event (the ContextMenu key or Shift+F10, which report no pointer
+   * position) opens on the first item and everything else, including a call with no event, on
+   * the menu: the same view every time, whatever the user did before.
+   */
+  initialFocus?: 'menu' | 'first-item';
 }
 
 export interface ContextMenuHandle {
@@ -89,6 +98,13 @@ export interface ContextMenuAdapter {
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
+
+/** A `contextmenu` event from the keyboard (ContextMenu key, Shift+F10): no pointer position. */
+function isKeyboardMenuEvent(event: ShowContextMenuOptions['event']): boolean {
+  if (!event || 'touches' in event) return false;
+  const mouse = event as MouseEvent;
+  return mouse.clientX === 0 && mouse.clientY === 0;
+}
 
 function getCoords(
   event: ShowContextMenuOptions['event'],
@@ -196,6 +212,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
         // z-index from .rdd-context-menu--submenu (+8501) — see the main menu's note below.
         // Placed by the layout effect above before paint (its starting left/top are in the class).
         role="menu"
+        tabIndex={-1}
         onKeyDown={handleKeyDown}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
@@ -257,9 +274,10 @@ interface MenuState {
   y: number;
   items: ContextMenuItem[];
   dir: 'ltr' | 'rtl';
+  initialFocus: 'menu' | 'first-item';
 }
 
-const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [], dir: 'ltr' };
+const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [], dir: 'ltr', initialFocus: 'menu' };
 
 /**
  * The menu is portaled to <body>, so it takes its direction from where it was opened: the event's
@@ -307,24 +325,31 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     }, [onHide, onOpenChange]);
 
     useImperativeHandle(ref, () => ({
-      show({ event, x, y, items, dir }) {
+      show({ event, x, y, items, dir, initialFocus }) {
         const coords = event ? getCoords(event) : { x: x ?? 0, y: y ?? 0 };
         openerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
           ? document.activeElement
           : null;
         itemRefs.current.clear();
-        setMenuState({ visible: true, x: coords.x, y: coords.y, items, dir: menuDirection(event, dir) });
+        setMenuState({
+          visible: true, x: coords.x, y: coords.y, items, dir: menuDirection(event, dir),
+          initialFocus: initialFocus ?? (isKeyboardMenuEvent(event) ? 'first-item' : 'menu'),
+        });
         setSubmenuIndex(null);
+        setSubmenuFocus(false);
         onShow?.();
         onOpenChange?.(true);
       },
     }), [onShow, onOpenChange]);
 
-    // Open: focus the first enabled item. Close: return focus to the opener if the menu had it
-    // and nothing else has taken it since.
+    // Open: focus the menu itself (no item highlighted) or, for a keyboard-opened menu, its first
+    // enabled item. Focusing an item is what made the browser's focus ring come and go with the
+    // user's previous interaction. Close: return focus to the opener if the menu had it and
+    // nothing else has taken it since.
     useLayoutEffect(() => {
       if (menuState.visible) {
-        enabledItems(menuRef.current)[0]?.focus();
+        if (menuState.initialFocus === 'first-item') enabledItems(menuRef.current)[0]?.focus();
+        else menuRef.current?.focus({ preventScroll: true });
         return;
       }
       if (!restoreFocusRef.current) return;
@@ -332,7 +357,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       const opener = openerRef.current;
       const active = document.activeElement;
       if (opener?.isConnected && (!active || active === document.body)) opener.focus();
-    }, [menuState.visible, menuState.items]);
+    }, [menuState.visible, menuState.items, menuState.initialFocus]);
 
     // Click-outside dismiss
     // Two listeners for full coverage:
@@ -419,6 +444,8 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       if (isSubMenu(item) && item.items?.length) {
         cancelOpenTimer();
         timers.current.open = setTimeout(() => {
+          // Opened by hovering: it must not take focus, even after a keyboard-opened submenu.
+          setSubmenuFocus(false);
           setSubmenuIndex(index);
         }, 150);
       } else if (!isSubMenu(item)) {
@@ -471,6 +498,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
           // inline value here silently overrode it). Resolves to the same 9500 by default.
           style={{ left: menuState.x, top: menuState.y, ...style }}
           role="menu"
+          tabIndex={-1}
           aria-orientation="vertical"
           onKeyDown={handleMenuKeyDown}
         >

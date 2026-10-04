@@ -94,6 +94,8 @@ function MapPanel() {
 >
 > **Direction.** The menu is rendered into `<body>`, so it takes its direction from where it was opened: the event's target when you pass `event`. `workspace.showContextMenu()` also passes the workspace's own direction, which a menu opened with only `x`/`y` then uses. `useContextMenu()` passes nothing extra, so a menu it opens with only `x`/`y` follows `<html dir>` — pass `dir: 'rtl'` (or an `event`) for an RTL workspace inside an LTR page.
 
+> **Initial focus.** A menu opens with focus on the menu itself and no item highlighted, the same however it was opened. That matters most here: a map library opens the menu from script after its own right-click handling, and focusing an item made the browser show or hide its focus ring depending on the user's previous click or key press. Arrow keys still work at once: ↓ reaches the first item, ↑ the last. For a menu you open from the keyboard, pass `initialFocus: 'first-item'`. When you pass a keyboard `contextmenu` event (the ContextMenu key or Shift+F10, which report no pointer position), that is the default.
+
 Both `showContextMenu()` and `usePanelContextMenu()` rely on the context menu that `DockableDesktopProvider` sets up automatically. The next section explains how to provide one yourself.
 
 ## `<RddContextMenu>` and `useContextMenu`
@@ -177,9 +179,10 @@ type MenuProps = Omit<RddContextMenuProps, 'adapter' | 'children'>;
 
 const MyMenu = forwardRef<ContextMenuHandle, MenuProps>((props, ref) => {
   useImperativeHandle(ref, () => ({
-    show({ event, x, y, items, dir }) {
+    show({ event, x, y, items, dir, initialFocus }) {
       // render your own menu here; since it's portaled, give it a direction:
-      // the event target's when there is an event, else dir, else the page's
+      // the event target's when there is an event, else dir, else the page's.
+      // initialFocus is 'first-item' when the menu was opened from the keyboard.
     },
   }));
   return null; // or your menu portal
@@ -311,7 +314,7 @@ The component renders via `createPortal` to `document.body` at `position: fixed`
 
 | Method | Description |
 |--------|-------------|
-| `show({ event?, x?, y?, items, dir? })` | Open the menu at the event's cursor position (or explicit `x`/`y`). Its direction is the event target's when there is an `event`, else `dir` when given, else the page's. |
+| `show({ event?, x?, y?, items, dir?, initialFocus? })` | Open the menu at the event's cursor position (or explicit `x`/`y`). Its direction is the event target's when there is an `event`, else `dir` when given, else the page's. `initialFocus`: `'menu'` (default; the menu itself is focused, nothing highlighted) or `'first-item'`; a keyboard `contextmenu` event defaults to `'first-item'`. |
 
 ### `RddContextMenuProps`
 
@@ -328,15 +331,17 @@ The component renders via `createPortal` to `document.body` at `position: fixed`
 
 ## Keyboard behaviour
 
-Opening a menu moves focus to its first enabled item. The menu follows the WAI-ARIA menu pattern:
+Opening a menu moves focus into it: onto the menu itself, with no item highlighted, so a menu looks the same every time it opens, whether it was opened with the mouse, from script or after a key press. Menus opened from the keyboard start on their first enabled item instead: those the library opens itself (ContextMenu or Shift+F10 on a tab or taskbar item, Enter or Space on a window's ⋮ button), a keyboard `contextmenu` event, and any menu shown with `initialFocus: 'first-item'`. The menu follows the WAI-ARIA menu pattern:
 
 | Key | Action |
 |-----|--------|
-| `↓` / `↑` | Next / previous item (disabled items are skipped; wraps around) |
+| `↓` / `↑` | Next / previous item (disabled items are skipped; wraps around). From the menu itself, `↓` reaches the first item and `↑` the last |
 | `Home` / `End` | First / last item |
 | `→` (`←` under RTL), `Enter`, `Space` | Open a sub-menu and focus its first item |
 | `←` (`→` under RTL) in a sub-menu | Close it and return to its parent item |
 | `Enter` / `Space` | Activate the focused item |
 | `Esc`, `Tab` | Close the menu; focus returns to where it was before the menu opened |
 
-A sub-menu also opens on click or tap. ContextMenu and Shift+F10 on a focused tab or taskbar item open that element's menu, placed at the element.
+A sub-menu also opens on click or tap; one opened by hovering takes no focus. ContextMenu and Shift+F10 on a focused tab or taskbar item open that element's menu, placed at the element.
+
+An item with keyboard focus draws the skin's focus ring (`:focus-visible`), never the browser's default. Restyle it with `--rdd-context-menu-focus-ring`, or every library ring at once with `--rdd-focus-ring`.

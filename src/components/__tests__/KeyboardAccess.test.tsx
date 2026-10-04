@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
@@ -117,30 +117,69 @@ describe('context menu (WAI-ARIA menu pattern)', () => {
     { label: 'Sub', items: [{ label: 'Child A', action: () => {} }, { label: 'Child B', action: () => {} }] },
     { label: 'Check', action: () => {}, checkbox: { value: true } },
   ];
-  const open = () => {
+  const open = (extra: Record<string, unknown> = {}) => {
     const opener = document.createElement('button');
     opener.id = 'opener';
     document.body.appendChild(opener);
     opener.focus();
-    act(() => { showMenu({ x: 10, y: 10, items }); });
+    act(() => { showMenu({ x: 10, y: 10, items, ...extra }); });
     return opener;
   };
+  const rootMenu = () => document.body.querySelector('.rdd-context-menu:not(.rdd-context-menu--submenu)') as HTMLElement;
   const menuItems = (sel = '.rdd-context-menu:not(.rdd-context-menu--submenu)') =>
     Array.from(document.body.querySelectorAll(`${sel} [role^="menuitem"]`)) as HTMLElement[];
-  const label = (el: Element | null) => el?.querySelector('.rdd-context-menu__label')?.textContent;
+  /** The label of the focused menu item, or null when focus is not on an item (the menu itself, say). */
+  const label = (el: Element | null) =>
+    el?.matches('[role^="menuitem"]') ? el.querySelector('.rdd-context-menu__label')?.textContent : null;
 
   afterEach(() => { document.getElementById('opener')?.remove(); });
 
-  it('focuses the first enabled item on open', () => {
+  // 7.6.0: a menu opens with nothing highlighted, the same however it was opened. Focusing the
+  // first item made the browser's focus ring come and go with the user's previous interaction.
+  it('opens with the menu itself focused and no item highlighted', () => {
     mount();
     open();
+    expect(document.activeElement).toBe(rootMenu());
+    expect(rootMenu().getAttribute('role')).toBe('menu');
+    expect(rootMenu().tabIndex).toBe(-1);
+    expect(label(document.activeElement)).toBeNull();
+  });
+
+  it('from the menu itself, ArrowDown reaches the first item and ArrowUp the last', () => {
+    mount();
+    open();
+    key(rootMenu(), 'ArrowDown');
     expect(label(document.activeElement)).toBe('One');
+    act(() => { rootMenu().focus(); });
+    key(rootMenu(), 'ArrowUp');
+    expect(label(document.activeElement)).toBe('Check');
+  });
+
+  it("initialFocus: 'first-item' opens on the first enabled item", () => {
+    mount();
+    open({ initialFocus: 'first-item' });
+    expect(label(document.activeElement)).toBe('One');
+  });
+
+  it('a keyboard contextmenu event (no pointer position) opens on the first item', () => {
+    mount();
+    const opener = document.createElement('button');
+    opener.id = 'opener';
+    document.body.appendChild(opener);
+    act(() => { showMenu({ event: new MouseEvent('contextmenu', { clientX: 0, clientY: 0 }), items }); });
+    expect(label(document.activeElement)).toBe('One');
+  });
+
+  it('a mouse contextmenu event opens on the menu itself', () => {
+    mount();
+    act(() => { showMenu({ event: new MouseEvent('contextmenu', { clientX: 40, clientY: 30 }), items }); });
+    expect(document.activeElement).toBe(rootMenu());
   });
 
   it('ArrowDown / ArrowUp skip disabled items and wrap; Home / End jump', () => {
     mount();
-    open();
-    const menu = document.body.querySelector('.rdd-context-menu')!;
+    open({ initialFocus: 'first-item' });
+    const menu = rootMenu();
     key(menu, 'ArrowDown');
     expect(label(document.activeElement)).toBe('Sub');
     key(menu, 'ArrowDown');
@@ -157,8 +196,10 @@ describe('context menu (WAI-ARIA menu pattern)', () => {
   it('ArrowRight opens a submenu and focuses its first item; ArrowLeft goes back', () => {
     mount();
     open();
-    const menu = document.body.querySelector('.rdd-context-menu')!;
+    const menu = rootMenu();
     key(menu, 'ArrowDown');
+    key(document.activeElement!, 'ArrowDown');
+    expect(label(document.activeElement)).toBe('Sub');
     key(document.activeElement!, 'ArrowRight');
     expect(label(document.activeElement)).toBe('Child A');
     key(document.activeElement!, 'ArrowDown');
@@ -166,6 +207,47 @@ describe('context menu (WAI-ARIA menu pattern)', () => {
     key(document.activeElement!, 'ArrowLeft');
     expect(label(document.activeElement)).toBe('Sub');
     expect(document.body.querySelector('.rdd-context-menu--submenu')).toBeNull();
+  });
+
+  it("the library's own keyboard opener (the Menu key on a tab) opens on the first item", () => {
+    mount();
+    act(() => { A.openPanel('a', 'p'); });
+    // A real box, so the menu event lands at the tab and not at 0,0 (which would open on the first
+    // item through the "no pointer position" rule instead of the opener's own choice).
+    tab('a').getBoundingClientRect = () => ({ left: 40, top: 10, right: 120, bottom: 34, width: 80, height: 24, x: 40, y: 10, toJSON() {} }) as DOMRect;
+    act(() => { tab('a').focus(); });
+    key(tab('a'), 'ContextMenu');
+    expect(rootMenu()).not.toBeNull();
+    expect(label(document.activeElement)).toBe(menuItems().map(i => label(i))[0]);
+    expect(document.activeElement).not.toBe(rootMenu());
+  });
+
+  it('a right-click on a tab opens its menu on the menu itself', () => {
+    mount();
+    act(() => { A.openPanel('a', 'p'); });
+    act(() => { tab('a').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 50, clientY: 20 })); });
+    expect(document.activeElement).toBe(rootMenu());
+  });
+
+  it('a submenu opened by hovering takes no focus, even after one opened from the keyboard', () => {
+    vi.useFakeTimers();
+    try {
+      mount();
+      const twoSubs = [
+        { label: 'Sub', items: [{ label: 'Child A', action: () => {} }] },
+        { label: 'Other', items: [{ label: 'Child X', action: () => {} }] },
+      ];
+      act(() => { showMenu({ x: 10, y: 10, items: twoSubs, initialFocus: 'first-item' }); });
+      key(document.activeElement!, 'ArrowRight');
+      expect(label(document.activeElement)).toBe('Child A');
+      const other = menuItems().find(i => label(i) === 'Other')!;
+      act(() => { other.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(document.body.querySelector('.rdd-context-menu--submenu')?.textContent).toContain('Child X');
+      expect(label(document.activeElement)).not.toBe('Child X');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a click (or tap) on a submenu item opens it', () => {
