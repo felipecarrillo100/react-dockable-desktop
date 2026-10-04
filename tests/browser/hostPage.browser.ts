@@ -87,6 +87,48 @@ describe('host CSS can override fixed chrome values', () => {
   });
 });
 
+// A <button> keeps the browser's default padding (1px 6px in Chrome) unless something resets it,
+// and every rdd- element is border-box, so that padding came out of an icon button's fixed size:
+// on a page without a reset the preview's 18px close button drew its 12px icon 6px wide (7.6.2).
+// The harness page has no CSS reset, so it is that page.
+describe('icon buttons do not depend on the host page\'s button padding', () => {
+  it('the taskbar preview close button draws its icon at full size', async () => {
+    const { page, close } = await openHarness();
+    await actions(page, 'openPanel', 'pv', 'nopreview', { title: 'Preview' });
+    await actions(page, 'minimizePanel', 'pv');
+    await page.mouse.move(640, 798);
+    await page.waitForTimeout(400);
+    await page.locator('.rdd-taskbar-glassmorphic-item').first().hover();
+    await page.waitForSelector('.rdd-taskbar-item-tooltip .rdd-tooltip-close-x');
+    const got = await page.evaluate(() => {
+      const x = document.querySelector('.rdd-taskbar-item-tooltip .rdd-tooltip-close-x')!;
+      const r = x.querySelector('svg')!.getBoundingClientRect();
+      return { padding: getComputedStyle(x).padding, svg: `${Math.round(r.width)}x${Math.round(r.height)}` };
+    });
+    expect(got).toEqual({ padding: '0px', svg: '12x12' });
+    await close();
+  });
+
+  it('toolbar and rail buttons keep their whole box for the icon, even at a larger icon size', async () => {
+    const { page, close } = await openHarness('tbx=1');
+    await page.waitForSelector('.rdd-toolbar-btn');
+    const pad = await page.evaluate(() => ({
+      toolbar: getComputedStyle(document.querySelector('.rdd-toolbar-btn')!).padding,
+      rail: getComputedStyle(document.querySelector('.rdd-sidebar-tab-btn')!).padding,
+    }));
+    expect(pad).toEqual({ toolbar: '0px', rail: '0px' });
+    // 28px is wider than a 36px button minus the default 6px + 6px of padding.
+    await page.addStyleTag({ content: ':root, [data-rdd-skin] { --rdd-chrome-icon-size: 28px; }' });
+    const inner = await page.evaluate(() => {
+      const b = document.querySelector<HTMLElement>('.rdd-toolbar-btn')!;
+      const cs = getComputedStyle(b);
+      return b.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    });
+    expect(inner).toBeGreaterThanOrEqual(28);
+    await close();
+  });
+});
+
 describe('the unregistered-panel placeholder follows the colour scheme', () => {
   for (const [scheme, rgb] of [['dark', 'rgb(220, 53, 69)'], ['light', 'rgb(185, 28, 28)']]) {
     it(`${scheme}: border and text use --rdd-danger-color`, async () => {
