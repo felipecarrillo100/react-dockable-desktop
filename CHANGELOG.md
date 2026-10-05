@@ -6,6 +6,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.0] — 2026-10-05
+
+Ready-made dialogs: the confirmation shows an icon, a new alert dialog, and both as promises.
+A confirmation dismissed without its buttons now settles.
+
+### Added
+
+- **`RddConfirm` shows an icon left of its message**: a question mark, coloured by `alertType`
+  (info, success, warning, danger) with the toast colour tokens. The new `icon` prop replaces it
+  with your own node; `icon: null` hides it.
+- **`RddAlert`**: a message with a single OK button, for telling rather than asking. Its icon
+  follows `alertType` (info, success, warning, danger), with the same `icon` override. Props:
+  `message`, `title`, `alertType`, `icon`, `okLabel`, `onSettled`. Focus starts on OK and Enter
+  presses it; Escape, the backdrop and the × acknowledge it too, unless the modal is
+  `closable: false`.
+- **`useModals().confirm(options)` and `useModals().alert(options)`** open those dialogs (size
+  `'small'`) and return a promise: `confirm` resolves `true` for the confirm button and `false` for
+  cancel or any dismissal; `alert` resolves once it is closed. Option types: `ConfirmOptions`,
+  `AlertOptions`.
+- **`RddConfirm` `onSettled(ok)`**: fires exactly once however the dialog ends — `true` for the
+  confirm button, `false` for cancel, Escape, the backdrop, the × or a close by code. `onOK` and
+  `onCancel` still fire for their buttons only.
+- **Test hooks:** `data-rdd-confirm-ok`, `data-rdd-confirm-cancel`, `data-rdd-alert-ok`.
+- **Message key `alertTitle`** ("Information"), the default title of `modals.alert()`;
+  `modals.confirm()` uses the existing `modalTitle` ("Confirmation").
+- **`usePanelEvents().onClose` (and the container contract's `onClose`) now fire in modals and
+  side drawers**, whichever way they close. They only fired for docked and floating panels before.
+- New classes: `rdd-dialog-content`, `rdd-dialog-icon`, `rdd-dialog-icon-{info|success|warning|danger}`.
+
+### Fixed
+
+- **An `RddConfirm` closed with Escape, the backdrop, the × or `closeAll()` never answered.**
+  Neither `onOK` nor `onCancel` fired, so a promise built on them stayed pending. The library's
+  own unsaved-changes prompt was one: after Escape on it, that close request never finished. The
+  prompt now resolves from `onSettled`, so a dismissal counts as "keep the panel".
+- **`RddConfirm` overwrote the modal's header icon.** It set a ❓ emoji there on mount, replacing
+  any `ModalOptions.icon` you passed. It no longer touches the header.
+
+### Changed
+
+- The ❓ is gone from a confirmation's header; the question icon is now drawn beside the message.
+  To keep a header icon, pass `ModalOptions.icon`.
+
+### Tests
+
+- `Dialogs.test.tsx`, under `StrictMode`: settle-once for every exit of both dialogs (Escape,
+  backdrop, ×, `closeAll`, `closeAllModals`, `close(id)`, each button); the unsaved-changes prompt
+  wired to `onSettled`; default, custom and hidden icons; the header icon left alone; alert focus,
+  label and `closable: false`; both promise helpers; `onClose` in drawers and modals. Each
+  assertion was seen failing with its code removed.
+- The branding and radius browser baselines were regenerated on purpose: their scenes include a
+  confirmation, whose header no longer has an icon and whose message now sits in the icon row.
+  Nothing outside that modal changed in either baseline.
+
 ## [7.6.2] — 2026-10-04
 
 ### Fixed
@@ -826,7 +880,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.0...HEAD
+[7.7.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.2...v7.7.0
 [7.6.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.1...v7.6.2
 [7.6.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.0...v7.6.1
 [7.6.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.5.0...v7.6.0

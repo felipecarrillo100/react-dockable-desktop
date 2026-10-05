@@ -2,6 +2,7 @@
   "exports": [
     "DockableDesktopProvider",
     "PanelRegistry",
+    "RddAlert",
     "RddConfirm",
     "RddContextMenu",
     "RddDesktop",
@@ -56,9 +57,11 @@
     "useWorkspaceState"
   ],
   "types": [
+    "AlertOptions",
     "BuiltInEvents",
     "ButtonVariant",
     "CloseOptions",
+    "ConfirmOptions",
     "ContainerType",
     "ContextMenuAdapter",
     "ContextMenuCheckbox",
@@ -102,6 +105,7 @@
     "PanelTitle",
     "PanelTitleDescriptor",
     "PointerDragConfig",
+    "RddAlertProps",
     "RddConfirmProps",
     "RddContextMenuProps",
     "RddDesktopProps",

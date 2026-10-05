@@ -77,7 +77,7 @@ function LaunchButton() {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `title` | `PanelTitle` | — | Modal header title: a string, a message descriptor (`{ id, defaultMessage }`) or a function returning a string. |
-| `icon` | `ReactNode` | — | Icon displayed in the title bar. |
+| `icon` | `ReactNode` | — | Icon displayed in the title bar. (The icon beside an `RddConfirm` or `RddAlert` message is the dialog's own `icon` prop.) |
 | `size` | `'small' \| 'medium' \| 'large' \| 'fullscreen' \| 'auto'` | `'auto'` (sized to its content) | Controls max-width of the modal. |
 | `closable` | `boolean` | `true` | When `false`, hides the × button and disables backdrop click-to-close. |
 | `bodyPadding` | `number \| string` | `0` | CSS padding for the modal body content. Numbers are treated as pixels; strings as any CSS value/shorthand (e.g. `'10px 16px'`). Default is edge-to-edge — pass `10` to restore the pre-v6.0.0 default. |
@@ -194,7 +194,80 @@ const confirm = () => {
 };
 ```
 
+A question icon sits left of the message, coloured by `alertType`. Pass `icon` to draw your own
+node in its place, or `icon: null` for none. The modal's own header icon (`ModalOptions.icon`) is
+separate and left as you set it.
+
+`onOK` and `onCancel` fire for their buttons only. To learn how the dialog ended — including
+Escape, the backdrop, the × or a close by code — pass `onSettled`: it fires exactly once, with
+`true` for the confirm button and `false` for everything else.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `message` | `string \| MessageDescriptor` | — | The question. |
+| `title` | `PanelTitle` | `modalTitle` message | Header title. |
+| `alert` | `string` | — | An extra notice shown above the message. |
+| `alertType` | `'info' \| 'warning' \| 'success' \| 'danger'` | `'info'` | Colours the notice and the icon. |
+| `icon` | `ReactNode \| null` | question icon | The icon left of the message; `null` hides it. |
+| `useYesNoTitles` | `boolean` | `false` | Yes / No instead of OK / Cancel. |
+| `onOK` / `onCancel` | `() => void` | — | The confirm / cancel button. |
+| `onSettled` | `(ok: boolean) => void` | — | Once, on every exit. |
+
+Its buttons carry `data-rdd-confirm-ok` and `data-rdd-confirm-cancel` for tests.
+
 See [Panel Lifecycle & Forms →](./forms-and-panels#rddconfirm-component) for how the dirty-state dialog uses it; its props type is `RddConfirmProps`.
+
+## `RddAlert` — built-in message dialog
+
+`RddAlert` shows a message and a single OK button: no question, nothing to choose. The icon left of
+the message follows `alertType` (info, success, warning, danger); `icon` replaces it and
+`icon: null` hides it, as for `RddConfirm`.
+
+```tsx
+import { RddAlert, useModals } from 'react-dockable-desktop';
+
+modals.open(RddAlert, {
+  title:     'Export finished',
+  message:   'The layer was exported to exports/roads.geojson.',
+  alertType: 'success',
+  onSettled: () => {},   // once, however it is closed
+});
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `message` | `string \| MessageDescriptor` | — | The text. |
+| `title` | `PanelTitle` | — | Header title. |
+| `alertType` | `'info' \| 'warning' \| 'success' \| 'danger'` | `'info'` | Picks the built-in icon and its colour. |
+| `icon` | `ReactNode \| null` | the type's icon | `null` hides it. |
+| `okLabel` | `string \| MessageDescriptor` | `ok` message | The button label. |
+| `onSettled` | `() => void` | — | Once: OK, Enter, Escape, the backdrop, the × or a close by code. |
+
+Focus starts on OK, and Enter presses it. Escape, the backdrop and the × acknowledge it too, unless
+the modal is opened with `closable: false` — then OK is the only way out. The button carries
+`data-rdd-alert-ok`.
+
+## `modals.confirm()` / `modals.alert()` — as promises
+
+For the common case, `useModals()` opens either dialog and hands back a promise:
+
+```ts
+const modals = useModals();
+
+if (await modals.confirm({ message: 'Delete the selected features?', alertType: 'danger', yesNo: true })) {
+  deleteSelection();
+}
+
+await modals.alert({ message: 'Nothing to export.', alertType: 'warning' });
+```
+
+- `confirm(options)` resolves `true` for the confirm button, `false` for cancel and for any
+  dismissal. Options: `message`, `title` (default: the `modalTitle` message, "Confirmation"),
+  `alert`, `alertType`, `icon`, `yesNo`, `size` (default `'small'`).
+- `alert(options)` resolves once it is closed, however. Options: `message`, `title` (default: the
+  `alertTitle` message, "Information"), `alertType`, `icon`, `okLabel`, `size` (default `'small'`).
+
+The option types are `ConfirmOptions` and `AlertOptions`.
 
 ## `RddSidebar` component
 
@@ -542,6 +615,8 @@ interface ModalsApi {
   get(id: OverlayId): OverlayInstance | undefined;
   update(id: OverlayId, updates: { props?, options?, dirty?, dirtyOptions? }): void;
   setDirty(id: OverlayId, dirty: boolean, options?: DirtyStateOptions): void;
+  confirm(options: ConfirmOptions): Promise<boolean>;  // false on cancel or dismissal
+  alert(options: AlertOptions): Promise<void>;
 }
 
 interface SidePanelsApi {

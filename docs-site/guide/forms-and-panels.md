@@ -208,6 +208,9 @@ function MyPanel() {
 }
 ```
 
+`onClose` also fires in a modal and in a side drawer (since 7.7.0), whichever way it is closed:
+its own `close()`, Escape, the backdrop, the ×, `closeAll()`, or a drawer being replaced by another.
+
 ::: tip Zero-unmount DOM preservation
 Panel components are **never unmounted** when hidden, minimized, or covered by another tab. React lifecycle events (`useEffect` cleanup) do not reliably signal visibility changes. Use the `onMinimize` / `onRestore` callbacks above instead.
 :::

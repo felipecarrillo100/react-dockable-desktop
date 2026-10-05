@@ -116,6 +116,11 @@ export interface PanelActions {
   registerCloseHandler: (id: OverlayId, handler: () => Promise<boolean>) => void;
   /** Unsubscribes close confirmation handler. */
   unregisterCloseHandler: (id: OverlayId) => void;
+  /**
+   * Subscribes to an instance being removed, by any path (`close`, `closeAll`, `closeAllModals`, or
+   * a side panel being replaced). Fires once; returns an unsubscribe function.
+   */
+  onInstanceClose: (id: OverlayId, handler: () => void) => () => void;
 }
 
 let idCounter = 0;
@@ -160,6 +165,26 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Close listeners per instance. Fired from the actions that remove an instance, never from an
+  // unmount, so StrictMode's simulated unmount can't fire them.
+  const closeListeners = useRef(new Map<OverlayId, Set<() => void>>());
+
+  const onInstanceClose = useCallback((id: OverlayId, handler: () => void) => {
+    const listeners = closeListeners.current;
+    if (!listeners.has(id)) listeners.set(id, new Set());
+    listeners.get(id)!.add(handler);
+    return () => { listeners.get(id)?.delete(handler); };
+  }, []);
+
+  const notifyClosed = useCallback((ids: (OverlayId | undefined)[]) => {
+    for (const id of ids) {
+      if (!id) continue;
+      const handlers = closeListeners.current.get(id);
+      closeListeners.current.delete(id);
+      handlers?.forEach(h => h());
+    }
+  }, []);
+
   const registerCloseHandler = useCallback((id: OverlayId, handler: () => Promise<boolean>) => {
     closeHandlers.set(id, handler);
   }, []);
@@ -192,9 +217,10 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         options,
       };
       setState(s => ({ ...s, leftPanel: instance }));
+      notifyClosed([currentPanel?.id]);
       return id;
     },
-    []
+    [notifyClosed]
   );
 
   const openRightPanel = useCallback(
@@ -221,9 +247,10 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         options,
       };
       setState(s => ({ ...s, rightPanel: instance }));
+      notifyClosed([currentPanel?.id]);
       return id;
     },
-    []
+    [notifyClosed]
   );
 
   const openModal = useCallback(
@@ -259,15 +286,20 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       rightPanel: s.rightPanel?.id === id ? null : s.rightPanel,
       modals: s.modals.filter(m => m.id !== id),
     }));
-  }, []);
+    notifyClosed([id]);
+  }, [notifyClosed]);
 
   const closeAll = useCallback(() => {
+    const { leftPanel, rightPanel, modals } = stateRef.current;
     setState(initialState);
-  }, []);
+    notifyClosed([leftPanel?.id, rightPanel?.id, ...modals.map(m => m.id)]);
+  }, [notifyClosed]);
 
   const closeAllModals = useCallback(() => {
+    const { modals } = stateRef.current;
     setState(s => ({ ...s, modals: [] }));
-  }, []);
+    notifyClosed(modals.map(m => m.id));
+  }, [notifyClosed]);
 
   const getInstance = useCallback(
     (id: OverlayId): OverlayInstance | undefined => {
@@ -313,6 +345,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setDirty,
       registerCloseHandler,
       unregisterCloseHandler,
+      onInstanceClose,
     }),
     [
       openLeftPanel,
@@ -326,6 +359,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setDirty,
       registerCloseHandler,
       unregisterCloseHandler,
+      onInstanceClose,
     ]
   );
 

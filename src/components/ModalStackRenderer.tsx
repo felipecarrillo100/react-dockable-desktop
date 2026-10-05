@@ -23,7 +23,7 @@ interface ModalRendererProps {
  * the FormContainerProvider context, enabling subcomponents to request closes and set dirty states.
  */
 const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
-  const { close, openModal, updateInstance, setDirty } = usePanelActions();
+  const { close, openModal, updateInstance, setDirty, onInstanceClose } = usePanelActions();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
   const { dir } = useWindowManagerState();
@@ -84,6 +84,8 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
     return () => { closeHandlerRef.current = null; };
   }, []);
 
+  const handleOnClose = useCallback((handler: () => void) => onInstanceClose(id, handler), [onInstanceClose, id]);
+
   const contract: FormContainerContract = useMemo(() => ({
     requestClose: handleClose,
     setDirty: handleSetDirty,
@@ -92,7 +94,8 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
     onCloseRequested: handleOnCloseRequested,
     containerType: 'modal',
     instanceId: id,
-  }), [handleClose, handleSetDirty, handleSetTitle, handleSetIcon, handleOnCloseRequested, id]);
+    onClose: handleOnClose,
+  }), [handleClose, handleOnClose, handleSetDirty, handleSetTitle, handleSetIcon, handleOnCloseRequested, id]);
 
   const displayTitle = dirty ? `${baseTitle} *` : baseTitle;
 
