@@ -3,30 +3,35 @@ name: GitHub Release
 # After CI passes on main: if package.json names a version that has no GitHub release yet, tag
 # that commit vX.Y.Z and publish a release whose notes are the version's CHANGELOG section.
 # npm publishing stays manual — this workflow never runs `npm publish`.
+# It can also be started by hand (Actions tab → GitHub Release → Run workflow) for the head of
+# main — e.g. when a runner outage cancelled the automatic run.
 
 on:
   workflow_run:
     workflows: ["Deploy Pages"]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   release:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the commit CI tested
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Create the release if this version has none
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event.workflow_run.head_sha }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
