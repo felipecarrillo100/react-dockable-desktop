@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useRef, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useFormContainer } from './FormContainerContext';
 import { globalPanelRegistry } from './PanelRegistry';
+import { createPanelHost, PanelHostContext, type PanelHost } from './workspace/panelHost';
+import { claimDocumentMirror, releaseDocumentMirror } from '../utils/documentMirror';
 import type { PanelRegistry } from './PanelRegistry';
 import { defaultPredefinedMessages } from './predefinedMessages';
 import type { MessageKey } from './predefinedMessages';
@@ -82,6 +84,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     return c;
   });
   const registry = client?.registry ?? globalPanelRegistry;
+  // This workspace's own panel DOM, sizes and lifecycle handlers — never shared with another provider.
+  const [panelHost] = useState<PanelHost>(createPanelHost);
   const state = useSyncExternalStore(core.subscribeToState, core.getSnapshot, core.getSnapshot);
   const actions = core.actions;
 
@@ -100,10 +104,12 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   // library's portaled chrome (ContextMenu, Toast, Toolbar's flyout, ModalStackRenderer),
   // which renders outside this provider's own DOM subtree, shifts in lockstep with
   // the floating windows' z counter.
+  // Through the document mirror, keyed by this workspace's panel host (as RddDesktop's skin is), so
+  // two workspaces on one page don't strip each other's base on unmount.
   useEffect(() => {
-    document.documentElement.style.setProperty('--rdd-z-base', String(effectiveZIndexBase));
-    return () => { document.documentElement.style.removeProperty('--rdd-z-base'); };
-  }, [effectiveZIndexBase]);
+    claimDocumentMirror(panelHost, { zBase: effectiveZIndexBase });
+  }, [panelHost, effectiveZIndexBase]);
+  useEffect(() => () => releaseDocumentMirror(panelHost, ['zBase']), [panelHost]);
 
   useEffect(() => {
     if (effectiveDir) actions.setDirection(effectiveDir);
@@ -151,7 +157,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
             <WindowActionsContext.Provider value={actions}>
               <WindowI18nContext.Provider value={effectiveFormatMessage || defaultFormatMessage}>
                 <WindowPredefinedMessagesContext.Provider value={mergedMessages}>
-                  {children}
+                  <PanelHostContext.Provider value={panelHost}>
+                    {children}
+                  </PanelHostContext.Provider>
                 </WindowPredefinedMessagesContext.Provider>
               </WindowI18nContext.Provider>
             </WindowActionsContext.Provider>

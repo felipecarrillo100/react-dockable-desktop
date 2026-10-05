@@ -9,6 +9,10 @@
  *
  * Offsets and the focused element are recorded *continuously* while the panel is on screen: by
  * the time React runs an effect cleanup the element has already been detached, and reads 0.
+ *
+ * Keyed by the panel's cached element rather than its id: each workspace has its own elements, so two
+ * workspaces on one page — even with the same panel ids — keep separate records, and a record goes
+ * away with its element.
  */
 
 interface PanelDomRecord {
@@ -18,18 +22,16 @@ interface PanelDomRecord {
   focused: HTMLElement | null;
 }
 
-const records = new Map<string, PanelDomRecord>();
-const tracked = new WeakSet<HTMLElement>();
+const records = new WeakMap<HTMLElement, PanelDomRecord>();
 
 /** A detached or display:none element has no client rects; its scroll offsets read 0. */
 const isOnScreen = (el: Element): boolean => el.isConnected && el.getClientRects().length > 0;
 
 /** Starts recording scroll offsets and focus inside a panel's cached element. Idempotent. */
-export function trackPanelDom(panelId: string, root: HTMLElement): void {
-  if (tracked.has(root)) return;
-  tracked.add(root);
+export function trackPanelDom(root: HTMLElement): void {
+  if (records.has(root)) return;
   const record: PanelDomRecord = { scrolls: new Map(), focused: null };
-  records.set(panelId, record);
+  records.set(root, record);
 
   root.addEventListener('scroll', (e) => {
     const target = e.target;
@@ -54,8 +56,8 @@ export function trackPanelDom(panelId: string, root: HTMLElement): void {
  * Runs now and once more on the next frame: content that lays out lazily (virtualised lists,
  * images) may not be tall enough to accept the offset on the first pass.
  */
-export function restorePanelDom(panelId: string, { refocus }: { refocus: boolean }): void {
-  const record = records.get(panelId);
+export function restorePanelDom(root: HTMLElement, { refocus }: { refocus: boolean }): void {
+  const record = records.get(root);
   if (!record) return;
   const apply = () => {
     record.scrolls.forEach(({ top, left }, el) => {
@@ -75,6 +77,6 @@ export function restorePanelDom(panelId: string, { refocus }: { refocus: boolean
 }
 
 /** Drops a closed panel's records. */
-export function forgetPanelDom(panelId: string): void {
-  records.delete(panelId);
+export function forgetPanelDom(root: HTMLElement): void {
+  records.delete(root);
 }

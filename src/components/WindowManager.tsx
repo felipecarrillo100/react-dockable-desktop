@@ -9,13 +9,15 @@ import React, { useState, useRef, useEffect, useCallback, useContext } from 'rea
 import { createPortal } from 'react-dom';
 import { useIsClient } from '../utils/useIsClient';
 import { forgetPanelDom } from './domPreservation';
+import { usePanelHost } from './workspace/panelHost';
+import { claimDocumentMirror, releaseDocumentMirror } from '../utils/documentMirror';
 import { useWindowManagerState, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import { DefaultContextMenuAdapter, ContextMenuContext } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 import { useColorScheme } from '../hooks/useColorScheme';
-import { domCache, getOrCreateDomCacheElement, renderPanelContent, FormContainerProviderWrapper } from './workspace/panelMount';
+import { renderPanelContent, FormContainerProviderWrapper } from './workspace/panelMount';
 import { WorkspaceGrid } from './workspace/WorkspaceGrid';
 import { WorkspaceZones } from './workspace/WorkspaceZones';
 import { FloatingWindows } from './workspace/FloatingWindows';
@@ -76,6 +78,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   // fallback only renders when no provider supplies one (the library's own tests).
   const contextMenuAdapter: ContextMenuAdapter = DefaultContextMenuAdapter;
   const state = useWindowManagerState();
+  const panelHost = usePanelHost();
   const registry = useRegistry();
   const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn } = useWindowManagerActionsInternal();
   const { openModal } = usePanelActions();
@@ -122,6 +125,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   }, [ctxMenu, registerContextMenuFn]);
 
   const taskbarRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [taskbarExpanded, setTaskbarExpanded] = useState(false);
   const taskbarCollapseTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   // The pointer is on the taskbar: it must not slide away under it (a press there would be lost).
@@ -155,8 +159,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     if (!hoveredMinimized?.fromTouch) return;
     const handler = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
-      const tooltip = document.querySelector('.rdd-taskbar-item-tooltip');
-      if (tooltip?.contains(e.target as Node)) return;
+      if (tooltipRef.current?.contains(e.target as Node)) return;
       setHoveredMinimized(null);
     };
     document.addEventListener('pointerdown', handler, { capture: true });
@@ -177,16 +180,17 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     actions: { dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, floatPanel, setDraggedPanelId },
   });
 
-  // Clean up domCache for panels that are no longer in state.panels
+  // Drop the preserved DOM of panels that are no longer open — this workspace's own only.
   useEffect(() => {
     const keys = Object.keys(state.panels);
-    for (const cachedId of Array.from(domCache.keys())) {
+    for (const cachedId of panelHost.ids()) {
       if (!keys.includes(cachedId)) {
-        domCache.delete(cachedId);
-        forgetPanelDom(cachedId);
+        const el = panelHost.getElement(cachedId);
+        panelHost.forget(cachedId);
+        if (el) forgetPanelDom(el);
       }
     }
-  }, [state.panels]);
+  }, [state.panels, panelHost]);
 
   // Safe window blur handler to cancel sticky dragging states when iframe/webview loses focus
   useEffect(() => {
@@ -347,28 +351,15 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   const currentColorScheme = useColorScheme();
   const isClient = useIsClient();
 
-  // Mirror the skin onto <html> so what renders outside the workspace element (RddToolbar,
-  // RddSidebar, portaled menus) also gets the skin's CSS variable overrides.
+  // Mirror the skin and the animations opt-out onto <html>, so what renders outside the workspace
+  // element (RddToolbar, RddSidebar, portaled menus, toasts, flyouts) gets them too. Through the
+  // document mirror, keyed by this workspace: with several on one page the newest wins, and unmounting
+  // one hands <html> back to the others rather than clearing it. The claim and its release are
+  // separate effects so a skin change updates the claim in place instead of re-stacking it.
   useEffect(() => {
-    if (skin) {
-      document.documentElement.setAttribute('data-rdd-skin', skin);
-    } else {
-      document.documentElement.removeAttribute('data-rdd-skin');
-    }
-    return () => { document.documentElement.removeAttribute('data-rdd-skin'); };
-  }, [skin]);
-
-
-  // Mirror the animations opt-out the same way — covers portaled chrome (ContextMenu,
-  // Toast, Toolbar's flyout) that renders outside this div via createPortal.
-  useEffect(() => {
-    if (!animations) {
-      document.documentElement.classList.add('rdd-no-animations');
-    } else {
-      document.documentElement.classList.remove('rdd-no-animations');
-    }
-    return () => { document.documentElement.classList.remove('rdd-no-animations'); };
-  }, [animations]);
+    claimDocumentMirror(panelHost, { skin: skin || null, noAnimations: !animations });
+  }, [panelHost, skin, animations]);
+  useEffect(() => () => releaseDocumentMirror(panelHost, ['skin', 'noAnimations']), [panelHost]);
 
   return (
     <div
@@ -439,6 +430,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         leaveTaskbar={leaveTaskbar}
         scrollTaskbar={scrollTaskbar}
         taskbarRef={taskbarRef}
+        tooltipRef={tooltipRef}
         defaultPanelIcon={defaultPanelIcon}
         messages={messages}
         formatMessage={formatMessage}
@@ -457,7 +449,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       {isClient && Object.keys(state.panels).map((id) => {
         const panel = state.panels[id];
         if (!panel) return null;
-        const targetEl = getOrCreateDomCacheElement(id);
+        const targetEl = panelHost.getOrCreateElement(id);
         return createPortal(
           <FormContainerProviderWrapper panelId={id}>
             <div className="rdd-panel-content" data-rdd-panel={id} dir={state.dir}>

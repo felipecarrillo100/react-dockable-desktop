@@ -155,6 +155,10 @@ const wsB = createWorkspace({ panels: { map: { component: MapB } } });
 </div>
 ```
 
+Each workspace also keeps its own panels' DOM, sizes (`usePanelSize`) and lifecycle handlers (`usePanelEvents`), so panel ids may repeat across workspaces: two `map-1` panels are two separate panels.
+
+One thing is shared, because the page is: the skin, the animations opt-out and the stacking base (`zIndexBase`) are mirrored onto `<html>` for the chrome that renders outside a workspace — the toolbar, the sidebar, menus, toasts, flyouts and modals. With several workspaces mounted, the most recently mounted one decides these; unmounting it hands them back to the others. So when two workspaces use different skins, that outside chrome follows the newest one.
+
 ## Provider, state selectors, panel hooks
 
 These are documented in the dedicated guides:
