@@ -20,7 +20,7 @@ import React, {
 } from 'react';
 import { startPointerDrag } from './dragResize';
 import { isComputedRtl } from '../utils/rtl';
-import { formatLabel, useFormatMessage, usePredefinedMessages, WindowStateContext } from './WindowManagerContext';
+import { formatLabel, useFormatMessage, usePredefinedMessages, useOptionalWindowManagerState } from './WindowManagerContext';
 
 // ==========================================
 // Types
@@ -487,7 +487,7 @@ export const Sidebar: React.ForwardRefExoticComponent<RddSidebarProps & React.Re
     },
     ref
   ) {
-    const workspaceDir = useContext(WindowStateContext)?.dir;
+    const workspaceDir = useOptionalWindowManagerState(s => s.dir, undefined);
     const isControlled = controlledActiveTabId !== undefined;
     const formatMessage = useFormatMessage();
     const closeLabel = formatLabel(usePredefinedMessages().closeTooltip, formatMessage);
