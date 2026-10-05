@@ -167,7 +167,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 };
 
 const noopSubscribe = (_cb: () => void): (() => void) => () => {};
-const noopRead = (): null => null;
+const outsideProvider = (): never => { throw new Error('useWorkspaceState must be used within <DockableDesktopProvider>'); };
 
 /**
  * The live workspace state. The component re-renders whenever it changes — or, given a selector,
@@ -203,9 +203,7 @@ export function useWindowManagerState<T>(selector?: (state: WorkspaceState) => T
     const snap = syncCtx!.getSnapshot();
     return selector ? selector(snap) : snap;
   };
-  const value = useSyncExternalStore(syncCtx?.subscribeToState ?? noopSubscribe, syncCtx ? read : noopRead, syncCtx ? read : noopRead);
-  if (!syncCtx) throw new Error('useWorkspaceState must be used within <DockableDesktopProvider>');
-  return value;
+  return useSyncExternalStore(syncCtx?.subscribeToState ?? noopSubscribe, syncCtx ? read : outsideProvider, syncCtx ? read : outsideProvider);
 }
 
 /**
