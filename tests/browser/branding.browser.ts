@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } fr
 import { join } from 'node:path';
 import type { Page } from 'playwright-core';
 import { SCENES, openBase, openScene, foldFrost } from './scenes';
+import { settle } from './lib';
 
 // Branding (7.2.0): --rdd-brand-accent / --rdd-brand-on-accent set on :root must reach every
 // built-in skin, and with neither set every skin must render exactly as before.
@@ -29,12 +30,23 @@ const PROPS = ['color', 'background-color', 'background-image', 'border-top-colo
 function snapshot(page: Page, root = 'body', tag = ''): Promise<Snapshot> {
   return page.evaluate(([props, rootSel, prefix]) => {
     const out: Record<string, Record<string, string>> = {};
-    const seg = (el: Element) => {
-      const parent = el.parentElement;
-      const idx = parent ? Array.prototype.indexOf.call(parent.children, el) : 0;
-      return `${el.tagName.toLowerCase()}${[...el.classList].filter(c => c.startsWith('rdd-')).map(c => '.' + c).join('')}:${idx}`;
-    };
-    const path = (el: Element) => { const p: string[] = []; for (let e: Element | null = el; e && e !== document.body; e = e.parentElement) p.unshift(seg(e)); return p.join('>'); };
+    // Keyed by library classes, not position (7.7.x): an element's key is its nearest
+    // library-classed ancestor's key plus its own tag and library classes, numbered (#2, #3…)
+    // only where two elements would otherwise share one. A wrapper without a library class, or a
+    // sibling of a different kind, no longer renames everything after it.
+    const keyOf = new Map<Element, string>();
+    const seen = new Map<string, number>();
+    for (const e of document.querySelectorAll('[class*="rdd-"]')) {
+      const own = [...e.classList].filter(c => c.startsWith('rdd-'));
+      if (!own.length) continue;
+      let up = e.parentElement;
+      while (up && up !== document.body && !keyOf.has(up)) up = up.parentElement;
+      const raw = `${up && keyOf.has(up) ? keyOf.get(up) + '>' : ''}${e.tagName.toLowerCase()}${own.map(c => '.' + c).join('')}`;
+      const n = (seen.get(raw) ?? 0) + 1;
+      seen.set(raw, n);
+      keyOf.set(e, n === 1 ? raw : `${raw}#${n}`);
+    }
+    const path = (el: Element) => keyOf.get(el) ?? '';
     const rootEl = document.querySelector(rootSel as string);
     if (!rootEl) return { [`${prefix}MISSING ${rootSel}`]: {} };
     const els = [rootEl, ...rootEl.querySelectorAll('[class*="rdd-"]')].filter(e => e === rootEl || e.className);
@@ -93,11 +105,13 @@ async function hoverSnapshots(skin: string, cs: string, brand = ''): Promise<Sna
     const loc = page.locator(sel).first();
     if (!(await loc.count())) { out[`hover ${sel} MISSING`] = {}; continue; }
     await loc.hover({ force: true });
-    await page.waitForTimeout(350); // past the hover transitions
+    await settle(page, 350); // past the hover transitions
     const marker = `data-rdd-probe-${HOVERS.indexOf(sel)}`;
     await loc.evaluate((el, m) => el.setAttribute(m, ''), marker);
     Object.assign(out, await snapshot(page, `[${marker}]`, `hover ${sel} | `));
     await page.mouse.move(1, 1);
+    // Fixed, not settled: leaving a control starts timers (a taskbar preview's dismissal) that change
+    // nothing until they fire, so a stillness check cannot see them.
     await page.waitForTimeout(350);
   }
   await close();
@@ -191,7 +205,9 @@ async function stableDiff(base: Snapshot, skin: string, cs: string): Promise<Map
   const first = await captureScene(skin, cs);
   expect(first.errors).toEqual([]);
   const d1 = diff(base, first.snap);
-  if (!d1.size) return d1;
+  // Only an unexpected difference earns a second capture: the intended stale-accent changes are in
+  // every capture, so recapturing for them doubled the cost of most scenes and proved nothing.
+  if (![...d1].some(([, v]) => isUnexpected(v, skin, cs))) return d1;
   const d2 = diff(base, (await captureScene(skin, cs)).snap);
   const both = new Map([...d1].filter(([k]) => d2.has(k)));
   const transient = [...d1.keys(), ...d2.keys()].filter(k => !both.has(k));
@@ -200,6 +216,12 @@ async function stableDiff(base: Snapshot, skin: string, cs: string): Promise<Map
 }
 
 const lines = (d: Map<string, string>) => [...d].map(([k, v]) => `${k}: ${v}`);
+
+/** A difference that is not one of the intended stale-accent changes: a missing key, or another colour. */
+function isUnexpected(v: string, skin: string, cs: string): boolean {
+  const [before, now] = v.split(' -> ');
+  return now === undefined || !intended(before, now, skin, cs);
+}
 
 describe('branding baseline: no brand set renders as 7.1.3, except stale accent literals', () => {
   const baseline: Record<string, Snapshot> = existsSync(FIXTURE) ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {};
@@ -222,10 +244,7 @@ describe('branding baseline: no brand set renders as 7.1.3, except stale accent 
       const base = baseline[`${skin}/${cs}`];
       expect(base, 'no baseline — run with RDD_BRANDING_BASELINE=write').toBeDefined();
       const d = await stableDiff(base, skin, cs);
-      const unexpected = new Map([...d].filter(([, v]) => {
-        const [before, now] = v.split(' -> ');
-        return now === undefined || !intended(before, now, skin, cs);
-      }));
+      const unexpected = new Map([...d].filter(([, v]) => isUnexpected(v, skin, cs)));
       if (process.env.RDD_BRANDING_REPORT) {
         appendFileSync(process.env.RDD_BRANDING_REPORT, lines(d).map(l => `${skin}/${cs} ${l}`).join('\n') + '\n');
       }

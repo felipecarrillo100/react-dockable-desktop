@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Internal
+
+The browser suite takes about 5½ minutes instead of 12, with the same tests. Nothing in the published
+package changes.
+
+- **The scene helpers wait for the page to be still instead of sleeping.** Opening the harness, a
+  branding scene, its overlays and each hover now wait until nothing is animating or changing
+  (two still frames), with the old sleep as the ceiling. The wait after the pointer leaves a
+  control stays fixed, since the timers it starts are invisible to such a check, and so do the
+  timer tests in `taskbar.browser.ts`. Rewriting both baselines with the new helpers gave
+  byte-identical fixtures.
+- **The radius tests check all three scales on one page per scene**: `--rdd-radius-scale` is set
+  on the open scene, which settles before its corners are read. Same 42 tests, a third of the page
+  loads.
+- **A branding scene is captured twice only for an unexpected difference.** The intended
+  stale-accent changes are in every capture, so recapturing for them doubled most scenes and proved
+  nothing.
+- **The baselines key elements by library class, not position**, so a new wrapper element no
+  longer renames everything after it (7.7.0's dialog row renamed a whole modal). Both fixtures were
+  regenerated once: every scene has the same entries with identical values, under the new keys.
+- `V2Features.test.tsx`: the "logs nothing for an unused workspace" test moves a fake clock past
+  the old 1s timer instead of waiting it out (seen failing with such a timer added).
+
 ## [7.7.0] — 2026-10-05
 
 Ready-made dialogs: the confirmation shows an icon, a new alert dialog, and both as promises.

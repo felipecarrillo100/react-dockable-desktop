@@ -36,8 +36,36 @@ export async function openHarness(query = '', viewport = { width: 1280, height: 
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(inject('harnessUrl') + (query ? `?${query}` : ''));
   await page.waitForFunction(() => (window as unknown as { __ready?: boolean }).__ready === true, null, { timeout: 15000 });
-  await page.waitForTimeout(300);
+  await settle(page, 300);
   return { page, errors, close: () => context.close() };
+}
+
+/**
+ * Waits until the page is still: two consecutive animation frames with no running CSS transition
+ * or animation and no DOM change — or `ceiling` ms at most, the fixed sleep this replaces, so a
+ * page is never read earlier than the old sleep allowed when something is still moving. Infinite
+ * animations (spinners) never finish, so they are not waited for. A timer that changes nothing
+ * until it fires is invisible to it: the callers that depend on one keep their fixed wait.
+ */
+export async function settle(page: Page, ceiling: number): Promise<void> {
+  await page.evaluate(async (max) => {
+    const start = performance.now();
+    let mutated = false;
+    const observer = new MutationObserver(() => { mutated = true; });
+    observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+    const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
+    const moving = () => document.getAnimations().some(a =>
+      (a.playState === 'running' || a.pending) && a.effect?.getComputedTiming().iterations !== Infinity);
+    try {
+      for (let still = 0; still < 2 && performance.now() - start < max;) {
+        await frame();
+        still = mutated || moving() ? 0 : still + 1;
+        mutated = false;
+      }
+    } finally {
+      observer.disconnect();
+    }
+  }, ceiling);
 }
 
 export interface Rect { x: number; y: number; width: number; height: number; right: number; bottom: number }

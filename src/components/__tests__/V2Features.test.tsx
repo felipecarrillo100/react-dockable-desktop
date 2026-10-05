@@ -245,13 +245,20 @@ describe('workspace store before mount', () => {
     expect(JSON.parse(early.saveLayout()).panels['early-panel'].title).toBe('Early');
   });
 
-  it('logs nothing for a workspace no provider ever uses', async () => {
+  it('logs nothing for a workspace no provider ever uses', () => {
+    // Fake timers: the old queue logged from a 1s timer, so the clock is moved past it rather than
+    // waited out in real time.
+    vi.useFakeTimers();
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const orphan = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
-    orphan.openPanel('orphan-panel', 'map');
-    await new Promise(resolve => setTimeout(resolve, 1100));
-    expect(errorSpy).not.toHaveBeenCalled();
-    errorSpy.mockRestore();
+    try {
+      const orphan = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
+      orphan.openPanel('orphan-panel', 'map');
+      vi.advanceTimersByTime(1100);
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
 
