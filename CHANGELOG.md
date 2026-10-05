@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.1] — 2026-10-05
+
 Two workspaces on one page no longer break each other. Several providers on one page were documented
 as supported, but they shared state they should not have.
 
@@ -935,7 +937,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.1...HEAD
+[7.7.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.0...v7.7.1
 [7.7.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.2...v7.7.0
 [7.6.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.1...v7.6.2
 [7.6.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.0...v7.6.1
