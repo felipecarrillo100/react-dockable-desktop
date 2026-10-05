@@ -37,6 +37,8 @@ export const enMessages: DockableMessages = {
   'dockable-desktop-yes': 'Yes',
   'dockable-desktop-no': 'No',
   'dockable-desktop-ok': 'OK',
+  'dockable-desktop-modalTitle': 'Confirmation',
+  'dockable-desktop-alertTitle': 'Information',
   'dockable-desktop-closePanelTooltip': 'Close panel',
   'dockable-desktop-closeTooltip': 'Close',
 };
@@ -65,6 +67,8 @@ export const esMessages: DockableMessages = {
   'dockable-desktop-yes': 'Sí',
   'dockable-desktop-no': 'No',
   'dockable-desktop-ok': 'Aceptar',
+  'dockable-desktop-modalTitle': 'Confirmación',
+  'dockable-desktop-alertTitle': 'Información',
   'dockable-desktop-closePanelTooltip': 'Cerrar panel',
   'dockable-desktop-closeTooltip': 'Cerrar',
 };
@@ -93,6 +97,8 @@ export const nlMessages: DockableMessages = {
   'dockable-desktop-yes': 'Ja',
   'dockable-desktop-no': 'Nee',
   'dockable-desktop-ok': 'OK',
+  'dockable-desktop-modalTitle': 'Bevestiging',
+  'dockable-desktop-alertTitle': 'Informatie',
   'dockable-desktop-closePanelTooltip': 'Paneel sluiten',
   'dockable-desktop-closeTooltip': 'Sluiten',
 };
@@ -121,6 +127,8 @@ export const frMessages: DockableMessages = {
   'dockable-desktop-yes': 'Oui',
   'dockable-desktop-no': 'Non',
   'dockable-desktop-ok': 'OK',
+  'dockable-desktop-modalTitle': 'Confirmation',
+  'dockable-desktop-alertTitle': 'Information',
   'dockable-desktop-closePanelTooltip': 'Fermer le panneau',
   'dockable-desktop-closeTooltip': 'Fermer',
 };
@@ -149,6 +157,8 @@ export const zhMessages: DockableMessages = {
   'dockable-desktop-yes': '是',
   'dockable-desktop-no': '否',
   'dockable-desktop-ok': '确定',
+  'dockable-desktop-modalTitle': '确认',
+  'dockable-desktop-alertTitle': '信息',
   'dockable-desktop-closePanelTooltip': '关闭面板',
   'dockable-desktop-closeTooltip': '关闭',
 };
@@ -177,6 +187,8 @@ export const arMessages: DockableMessages = {
   'dockable-desktop-yes': 'نعم',
   'dockable-desktop-no': 'لا',
   'dockable-desktop-ok': 'موافق',
+  'dockable-desktop-modalTitle': 'تأكيد',
+  'dockable-desktop-alertTitle': 'معلومات',
   'dockable-desktop-closePanelTooltip': 'إغلاق اللوحة',
   'dockable-desktop-closeTooltip': 'إغلاق',
 };

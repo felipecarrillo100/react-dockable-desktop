@@ -79,7 +79,7 @@ export type {
 
 // ─── Modals and side drawers ────────────────────────────────────────────────────
 export { useModals, useSidePanels, RddSidePanels } from './api';
-export type { ModalsApi, SidePanelsApi, OverlayInstance, OverlayId, RddSidePanelsProps } from './api';
+export type { ModalsApi, ConfirmOptions, AlertOptions, SidePanelsApi, OverlayInstance, OverlayId, RddSidePanelsProps } from './api';
 export { default as RddModals } from './components/ModalStackRenderer';
 export type {
   PanelTitle,
@@ -90,6 +90,8 @@ export type {
 } from './components/PanelProviderContext';
 export { default as RddConfirm } from './forms/ConfirmationForm';
 export type { RddConfirmProps } from './forms/ConfirmationForm';
+export { default as RddAlert } from './forms/AlertForm';
+export type { RddAlertProps } from './forms/AlertForm';
 
 // ─── Sidebar ────────────────────────────────────────────────────────────────────
 export { Sidebar as RddSidebar, SecondarySidebar as RddSecondarySidebar, useSidebar, useSidebarTab } from './components/Sidebar';

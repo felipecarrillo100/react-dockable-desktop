@@ -8,12 +8,14 @@
 import React, { forwardRef, useContext, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { WorkspaceClient, type WorkspaceClientConfig } from '../WorkspaceClient';
 import { WorkspaceInstanceContext } from '../components/WorkspaceInstanceContext';
-import { WindowStoreSyncContext, type MessageDescriptor, type WorkspaceState, type PanelInfo } from '../components/WindowManagerContext';
+import { WindowStoreSyncContext, usePredefinedMessages, type MessageDescriptor, type WorkspaceState, type PanelInfo } from '../components/WindowManagerContext';
 import { useFormContainer, type CloseOptions, type ContainerType, type FormContainerContract } from '../components/FormContainerContext';
 import type { DirtyStateOptions } from '../components/dirtyOptions';
 import { usePanelActions, usePanelState, type OverlayInstance, type OverlayId, type ModalOptions, type SidePanelOptions } from '../components/PanelProviderContext';
 export type { OverlayInstance, OverlayId };
 import SidePanelRenderer, { LeftPanelRenderer, RightPanelRenderer } from '../components/SidePanelRenderer';
+import ConfirmationForm, { type RddConfirmProps } from '../forms/ConfirmationForm';
+import AlertForm, { type RddAlertProps } from '../forms/AlertForm';
 import { ContextMenu, ContextMenuProvider, type ContextMenuAdapter, type ContextMenuHandle, type ContextMenuProps } from '../components/ContextMenu';
 
 // ─── Workspace ──────────────────────────────────────────────────────────────────
@@ -226,6 +228,37 @@ export interface ModalsApi {
   get: (id: OverlayId) => OverlayInstance | undefined;
   update: (id: OverlayId, updates: OverlayUpdate) => void;
   setDirty: (id: OverlayId, dirty: boolean, options?: DirtyStateOptions) => void;
+  /**
+   * Opens an {@link RddConfirm} and resolves `true` when it is confirmed, `false` when it is
+   * cancelled or dismissed (Escape, the backdrop, the ×, or a close by code).
+   */
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
+  /** Opens an {@link RddAlert} and resolves once it is acknowledged or dismissed. */
+  alert: (options: AlertOptions) => Promise<void>;
+}
+
+/** Options of {@link ModalsApi.confirm}. The title defaults to the `modalTitle` message. */
+export interface ConfirmOptions {
+  message: RddConfirmProps['message'];
+  title?: ModalOptions['title'];
+  alert?: string;
+  alertType?: RddConfirmProps['alertType'];
+  icon?: React.ReactNode | null;
+  /** Labels the buttons Yes and No instead of OK and Cancel. */
+  yesNo?: boolean;
+  /** Defaults to `'small'`. */
+  size?: ModalOptions['size'];
+}
+
+/** Options of {@link ModalsApi.alert}. The title defaults to the `alertTitle` message. */
+export interface AlertOptions {
+  message: RddAlertProps['message'];
+  title?: ModalOptions['title'];
+  alertType?: RddAlertProps['alertType'];
+  icon?: React.ReactNode | null;
+  okLabel?: RddAlertProps['okLabel'];
+  /** Defaults to `'small'`. */
+  size?: ModalOptions['size'];
 }
 
 /** Returned by {@link useSidePanels}. */
@@ -246,6 +279,7 @@ export interface SidePanelsApi {
 export function useModals(): ModalsApi {
   const { modals } = usePanelState();
   const a = usePanelActions();
+  const messages = usePredefinedMessages();
   return useMemo<ModalsApi>(() => ({
     stack: modals,
     topmost: modals[modals.length - 1] ?? null,
@@ -255,7 +289,15 @@ export function useModals(): ModalsApi {
     get: a.getInstance,
     update: a.updateInstance,
     setDirty: a.setDirty,
-  }), [modals, a]);
+    confirm: ({ message, title, alert, alertType, icon, yesNo, size = 'small' }) => new Promise<boolean>(resolve => {
+      a.openModal(ConfirmationForm, { message, alert, alertType, icon, useYesNoTitles: yesNo, onSettled: resolve },
+        { title: title ?? messages.modalTitle, size });
+    }),
+    alert: ({ message, title, alertType, icon, okLabel, size = 'small' }) => new Promise<void>(resolve => {
+      a.openModal(AlertForm, { message, alertType, icon, okLabel, onSettled: resolve },
+        { title: title ?? messages.alertTitle, size });
+    }),
+  }), [modals, a, messages]);
 }
 
 /** Opens and tracks the left and right side drawers. */

@@ -44,6 +44,8 @@ export const defaultPredefinedMessages = {
   closeSearch: { id: 'dockable-desktop-closeSearch', defaultMessage: 'Close search' },
   searchPlaceholder: { id: 'dockable-desktop-searchPlaceholder', defaultMessage: 'Search…' },
   modalTitle: { id: 'dockable-desktop-modalTitle', defaultMessage: 'Confirmation' },
+  // Default title of useModals().alert() (7.7.0).
+  alertTitle: { id: 'dockable-desktop-alertTitle', defaultMessage: 'Information' },
   emptyGroup: { id: 'dockable-desktop-emptyGroup', defaultMessage: 'Empty Workspace Section' },
   emptyGrid: { id: 'dockable-desktop-emptyGrid', defaultMessage: 'Grid Empty' },
   componentUnregistered: { id: 'dockable-desktop-componentUnregistered', defaultMessage: 'Component Unregistered' },

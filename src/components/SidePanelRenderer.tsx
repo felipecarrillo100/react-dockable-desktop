@@ -27,7 +27,7 @@ interface SidePanelRendererItemProps {
  * wrapped inside the FormContainerProvider context. Handles dirty state verification before close.
  */
 const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, position, defaultWidth, containerRect }) => {
-  const { close, openModal, updateInstance, setDirty, registerCloseHandler, unregisterCloseHandler } = usePanelActions();
+  const { close, openModal, updateInstance, setDirty, registerCloseHandler, unregisterCloseHandler, onInstanceClose } = usePanelActions();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
   const { dir } = useWindowManagerState();
@@ -99,6 +99,8 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
     return () => { closeHandlerRef.current = null; };
   }, []);
 
+  const handleOnClose = useCallback((handler: () => void) => onInstanceClose(id, handler), [onInstanceClose, id]);
+
   const contract: FormContainerContract = useMemo(() => ({
     requestClose: handleClose,
     setDirty: handleSetDirty,
@@ -107,7 +109,8 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
     onCloseRequested: handleOnCloseRequested,
     containerType: position === 'left' ? 'left-panel' : 'right-panel',
     instanceId: id,
-  }), [handleClose, handleSetDirty, handleSetTitle, handleSetIcon, handleOnCloseRequested, position, id]);
+    onClose: handleOnClose,
+  }), [handleClose, handleOnClose, handleSetDirty, handleSetTitle, handleSetIcon, handleOnCloseRequested, position, id]);
 
   const displayTitle = dirty ? `${baseTitle} *` : baseTitle;
 

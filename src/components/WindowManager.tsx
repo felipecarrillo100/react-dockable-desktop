@@ -100,8 +100,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
             alert: opts?.alert,
             alertType: opts?.alertType || 'danger',
             useYesNoTitles: true,
-            onOK: () => resolve(true),
-            onCancel: () => resolve(false),
+            // Settles on every exit: Yes, No, Escape, the backdrop, the × or closeAll (7.7.0).
+            onSettled: resolve,
           },
           { size: 'small' }
         );
