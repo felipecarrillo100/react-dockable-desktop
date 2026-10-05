@@ -3,7 +3,7 @@
  * baseline (branding.browser.ts) and the corner baseline (radius.browser.ts).
  */
 import type { Page } from 'playwright-core';
-import { openHarness, actions } from './lib';
+import { openHarness, actions, settle } from './lib';
 
 export const SKINS = ['vscode', 'macos', 'chrome', 'slate', 'nord', 'obsidian', 'tokyo'];
 export const SCHEMES = ['dark', 'light'];
@@ -17,7 +17,7 @@ export async function openBase(skin: string, cs: string, brand: string) {
   await page.click('.rdd-sidebar-tab-btn[title="Tab A"]');
   await page.click('[aria-label="Radio 1"]');
   await page.click('.rdd-workspace-tab:has-text("Panel One")');
-  await page.waitForTimeout(200);
+  await settle(page, 200);
   return h;
 }
 
@@ -33,7 +33,7 @@ export async function openScene(skin: string, cs: string, brand = ''): Promise<{
     wm.toast('hello');
   });
   await page.locator('#ctx').dispatchEvent('contextmenu', { clientX: 40, clientY: 40, bubbles: true });
-  await page.waitForTimeout(700);
+  await settle(page, 700);
   return h;
 }
 
@@ -42,7 +42,7 @@ export async function openScene(skin: string, cs: string, brand = ''): Promise<{
  * The containers whose frost (and background) moved onto their own ::before in 7.4.0, so a
  * consumer's position: fixed content inside them keeps the viewport. See frost.browser.ts.
  */
-export const FROSTED = /\.rdd-(floating-window|side-panel|panel-float|workspace-panel|panel-toolbar)(\.|:|$)/;
+export const FROSTED = /\.rdd-(floating-window|side-panel|panel-float|workspace-panel|panel-toolbar)(\.|:|#|$)/;
 
 /**
  * A snapshot taken before 7.4.0 painted a frosted container's background on the element; from
