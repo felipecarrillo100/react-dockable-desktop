@@ -4,6 +4,8 @@ The workspace is the central object for `react-dockable-desktop`. It holds your 
 
 The pattern mirrors **TanStack QueryClient** and **Redux store**: all configuration and imperative access live on the workspace; the React provider is a thin rendering shell.
 
+A page can hold several workspaces, each with its own provider; they share nothing but what is mirrored onto `<html>`. See [Multiple providers on one page](./advanced#multiple-providers-on-one-page).
+
 ## `createWorkspace()`
 
 ```ts

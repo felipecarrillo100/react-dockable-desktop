@@ -25,6 +25,8 @@ export interface TaskbarProps extends Pick<InternalWindowActions, 'restorePanel'
   leaveTaskbar: () => void;
   scrollTaskbar: (direction: 'left' | 'right') => void;
   taskbarRef: React.RefObject<HTMLDivElement | null>;
+  /** This workspace's preview tooltip, so the touch dismissal never tests another workspace's. */
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
   defaultPanelIcon?: React.ReactNode;
   messages: Record<MessageKey, MessageDescriptor>;
   formatMessage: MessageFormatter;
@@ -39,7 +41,7 @@ export interface TaskbarProps extends Pick<InternalWindowActions, 'restorePanel'
 
 export const Taskbar = ({
   state, registry, taskbarVisibility, taskbarExpanded, expandTaskbar, leaveTaskbar, scrollTaskbar,
-  taskbarRef, defaultPanelIcon, messages, formatMessage, lastTaskbarPointerTypeRef, hoveredMinimized,
+  taskbarRef, tooltipRef, defaultPanelIcon, messages, formatMessage, lastTaskbarPointerTypeRef, hoveredMinimized,
   setHoveredMinimized, minimizedTooltipTimeoutRef, isContextMenuOpen, handleMinimizedRightClick,
   handleRequestClose, restorePanel,
 }: TaskbarProps): React.ReactElement | null => {
@@ -173,6 +175,7 @@ export const Taskbar = ({
 
       {hoveredMinimized && createPortal(
         <div
+          ref={tooltipRef}
           className="rdd-taskbar-item-tooltip"
           dir={state.dir}
           style={{

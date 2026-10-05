@@ -18,6 +18,7 @@
  *   skin=NAME       skin passed to RddDesktop
  *   ba=HEX, bon=HEX --rdd-brand-accent / --rdd-brand-on-accent set on :root (hex without the #)
  *   tbx=1           toolbar also has a radio pair (group "rg": r1, r2) and a toggle that starts active
+ *   two=1           a second, independent workspace below the first (panels b1, b2), exposed as `window.__wm2`
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
@@ -192,6 +193,21 @@ function Inner() {
   );
 }
 
+// two=1: a second workspace on the same page, with its own provider — the 7.7.1 isolation spec.
+const workspace2 = createWorkspace({ panels: { probe: { component: ProbePanel } } });
+
+function SecondDesktop() {
+  const actions = useWorkspace();
+  useEffect(() => {
+    (window as unknown as { __wm2: unknown }).__wm2 = { actions };
+    actions.openPanel('b1', 'probe', { title: 'Bee One' });
+    actions.openPanel('b2', 'probe', { title: 'Bee Two' });
+    actions.focusPanel('b1');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <RddDesktop />;
+}
+
 function App() {
   const app = (
     <DockableDesktopProvider workspace={workspace} dir={DIR === 'prov' ? 'rtl' : undefined} zIndexBase={q.get('zb') ? Number(q.get('zb')) : undefined}>
@@ -209,6 +225,16 @@ function App() {
   }
   // grow=1: a full-window app that forgot rdd-fill-viewport (a wrapper with no height of its own).
   if (q.get('grow') === '1') return <div style={{ height: '100%' }}>{wrapped}</div>;
+  if (q.get('two') === '1') {
+    return (
+      <div className="rdd-fill-viewport" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div id="first" style={{ flex: '1 1 50%', minHeight: 0 }}>{wrapped}</div>
+        <div id="second" style={{ flex: '1 1 50%', minHeight: 0 }}>
+          <DockableDesktopProvider workspace={workspace2}><SecondDesktop /></DockableDesktopProvider>
+        </div>
+      </div>
+    );
+  }
   return <div className="rdd-fill-viewport">{wrapped}</div>;
 }
 createRoot(document.getElementById('root')!).render(<App />);

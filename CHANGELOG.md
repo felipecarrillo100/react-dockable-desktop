@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Two workspaces on one page no longer break each other. Several providers on one page were documented
+as supported, but they shared state they should not have.
+
+### Fixed
+
+- **A workspace's panels came back blank after another workspace on the page changed its panels.**
+  The panel DOM cache was shared by every workspace, and each workspace's cleanup deleted the cached
+  elements of panels that were not its own. On its next render the other workspace's panels got new,
+  empty elements: typed text, scroll offsets and React state were gone. Each workspace now keeps its
+  own panel DOM, sizes and lifecycle handlers.
+- **Two workspaces with the same panel id interfered.** Both rendered into one element, `usePanelSize`
+  reported the other panel's size, `usePanelEvents` handlers fired for the other workspace's panel,
+  and closing the panel in one workspace silently dropped the other's handlers. Panel ids may now
+  repeat across workspaces.
+- **A touch inside a taskbar preview could close it** while another workspace also showed a preview:
+  the "touched outside?" check found the first preview on the page rather than its own.
+- **Unmounting one workspace stripped `<html>` of the other's skin, animations opt-out and stacking
+  base** (`data-rdd-skin`, `rdd-no-animations`, `--rdd-z-base`). With several workspaces mounted, the
+  most recently mounted one now decides these, and unmounting it hands them back to the others instead
+  of removing them. Chrome rendered outside the workspaces (menus, toasts, flyouts) therefore follows
+  the newest workspace's skin when two workspaces use different skins.
+
+### Tests
+
+- `TwoWorkspaces.test.tsx`: two providers in one document — distinct ids (a panel keeps its element
+  and state after the other workspace closes a panel), the same id (own element, own lifecycle
+  events, own size), the taskbar preview under touch, and the `<html>` mirror (newest wins, handed
+  back on unmount, a page-set skin left alone). Each assertion was seen failing on 7.7.0, the last one
+  with its guard removed.
+- `twoWorkspaces.browser.ts` (harness `two=1`): a real tab drag and a close in one workspace leave the
+  other's typed input, scroll offset and DOM intact. On 7.7.0 the input came back empty.
+
 ### Internal
 
 The browser suite takes about 5½ minutes instead of 12, with the same tests. Nothing in the published
