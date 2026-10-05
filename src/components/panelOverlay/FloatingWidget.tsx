@@ -3,7 +3,7 @@
  * @description A floating widget inside a panel: docked to a corner or free, stretchable, resizable.
  */
 import React, { useState, useContext, useRef, useLayoutEffect, useCallback, useEffect } from 'react';
-import { WindowStateContext, formatLabel, useFormatMessage, usePredefinedMessages } from '../WindowManagerContext';
+import { useOptionalWindowManagerState, formatLabel, useFormatMessage, usePredefinedMessages } from '../WindowManagerContext';
 import type { FloatAnchor } from '../WindowManagerContext';
 import type { PanelTitle } from '../PanelProviderContext';
 import { flipZoneHorizontal } from '../anchorGeometry';
@@ -117,7 +117,7 @@ type WindowMode = 'docked' | 'free';
 
 
 function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
-  const isRtl = useContext(WindowStateContext)?.isRtl ?? false;
+  const isRtl = useOptionalWindowManagerState(s => s.isRtl, false);
   // Resolved here rather than at the call site, so a descriptor title re-resolves whenever the
   // formatter changes. Both hooks fall back to the message's own `defaultMessage` when there is no
   // provider, so an overlay used outside a WindowManager keeps working.

@@ -1,7 +1,7 @@
-import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useIsClient } from '../utils/useIsClient';
 import { createPortal } from 'react-dom';
-import { formatLabel, useFormatMessage, usePredefinedMessages, WindowStateContext } from './WindowManagerContext';
+import { formatLabel, useFormatMessage, usePredefinedMessages, useOptionalWindowManagerState } from './WindowManagerContext';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -459,7 +459,7 @@ export function ToastContainer({
   const regionLabel = formatLabel(messages.notifications, formatMessage);
   // Toasts are portalled to <body>: they follow setDirection('rtl') like the workspace, and
   // otherwise inherit the page's direction, as before.
-  const workspaceDir = useContext(WindowStateContext)?.dir;
+  const workspaceDir = useOptionalWindowManagerState(s => s.dir, undefined);
   // Portals need `document.body`, which doesn't exist on the server. Render nothing there, and
   // during hydration (the server snapshot); portal on the client after that. The server's output
   // and the hydrating render then agree — both empty — so there is nothing to reconcile.

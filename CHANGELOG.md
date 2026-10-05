@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.2] — 2026-10-05
+
+Panels re-render only when something about them changes. Before, focusing one panel or moving a
+window by one pixel re-rendered every open panel: with 100 panels open, 100 re-renders per pointer
+move. Now none.
+
+### Fixed
+
+- **Every panel re-rendered on every workspace change.** The desktop rebuilt each open panel's
+  element whenever it rendered: on a focus change, on each pointer move of a window drag or resize,
+  on a split resize. Each panel is now mounted by its own memoised host that reads only that panel's
+  entry, so a panel re-renders when its own title, icon, dirty flag or props change, or when what it
+  reads through `usePanel()`, `usePanelSize()` or `useWorkspaceState(selector)` does. A panel that
+  shows something it does not subscribe to (a value read from `ws.getOpenPanelIds()` or a module
+  variable during render) no longer refreshes on unrelated changes; read it with
+  `useWorkspaceState(selector)` instead.
+- **`useWorkspaceState(selector)` re-rendered on every change**, whatever the selector returned, as
+  if no selector had been passed. It now re-renders only when the selected value changes, as
+  documented. Without a selector it still re-renders on every change.
+- **Each pointer move of a tab drag re-rendered the whole desktop**, to move the ghost tab. Only the
+  ghost re-renders now. During a touch drag, moving within the same drop target no longer
+  re-renders the desktop either.
+- **Open modals and side panels re-rendered their content on every workspace change**, including
+  each pointer move of a window drag behind them: their renderers read the whole state for the
+  direction. They now read only the direction, and so do the sidebar, toasts and panel overlay
+  widgets.
+
+### Tests
+
+- `RenderScope.test.tsx`: with 10 and 100 panels, a focus change and a window move (through the
+  API and by dragging the title bar) re-render no panel; a focus change re-renders exactly the two
+  panels whose `usePanel().isActive` flips; renaming a panel re-renders that panel only;
+  `useWorkspaceState(selector)` re-renders only when its value changes; a window move re-renders no
+  open modal's content; a tab-drag move moves the ghost without re-rendering the desktop. Each was seen failing on 7.7.1, and again with the memo,
+  the selector hook, the modal renderer's selector or the ghost's own store broken.
+
 ## [7.7.1] — 2026-10-05
 
 Two workspaces on one page no longer break each other. Several providers on one page were documented
@@ -937,7 +973,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.2...HEAD
+[7.7.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.1...v7.7.2
 [7.7.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.0...v7.7.1
 [7.7.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.2...v7.7.0
 [7.6.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.1...v7.6.2

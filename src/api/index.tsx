@@ -5,10 +5,10 @@
  * Everything here is built on the library's internal modules; `src/index.ts` exports it together
  * with the internal components under their 7.0 names.
  */
-import React, { forwardRef, useContext, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import React, { forwardRef, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { WorkspaceClient, type WorkspaceClientConfig } from '../WorkspaceClient';
 import { WorkspaceInstanceContext } from '../components/WorkspaceInstanceContext';
-import { WindowStoreSyncContext, usePredefinedMessages, type MessageDescriptor, type WorkspaceState, type PanelInfo } from '../components/WindowManagerContext';
+import { useOptionalWindowManagerState, usePredefinedMessages, type MessageDescriptor, type PanelInfo } from '../components/WindowManagerContext';
 import { useFormContainer, type CloseOptions, type ContainerType, type FormContainerContract } from '../components/FormContainerContext';
 import type { DirtyStateOptions } from '../components/dirtyOptions';
 import { usePanelActions, usePanelState, type OverlayInstance, type OverlayId, type ModalOptions, type SidePanelOptions } from '../components/PanelProviderContext';
@@ -62,17 +62,6 @@ export function useWorkspace<TEvents extends object = Record<string, unknown>>()
 }
 
 // ─── Panel side ─────────────────────────────────────────────────────────────────
-
-const noopSubscribe = () => () => {};
-
-/** Reads workspace state if there is a workspace; `fallback` otherwise (standalone use). */
-function useOptionalWorkspaceState<T>(selector: (s: WorkspaceState) => T, fallback: T): T {
-  const sync = useContext(WindowStoreSyncContext);
-  const selectorRef = useRef(selector);
-  useLayoutEffect(() => { selectorRef.current = selector; });
-  const read = () => (sync ? selector(sync.getSnapshot()) : fallback);
-  return useSyncExternalStore(sync?.subscribeToState ?? noopSubscribe, read, read);
-}
 
 /** The state of a workspace panel: where it is. */
 export type PanelState = PanelInfo['state'];
@@ -129,8 +118,8 @@ export function usePanel(): PanelHandle {
   const id = c.instanceId;
   // Select primitives only: a selector returning the whole panel record would give a new handle
   // on every write to the panel (title, dirty, props), including the panel's own writes.
-  const state = useOptionalWorkspaceState(s => s.panels[id]?.state, undefined);
-  const isActive = useOptionalWorkspaceState(s => s.activePanelId === id, false);
+  const state = useOptionalWindowManagerState(s => s.panels[id]?.state, undefined);
+  const isActive = useOptionalWindowManagerState(s => s.activePanelId === id, false);
   const containerType: ContainerType = state
     ? (state === 'floating' ? 'floating-window' : 'dockable-panel')
     : (c.containerType ?? 'standalone');

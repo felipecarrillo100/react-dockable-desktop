@@ -3,6 +3,7 @@
  * @description Where panels live: the slots that place a panel's preserved DOM (in a tab, a window, a taskbar preview), its lifecycle events and form container. The DOM, sizes and lifecycle handlers themselves belong to the workspace's own panel host (`panelHost.ts`).
  */
 import React, { useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { restorePanelDom } from '../domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
 import type { PanelInfo, MessageDescriptor, MessageFormatter } from '../../types';
@@ -104,13 +105,12 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
 
 export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const panelHost = usePanelHost();
-  const state = useWindowManagerState();
+  const panel = useWindowManagerState(s => s.panels[panelId]);
   const registry = useRegistry();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const hostRef = useRef<HTMLDivElement | null>(null);
 
-  const panel = state.panels[panelId];
   const regEntry = panel ? registry.get(panel.component) : null;
   const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || false;
 
@@ -179,11 +179,10 @@ export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) =>
 
 export const FormContainerProviderWrapper: React.FC<{ panelId: string; children: React.ReactNode }> = ({ panelId, children }) => {
   const panelHost = usePanelHost();
-  const state = useWindowManagerState();
   const { requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel } = useWindowManagerActions();
 
   // ── minimize / restore ──────────────────────────────────────────────────
-  const isMin = state.minimized.some(m => m.id === panelId);
+  const isMin = useWindowManagerState(s => s.minimized.some(m => m.id === panelId));
   const prevMinRef = useRef(isMin);
 
   useEffect(() => {
@@ -199,7 +198,7 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
   }, [isMin, panelId, panelHost]);
 
   // ── activate / deactivate ───────────────────────────────────────────────
-  const isActive = state.activePanelId === panelId;
+  const isActive = useWindowManagerState(s => s.activePanelId === panelId);
   const prevActiveRef = useRef(isActive);
 
   useEffect(() => {
@@ -216,7 +215,7 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
   }, [isActive, panelId, panelHost]);
 
   // ── container-type change ───────────────────────────────────────────────
-  const rawPanelState = state.panels[panelId]?.state;
+  const rawPanelState = useWindowManagerState(s => s.panels[panelId]?.state);
   const derivedContainerType: ContainerType =
     rawPanelState === 'floating' ? 'floating-window' : 'dockable-panel';
   const prevContainerTypeRef = useRef(derivedContainerType);
@@ -309,3 +308,27 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
     </FormContainerProvider>
   );
 };
+
+/**
+ * One open panel's body, portaled into its preserved element (the slots then place that element in
+ * a tab, a window or a preview). Memoised and given only the id: it reads its own entry and the
+ * direction, so it re-renders when its panel changes, never because another panel did (7.7.2).
+ */
+export const PanelMount: React.FC<{ panelId: string }> = React.memo(({ panelId }) => {
+  const panelHost = usePanelHost();
+  const panel = useWindowManagerState(s => s.panels[panelId]);
+  const dir = useWindowManagerState(s => s.dir);
+  const registry = useRegistry();
+  const formatMessage = useFormatMessage();
+  const messages = usePredefinedMessages();
+  if (!panel) return null;
+  return createPortal(
+    <FormContainerProviderWrapper panelId={panelId}>
+      <div className="rdd-panel-content" data-rdd-panel={panelId} dir={dir}>
+        {renderPanelContent(panelId, panel, registry, messages, formatMessage)}
+      </div>
+    </FormContainerProviderWrapper>,
+    panelHost.getOrCreateElement(panelId),
+  );
+});
+PanelMount.displayName = 'PanelMount';

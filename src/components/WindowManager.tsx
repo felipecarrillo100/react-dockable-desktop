@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
-import { createPortal } from 'react-dom';
 import { useIsClient } from '../utils/useIsClient';
 import { forgetPanelDom } from './domPreservation';
 import { usePanelHost } from './workspace/panelHost';
@@ -17,7 +16,8 @@ import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { usePanelActions } from './PanelProviderContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 import { useColorScheme } from '../hooks/useColorScheme';
-import { renderPanelContent, FormContainerProviderWrapper } from './workspace/panelMount';
+import { PanelMount } from './workspace/panelMount';
+import { DragGhost } from './workspace/DragGhost';
 import { WorkspaceGrid } from './workspace/WorkspaceGrid';
 import { WorkspaceZones } from './workspace/WorkspaceZones';
 import { FloatingWindows } from './workspace/FloatingWindows';
@@ -446,20 +446,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
       {/* 3. Persistence Port: Portals rendering panels into off-screen elements. Client only:
           the server has no DOM to create them in, and panel bodies fill in after hydration. */}
-      {isClient && Object.keys(state.panels).map((id) => {
-        const panel = state.panels[id];
-        if (!panel) return null;
-        const targetEl = panelHost.getOrCreateElement(id);
-        return createPortal(
-          <FormContainerProviderWrapper panelId={id}>
-            <div className="rdd-panel-content" data-rdd-panel={id} dir={state.dir}>
-              {renderPanelContent(id, panel, registry, messages, formatMessage)}
-            </div>
-          </FormContainerProviderWrapper>,
-          targetEl,
-          id
-        );
-      })}
+      {isClient && Object.keys(state.panels).map((id) => <PanelMount key={id} panelId={id} />)}
 
       {/* 4. Context Menu — only rendered when no parent ContextMenuProvider is in the tree */}
       {ctxMenu === null && (
@@ -474,15 +461,9 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
       {/* 5. Dragging Tab Ghost Representation */}
       {state.draggedPanelId !== null && !state.floating.some(w => w.id === state.draggedPanelId) && (
-        <div
-          className="rdd-drag-ghost-tab"
-          style={{
-            left: dragPos.x + 12,
-            top: dragPos.y + 12,
-          }}
-        >
+        <DragGhost dragPos={dragPos}>
           📄 {formatLabel(state.panels[state.draggedPanelId]?.title || messages.untitledPanel, formatMessage)}
-        </div>
+        </DragGhost>
       )}
 
 

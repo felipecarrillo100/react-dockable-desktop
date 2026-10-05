@@ -20,7 +20,6 @@ export type { MessageDescriptor, MessageFormatter, SplitOrientation, SplitDirect
 export { defaultFormatMessage, formatLabel } from '../core/messages';
 export { createWorkspaceCore } from '../core/workspaceCore';
 
-export const WindowStateContext: React.Context<WorkspaceState | null> = createContext<WorkspaceState | null>(null);
 const WindowActionsContext = createContext<InternalWindowActions | null>(null);
 const WindowI18nContext = createContext<MessageFormatter | null>(null);
 
@@ -86,7 +85,6 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
   const registry = client?.registry ?? globalPanelRegistry;
   // This workspace's own panel DOM, sizes and lifecycle handlers — never shared with another provider.
   const [panelHost] = useState<PanelHost>(createPanelHost);
-  const state = useSyncExternalStore(core.subscribeToState, core.getSnapshot, core.getSnapshot);
   const actions = core.actions;
 
   // Effective config: client config takes precedence over individual provider props
@@ -153,17 +151,15 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     <StyleClassContext.Provider value={styleClasses}>
       <RegistryContext.Provider value={registry}>
         <WindowStoreSyncContext.Provider value={syncContextValue}>
-          <WindowStateContext.Provider value={state}>
-            <WindowActionsContext.Provider value={actions}>
-              <WindowI18nContext.Provider value={effectiveFormatMessage || defaultFormatMessage}>
-                <WindowPredefinedMessagesContext.Provider value={mergedMessages}>
-                  <PanelHostContext.Provider value={panelHost}>
-                    {children}
-                  </PanelHostContext.Provider>
-                </WindowPredefinedMessagesContext.Provider>
-              </WindowI18nContext.Provider>
-            </WindowActionsContext.Provider>
-          </WindowStateContext.Provider>
+          <WindowActionsContext.Provider value={actions}>
+            <WindowI18nContext.Provider value={effectiveFormatMessage || defaultFormatMessage}>
+              <WindowPredefinedMessagesContext.Provider value={mergedMessages}>
+                <PanelHostContext.Provider value={panelHost}>
+                  {children}
+                </PanelHostContext.Provider>
+              </WindowPredefinedMessagesContext.Provider>
+            </WindowI18nContext.Provider>
+          </WindowActionsContext.Provider>
         </WindowStoreSyncContext.Provider>
       </RegistryContext.Provider>
     </StyleClassContext.Provider>
@@ -171,6 +167,7 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
 };
 
 const noopSubscribe = (_cb: () => void): (() => void) => () => {};
+const noopRead = (): null => null;
 
 /**
  * The live workspace state. The component re-renders whenever it changes — or, given a selector,
@@ -198,26 +195,27 @@ const noopSubscribe = (_cb: () => void): (() => void) => () => {};
 export function useWindowManagerState(): WorkspaceState;
 export function useWindowManagerState<T>(selector: (state: WorkspaceState) => T): T;
 export function useWindowManagerState<T>(selector?: (state: WorkspaceState) => T): WorkspaceState | T {
-  const stateCtx = useContext(WindowStateContext);
+  // Straight from the store, with the selector inside the subscription: until 7.7.2 this also read
+  // a context holding the whole state, so it re-rendered on every change whatever the selector
+  // returned.
   const syncCtx = useContext(WindowStoreSyncContext);
-  const selectorRef = useRef<((state: WorkspaceState) => T) | undefined>(selector);
-  selectorRef.current = selector;
+  const read = (): WorkspaceState | T => {
+    const snap = syncCtx!.getSnapshot();
+    return selector ? selector(snap) : snap;
+  };
+  const value = useSyncExternalStore(syncCtx?.subscribeToState ?? noopSubscribe, syncCtx ? read : noopRead, syncCtx ? read : noopRead);
+  if (!syncCtx) throw new Error('useWorkspaceState must be used within <DockableDesktopProvider>');
+  return value;
+}
 
-  const syncResult = useSyncExternalStore(
-    selector ? (syncCtx?.subscribeToState ?? noopSubscribe) : noopSubscribe,
-    (): T => {
-      const snap = syncCtx?.getSnapshot() ?? stateCtx!;
-      return (selectorRef.current ? selectorRef.current(snap) : snap) as T;
-    },
-    (): T => {
-      const snap = syncCtx?.getSnapshot() ?? stateCtx!;
-      return (selectorRef.current ? selectorRef.current(snap) : snap) as T;
-    }
-  );
-
-  if (!stateCtx) throw new Error('useWorkspaceState must be used within <DockableDesktopProvider>');
-  if (!selector) return stateCtx;
-  return syncResult;
+/**
+ * @internal `useWorkspaceState(selector)` for components that may also render outside a provider
+ * (sidebar, toasts, panel overlays, a panel used standalone): `fallback` there instead of throwing.
+ */
+export function useOptionalWindowManagerState<T>(selector: (state: WorkspaceState) => T, fallback: T): T {
+  const syncCtx = useContext(WindowStoreSyncContext);
+  const read = (): T => (syncCtx ? selector(syncCtx.getSnapshot()) : fallback);
+  return useSyncExternalStore(syncCtx?.subscribeToState ?? noopSubscribe, read, read);
 }
 
 /**

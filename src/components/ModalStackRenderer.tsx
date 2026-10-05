@@ -26,7 +26,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
   const { close, openModal, updateInstance, setDirty, onInstanceClose } = usePanelActions();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
-  const { dir } = useWindowManagerState();
+  const dir = useWindowManagerState(s => s.dir);
   const { modalClass, modalBodyClass } = useStyleClasses();
   const closeHandlerRef = useRef<(() => boolean | Promise<boolean>) | null>(null);
 

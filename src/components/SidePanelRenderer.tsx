@@ -30,7 +30,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
   const { close, openModal, updateInstance, setDirty, registerCloseHandler, unregisterCloseHandler, onInstanceClose } = usePanelActions();
   const formatMessage = useFormatMessage();
   const predefinedMessages = usePredefinedMessages();
-  const { dir } = useWindowManagerState();
+  const dir = useWindowManagerState(s => s.dir);
   const { sidePanelClass, sidePanelBodyClass } = useStyleClasses();
   const closeHandlerRef = useRef<(() => boolean | Promise<boolean>) | null>(null);
 
