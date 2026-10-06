@@ -95,6 +95,8 @@
     "OverlayState",
     "PanelContribution",
     "PanelDefinition",
+    "PanelDrop",
+    "PanelDropTarget",
     "PanelEvents",
     "PanelFloatPlacement",
     "PanelHandle",

@@ -10,7 +10,7 @@ import { useIsClient } from '../utils/useIsClient';
 import { forgetPanelDom } from './domPreservation';
 import { usePanelHost } from './workspace/panelHost';
 import { claimDocumentMirror, releaseDocumentMirror } from '../utils/documentMirror';
-import { useWindowManagerState, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
+import { WindowStoreSyncContext, useWindowManagerState, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useStyleClasses, useRegistry } from './WindowManagerContext';
 import { DefaultContextMenuAdapter, ContextMenuContext } from './ContextMenu';
 import type { ContextMenuHandle, ContextMenuAdapter } from './ContextMenu';
 import { usePanelActions } from './PanelProviderContext';
@@ -86,7 +86,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   const state = useWindowManagerState();
   const panelHost = usePanelHost();
   const registry = useRegistry();
-  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn } = useWindowManagerActionsInternal();
+  const { restorePanel, minimizePanel, requestClosePanel, maximizePanel, updateFloatingPosition, focusPanel, floatPanel, setDraggedPanelId, dockPanelToGroup, movePanelOrder, dockPanelToWorkspaceEdge, setActivePanel, getPanelContextMenuItems, showContextMenu, registerContextMenuFn, isDropAllowed } = useWindowManagerActionsInternal();
   const { openModal } = usePanelActions();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
@@ -178,17 +178,24 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   }, [hoveredMinimized?.fromTouch]);
 
   // Where a dragged panel would land; read by the drag handlers below and drawn by the zones.
-  const targets = useDragTargets({ setDraggedPanelId, isRtl: state.isRtl });
+  // Read live from the store, not from this render: drag handlers keep the deps of the render they
+  // started in, before the dragged panel was set (7.9.0).
+  const storeSync = useContext(WindowStoreSyncContext);
+  const canInsertInto = (leafId: string) => {
+    const dragged = storeSync?.getSnapshot().draggedPanelId ?? null;
+    return dragged !== null && isDropAllowed(dragged, { kind: 'group', leafId, position: 'center' });
+  };
+  const targets = useDragTargets({ setDraggedPanelId, isRtl: state.isRtl, canInsertInto });
   const { activeDropZone, setActiveDropZone, dragPos, activeEdgeDrop, setActiveEdgeDrop, activeCornerAnchor, setActiveCornerAnchor, hoveredTab, setHoveredTab, handleTabHover, handleHoverDropZone } = targets;
 
   const { handleTabRightClick, handleMinimizedRightClick } = createWorkspaceMenus({
     state, registry, messages, formatMessage, handleRequestClose, setHoveredMinimized,
-    actions: { floatPanel, minimizePanel, restorePanel, maximizePanel, getPanelContextMenuItems, showContextMenu },
+    actions: { floatPanel, minimizePanel, restorePanel, maximizePanel, getPanelContextMenuItems, showContextMenu, isDropAllowed },
   });
 
   const { handleTabDragStart } = createTabDrag({
     state, targets, handleTabRightClick,
-    actions: { dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, floatPanel, setDraggedPanelId },
+    actions: { dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, floatPanel, setDraggedPanelId, isDropAllowed },
   });
 
   // Drop the preserved DOM of panels that are no longer open — this workspace's own only.
@@ -313,7 +320,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
   const { startDrag, startResize } = createFloatingWindowDrag({
     state, workspaceSize, targets,
-    actions: { focusPanel, updateFloatingPosition, dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, setDraggedPanelId },
+    actions: { focusPanel, updateFloatingPosition, dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, setDraggedPanelId, isDropAllowed },
   });
 
   // horizontal scroll for minimized taskbar
@@ -387,7 +394,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         ref={workspaceRef}
         className={`rdd-workspace-viewport${state.draggedPanelId ? ' rdd-dragging-active' : ''}`}
       >
-        <WorkspaceZones state={state} activeEdgeDrop={activeEdgeDrop} activeCornerAnchor={activeCornerAnchor} setActiveEdgeDrop={setActiveEdgeDrop} setActiveCornerAnchor={setActiveCornerAnchor} />
+        <WorkspaceZones state={state} activeEdgeDrop={activeEdgeDrop} activeCornerAnchor={activeCornerAnchor} setActiveEdgeDrop={setActiveEdgeDrop} setActiveCornerAnchor={setActiveCornerAnchor} isDropAllowed={isDropAllowed} />
 
         {/* 1.1 Viewport Split Grid Layout */}
         <div className="rdd-workspace-grid-host">

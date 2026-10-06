@@ -18,12 +18,12 @@ export interface WorkspaceMenusDeps {
   formatMessage: MessageFormatter;
   handleRequestClose: (id: string) => unknown;
   setHoveredMinimized: (v: HoveredMinimized | null) => void;
-  actions: Pick<InternalWindowActions, 'floatPanel' | 'minimizePanel' | 'restorePanel' | 'maximizePanel' | 'getPanelContextMenuItems' | 'showContextMenu'>;
+  actions: Pick<InternalWindowActions, 'floatPanel' | 'minimizePanel' | 'restorePanel' | 'maximizePanel' | 'getPanelContextMenuItems' | 'showContextMenu' | 'isDropAllowed'>;
 }
 
 export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRightClick: (id: string, e: React.MouseEvent) => void; handleMinimizedRightClick: (id: string, e: React.MouseEvent) => void } {
   const { state, registry, messages, formatMessage, handleRequestClose, setHoveredMinimized } = deps;
-  const { floatPanel, minimizePanel, restorePanel, maximizePanel, getPanelContextMenuItems, showContextMenu } = deps.actions;
+  const { floatPanel, minimizePanel, restorePanel, maximizePanel, getPanelContextMenuItems, showContextMenu, isDropAllowed } = deps.actions;
 
   const handleTabRightClick = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -33,7 +33,8 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
     const options = registryEntry?.defaultOptions;
 
     const items = [];
-    if (options?.canDrag !== false) {
+    // Floating it is a move the rules decide (7.9.0): canFloat, then the app's canDrop.
+    if (options?.canDrag !== false && isDropAllowed(id, { kind: 'float', anchor: null })) {
       items.push({
         label: formatLabel(messages.floatWindow, formatMessage),
         icon: ContextMenuIcons.float,
@@ -76,8 +77,10 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
     // Maximizing needs a floating window. A panel minimized from a group is floated on the way
     // back, which a `canDrag: false` panel refuses — so for it the item would do nothing.
     const panel = state.panels[id];
+    // A panel that was floating only goes back to floating; one from a group is floated, which the
+    // rules decide (7.9.0).
     const canMaximize = panel?.previousState === 'floating'
-      || registry.get(panel?.component ?? '')?.defaultOptions?.canDrag !== false;
+      || (registry.get(panel?.component ?? '')?.defaultOptions?.canDrag !== false && isDropAllowed(id, { kind: 'float', anchor: null }));
     showContextMenu({
       event: e,
       initialFocus: initialFocusFor(e),

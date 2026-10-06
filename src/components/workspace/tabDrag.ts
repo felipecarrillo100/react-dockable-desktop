@@ -10,14 +10,14 @@ import type { DragTargets } from './useDragTargets';
 export interface TabDragDeps {
   state: WorkspaceState;
   targets: DragTargets;
-  actions: Pick<InternalWindowActions, 'dockPanelToWorkspaceEdge' | 'movePanelOrder' | 'dockPanelToGroup' | 'floatPanel' | 'setDraggedPanelId'>;
+  actions: Pick<InternalWindowActions, 'dockPanelToWorkspaceEdge' | 'movePanelOrder' | 'dockPanelToGroup' | 'floatPanel' | 'setDraggedPanelId' | 'isDropAllowed'>;
   handleTabRightClick: (id: string, e: React.MouseEvent) => void;
 }
 
 export function createTabDrag(deps: TabDragDeps): { executeDrop: (id: string, me: PointerEvent) => void; handleTabDragStart: (id: string, e: React.PointerEvent) => void } {
   const { state, handleTabRightClick } = deps;
   const { activeDropZoneRef, hoveredTabRef, activeEdgeDropRef, activeCornerAnchorRef, setActiveCornerAnchor, clearDragState, flipRtl, setDragPos, updateHoverFromPoint } = deps.targets;
-  const { dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, floatPanel, setDraggedPanelId } = deps.actions;
+  const { dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, floatPanel, setDraggedPanelId, isDropAllowed } = deps.actions;
 
   const executeDrop = (id: string, me: PointerEvent) => {
     const dropZone = activeDropZoneRef.current;
@@ -25,9 +25,13 @@ export function createTabDrag(deps: TabDragDeps): { executeDrop: (id: string, me
     const edgeDrop = activeEdgeDropRef.current;
     const cornerAnchor = activeCornerAnchorRef.current;
 
+    // Each target was only offered if the rules allowed it (7.9.0); asking again here covers a rule
+    // that changed mid-drag. A forbidden target, or nowhere when floating is forbidden, does nothing.
     if (edgeDrop) {
-      dockPanelToWorkspaceEdge(id, flipRtl(edgeDrop) as SplitDirection);
+      const side = flipRtl(edgeDrop) as SplitDirection;
+      if (isDropAllowed(id, { kind: 'edge', side })) dockPanelToWorkspaceEdge(id, side);
     } else if (targetTab) {
+      if (!isDropAllowed(id, { kind: 'group', leafId: targetTab.leafId, position: 'center' })) { setActiveCornerAnchor(null); clearDragState(); return; }
       let targetIndex = targetTab.index;
       if (targetTab.side === 'right') targetIndex += 1;
       // DOM tab indices are pre-removal. movePanelOrder removes the panel before
@@ -40,12 +44,13 @@ export function createTabDrag(deps: TabDragDeps): { executeDrop: (id: string, me
       }
       movePanelOrder(id, targetTab.leafId, targetIndex);
     } else if (dropZone) {
-      dockPanelToGroup(id, dropZone.leafId, flipRtl(dropZone.position));
+      const position = flipRtl(dropZone.position);
+      if (isDropAllowed(id, { kind: 'group', leafId: dropZone.leafId, position })) dockPanelToGroup(id, dropZone.leafId, position);
     } else if (cornerAnchor) {
       // The zone's name is already the anchor: the CSS mirrors the zones under RTL, and an anchor is
       // drawn mirrored too. Flipping it here as well sent the window to the opposite corner.
-      floatPanel(id, undefined, cornerAnchor);
-    } else {
+      if (isDropAllowed(id, { kind: 'float', anchor: cornerAnchor })) floatPanel(id, undefined, cornerAnchor);
+    } else if (isDropAllowed(id, { kind: 'float', anchor: null })) {
       floatPanel(id, { x: me.clientX - 150, y: me.clientY - 15, width: 450, height: 350 });
     }
     setActiveCornerAnchor(null);

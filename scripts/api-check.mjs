@@ -22,7 +22,9 @@ import { fileURLToPath } from 'node:url';
 
 export const REPORT = 'api/react-dockable-desktop.api.md';
 
-const DECL = /^export\s+(?:declare\s+)?(?:abstract\s+)?(?:class|interface|type|function|const|let|var|enum|namespace)\s+([A-Za-z_$][\w$]*)/;
+// `export` is optional: with includeForgottenExports, the report also lists types the public API
+// refers to without exporting (the workspace config's own type, for one), and those are contract too.
+const DECL = /^(?:export\s+)?(?:declare\s+)?(?:abstract\s+)?(?:class|interface|type|function|const|let|var|enum|namespace)\s+([A-Za-z_$][\w$]*)/;
 
 /** The report's declarations: name → its lines, trimmed, without comments and blank lines. */
 export function declarations(report) {

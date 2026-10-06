@@ -13,13 +13,13 @@ export interface FloatingWindowDragDeps {
   state: WorkspaceState;
   workspaceSize: { width: number; height: number };
   targets: DragTargets;
-  actions: Pick<InternalWindowActions, 'focusPanel' | 'updateFloatingPosition' | 'dockPanelToWorkspaceEdge' | 'movePanelOrder' | 'dockPanelToGroup' | 'setDraggedPanelId'>;
+  actions: Pick<InternalWindowActions, 'focusPanel' | 'updateFloatingPosition' | 'dockPanelToWorkspaceEdge' | 'movePanelOrder' | 'dockPanelToGroup' | 'setDraggedPanelId' | 'isDropAllowed'>;
 }
 
 export function createFloatingWindowDrag(deps: FloatingWindowDragDeps): { startDrag: (id: string, e: React.PointerEvent) => void; startResize: (id: string, dir: ResizeDir, e: React.PointerEvent) => void } {
   const { state, workspaceSize } = deps;
   const { activeDropZoneRef, hoveredTabRef, activeEdgeDropRef, activeCornerAnchorRef, setActiveCornerAnchor, clearDragState, flipRtl, updateHoverFromPoint } = deps.targets;
-  const { focusPanel, updateFloatingPosition, dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, setDraggedPanelId } = deps.actions;
+  const { focusPanel, updateFloatingPosition, dockPanelToWorkspaceEdge, movePanelOrder, dockPanelToGroup, setDraggedPanelId, isDropAllowed } = deps.actions;
 
   // Floating Window dragging handler
   const startDrag = (id: string, e: React.PointerEvent) => {
@@ -40,16 +40,19 @@ export function createFloatingWindowDrag(deps: FloatingWindowDragDeps): { startD
       const targetTab = hoveredTabRef.current;
       const edgeDrop = activeEdgeDropRef.current;
       const cornerAnchor = activeCornerAnchorRef.current;
+      // Asked again at release, as in the tab drag (7.9.0); a forbidden target leaves it floating.
       if (cornerAnchor) {
-        updateFloatingPosition(id, { anchor: cornerAnchor }); // already the anchor — see the tab drop above
+        if (isDropAllowed(id, { kind: 'float', anchor: cornerAnchor })) updateFloatingPosition(id, { anchor: cornerAnchor }); // already the anchor — see the tab drop above
       } else if (edgeDrop) {
-        dockPanelToWorkspaceEdge(id, flipRtl(edgeDrop) as SplitDirection);
+        const side = flipRtl(edgeDrop) as SplitDirection;
+        if (isDropAllowed(id, { kind: 'edge', side })) dockPanelToWorkspaceEdge(id, side);
       } else if (targetTab) {
         let targetIndex = targetTab.index;
         if (targetTab.side === 'right') targetIndex += 1;
-        movePanelOrder(id, targetTab.leafId, targetIndex);
+        if (isDropAllowed(id, { kind: 'group', leafId: targetTab.leafId, position: 'center' })) movePanelOrder(id, targetTab.leafId, targetIndex);
       } else if (dropZone) {
-        dockPanelToGroup(id, dropZone.leafId, flipRtl(dropZone.position));
+        const position = flipRtl(dropZone.position);
+        if (isDropAllowed(id, { kind: 'group', leafId: dropZone.leafId, position })) dockPanelToGroup(id, dropZone.leafId, position);
       }
       setActiveCornerAnchor(null);
       clearDragState();

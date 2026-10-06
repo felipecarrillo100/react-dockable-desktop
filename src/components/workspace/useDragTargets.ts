@@ -58,7 +58,12 @@ export interface DragTargets {
   flipRtl: (pos: DropPosition) => DropPosition;
 }
 
-export function useDragTargets({ setDraggedPanelId, isRtl }: { setDraggedPanelId: InternalWindowActions['setDraggedPanelId']; isRtl: boolean }): DragTargets {
+export function useDragTargets({ setDraggedPanelId, isRtl, canInsertInto }: {
+  setDraggedPanelId: InternalWindowActions['setDraggedPanelId'];
+  isRtl: boolean;
+  /** Whether the dragged panel may be inserted among a group's tabs; a forbidden group's tabs are no target (7.9.0). */
+  canInsertInto: (leafId: string) => boolean;
+}): DragTargets {
   const [activeDropZone, setActiveDropZone] = useState<{ leafId: string; position: DropPosition } | null>(null);
   const activeDropZoneRef = useRef<{ leafId: string; position: DropPosition } | null>(null);
   const [dragPos] = useState(createDragPos);
@@ -82,7 +87,7 @@ export function useDragTargets({ setDraggedPanelId, isRtl }: { setDraggedPanelId
   const hoveredTabRef = useRef<{ leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null>(null);
 
   const handleTabHover = (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => {
-    const val = side ? { leafId, panelId, index, side } : null;
+    const val = side && canInsertInto(leafId) ? { leafId, panelId, index, side } : null;
     setHoveredTab(val);
     hoveredTabRef.current = val;
   };
@@ -124,7 +129,7 @@ export function useDragTargets({ setDraggedPanelId, isRtl }: { setDraggedPanelId
       if (!foundTab && el.dataset.tabId) {
         const leafId = el.dataset.leafId;
         const tabIdx = parseInt(el.dataset.tabIndex || '0', 10);
-        if (leafId) {
+        if (leafId && canInsertInto(leafId)) {
           const val = { leafId, panelId: el.dataset.tabId, index: tabIdx, side: tabDropSide(el, x) };
           setHoveredTab(prev => sameTab(prev, val) ? prev : val);
           hoveredTabRef.current = val;

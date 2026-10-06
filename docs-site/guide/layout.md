@@ -41,6 +41,60 @@ workspace.openPanel('doc-2', 'editor', { dockTo: { panel: 'doc-1', position: 'ce
 - If `panel` isn't docked (not open, floating or minimized), the new panel is placed as usual, and a
   development warning says why.
 
+## Controlling where users can move panels
+
+Two opt-in controls decide where the **user** can move a panel (7.9.0). Neither restricts your own
+calls: `floatPanel`, `dockPanelToGroup`, `openPanel` and the others always do what they say.
+
+**Per panel type**, in its [`defaultOptions`](/guide/panel-registry#defaultoptions):
+
+```ts
+createWorkspace({
+  panels: {
+    // A main view that must stay in the grid.
+    main: { component: MainView, defaultOptions: { canFloat: false } },
+    // A tool palette that must stay floating.
+    palette: { component: Palette, defaultOptions: { canDock: false, initialTarget: 'floating' } },
+  },
+});
+```
+
+- `canFloat: false`: a tab drag can't end in a floating window. Dropped on nothing or on a corner, the
+  panel stays where it was. "Float Window" and the taskbar's "Maximize" are hidden. A window your app
+  floated itself can still be moved to another corner.
+- `canDock: false`: dragging the panel offers no group, tab or edge targets, only corners, so it
+  stays floating.
+
+**Across the workspace**, `canDrop` vetoes any move, for rules that depend on where a panel would go:
+
+```ts
+createWorkspace({
+  panels,
+  // Only tool panels in the "tools" group, and nothing along the top edge.
+  canDrop: ({ panelId, component, to }) =>
+    !(to.kind === 'group' && to.leafId === 'tools' && component !== 'tool') &&
+    !(to.kind === 'edge' && to.side === 'top'),
+});
+```
+
+It's called with the panel and its registered `component`, and with `to`, one of:
+
+| `to` | The move |
+|------|----------|
+| `{ kind: 'group', leafId, position }` | Into a group: a new split on one side (`'left'`, `'right'`, `'top'`, `'bottom'`), or `'center'` as a tab, which also covers dropping it between tabs |
+| `{ kind: 'edge', side }` | Along a workspace edge, as a full-width or full-height strip |
+| `{ kind: 'float', anchor }` | Into a floating window, pinned to a corner, or free (`anchor: null`: a tab dropped on nothing) |
+
+A forbidden target **isn't offered**: its drop zone, edge or corner doesn't appear while the panel is
+dragged, and releasing there does nothing. The rule is asked again at release, so a rule that changes
+mid-drag still holds.
+
+- Positions are the ones the move applies. Under RTL, the zone drawn on the screen's right splits to
+  the left, and `canDrop` sees `'left'`.
+- It runs while the pointer moves, for every target, so keep it fast and free of side effects.
+- If it throws, the move is allowed and the error is logged.
+- `canDrop` runs after the panel type's own `canFloat` / `canDock`; it can't allow what those forbid.
+
 ## Activating / focusing panels
 
 ```ts

@@ -42,6 +42,8 @@ The type is `PanelRegistryEntry['defaultOptions']` (`PanelRegistryEntry` is expo
 | `canClose` | `boolean` | `true` | Show or hide the × close button. |
 | `canMinimize` | `boolean` | `true` | Show or hide the minimize button. |
 | `canDrag` | `boolean` | `true` | Allow the tab to be dragged to a different leaf or position. When `false`, the panel cannot be floated via drag. |
+| `canFloat` | `boolean` | `true` | `false`: the user can't make it floating. A tab drag can't end in a floating window, and "Float Window" and the taskbar's "Maximize" are hidden. See [Controlling where users can move panels](/guide/layout#controlling-where-users-can-move-panels). (7.9.0) |
+| `canDock` | `boolean` | `true` | `false`: the user can't dock it. Dragging it offers no group, tab or edge targets, only corners. Pair it with `initialTarget: 'floating'`. (7.9.0) |
 | `defaultAnchor` | `FloatAnchor` (`'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'`) | — (unanchored) | Every instance of this component opens pre-anchored to the given workspace corner when floated — see the `anchor` option in [Workspace](./workspace-client#openpanel-options), which this is the per-component default for. |
 | `disableLivePreview` | `boolean` | `false` | Show a placeholder instead of a live thumbnail in the preview that pops up when the pointer is over this panel's taskbar button (while it is minimized). A canvas-rendered view (a WebGL map) that blurs in the scaled-down preview can instead be marked with `data-rdd-preview-unscale` on its container, which renders it at full resolution there. |
 | `renderHeaderActions` | `(panelId: string) => ReactNode` | — | Inject React nodes into the panel tab header (e.g. export buttons). |

@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.8.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.9.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -25,6 +25,7 @@ serialised layout format**, so a layout saved by either library loads in the oth
 
 - **Split-Docking Grid** — drag panels to split any zone into rows/columns or group into tabbed containers
 - **Workspace Edge Docking** — drag to the outer edges to dock a panel as a full-width or full-height strip
+- **Docking Rules** — keep a panel type in the grid (`canFloat: false`) or floating (`canDock: false`), and veto any move with one `canDrop` function; forbidden targets simply aren't offered
 - **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
 - **Panel Overlay** — per-panel overlay layer with anchored toolbars (`RddPanelToolbar`, `RddToolbarButton`, `RddToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; an axis can span the panel instead of carrying a fixed size, so a strip or column tracks the panel as it resizes — set declaratively or by dragging an edge out until it snaps; `useFloatingWidgets()` opens N named windows dynamically from data or event handlers
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
