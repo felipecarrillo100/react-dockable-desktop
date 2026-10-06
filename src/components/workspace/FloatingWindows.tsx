@@ -47,6 +47,9 @@ export const FloatingWindows = ({
           key={w.id}
           data-window-id={w.id}
           data-rdd-window={w.id}
+          // State for app CSS (7.8.0): present when true.
+          data-rdd-focused={isFocused ? '' : undefined}
+          data-rdd-maximized={isMaximized ? '' : undefined}
           dir={state.dir}
           onPointerDownCapture={() => {
             setActivePanel(w.id);

@@ -60,6 +60,7 @@ workspace.focusPanel(id)                          // bring to front / select tab
 | `focus` | `boolean` | Set `activePanelId` to this panel. Default `true`. |
 | `props` | `object` | Custom per-instance data spread onto the panel component alongside `panelId` — see **Per-panel props** below. Unconstrained, matching the `props` argument of `useModals().open` and `useSidePanels().openLeft`/`openRight`. |
 | `dedupeKey` | `string` | If another open panel of the same `componentKey` already has this exact key, that panel is focused instead of opening a new one — see **Instance dedup** below. |
+| `dockTo` | `{ panel: string; position: DropPosition; size?: number }` | Dock the new panel beside an open, docked panel: as a tab in its group (`position: 'center'`), or in a new group split off on one side (`'left'`, `'right'`, `'top'`, `'bottom'`). `size` is the new group's share of that split, 0.1–0.9. Wins over `initialTarget`; applies only to a newly opened panel — see [Opening beside another panel](/guide/layout#opening-beside-another-panel). (7.8.0) |
 
 ## Per-panel props
 
@@ -263,10 +264,15 @@ import type { RddDesktopProps, TaskbarVisibility } from 'react-dockable-desktop'
 | `defaultPanelIcon` | `ReactNode` | — | Fallback icon used when a panel definition has no `icon`. |
 | `taskbarVisibility` | `TaskbarVisibility` | `'autohide'` | When the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows it only while at least one panel is minimized. `'autohide'` shows it only while at least one panel is minimized, collapsed to an 8px peek strip (12px on touch screens) at the bottom of the workspace: it expands when the pointer reaches it, collapses 400ms after the pointer leaves — never while the pointer is on it — and opens for 2s when a panel is minimized. |
 | `animations` | `boolean` | `true` | Enables the library's own transitions/animations (tab hover, dock preview, etc.). Set to `false` to disable them — scoped to only the library's own elements, never the host page's. |
+| `emptyWorkspace` | `ReactNode` | the built-in "Empty Workspace Section" message | What the workspace shows while no panel is docked: a welcome screen, a logo, "Open a file" buttons. It fills the empty group; floating windows still show over it, and a window can still be dropped onto it to dock. Other empty groups in a split keep the built-in message. (7.8.0) |
 
 ```tsx
 <RddDesktop skin="nord" taskbarVisibility="autohide" defaultPanelIcon={<FolderIcon />} />
+
+<RddDesktop emptyWorkspace={<WelcomeScreen />} />
 ```
+
+To change only the text of the built-in empty message, override `emptyGroup` in `messages` instead.
 
 ## `DockableDesktopProvider` props
 

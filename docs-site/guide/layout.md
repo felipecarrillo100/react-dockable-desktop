@@ -20,6 +20,27 @@ To put a panel into a particular group, or split one, open it and then use `dock
 
 If the panel ID is already open, `openPanel` focuses it instead of creating a duplicate.
 
+### Opening beside another panel
+
+`dockTo` places a new panel next to one that is already docked (7.8.0):
+
+```ts
+// A legend in a new group on the right of the chart, taking a quarter of the width:
+workspace.openPanel('legend-1', 'legend', { dockTo: { panel: 'chart-1', position: 'right', size: 0.25 } });
+
+// A second document as a tab in the same group as the first:
+workspace.openPanel('doc-2', 'editor', { dockTo: { panel: 'doc-1', position: 'center' } });
+```
+
+- `position` is `'left'`, `'right'`, `'top'`, `'bottom'` (a new group split off on that side) or
+  `'center'` (a tab in the same group).
+- `size` is the new group's share of that split, from 0.1 to 0.9. Without it, the workspace's
+  default split ratio applies.
+- `dockTo` wins over `initialTarget`, and applies only to a panel that isn't open yet: opening an
+  open panel focuses it, as always.
+- If `panel` isn't docked (not open, floating or minimized), the new panel is placed as usual, and a
+  development warning says why.
+
 ## Activating / focusing panels
 
 ```ts

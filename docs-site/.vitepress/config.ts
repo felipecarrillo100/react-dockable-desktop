@@ -17,7 +17,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
       {
-        text: 'v7.7.4',
+        text: 'v7.8.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md' },
           { text: 'Migration Guide', link: '/guide/migration' },
@@ -63,6 +63,7 @@ export default defineConfig({
             { text: 'Advanced Topics', link: '/guide/advanced' },
             { text: 'RTL Support', link: '/guide/rtl' },
             { text: 'Custom Theming', link: '/guide/theming' },
+            { text: 'UI Frameworks (MUI, Bootstrap, Tailwind)', link: '/guide/ui-frameworks' },
             { text: 'Best Practices', link: '/guide/best-practices' },
             { text: 'Migration Guide', link: '/guide/migration' },
             { text: 'Stability & Versioning', link: '/guide/stability' },

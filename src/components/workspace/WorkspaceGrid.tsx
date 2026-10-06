@@ -19,14 +19,16 @@ export interface WorkspaceGridProps {
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
+  /** The app's empty-workspace view; used by the root group only. */
+  emptyWorkspace?: React.ReactNode;
   onRequestClosePanel: (id: string) => Promise<void> | void;
 }
 
-export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
+export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace }) => {
   const { updateSplitSizes } = useWindowManagerActions();
 
   if (node.type === 'leaf') {
-    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} />;
+    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} emptyWorkspace={path.length === 0 ? emptyWorkspace : undefined} />;
   }
 
   const isRow = node.orientation === 'horizontal';

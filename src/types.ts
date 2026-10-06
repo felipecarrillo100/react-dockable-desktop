@@ -180,6 +180,19 @@ export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
    * for the document at this path"). See also {@link WorkspaceActions.findPanelId}.
    */
   dedupeKey?: string;
+  /**
+   * Dock the new panel beside an open, docked panel: in that panel's group (`position: 'center'`,
+   * as a tab) or in a new group split off on one side of it. `size` is the new group's share of
+   * that split, from 0.1 to 0.9 (the workspace's default split ratio when omitted). Wins over
+   * `initialTarget`. If `panel` is not docked (not open, floating or minimized), the new panel is
+   * placed as usual and a development warning says why. Applies only to a newly opened panel. (7.8.0)
+   *
+   * @example
+   * ```ts
+   * ws.openPanel('legend', 'legend', { dockTo: { panel: 'chart-1', position: 'right', size: 0.25 } });
+   * ```
+   */
+  dockTo?: { panel: string; position: DropPosition; size?: number };
 }
 
 /**

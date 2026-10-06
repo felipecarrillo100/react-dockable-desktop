@@ -153,6 +153,43 @@ The rail is narrow, so a square mark fits better than a wide wordmark. Adjust it
 
 Branding relies on CSS `color-mix()`, available since Chrome 111, Edge 111, Safari 16.2 and Firefox 113 (all 2023). In an older browser the tinted hover and active highlights lose their colour; layout and behaviour are unaffected.
 
+## Styling by state and by panel type
+
+Two hooks let your CSS target the desktop without depending on the library's internal class names
+(7.8.0).
+
+**State attributes.** Each is present while its state is true and absent otherwise:
+
+| Attribute | On | Present while |
+|-----------|----|---------------|
+| `data-rdd-selected` | tab | it is the tab shown in its group |
+| `data-rdd-focused` | tab, floating window | it is the workspace's active panel |
+| `data-rdd-dirty` | tab | the panel has unsaved changes |
+| `data-rdd-maximized` | floating window | it is maximized |
+
+Tabs carry `data-rdd-tab="<panel id>"` and floating windows `data-rdd-window="<panel id>"`, so a
+rule can also name one panel.
+
+**Per panel type.** `className` and `tabClassName` in a panel type's
+[`defaultOptions`](/guide/panel-registry#defaultoptions) add your own class to every panel of that
+type and to its tab.
+
+```css
+/* Unsaved documents: an amber marker on the tab. */
+[data-rdd-tab][data-rdd-dirty] { box-shadow: inset 0 -2px 0 #f59e0b; }
+
+/* The focused floating window gets a stronger outline. */
+[data-rdd-window][data-rdd-focused] { outline: 2px solid var(--rdd-brand-accent); }
+
+/* Every chart panel (defaultOptions: { className: 'app-chart', tabClassName: 'app-chart-tab' }). */
+.app-chart { background: #0b1020; }
+.app-chart-tab { font-style: italic; }
+```
+
+The library's own rules are specific, and some use `!important`, so a rule of yours may need equal
+specificity to win. Where the property comes from a CSS variable, set the variable instead. See
+[UI frameworks](/guide/ui-frameworks) for the full picture.
+
 ## Frosted glass and your own overlays
 
 Several skins draw floating windows, drawers, overlay widgets, frosted panel toolbars and (in `macos`) docked panels as frosted glass. Since 7.4.0 the frost is drawn on each container's `::before`, never on the container itself. A `backdrop-filter` on an element makes it the containing block for `position: fixed` content, so a dropdown or popover of yours inside a frosted window used to be positioned against the window rather than the viewport — in some skins and not others. Now `position: fixed` inside any library container means the viewport, in every skin.

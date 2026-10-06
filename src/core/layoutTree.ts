@@ -265,6 +265,22 @@ export const isLoneOccupant = (node: LayoutNode, leafId: string, panelId: string
 export const hasLeaf = (node: LayoutNode, leafId: string): boolean =>
   node.type === 'leaf' ? node.id === leafId : node.children.some(c => hasLeaf(c, leafId));
 
+/** Whether a docked panel is the one shown in its group. */
+export const isShownInGrid = (node: LayoutNode, panelId: string): boolean => {
+  if (node.type === 'leaf') return node.panels.includes(panelId) && node.activePanelId === panelId;
+  return node.children.some(c => isShownInGrid(c, panelId));
+};
+
+/** The id of the group (leaf) that holds `panelId` in the grid, or null if it is not docked. */
+export const findLeafIdOf = (node: LayoutNode, panelId: string): string | null => {
+  if (node.type === 'leaf') return node.panels.includes(panelId) ? node.id : null;
+  for (const child of node.children) {
+    const id = findLeafIdOf(child, panelId);
+    if (id) return id;
+  }
+  return null;
+};
+
 export const findFirstLeafId = (node: LayoutNode): string | null => {
   if (node.type === 'leaf') return node.id;
   for (const child of node.children) {
