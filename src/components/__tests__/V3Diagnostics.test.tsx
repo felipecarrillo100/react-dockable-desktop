@@ -16,10 +16,9 @@ const MockPanel: React.FC<{ panelId: string }> = ({ panelId }) => (
   <div data-panel-id={panelId} />
 );
 
-let lastActions: any = null;
 const StateExtractor: React.FC = () => {
   useWindowManagerState();
-  lastActions = useWindowManagerActions();
+  useWindowManagerActions();
   return null;
 };
 
@@ -38,7 +37,6 @@ describe('C5: styles.css sentinel (--rdd-styles-loaded)', () => {
   beforeEach(() => {
     container = document.createElement('div');
     document.body.appendChild(container);
-    lastActions = null;
     client = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
     originalGetComputedStyle = window.getComputedStyle;
     originalEnv = process.env.NODE_ENV;
@@ -144,7 +142,6 @@ describe('C6: ResizeObserver zero-height warning', () => {
   beforeEach(() => {
     container = document.createElement('div');
     document.body.appendChild(container);
-    lastActions = null;
     client = new WorkspaceClient({ panels: { map: { component: MockPanel } } });
     capturedCallback = null;
     OriginalResizeObserver = globalThis.ResizeObserver;

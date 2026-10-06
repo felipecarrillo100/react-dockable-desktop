@@ -35,7 +35,7 @@
  * PO31: The close button's tooltip comes from the message catalogue, not hardcoded English
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import {
@@ -1444,7 +1444,7 @@ describe('PO28–PO31: localisable float titles', () => {
   });
 
   it('PO30: a plain string title renders unchanged, and the formatter is never consulted', () => {
-    const fmt = vi.fn(((msg: { id: string; defaultMessage?: string }) => 'TRANSLATED') as MessageFormatter);
+    const fmt = vi.fn(((_msg: { id: string; defaultMessage?: string }) => 'TRANSLATED') as MessageFormatter);
     mountManaged(fmt, 'SLD Legend');
     expect(headerText()).toBe('SLD Legend');
     // Only the close tooltip may have gone through the formatter; the title must not have.

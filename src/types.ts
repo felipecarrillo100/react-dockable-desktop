@@ -8,6 +8,7 @@ import type { PanelRegistry } from './components/PanelRegistry';
 import type { WorkspaceClient } from './WorkspaceClient';
 import type { DirtyStateOptions } from './components/dirtyOptions';
 import type { ContextMenuItem, ShowContextMenuOptions } from './components/ContextMenu';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- referenced by the {@link}s below
 import { isSerializable } from './components/serializable';
 
 /**

@@ -489,7 +489,7 @@ describe('FormContainer Lifecycle Extensions', () => {
   });
 
   it('usePanelSize() returns null before layout and updates reactively when the panel resizes', () => {
-    let roCallbacks: ResizeObserverCallback[] = [];
+    const roCallbacks: ResizeObserverCallback[] = [];
     const OriginalRO = globalThis.ResizeObserver;
     // @ts-ignore
     globalThis.ResizeObserver = class {

@@ -60,7 +60,7 @@
     "test": "vitest run",
     "test:browser": "vitest run -c vitest.browser.config.ts",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit",
+    "lint": "tsc -p tsconfig.lib.json && eslint src",
     "version:sync": "node scripts/sync-version.js",
     "version": "node scripts/sync-version.js && git add README.md CHANGELOG.md docs-site/.vitepress/config.ts"
   },

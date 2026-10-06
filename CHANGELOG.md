@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Internal
+
+Nothing in the published package changes.
+
+- **`npm run lint` checks something again.** It ran `tsc --noEmit` against a `tsconfig.json` that
+  lists no files, so it passed whatever the code contained; that is how a 7.7.2 type error reached
+  `main`. It now type-checks the library source (`tsconfig.lib.json`: `src` without its tests) and
+  runs ESLint on `src`, tests included, and fails on any error. CI already ran `npm run lint`.
+- **ESLint config for a library.** `react-refresh/only-export-components` is off for `src` (a
+  Vite dev-server rule for apps); a leading `_` marks a deliberately unused name; tests may use
+  `any`, `@ts-ignore` and module-level counters. `no-explicit-any` and the React Compiler rules
+  (`react-hooks/refs`, `globals`, `immutability`, `set-state-in-effect`) are warnings for now: 59
+  remain in library code. The 17 errors left were fixed, among them 13 unused imports and
+  variables in tests.
+- **CI installs with `npm ci` on Node 24.** `npm ci` failed on Node 20's npm 10, which resolves this
+  lockfile's peer dependencies differently; npm 11 and 12 accept it unchanged. Node 20 is past its
+  end of life.
+- `recycle_bin/` deleted (7 files, unused since August).
+
 ## [7.7.2] — 2026-10-05
 
 Panels re-render only when something about them changes. Before, focusing one panel or moving a

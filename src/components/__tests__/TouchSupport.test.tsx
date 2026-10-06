@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
-import { WindowManagerProvider, useWindowManagerState, useWindowManagerActions } from '../WindowManagerContext';
+import { WindowManagerProvider } from '../WindowManagerContext';
 import { WorkspaceClient } from '../../WorkspaceClient';
 import WindowManager from '../WindowManager';
 import { PanelProvider } from '../PanelProviderContext';
@@ -406,8 +406,6 @@ describe('T6: Global focus uses pointerdown', () => {
     });
 
     act(() => { client.openPanel('panel1', 'map'); });
-
-    const panel = container.querySelector('.rdd-workspace-panel') as HTMLElement | null;
 
     expect(() => {
       act(() => {
