@@ -73,6 +73,9 @@ What to expect:
   Keep what must survive outside it (a store, `props`, `useSaveState`).
 - **Its tab, title, dirty flag and lifecycle continue.** Hiding is not closing: `onClose` is not
   called; it is called once, when the panel is really closed.
+- **A guard it registered with `useBeforeClose` is not active while it is unmounted**, since the
+  guard goes with the component. Its dirty flag lives in the workspace and still is, so closing a
+  hidden dirty panel still asks first.
 - **The taskbar shows a placeholder** instead of a live preview while it is minimized.
 - **While it is unmounted, `saveLayout()` saves its open-time `props`**, since there is no component
   to report state through `useSaveState`.

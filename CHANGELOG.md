@@ -10,6 +10,21 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+Found while porting 7.8.0 to vdd. No API or behaviour change.
+
+### Docs
+
+- **`keepAlive: false`:** a guard the panel registered with `useBeforeClose` is not active while the
+  panel is unmounted (it goes with the component); its dirty flag still is, so closing a hidden
+  dirty panel still asks first. Now said in the Panel Registry guide and the option's TSDoc.
+
+### Tests
+
+- `ReleaseA.test.tsx`: empty groups inside a split keep the built-in message; only the root group
+  shows the `emptyWorkspace` view. 7.8.0 behaved this way, but no test pinned it. A redundant
+  root-only check in `WorkspaceGrid` was removed: nested grids never receive the prop, which is
+  what the new test now proves.
+
 ## [7.8.0] — 2026-10-06
 
 More control over how the desktop looks and where panels open, all opt-in: without the new options,

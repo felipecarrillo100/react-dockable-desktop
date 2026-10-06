@@ -51,6 +51,24 @@ describe('emptyWorkspace', () => {
     expect($('.rdd-empty-workspace')).toBeNull();
   });
 
+  it('empty groups inside a split keep the built-in message: only the root group shows the view', () => {
+    // A layout that starts as a split of two empty groups: neither is the root group.
+    const split = JSON.stringify({
+      version: 2,
+      gridRoot: { type: 'branch', orientation: 'horizontal', sizes: [0.5, 0.5], children: [
+        { type: 'leaf', id: 'L', panels: [], activePanelId: null, keepOnEmpty: true },
+        { type: 'leaf', id: 'R', panels: [], activePanelId: null, keepOnEmpty: true }] },
+      floating: [], minimized: [], panels: {},
+    });
+    const ws = createWorkspace({ panels: { plain: { component: Plain } }, initialState: split });
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => { root!.render(<DockableDesktopProvider workspace={ws}><RddDesktop emptyWorkspace={<p data-welcome />} /></DockableDesktopProvider>); });
+    expect(container.querySelectorAll('.rdd-empty-leaf-placeholder').length).toBe(2);
+    expect($('[data-welcome]')).toBeNull();
+  });
+
   it('a panel floating over an empty grid can still be docked into it', () => {
     const ws = mount({ emptyWorkspace: <p data-welcome /> });
     act(() => { ws.openPanel('a', 'plain', { initialTarget: 'floating' }); });

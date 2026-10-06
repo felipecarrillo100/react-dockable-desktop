@@ -41,7 +41,8 @@ export interface PanelRegistryEntry {
      * `false` unmounts the panel's component while it is hidden (an unselected tab, or minimized)
      * and mounts it afresh when it is shown, to free what a heavy, rarely shown panel holds. Its
      * own state is lost each time; its tab, title and lifecycle continue (`onClose` is not called),
-     * and the taskbar shows a placeholder instead of a live preview. While it is unmounted,
+     * and the taskbar shows a placeholder instead of a live preview. While it is unmounted, a
+     * guard it registered with `useBeforeClose` is not active (its dirty flag still is), and
      * `saveLayout()` saves its open-time props. @default true: panels stay mounted and keep their
      * state, as they always have. (7.8.0)
      */
