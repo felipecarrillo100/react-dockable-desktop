@@ -7,6 +7,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
 import { useIsClient } from '../utils/useIsClient';
+import type { TabContentProps } from '../types';
 import { forgetPanelDom } from './domPreservation';
 import { usePanelHost } from './workspace/panelHost';
 import { claimDocumentMirror, releaseDocumentMirror } from '../utils/documentMirror';
@@ -59,6 +60,13 @@ export interface RddDesktopProps {
    * floating window can still be docked into it. Floating windows still show over it. (7.8.0)
    */
   emptyWorkspace?: React.ReactNode;
+  /**
+   * Your own content for each tab in the grid: an icon, the title, a badge, a status dot (7.10.0).
+   * It replaces the built-in icon, title and dirty marker; the tab itself (dragging, keyboard,
+   * accessibility, its context menu, header actions and close button) stays the library's.
+   * Called with the tab's `TabContentProps`; branch on `component` for a per-type look.
+   */
+  renderTabContent?: (tab: TabContentProps) => React.ReactNode;
 }
 
 /**
@@ -79,7 +87,7 @@ export interface RddDesktopProps {
  * </DockableDesktopProvider>
  * ```
  */
-export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', animations = true, emptyWorkspace }) => {
+export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', animations = true, emptyWorkspace, renderTabContent }) => {
   // The context menu comes from <DockableDesktopProvider contextMenuAdapter={…}>. This built-in
   // fallback only renders when no provider supplies one (the library's own tests).
   const contextMenuAdapter: ContextMenuAdapter = DefaultContextMenuAdapter;
@@ -411,6 +419,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
               defaultPanelIcon={defaultPanelIcon}
               onRequestClosePanel={handleRequestClose}
               emptyWorkspace={emptyWorkspace}
+              renderTabContent={renderTabContent}
             />
           ) : (
             <div className="rdd-empty-workspace-grid">

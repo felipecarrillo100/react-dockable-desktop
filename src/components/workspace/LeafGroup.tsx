@@ -9,6 +9,7 @@ import type { LayoutLeafNode, DropPosition } from '../../types';
 import { tabDropSide, isMenuKey, menuEventAt, refocusAfterTabClose, domIdPart } from './helpers';
 import { DefaultGridIcon } from './icons';
 import { PreservedDOMWrapper } from './panelMount';
+import type { TabContentProps } from '../../types';
 
 export interface LeafGroupProps {
   leaf: LayoutLeafNode;
@@ -21,10 +22,12 @@ export interface LeafGroupProps {
   defaultPanelIcon?: React.ReactNode;
   /** Set on the root group only: shown in place of the built-in message while it has no panels. */
   emptyWorkspace?: React.ReactNode;
+  /** The app's tab content (7.10.0). */
+  renderTabContent?: (tab: TabContentProps) => React.ReactNode;
   onRequestClosePanel: (id: string) => Promise<void> | void;
 }
 
-export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace }) => {
+export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace, renderTabContent }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { openPanel, closeLeafGroup, setActivePanel, isDropAllowed } = useWindowManagerActionsInternal();
@@ -210,11 +213,23 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
                 <span className="rdd-text-truncate rdd-workspace-tab-title">
-                  <span className="rdd-workspace-tab-icon">{panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon)}</span>
-                  <span>
-                    {formatLabel(panel.title, formatMessage)}
-                    {panel.dirty ? ' *' : ''}
-                  </span>
+                  {(() => {
+                    const icon = panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon);
+                    const title = formatLabel(panel.title, formatMessage);
+                    // The app's content replaces the icon, title and marker; the tab stays ours (7.10.0).
+                    if (renderTabContent) {
+                      return renderTabContent({ panelId: id, component: panel.component, title, icon, dirty: panel.dirty === true, selected: isSelected, focused: isGloballyActive });
+                    }
+                    return (
+                      <>
+                        <span className="rdd-workspace-tab-icon">{icon}</span>
+                        <span>
+                          {title}
+                          {panel.dirty ? ' *' : ''}
+                        </span>
+                      </>
+                    );
+                  })()}
                 </span>
                 {options?.renderHeaderActions && (
                   <span

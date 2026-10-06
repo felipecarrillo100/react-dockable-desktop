@@ -17,7 +17,7 @@ export { defaultPredefinedMessages } from './predefinedMessages';
 export type { DirtyStateOptions };
 
 // Moved in 7.6.1; re-exported so every existing import of this module keeps working.
-export type { MessageDescriptor, MessageFormatter, SplitOrientation, SplitDirection, DropPosition, DropTarget, PanelDrop, PanelDropTarget, LayoutGridNode, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, WorkspaceActions, InternalWindowActions, HostClasses, SerializedLayout, WindowManagerProviderProps, WorkspaceCoreConfig, WorkspaceCore } from '../types';
+export type { MessageDescriptor, MessageFormatter, SplitOrientation, SplitDirection, DropPosition, DropTarget, PanelDrop, PanelDropTarget, TabContentProps, LayoutGridNode, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, WorkspaceActions, InternalWindowActions, HostClasses, SerializedLayout, WindowManagerProviderProps, WorkspaceCoreConfig, WorkspaceCore } from '../types';
 export { defaultFormatMessage, formatLabel } from '../core/messages';
 export { createWorkspaceCore } from '../core/workspaceCore';
 
@@ -43,7 +43,7 @@ const RegistryContext = createContext<PanelRegistry>(globalPanelRegistry);
 
 /**
  * React hook to read the scoped {@link PanelRegistry} for the current provider.
- * When the provider was given a workspace from {@link createWorkspace}, this returns that workspace's
+ * When the provider was given a workspace from `createWorkspace()`, this returns that workspace's
  * private registry. Otherwise it returns the global `globalPanelRegistry` singleton.
  *
  * @group Hooks

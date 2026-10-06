@@ -10,6 +10,28 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.10.0] — 2026-10-07
+
+Your own tab content, and an opt-in typed panel registry. Both opt-in: without them nothing changes.
+
+### Added
+
+- **`renderTabContent` on `<RddDesktop>`: your own tab content.** `renderTabContent={(tab) => …}`
+  replaces what's inside every tab in the grid: the icon, the title and the dirty marker. It receives
+  a `TabContentProps`: `{ panelId, component, title, icon, dirty, selected, focused }`, with `title`
+  already formatted and `icon` the one the built-in content shows, so the built-in look is one line
+  to start from. Branch on `component` for a per-type look. The tab itself stays the library's:
+  dragging, keyboard navigation, `role="tab"`, its context menu, state attributes and classes, the
+  header actions and the close button. Floating-window title bars and the taskbar are unchanged.
+  New type: `TabContentProps`.
+- **`definePanels()`: a typed panel registry, opt-in.** Wrap the `panels` map in `definePanels({…})`
+  and the workspace `createWorkspace` returns has a typed `openPanel`: only registered names are
+  accepted, and `props` is checked against that panel's component (without `panelId`). It returns its
+  argument unchanged; the typing is compile-time only. With typed events too, pass both:
+  `createWorkspace<typeof panels, AppEvents>({ panels })`. `useWorkspace()` stays untyped. A plain map
+  keeps its types exactly, so existing code is unaffected. New types: `TypedWorkspace`, `PanelMap`,
+  `PanelPropsOf`; `createWorkspace` gains an overload for marked maps.
+
 ## [7.9.0] — 2026-10-06
 
 Control over where users can move panels: per-panel-type rules and an app-wide veto, all opt-in.
@@ -1169,7 +1191,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.9.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.0...HEAD
+[7.10.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.9.0...v7.10.0
 [7.9.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.8.0...v7.9.0
 [7.8.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.4...v7.8.0
 [7.7.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.3...v7.7.4

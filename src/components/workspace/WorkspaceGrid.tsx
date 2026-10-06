@@ -8,6 +8,7 @@ import { useWindowManagerActions } from '../WindowManagerContext';
 import type { LayoutNode, DropPosition } from '../../types';
 import { startPointerDrag } from '../dragResize';
 import { LeafGroup } from './LeafGroup';
+import type { TabContentProps } from '../../types';
 
 export interface WorkspaceGridProps {
   node: LayoutNode;
@@ -21,14 +22,16 @@ export interface WorkspaceGridProps {
   defaultPanelIcon?: React.ReactNode;
   /** The app's empty-workspace view. Only the root grid receives it: nested grids are rendered without it. */
   emptyWorkspace?: React.ReactNode;
+  /** The app's tab content, for every group (7.10.0). */
+  renderTabContent?: (tab: TabContentProps) => React.ReactNode;
   onRequestClosePanel: (id: string) => Promise<void> | void;
 }
 
-export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace }) => {
+export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace, renderTabContent }) => {
   const { updateSplitSizes } = useWindowManagerActions();
 
   if (node.type === 'leaf') {
-    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} emptyWorkspace={emptyWorkspace} />;
+    return <LeafGroup leaf={node} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} emptyWorkspace={emptyWorkspace} renderTabContent={renderTabContent} />;
   }
 
   const isRow = node.orientation === 'horizontal';
@@ -74,7 +77,7 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({ node, path, onTabR
         return (
           <React.Fragment key={idx}>
             <div className="rdd-split-child" style={{ flexGrow: node.sizes[idx], flexBasis: `${size}%` }}>
-              <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} />
+              <WorkspaceGrid node={child} path={[...path, idx]} onTabRightClick={onTabRightClick} activeDropZone={activeDropZone} onHoverDropZone={onHoverDropZone} onTabDragStart={onTabDragStart} hoveredTab={hoveredTab} onTabHover={onTabHover} defaultPanelIcon={defaultPanelIcon} onRequestClosePanel={onRequestClosePanel} renderTabContent={renderTabContent} />
             </div>
             {idx < node.children.length - 1 && (
               <div
