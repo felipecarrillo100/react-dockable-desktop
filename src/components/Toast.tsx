@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { useIsClient } from '../utils/useIsClient';
 import { createPortal } from 'react-dom';
 import { formatLabel, useFormatMessage, usePredefinedMessages, useOptionalWindowManagerState } from './WindowManagerContext';
+import { useLatestRef } from '../utils/useLatestRef';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -466,13 +467,12 @@ export function ToastContainer({
   const mounted = useIsClient();
   const closeLabel = formatLabel(messages.closeNotification, formatMessage);
   const queueRef  = useRef<Array<{ id: string; message: React.ReactNode; rawOpts: ToastOptions & { id: string } }>>([]);
-  const toastsRef = useRef<ActiveToast[]>(toasts);
-  toastsRef.current = toasts;
+  const toastsRef = useLatestRef<ActiveToast[]>(toasts);
 
   const handleDismiss = useCallback((id: string) => {
     setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
     toastsRef.current.find(t => t.id === id)?.options.onClose?.();
-  }, []);
+  }, [toastsRef]);
 
   const handleExited = useCallback((id: string) => {
     // Shift outside the updater (once) so the updater is pure and safe for StrictMode
@@ -540,7 +540,7 @@ export function ToastContainer({
 
     emitter.subscribe(handle);
     return () => emitter.unsubscribe(handle);
-  }, [adapter, maxVisible, defaultDuration, defaultClosable, handleDismiss]);
+  }, [adapter, maxVisible, defaultDuration, defaultClosable, handleDismiss, toastsRef]);
 
   // Subscribe to emitter (adapter path)
   useEffect(() => {

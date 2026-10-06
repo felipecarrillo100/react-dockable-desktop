@@ -7,6 +7,7 @@ import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, 
 import ConfirmationForm from '../forms/ConfirmationForm';
 import { useEscapeLayer } from '../utils/escapeStack';
 import { useContainerRect, type ContainerRect } from '../hooks/useContainerRect';
+import { useLatestRef } from '../utils/useLatestRef';
 
 /**
  * Props for the internal {@link SidePanelRendererItem} component.
@@ -38,8 +39,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
   const panelOptions = options as SidePanelOptions;
   const [icon, setIconState] = useState<React.ReactNode>(panelOptions.icon || null);
 
-  const optionsRef = useRef(panelOptions);
-  optionsRef.current = panelOptions;
+  const optionsRef = useLatestRef(panelOptions);
 
   const baseTitle = formatLabel(panelOptions.title, formatMessage);
 
@@ -92,7 +92,7 @@ const SidePanelRendererItem: React.FC<SidePanelRendererItemProps> = ({ panel, po
   }, [id, canClose, registerCloseHandler, unregisterCloseHandler]);
 
   const handleSetDirty = useCallback((dirty: boolean, options?: DirtyStateOptions) => setDirty(id, dirty, options), [setDirty, id]);
-  const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id]);
+  const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id, optionsRef]);
   const handleSetIcon = useCallback((newIcon: React.ReactNode) => setIconState(newIcon), []);
   const handleOnCloseRequested = useCallback((handler: () => boolean | Promise<boolean>) => {
     closeHandlerRef.current = handler;

@@ -6,6 +6,7 @@ import type { DirtyStateOptions } from './dirtyOptions';
 import { useFormatMessage, formatLabel, useStyleClasses, usePredefinedMessages, useWindowManagerState } from './WindowManagerContext';
 import ConfirmationForm from '../forms/ConfirmationForm';
 import { useEscapeLayer } from '../utils/escapeStack';
+import { useLatestRef } from '../utils/useLatestRef';
 
 /**
  * Interface representing props for the internal {@link ModalRenderer} component.
@@ -35,8 +36,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
 
   const [icon, setIconState] = useState<React.ReactNode>(modalOptions.icon || null);
 
-  const optionsRef = useRef(modalOptions);
-  optionsRef.current = modalOptions;
+  const optionsRef = useLatestRef(modalOptions);
 
   const baseTitle = formatLabel(modalOptions.title, formatMessage);
 
@@ -77,7 +77,7 @@ const ModalRenderer: React.FC<ModalRendererProps> = ({ modal, index }) => {
   }, [close, openModal, id, dirty, dirtyOptions, baseTitle, predefinedMessages]);
 
   const handleSetDirty = useCallback((dirty: boolean, options?: DirtyStateOptions) => setDirty(id, dirty, options), [setDirty, id]);
-  const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id]);
+  const handleSetTitle = useCallback((title: PanelTitle) => updateInstance(id, { options: { ...optionsRef.current, title } }), [updateInstance, id, optionsRef]);
   const handleSetIcon = useCallback((newIcon: React.ReactNode) => setIconState(newIcon), []);
   const handleOnCloseRequested = useCallback((handler: () => boolean | Promise<boolean>) => {
     closeHandlerRef.current = handler;

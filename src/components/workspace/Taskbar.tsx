@@ -14,7 +14,7 @@ import { PreviewDOMWrapper } from './panelMount';
 import type { TaskbarVisibility } from '../WindowManager';
 
 /** The minimized panel whose preview is showing, and where its taskbar item is. */
-export type HoveredMinimized = { id: string; rect: DOMRect; title: string | any; component: string; fromTouch?: boolean };
+export type HoveredMinimized = { id: string; rect: DOMRect; title: WorkspaceState['minimized'][number]['title']; component: string; fromTouch?: boolean };
 
 export interface TaskbarProps extends Pick<InternalWindowActions, 'restorePanel'> {
   state: WorkspaceState;

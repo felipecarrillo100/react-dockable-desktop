@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useMemo, useEffect, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useFormContainer } from './FormContainerContext';
 import { globalPanelRegistry } from './PanelRegistry';
 import { createPanelHost, PanelHostContext, type PanelHost } from './workspace/panelHost';
@@ -11,6 +11,7 @@ import type { ContextMenuItem } from './ContextMenu';
 import type { MessageDescriptor, MessageFormatter, WorkspaceState, WorkspaceActions, InternalWindowActions, HostClasses, WindowManagerProviderProps, WorkspaceCore } from '../types';
 import { defaultFormatMessage } from '../core/messages';
 import { createWorkspaceCore } from '../core/workspaceCore';
+import { useLatestRef } from '../utils/useLatestRef';
 export type { MessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 export type { DirtyStateOptions };
@@ -315,11 +316,11 @@ export const usePanelId = (): string => useFormContainer().instanceId;
 export function usePanelContextMenu(items: ContextMenuItem[]): void {
   const ctx = useContext(WindowActionsContext);
   const panelId = usePanelId();
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const register = ctx?.registerPanelContextMenu;
+  const itemsRef = useLatestRef(items);
 
   useEffect(() => {
-    if (!ctx?.registerPanelContextMenu || !panelId) return;
-    return ctx.registerPanelContextMenu(panelId, () => itemsRef.current);
-  }, [panelId, ctx?.registerPanelContextMenu]);
+    if (!register || !panelId) return;
+    return register(panelId, () => itemsRef.current);
+  }, [panelId, register, itemsRef]);
 }

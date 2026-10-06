@@ -5,9 +5,9 @@
 
 // Event Bus class for pub-sub communication between panels
 export class PanelEventBus {
-  private listeners: Record<string, ((data: any) => void)[]> = {};
+  private listeners: Record<string, ((data: unknown) => void)[]> = {};
 
-  subscribe(event: string, callback: (data: any) => void): () => void {
+  subscribe(event: string, callback: (data: unknown) => void): () => void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
@@ -17,7 +17,7 @@ export class PanelEventBus {
     };
   }
 
-  publish(event: string, data: any): void {
+  publish(event: string, data: unknown): void {
     if (this.listeners[event]) {
       // One subscriber that throws must not stop delivery to the rest (7.4.1), nor the action
       // that published — loadLayout, a close — halfway through.

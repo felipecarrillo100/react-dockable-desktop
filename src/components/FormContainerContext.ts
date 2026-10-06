@@ -1,5 +1,6 @@
 import { createContext, useContext, useSyncExternalStore, type Context, type Provider } from 'react';
 import type { DirtyStateOptions } from './dirtyOptions';
+import type { MessageDescriptor } from '../types';
 
 /**
  * Options used when requesting to close a container.
@@ -41,7 +42,7 @@ export interface FormContainerContract {
    */
   registerStateProvider?: (getState: () => unknown) => (() => void);
   /** Change the display title of the containing tab or window dynamically. */
-  setTitle: (title: string | { id: string; defaultMessage: string; values?: Record<string, any> } | (() => string)) => void;
+  setTitle: (title: string | MessageDescriptor | (() => string)) => void;
   /** Change the tab or window icon dynamically. */
   setIcon?: (icon: React.ReactNode) => void;
   /** The type of container the panel is mounted in. Reflects the state at mount time; subscribe to {@link onContainerTypeChange} for live updates. */

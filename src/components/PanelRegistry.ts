@@ -6,6 +6,7 @@ import type { FloatAnchor } from '../types';
  */
 export interface PanelRegistryEntry {
   /** The React component type registered. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public: a registry holds components with different props; unknown would reject them
   Component: ComponentType<any>;
   /** Default metadata settings configuration applied on instantiation. */
   defaultOptions?: {
@@ -52,7 +53,7 @@ export class PanelRegistry {
     defaultOptions?: PanelRegistryEntry['defaultOptions']
   ): void {
     this.registry.set(id, {
-      Component: Component as ComponentType<any>,
+      Component: Component as PanelRegistryEntry['Component'],
       defaultOptions
     });
   }

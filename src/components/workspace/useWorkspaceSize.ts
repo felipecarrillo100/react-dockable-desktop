@@ -85,7 +85,7 @@ export function useWorkspaceSize(workspaceRef: React.RefObject<HTMLDivElement | 
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [workspaceRef]);
 
   return workspaceSize;
 }

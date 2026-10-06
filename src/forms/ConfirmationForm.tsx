@@ -2,14 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import { useFormContainer } from '../components/FormContainerContext';
 import { useFormatMessage, usePredefinedMessages } from '../components/WindowManagerContext';
 import { DialogIcon } from './dialogIcons';
+import { useLatestRef } from '../utils/useLatestRef';
 
 /**
  * Props for the {@link RddConfirm} component.
  */
 export interface RddConfirmProps {
   /** Optional custom title text or localizable descriptor for the dialog container. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public input; narrowed with the title type in 8.0.0
   title?: string | { id: string; defaultMessage?: string; values?: any } | (() => string);
   /** Main message text or localizable descriptor to display. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public input; narrowed with the title type in 8.0.0
   message: string | { id: string; defaultMessage?: string; values?: any };
   /** Optional auxiliary top alert notification text. */
   alert?: string;
@@ -56,17 +59,15 @@ export const ConfirmationForm: React.FC<RddConfirmProps> = ({
   // Settle once. The container reports every close, so Escape, the backdrop, the × and a close by
   // code settle as "not confirmed"; after a button the guard swallows that report.
   const settledRef = useRef(false);
-  const onSettledRef = useRef(onSettled);
-  onSettledRef.current = onSettled;
+  const onSettledRef = useLatestRef(onSettled);
   const settle = (ok: boolean) => {
     if (settledRef.current) return;
     settledRef.current = true;
     onSettledRef.current?.(ok);
   };
-  const settleRef = useRef(settle);
-  settleRef.current = settle;
+  const settleRef = useLatestRef(settle);
 
-  useEffect(() => onClose?.(() => settleRef.current(false)), [onClose]);
+  useEffect(() => onClose?.(() => settleRef.current(false)), [onClose, settleRef]);
 
   useEffect(() => {
     if (title) {
