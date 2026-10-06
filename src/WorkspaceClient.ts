@@ -43,6 +43,7 @@ export interface BuiltInEvents {
 
 /** Per-panel definition supplied to `createWorkspace({ panels })`. */
 export interface PanelDefinition {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public: a registry holds components with different props; unknown would reject them
   component: ComponentType<any>;
   defaultOptions?: PanelRegistryEntry['defaultOptions'];
 }

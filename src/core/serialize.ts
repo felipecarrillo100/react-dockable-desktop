@@ -20,24 +20,30 @@ export const DEFAULT_FLOAT_RECT = { x: 300, y: 150, width: 450, height: 350 } as
  * style property" at every start-up — so each is replaced by the default a new float gets, and the
  * repair is reported. A string (a CSS length) is kept as it is.
  */
-export function finiteGeometry(fw: any, repairs: string[]): any {
+export function finiteGeometry<T extends Record<string, unknown>>(fw: T, repairs: string[]): T {
   let out = fw;
   for (const k of ['x', 'y', 'width', 'height'] as const) {
     const v = fw[k];
     if (typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v))) continue;
-    out = { ...out, [k]: DEFAULT_FLOAT_RECT[k] };
+    out = { ...out, [k]: DEFAULT_FLOAT_RECT[k] } as T;
     repairs.push(`floating window "${fw.id}" had ${k} = ${String(v)}`);
   }
   return out;
 }
 
-export function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
+/** A saved window as read from storage, before repair: possibly a pre-anchor layout (`stickyRight`/`stickyBottom`). */
+type RawWindow = Record<string, unknown>;
+
+export function parseLayoutPayload(input: unknown): ParsedLayoutPayload | null {
+  const parsed = input as Partial<Record<'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId', unknown>> | null;
   if (!parsed || !parsed.gridRoot || !Array.isArray(parsed.floating) || !Array.isArray(parsed.minimized) || !parsed.panels) {
     return null;
   }
   // const version = typeof parsed.version === 'number' ? parsed.version : 0; // reserved for future migrations
   const geometryRepairs: string[] = [];
-  const floating = (parsed.floating as any[]).map((fw: any) => finiteGeometry(fw, geometryRepairs)).map((fw: any) => {
+  // Past the shape check the payload is trusted, as before; each window only gets its geometry
+  // repaired and a pre-anchor layout converted.
+  const floating = (parsed.floating as RawWindow[]).map(fw => finiteGeometry(fw, geometryRepairs)).map(fw => {
     if ('stickyRight' in fw || 'stickyBottom' in fw) {
       const anchor: FloatAnchor | null = fw.stickyRight && fw.stickyBottom ? 'bottom-right'
         : fw.stickyRight ? 'top-right'
@@ -47,10 +53,11 @@ export function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
       return { ...rest, anchor };
     }
     return fw;
-  });
+  }) as unknown as SerializedLayout['floating'];
+  const panels = parsed.panels as Record<string, PanelInfo>;
   // Repair before anything reads the tree: activePanelId resolution below asks which panels
   // are visible, and a duplicated or orphaned panel would make that answer meaningless.
-  const repaired = repairLayoutTree(parsed.gridRoot as LayoutNode, parsed.panels as Record<string, PanelInfo>);
+  const repaired = repairLayoutTree(parsed.gridRoot as LayoutNode, panels);
   if (repaired.repairs.length > 0 && process.env.NODE_ENV === 'development') {
     console.warn(
       `[react-dockable-desktop] Repaired the saved layout on load: ${repaired.repairs.join('; ')}. ` +
@@ -67,7 +74,7 @@ export function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
     );
   }
   const gridRoot = repaired.gridRoot;
-  const scope: ActiveTargetScope = { gridRoot, floating, panels: parsed.panels };
+  const scope: ActiveTargetScope = { gridRoot, floating, panels };
 
   // A persisted value wins when it still names a visible panel; anything stale (the panel was
   // closed, minimized, or pruned from this snapshot) falls back to deriving from the grid, which
@@ -88,7 +95,7 @@ export function parseLayoutPayload(parsed: any): ParsedLayoutPayload | null {
   }
   if (activePanelId === null) activePanelId = deriveActivePanelId(scope);
 
-  return { gridRoot, floating, minimized: parsed.minimized, panels: parsed.panels, activePanelId };
+  return { gridRoot, floating, minimized: parsed.minimized as SerializedLayout['minimized'], panels, activePanelId };
 }
 
 export function parseInitialState(json: string | null): Pick<WorkspaceState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {

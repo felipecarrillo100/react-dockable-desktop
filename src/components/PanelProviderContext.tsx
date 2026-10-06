@@ -3,6 +3,7 @@ import type { ComponentType, ReactNode } from 'react';
 import type { DirtyStateOptions } from './dirtyOptions';
 import { usePredefinedMessages } from './WindowManagerContext';
 import { sameTitle, sameDirtyOptions } from './sameUpdate';
+import { useLatestRef } from '../utils/useLatestRef';
 export type { DirtyStateOptions };
 
 /** Unique string identifier for panel/modal instances. */
@@ -69,8 +70,10 @@ export interface OverlayInstance {
   /** Unique ID generated for this instance. */
   id: OverlayId;
   /** React Component to mount inside the panel. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public: overlays of every component share this type; unknown would reject them
   Component: ComponentType<any>;
   /** Property props passed to the Component. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public: read back by callers through get()/stack
   props: Record<string, any>;
   /** The target rendering layout zone. */
   containerType: 'left-panel' | 'right-panel' | 'modal';
@@ -162,8 +165,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // follows the app's formatter and `predefinedMessages` like every other label.
   const defaultModalTitle = usePredefinedMessages().modalTitle;
 
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const stateRef = useLatestRef(state);
 
   // Close listeners per instance. Fired from the actions that remove an instance, never from an
   // unmount, so StrictMode's simulated unmount can't fire them.
@@ -211,8 +213,8 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const id = generateId();
       const instance: OverlayInstance = {
         id,
-        Component: Component as ComponentType<any>,
-        props: props as Record<string, any>,
+        Component: Component as OverlayInstance['Component'],
+        props: props as OverlayInstance['props'],
         containerType: 'left-panel',
         options,
       };
@@ -220,7 +222,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       notifyClosed([currentPanel?.id]);
       return id;
     },
-    [notifyClosed]
+    [notifyClosed, stateRef]
   );
 
   const openRightPanel = useCallback(
@@ -241,8 +243,8 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const id = generateId();
       const instance: OverlayInstance = {
         id,
-        Component: Component as ComponentType<any>,
-        props: props as Record<string, any>,
+        Component: Component as OverlayInstance['Component'],
+        props: props as OverlayInstance['props'],
         containerType: 'right-panel',
         options,
       };
@@ -250,7 +252,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       notifyClosed([currentPanel?.id]);
       return id;
     },
-    [notifyClosed]
+    [notifyClosed, stateRef]
   );
 
   const openModal = useCallback(
@@ -260,7 +262,7 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       options: ModalOptions = {}
     ): OverlayId => {
       const id = generateId();
-      const formTitle = (props as any).title;
+      const formTitle = (props as { title?: PanelTitle }).title;
       
       const modalOptions: ModalOptions = {
         ...options,
@@ -269,8 +271,8 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       const instance: OverlayInstance = {
         id,
-        Component: Component as ComponentType<any>,
-        props: props as Record<string, any>,
+        Component: Component as OverlayInstance['Component'],
+        props: props as OverlayInstance['props'],
         containerType: 'modal',
         options: modalOptions,
       };
@@ -293,13 +295,13 @@ export const PanelProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const { leftPanel, rightPanel, modals } = stateRef.current;
     setState(initialState);
     notifyClosed([leftPanel?.id, rightPanel?.id, ...modals.map(m => m.id)]);
-  }, [notifyClosed]);
+  }, [notifyClosed, stateRef]);
 
   const closeAllModals = useCallback(() => {
     const { modals } = stateRef.current;
     setState(s => ({ ...s, modals: [] }));
     notifyClosed(modals.map(m => m.id));
-  }, [notifyClosed]);
+  }, [notifyClosed, stateRef]);
 
   const getInstance = useCallback(
     (id: OverlayId): OverlayInstance | undefined => {

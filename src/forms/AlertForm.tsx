@@ -2,14 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import { useFormContainer } from '../components/FormContainerContext';
 import { useFormatMessage, usePredefinedMessages } from '../components/WindowManagerContext';
 import { DialogIcon } from './dialogIcons';
+import { useLatestRef } from '../utils/useLatestRef';
 
 /**
  * Props for the {@link RddAlert} component.
  */
 export interface RddAlertProps {
   /** Optional custom title text or localizable descriptor for the dialog container. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public input; narrowed with the title type in 8.0.0
   title?: string | { id: string; defaultMessage?: string; values?: any } | (() => string);
   /** Main message text or localizable descriptor to display. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public input; narrowed with the title type in 8.0.0
   message: string | { id: string; defaultMessage?: string; values?: any };
   /** Picks the built-in icon and its colour. Defaults to `'info'`. */
   alertType?: 'info' | 'warning' | 'success' | 'danger';
@@ -19,6 +22,7 @@ export interface RddAlertProps {
    */
   icon?: React.ReactNode | null;
   /** Label of the button. Defaults to the `ok` predefined message. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public input; narrowed with the title type in 8.0.0
   okLabel?: string | { id: string; defaultMessage?: string; values?: any };
   /**
    * Fired exactly once, however the dialog ends: the OK button, Enter, Escape, the backdrop, the ×
@@ -45,17 +49,15 @@ export const AlertForm: React.FC<RddAlertProps> = ({
   const okButtonRef = useRef<HTMLButtonElement>(null);
 
   const settledRef = useRef(false);
-  const onSettledRef = useRef(onSettled);
-  onSettledRef.current = onSettled;
+  const onSettledRef = useLatestRef(onSettled);
   const settle = () => {
     if (settledRef.current) return;
     settledRef.current = true;
     onSettledRef.current?.();
   };
-  const settleRef = useRef(settle);
-  settleRef.current = settle;
+  const settleRef = useLatestRef(settle);
 
-  useEffect(() => onClose?.(() => settleRef.current()), [onClose]);
+  useEffect(() => onClose?.(() => settleRef.current()), [onClose, settleRef]);
 
   useEffect(() => {
     if (title) {

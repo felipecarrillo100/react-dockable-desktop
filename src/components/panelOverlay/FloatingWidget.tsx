@@ -2,7 +2,7 @@
  * @file FloatingWidget.tsx
  * @description A floating widget inside a panel: docked to a corner or free, stretchable, resizable.
  */
-import React, { useState, useContext, useRef, useLayoutEffect, useCallback, useEffect } from 'react';
+import React, { useState, useContext, useRef, useLayoutEffect, useInsertionEffect, useCallback, useEffect } from 'react';
 import { useOptionalWindowManagerState, formatLabel, useFormatMessage, usePredefinedMessages } from '../WindowManagerContext';
 import type { FloatAnchor } from '../WindowManagerContext';
 import type { PanelTitle } from '../PanelProviderContext';
@@ -14,6 +14,7 @@ import { PanelOverlayContext } from './context';
 import type { PanelOverlayCtx } from './context';
 import { stretchesInline, stretchesBlock, addAxis, releaseAxis, bucketsFor, withInlineHalf, withBlockHalf } from '../../core/stretch';
 import { getHoveredZone, MIN_W, MIN_H, DOCK_INSET, DOCK_GAP, SNAP_IN, SNAP_OUT } from '../../core/panelOverlayGeometry';
+import { useLatestRef } from '../../utils/useLatestRef';
 
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
@@ -138,22 +139,15 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   const windowRef = useRef<HTMLDivElement>(null);
 
   // Refs to avoid stale closures in pointer handlers
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
-  const freePosRef = useRef(freePos);
-  freePosRef.current = freePos;
-  const sizeRef = useRef(size);
-  sizeRef.current = size;
-  const stretchRef = useRef(stretch);
-  stretchRef.current = stretch;
-  const currentAnchorRef = useRef(currentAnchor);
-  currentAnchorRef.current = currentAnchor;
-  const onPlacementChangeRef = useRef(onPlacementChange);
-  onPlacementChangeRef.current = onPlacementChange;
+  const modeRef = useLatestRef(mode);
+  const freePosRef = useLatestRef(freePos);
+  const sizeRef = useLatestRef(size);
+  const stretchRef = useLatestRef(stretch);
+  const currentAnchorRef = useLatestRef(currentAnchor);
+  const onPlacementChangeRef = useLatestRef(onPlacementChange);
   /** Which axes would snap to stretched if the drag were released now — drives the visual cue. */
   const [snapArmed, setSnapArmed] = useState<{ inline: boolean; block: boolean }>({ inline: false, block: false });
-  const snapArmedRef = useRef(snapArmed);
-  snapArmedRef.current = snapArmed;
+  const snapArmedRef = useLatestRef(snapArmed);
   /** The block extent available to this widget depends on what it is stacked behind. */
   const stackOffsetRef = useRef(0);
 
@@ -166,7 +160,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     setCurrentAnchor(anchor);
     if (!isStretchControlled) setInternalStretch(next);
     onPlacementChangeRef.current?.({ anchor, stretch: next });
-  }, [isStretchControlled]);
+  }, [isStretchControlled, onPlacementChangeRef]);
 
   const dragState = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number; hasDragged: boolean } | null>(null);
 
@@ -488,6 +482,9 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   // ── Compute position style ─────────────────────────────────────────────────
   let windowStyle: React.CSSProperties;
 
+  // This render's stack offset while docked, for the drag handlers (see stackOffsetRef). Left
+  // null in free mode, where the ref keeps its last docked value, as before.
+  let dockedStackOffset: number | null = null;
   if (mode === 'docked' && ctx) {
     // Offset is the largest offset across every bucket this widget occupies, so a strip spanning
     // an edge clears whatever is stacked in *both* of that edge's corners.
@@ -507,7 +504,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       }
       stackOffset = Math.max(stackOffset, offset);
     }
-    stackOffsetRef.current = stackOffset;
+    dockedStackOffset = stackOffset;
 
     const band = dockedBand();
 
@@ -550,6 +547,9 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       zIndex: zOrder,
     };
   }
+  useInsertionEffect(() => {
+    if (dockedStackOffset !== null) stackOffsetRef.current = dockedStackOffset;
+  });
 
   // ── Which resize handles this window offers ────────────────────────────────
   // Free-floating: all eight, nothing is pinned.

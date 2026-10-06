@@ -580,6 +580,8 @@ export const Sidebar: React.ForwardRefExoticComponent<RddSidebarProps & React.Re
     // back to a different tab the user didn't choose.
     useEffect(() => {
       if (activeTabId != null && !allTabs.some(t => t.id === activeTabId)) {
+        // Through setActiveTabId on purpose: it also tells a controlling parent (onActiveTabChange).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveTabId(null);
       }
     }, [activeTabId, allTabs, setActiveTabId]);

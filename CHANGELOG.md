@@ -6,9 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Internal
+## [7.7.3] — 2026-10-06
 
-Nothing in the published package changes.
+Code-health release: the lint gate checks the library again, dead code is checked too, and the
+library is at zero ESLint warnings. No API change and no intended behaviour change; the published
+type declarations are byte-identical to 7.7.2.
+
+### Internal
 
 - **`npm run lint` checks something again.** It ran `tsc --noEmit` against a `tsconfig.json` that
   lists no files, so it passed whatever the code contained; that is how a 7.7.2 type error reached
@@ -30,6 +34,22 @@ Nothing in the published package changes.
   imports (`DockableDesktopProvider`, `PanelRegistry`, `Sidebar`; the named exports remain) and
   the unused `copyfiles` dev dependency, all removed. The published type declarations are
   byte-identical.
+- **ESLint: zero warnings, and warnings now fail the lint too** (`--max-warnings 0`).
+  `no-explicit-any` and the React Compiler rules are errors again. The published type
+  declarations are byte-identical.
+  - **`any`:** the internal ones got real types (the event bus, the layout parser, the taskbar
+    preview, overlay and registry casts). The public ones stay `any` with a reason beside each,
+    because `unknown` would break users' code: event payloads, `ComponentType<any>` in the panel
+    and overlay registries, overlay `props`, and the dialogs' message `values` (narrowed with the
+    title type in 8.0.0).
+  - **Refs written during render** (the "latest value" pattern, 16 places) now go through
+    `useLatestRef`, which updates the ref in an insertion effect. That runs before every layout
+    effect of the commit, so a child's effect never reads the previous value; a test pins it,
+    and fails with a layout effect. `panelMount` captures the initial container type with
+    `useState` instead of a ref read during render.
+  - **Four deliberate patterns** keep a disable comment that gives the reason: two effects that
+    must set state (the drawer closing when its tab disappears notifies a controlling parent),
+    an unmount cleanup that reads the pending timer, and the panel handle's `[id]` dependency.
 
 ## [7.7.2] — 2026-10-05
 
@@ -998,7 +1018,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.2...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.3...HEAD
+[7.7.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.2...v7.7.3
 [7.7.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.1...v7.7.2
 [7.7.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.0...v7.7.1
 [7.7.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.6.2...v7.7.0

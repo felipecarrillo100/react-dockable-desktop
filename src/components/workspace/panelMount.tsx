@@ -2,7 +2,7 @@
  * @file panelMount.tsx
  * @description Where panels live: the slots that place a panel's preserved DOM (in a tab, a window, a taskbar preview), its lifecycle events and form container. The DOM, sizes and lifecycle handlers themselves belong to the workspace's own panel host (`panelHost.ts`).
  */
-import React, { useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { restorePanelDom } from '../domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
@@ -246,7 +246,7 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
 
   // Capture the container type at mount so the static `containerType` field is
   // correct ('dockable-panel' or 'floating-window') rather than the default 'standalone'.
-  const initialContainerTypeRef = useRef<ContainerType>(derivedContainerType);
+  const [initialContainerType] = useState<ContainerType>(derivedContainerType);
 
   const contract = React.useMemo<FormContainerContract>(() => ({
     requestClose: (options) => requestClosePanel(panelId, options),
@@ -262,7 +262,7 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
     setTitle: (title) => updatePanelTitle(panelId, title),
     setIcon: (icon) => setPanelIcon(panelId, icon ?? null),
     instanceId: panelId,
-    containerType: initialContainerTypeRef.current,
+    containerType: initialContainerType,
     onClose: (handler) => {
       const reg = panelHost.getOrCreateLifecycle(panelId);
       reg.onClose.add(handler);
@@ -300,7 +300,7 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
       reg.onContainerTypeChange.add(handler);
       return () => reg.onContainerTypeChange.delete(handler);
     },
-  }), [panelId, panelHost, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel]);
+  }), [panelId, panelHost, initialContainerType, requestClosePanel, setPanelDirty, registerCloseGuard, unregisterCloseGuard, registerStateProvider, unregisterStateProvider, updatePanelTitle, setPanelIcon, minimizePanel]);
 
   return (
     <FormContainerProvider value={contract}>

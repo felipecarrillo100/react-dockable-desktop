@@ -21,7 +21,7 @@ import { DragGhost } from './workspace/DragGhost';
 import { WorkspaceGrid } from './workspace/WorkspaceGrid';
 import { WorkspaceZones } from './workspace/WorkspaceZones';
 import { FloatingWindows } from './workspace/FloatingWindows';
-import { Taskbar } from './workspace/Taskbar';
+import { Taskbar, type HoveredMinimized } from './workspace/Taskbar';
 import { useDragTargets } from './workspace/useDragTargets';
 import { createTabDrag } from './workspace/tabDrag';
 import { createWorkspaceMenus } from './workspace/workspaceMenus';
@@ -132,7 +132,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   const taskbarHoveredRef = useRef(false);
   const prevMinimizedLengthRef = useRef(state.minimized.length);
 
-  const [hoveredMinimized, setHoveredMinimized] = useState<{ id: string; rect: DOMRect; title: string | any; component: string; fromTouch?: boolean } | null>(null);
+  const [hoveredMinimized, setHoveredMinimized] = useState<HoveredMinimized | null>(null);
   const minimizedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const lastTaskbarPointerTypeRef = useRef<string>('mouse');
   const [internalContextMenuOpen, setInternalContextMenuOpen] = useState(false);
@@ -140,7 +140,9 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
 
   useEffect(() => {
     return () => {
+      // The timer pending at unmount is the one to clear, so the ref is read here on purpose.
       if (minimizedTooltipTimeoutRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         clearTimeout(minimizedTooltipTimeoutRef.current);
       }
     };
@@ -150,6 +152,9 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     if (hoveredMinimized) {
       const isStillMinimized = state.minimized.some(m => m.id === hoveredMinimized.id);
       if (!isStillMinimized) {
+        // Cleared rather than derived: a stale preview kept in state would come back, with its old
+        // position, if the same panel were minimized again.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setHoveredMinimized(null);
       }
     }
@@ -205,7 +210,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     return () => {
       window.removeEventListener('blur', handleWindowBlur);
     };
-  }, [state.draggedPanelId]);
+  }, [state.draggedPanelId, setDraggedPanelId, setActiveDropZone, setHoveredTab]);
 
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const workspaceSize = useWorkspaceSize(workspaceRef);

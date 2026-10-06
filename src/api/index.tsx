@@ -133,6 +133,8 @@ export function usePanel(): PanelHandle {
     setDirty: (dirty: boolean, options?: DirtyStateOptions) => cRef.current.setDirty(dirty, options),
     setTitle: (title: string | MessageDescriptor | (() => string)) => cRef.current.setTitle(title as Parameters<FormContainerContract['setTitle']>[0]),
     setIcon: (icon: React.ReactNode) => cRef.current.setIcon?.(icon),
+    // New functions when the panel changes, so an effect that depends on them re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [id]);
   return useMemo<PanelHandle>(() => ({
     id,

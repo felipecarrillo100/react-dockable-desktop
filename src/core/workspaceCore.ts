@@ -64,11 +64,11 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     floating.reduce((top, w) => (Number.isFinite(w.z) && w.z > top ? w.z : top), effectiveZIndexBase);
   const maxZRef = { current: topZ(state.floating) };
 
-  const subscribe = (event: string, callback: (data: any) => void) => {
+  const subscribe: InternalWindowActions['subscribe'] = (event, callback) => {
     return eventBusRef.current.subscribe(event, callback);
   };
 
-  const publish = (event: string, data: any) => {
+  const publish: InternalWindowActions['publish'] = (event, data) => {
     eventBusRef.current.publish(event, data);
   };
 

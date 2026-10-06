@@ -378,6 +378,7 @@ export interface WorkspaceActions {
    * @param event - Event name string.
    * @param data - Arbitrary payload passed to all subscribers.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public: subscribers read fields off the payload; typed events are opt-in
   publish: (event: string, data: any) => void;
   /**
    * Subscribes a callback to the inter-panel pub/sub event bus.
@@ -389,6 +390,7 @@ export interface WorkspaceActions {
    * useEffect(() => actions.subscribe('map:zoom', ({ level }) => setZoom(level)), []);
    * ```
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- public: subscribers read fields off the payload; typed events are opt-in
   subscribe: (event: string, callback: (data: any) => void) => () => void;
   /** @internal Stores reference to the active tab ID being dragged. */
   setDraggedPanelId: (id: string | null) => void;
