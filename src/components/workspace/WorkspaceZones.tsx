@@ -3,7 +3,7 @@
  * @description The drop targets shown while a panel is dragged: the workspace edges, the corner anchors, and the preview of an edge drop.
  */
 import React from 'react';
-import type { SplitDirection, FloatAnchor, WorkspaceState } from '../../types';
+import type { SplitDirection, FloatAnchor, WorkspaceState, PanelDropTarget } from '../../types';
 
 export interface WorkspaceZonesProps {
   state: WorkspaceState;
@@ -11,42 +11,52 @@ export interface WorkspaceZonesProps {
   activeCornerAnchor: FloatAnchor | null;
   setActiveEdgeDrop: (val: SplitDirection | null) => void;
   setActiveCornerAnchor: (val: FloatAnchor | null) => void;
+  /** Whether the dragged panel may go to a target; a forbidden one isn't offered (7.9.0). */
+  isDropAllowed: (panelId: string, to: PanelDropTarget) => boolean;
 }
 
-export const WorkspaceZones = ({ state, activeEdgeDrop, activeCornerAnchor, setActiveEdgeDrop, setActiveCornerAnchor }: WorkspaceZonesProps): React.ReactElement => (
+/** The side an edge drop applies: edges are drawn by screen side, and the move flips them under RTL. */
+const appliedSide = (side: SplitDirection, rtl: boolean): SplitDirection =>
+  rtl && (side === 'left' || side === 'right') ? (side === 'left' ? 'right' : 'left') : side;
+
+export const WorkspaceZones = ({ state, activeEdgeDrop, activeCornerAnchor, setActiveEdgeDrop, setActiveCornerAnchor, isDropAllowed }: WorkspaceZonesProps): React.ReactElement => {
+  const dragged = state.draggedPanelId;
+  const edge = (side: SplitDirection) => dragged !== null && isDropAllowed(dragged, { kind: 'edge', side: appliedSide(side, state.isRtl) });
+  const cornerOffered = (anchor: FloatAnchor) => dragged !== null && isDropAllowed(dragged, { kind: 'float', anchor });
+  return (
   <>
     {/* Workspace outer edge drop zone targets */}
     {state.draggedPanelId !== null && (
       <>
-        <div
+        {edge('left') && <div
           data-edge-trigger="left"
           className="rdd-workspace-edge-trigger rdd-edge-trigger-left"
           onPointerEnter={() => setActiveEdgeDrop('left')}
           onPointerLeave={() => setActiveEdgeDrop(null)}
-        />
-        <div
+        />}
+        {edge('right') && <div
           data-edge-trigger="right"
           className="rdd-workspace-edge-trigger rdd-edge-trigger-right"
           onPointerEnter={() => setActiveEdgeDrop('right')}
           onPointerLeave={() => setActiveEdgeDrop(null)}
-        />
-        <div
+        />}
+        {edge('top') && <div
           data-edge-trigger="top"
           className="rdd-workspace-edge-trigger rdd-edge-trigger-top"
           onPointerEnter={() => setActiveEdgeDrop('top')}
           onPointerLeave={() => setActiveEdgeDrop(null)}
-        />
-        <div
+        />}
+        {edge('bottom') && <div
           data-edge-trigger="bottom"
           className="rdd-workspace-edge-trigger rdd-edge-trigger-bottom"
           onPointerEnter={() => setActiveEdgeDrop('bottom')}
           onPointerLeave={() => setActiveEdgeDrop(null)}
-        />
+        />}
       </>
     )}
 
     {/* Corner anchor drop zones — appear during floating window drag */}
-    {state.draggedPanelId !== null && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as FloatAnchor[]).map(corner => (
+    {state.draggedPanelId !== null && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as FloatAnchor[]).filter(cornerOffered).map(corner => (
       <div
         key={corner}
         className={`rdd-corner-zone rdd-corner-zone--${corner}${activeCornerAnchor === corner ? ' rdd-corner-zone--hovered' : ''}`}
@@ -72,4 +82,5 @@ export const WorkspaceZones = ({ state, activeEdgeDrop, activeCornerAnchor, setA
       />
     )}
   </>
-);
+  );
+};

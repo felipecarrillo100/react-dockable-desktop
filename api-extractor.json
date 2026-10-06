@@ -19,7 +19,8 @@
   "apiReport": {
     "enabled": true,
     "reportFolder": "<projectFolder>/api/",
-    "reportTempFolder": "<projectFolder>/node_modules/.tmp/api-report/"
+    "reportTempFolder": "<projectFolder>/node_modules/.tmp/api-report/",
+    "includeForgottenExports": true
   },
   "docModel": { "enabled": false },
   "dtsRollup": { "enabled": false },

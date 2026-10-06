@@ -8,7 +8,7 @@ import type { DirtyStateOptions } from '../components/dirtyOptions';
 import type { ContextMenuItem, ShowContextMenuOptions } from '../components/ContextMenu';
 import { isSerializable } from '../components/serializable';
 import { sameTitle, sameDirtyOptions } from '../components/sameUpdate';
-import type { MessageDescriptor, SplitOrientation, SplitDirection, DropPosition, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, InternalWindowActions, SerializedLayout, WorkspaceCoreConfig, WorkspaceCore } from '../types';
+import type { PanelDropTarget, MessageDescriptor, SplitOrientation, SplitDirection, DropPosition, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, InternalWindowActions, SerializedLayout, WorkspaceCoreConfig, WorkspaceCore } from '../types';
 import { PanelEventBus } from './eventBus';
 import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, resolveActivePanelId, removePanelFromTree, addPanelToLeaf, isLoneOccupant, hasLeaf, findFirstLeafId, findLeafIdOf, splitLeafInTree } from './layoutTree';
 import { DEFAULT_FLOAT_RECT, parseLayoutPayload, parseInitialState } from './serialize';
@@ -950,6 +950,27 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     }));
   };
 
+  // Docking rules (7.9.0): what the *user* may do. The type's own canFloat / canDock first, then
+  // the app's canDrop. Never consulted by the app's own API calls.
+  const isDropAllowed = (panelId: string, to: PanelDropTarget): boolean => {
+    const panel = stateRef.current.panels[panelId];
+    if (!panel) return false;
+    const options = registry.get(panel.component)?.defaultOptions;
+    if (to.kind === 'float') {
+      // Blocks *becoming* floating; a window that already floats may still change corner.
+      if (options?.canFloat === false && panel.state !== 'floating') return false;
+    } else if (options?.canDock === false) {
+      return false;
+    }
+    if (!config.canDrop) return true;
+    try {
+      return config.canDrop({ panelId, component: panel.component, to }) !== false;
+    } catch (e) {
+      console.error('[react-dockable-desktop] canDrop threw; the move is allowed:', e);
+      return true;
+    }
+  };
+
   const saveLayout = () => {
     const currentPanels = stateRef.current.panels;
     const excludedIds: string[] = [];
@@ -1109,6 +1130,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     maximizePanel,
     updateSplitSizes,
     updateFloatingPosition,
+    isDropAllowed,
     focusPanel,
     isOpen,
     getOpenPanelIds,

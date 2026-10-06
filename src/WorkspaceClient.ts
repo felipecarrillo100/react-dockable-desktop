@@ -3,6 +3,7 @@ import { PanelRegistry } from './components/PanelRegistry';
 import type { PanelRegistryEntry } from './components/PanelRegistry';
 import { createWorkspaceCore, type WorkspaceCore } from './components/WindowManagerContext';
 import type {
+  PanelDrop,
   WorkspaceActions,
   MessageFormatter,
   MessageDescriptor,
@@ -87,6 +88,24 @@ export interface WorkspaceClientConfig {
    * app's own modal z-index range to control stacking against it. Default: 1000.
    */
   zIndexBase?: number;
+  /**
+   * Veto where users can move panels (7.9.0). Called for each place a dragged panel could go, and
+   * for the built-in "Float" and "Maximize" menu items: return `false` and that target isn't
+   * offered (its drop zone doesn't appear) and the move doesn't happen. It runs after the panel
+   * type's own `canFloat` / `canDock`, and only for what the user does: the app's own calls
+   * (`floatPanel`, `dockPanelToGroup`, `openPanel`) always work. Keep it fast and pure; it runs
+   * while the pointer moves.
+   *
+   * @example
+   * ```ts
+   * createWorkspace({
+   *   panels,
+   *   // Nothing but tool panels in the left group.
+   *   canDrop: ({ component, to }) => !(to.kind === 'group' && to.leafId === 'tools' && component !== 'tool'),
+   * });
+   * ```
+   */
+  canDrop?: (drop: PanelDrop) => boolean;
 }
 
 /**
@@ -170,6 +189,7 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
       zIndexBase: config.zIndexBase,
       defaultSplitRatio: config.defaultSplitRatio,
       defaultEdgeSplitRatio: config.defaultEdgeSplitRatio,
+      canDrop: config.canDrop,
     });
   }
 

@@ -31,6 +31,8 @@ export type {
   SplitDirection,
   DropPosition,
   DropTarget,
+  PanelDrop,
+  PanelDropTarget,
   LayoutGridNode,
   LayoutLeafNode,
   LayoutNode,

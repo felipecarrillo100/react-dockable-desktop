@@ -44,6 +44,17 @@ describe('api-check: breaking changes between reports', () => {
     expect(breakingChanges(base, next)).toEqual(['changed: PanelOptions (no longer has: width: number;)']);
   });
 
+  it('a type the API refers to without exporting it is tracked too (includeForgottenExports)', () => {
+    const before = report(`interface WorkspaceClientConfig {
+    canDrop?: (drop: PanelDrop) => boolean;
+    zIndexBase?: number;
+}`);
+    const after = report(`interface WorkspaceClientConfig {
+    canDrop?: (drop: PanelDrop) => boolean;
+}`);
+    expect(breakingChanges(before, after)).toEqual(['changed: WorkspaceClientConfig (no longer has: zIndexBase?: number;)']);
+  });
+
   it('a changed signature or type is breaking', () => {
     const next = base
       .replace('openPanel(id: string, component: string): void;', 'openPanel(id: string, component: string): boolean;')

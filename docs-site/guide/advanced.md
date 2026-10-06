@@ -133,6 +133,8 @@ function ResizableSplit() {
 
 `onMove` receives the delta from the drag's start position, not the live pointer coordinate — recover an absolute position with `startClientX + dx` as shown above. `activeClasses` toggles CSS classes for the duration of the drag; for anything beyond classes (e.g. `document.body.style.cursor`), set it before calling `startPointerDrag` and reset it in `onEnd`.
 
+The drag also ends if the window loses focus or the pointer capture is lost, for example because your element was removed mid-drag (7.9.0). Then `onCancel` is called instead of `onEnd`, if you give one, so you can undo a half-finished change; otherwise `onEnd` is called. Either way the drag's listeners and `activeClasses` are removed, so a drag never outlives its element.
+
 For a resize handle that grows/shrinks a box in up to 8 directions instead of a single-axis divider, pair it with `computeResizedRect(dir, dx, dy, start, constraints)` — the same pure function the floating-window resize handles use — which supports independent `minW`/`minH`/`maxW`/`maxH`/`minX`/`minY` constraints per call site.
 
 ## RTL support

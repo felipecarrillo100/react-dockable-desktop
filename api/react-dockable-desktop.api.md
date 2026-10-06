@@ -59,6 +59,9 @@ export interface CloseOptions {
     force?: boolean;
 }
 
+// @public (undocumented)
+type ColorScheme = 'dark' | 'light';
+
 // @public
 export function computeResizedRect(dir: ResizeDir, dx: number, dy: number, start: ResizeRect, constraints: ResizeConstraints): ResizeRect;
 
@@ -109,6 +112,28 @@ export type ContextMenuItem = ContextMenuSimpleItem | ContextMenuSeparator | Con
 //
 // @public (undocumented)
 export type ContextMenuLabel = string | MessageDescriptor$1;
+
+// @public (undocumented)
+interface ContextMenuProps {
+    // (undocumented)
+    animation?: string;
+    // (undocumented)
+    className?: string;
+    // Warning: (ae-forgotten-export) The symbol "MessageFormatter$1" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    formatMessageProvider?: MessageFormatter$1;
+    // (undocumented)
+    onHide?: () => void;
+    // (undocumented)
+    onOpenChange?: (open: boolean) => void;
+    // (undocumented)
+    onShow?: () => void;
+    // (undocumented)
+    style?: React$1.CSSProperties;
+    // (undocumented)
+    theme?: string;
+}
 
 // @public (undocumented)
 export interface ContextMenuSeparator {
@@ -386,6 +411,19 @@ export interface HostClasses {
     windowClass?: string;
 }
 
+// @internal
+interface InternalWindowActions extends WorkspaceActions {
+    // (undocumented)
+    getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
+    isDropAllowed: (panelId: string, to: PanelDropTarget) => boolean;
+    // (undocumented)
+    registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
+    // (undocumented)
+    registerPanelContextMenu: (panelId: string, getItems: () => ContextMenuItem[]) => () => void;
+    // (undocumented)
+    setActivePanel: (id: string | null) => void;
+}
+
 // @public
 export function isComputedRtl(el: Element | null | undefined): boolean;
 
@@ -432,12 +470,25 @@ export interface ManagedWidget {
 // @public (undocumented)
 export type MenuItemAction = () => void;
 
+// @public (undocumented)
+interface MessageDescriptor$1 {
+    // (undocumented)
+    defaultMessage?: string;
+    // (undocumented)
+    id: string;
+    // (undocumented)
+    values?: Record<string, string | number>;
+}
+
 // @public
 export interface MessageDescriptor {
     defaultMessage?: string;
     id: string;
     values?: Record<string, string | number>;
 }
+
+// @public (undocumented)
+type MessageFormatter$1 = (msg: MessageDescriptor$1) => string;
 
 // @public
 export type MessageFormatter = (msg: MessageDescriptor) => string;
@@ -512,6 +563,9 @@ export interface OverlayState {
     rightPanel: OverlayInstance | null;
 }
 
+// @public (undocumented)
+type OverlayUpdate = Partial<Pick<OverlayInstance, 'props' | 'options' | 'dirty' | 'dirtyOptions'>>;
+
 // @public
 export interface PanelContribution {
     // (undocumented)
@@ -527,6 +581,29 @@ export interface PanelDefinition {
     // (undocumented)
     defaultOptions?: PanelRegistryEntry['defaultOptions'];
 }
+
+// @public
+export interface PanelDrop {
+    // (undocumented)
+    component: string;
+    // (undocumented)
+    panelId: string;
+    // (undocumented)
+    to: PanelDropTarget;
+}
+
+// @public
+export type PanelDropTarget = {
+    kind: 'group';
+    leafId: string;
+    position: DropPosition;
+} | {
+    kind: 'edge';
+    side: SplitDirection;
+} | {
+    kind: 'float';
+    anchor: FloatAnchor | null;
+};
 
 // @public
 export interface PanelEvents {
@@ -616,6 +693,8 @@ export interface PanelRegistryEntry {
             height: number | string;
         };
         canDrag?: boolean;
+        canFloat?: boolean;
+        canDock?: boolean;
         canMinimize?: boolean;
         canClose?: boolean;
         defaultAnchor?: FloatAnchor;
@@ -660,6 +739,7 @@ export interface PointerDragConfig<TStart> {
     }>;
     captureStart: () => TStart;
     element: HTMLElement;
+    onCancel?: (start: TStart) => void;
     onEnd?: (start: TStart) => void;
     onMove: (dx: number, dy: number, start: TStart) => void;
     // (undocumented)
@@ -1439,11 +1519,110 @@ export interface WorkspaceActions {
     updateSplitSizes: (path: number[], sizes: number[]) => void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "WorkspaceClientConfig" needs to be exported by the entry point index.d.ts
-//
+// @public
+class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
+    constructor(config?: WorkspaceClientConfig);
+    closeLeafGroup(leafId: string, options?: {
+        onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean>;
+    }): Promise<void>;
+    // (undocumented)
+    closePanel(id: string): void;
+    // Warning: (ae-forgotten-export) The symbol "WorkspaceClientConfig" needs to be exported by the entry point index.d.ts
+    readonly config: Pick<WorkspaceClientConfig, 'formatMessage' | 'predefinedMessages' | 'dir' | 'defaultSplitRatio' | 'defaultEdgeSplitRatio' | 'zIndexBase'>;
+    // Warning: (ae-forgotten-export) The symbol "WorkspaceCore" needs to be exported by the entry point index.d.ts
+    //
+    // @internal
+    readonly _core: WorkspaceCore;
+    // (undocumented)
+    dockPanel(...args: Parameters<WorkspaceActions['dockPanel']>): void;
+    dockPanelToGroup(id: string, targetLeafId: string, position: DropPosition): void;
+    dockPanelToWorkspaceEdge(id: string, position: SplitDirection): void;
+    findPanelId(component: string, dedupeKey: string): string | null;
+    // (undocumented)
+    floatPanel(...args: Parameters<WorkspaceActions['floatPanel']>): void;
+    focusPanel(id: string): void;
+    getOpenPanelIds(): string[];
+    readonly initialState: string | null;
+    isOpen(id: string): boolean;
+    // (undocumented)
+    loadLayout(json: string): boolean;
+    // (undocumented)
+    maximizePanel(id: string): void;
+    // (undocumented)
+    minimizePanel(id: string): void;
+    movePanelOrder(panelId: string, targetLeafId: string, targetIndex: number): void;
+    onLayoutChanged(callback: () => void): () => void;
+    onPanelClose(callback: (id: string) => void): () => void;
+    onPanelMinimize(callback: (id: string) => void): () => void;
+    onPanelOpen(callback: (id: string, component: string) => void): () => void;
+    onPanelRestore(callback: (id: string) => void): () => void;
+    onPanelsExcluded(callback: (panels: {
+        id: string;
+        component: string;
+    }[]) => void): () => void;
+    // (undocumented)
+    openPanel(...args: Parameters<WorkspaceActions['openPanel']>): void;
+    // (undocumented)
+    publish<K extends keyof (TUserEvents & BuiltInEvents)>(event: K, data: (TUserEvents & BuiltInEvents)[K]): void;
+    registerCloseGuard(id: string, guard: () => boolean | Promise<boolean>): void;
+    registerStateProvider(id: string, provider: () => unknown): void;
+    readonly registry: PanelRegistry;
+    requestClosePanel(id: string, options?: {
+        force?: boolean;
+        onConfirm?: (opts?: DirtyStateOptions) => Promise<boolean>;
+    }): Promise<void>;
+    // (undocumented)
+    restorePanel(...args: Parameters<WorkspaceActions['restorePanel']>): void;
+    // (undocumented)
+    saveLayout(): string;
+    // (undocumented)
+    setDirection(dir: 'ltr' | 'rtl'): void;
+    // @internal
+    setDraggedPanelId(id: string | null): void;
+    setPanelDirty(id: string, dirty: boolean, options?: DirtyStateOptions): void;
+    setPanelIcon(id: string, icon: ReactNode | null): void;
+    showContextMenu(options: ShowContextMenuOptions): void;
+    // (undocumented)
+    subscribe<K extends keyof (TUserEvents & BuiltInEvents)>(event: K, callback: (data: (TUserEvents & BuiltInEvents)[K]) => void): () => void;
+    unregisterCloseGuard(id: string): void;
+    unregisterStateProvider(id: string): void;
+    updateFloatingPosition(id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>): void;
+    updatePanelTitle(id: string, title: string | MessageDescriptor | (() => string)): void;
+    updateSplitSizes(path: number[], sizes: number[]): void;
+}
+
+// @public
+interface WorkspaceClientConfig {
+    canDrop?: (drop: PanelDrop) => boolean;
+    defaultEdgeSplitRatio?: number;
+    defaultSplitRatio?: number;
+    dir?: 'ltr' | 'rtl';
+    formatMessage?: MessageFormatter;
+    initialState?: string | null;
+    panels?: Record<string, PanelDefinition>;
+    predefinedMessages?: Record<string, MessageDescriptor>;
+    zIndexBase?: number;
+}
+
 // @public
 export interface WorkspaceConfig extends Omit<WorkspaceClientConfig, 'predefinedMessages'> {
     messages?: Record<string, MessageDescriptor>;
+}
+
+// @internal
+interface WorkspaceCore {
+    // Warning: (ae-forgotten-export) The symbol "InternalWindowActions" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    actions: InternalWindowActions;
+    applyProviderDefaults: (defaults: {
+        dir?: 'ltr' | 'rtl';
+        zIndexBase?: number;
+    }) => void;
+    // (undocumented)
+    getSnapshot: () => WorkspaceState;
+    // (undocumented)
+    subscribeToState: (cb: () => void) => () => void;
 }
 
 // @public

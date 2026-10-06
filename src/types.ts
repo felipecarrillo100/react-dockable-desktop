@@ -42,6 +42,26 @@ export interface DropTarget {
 }
 
 /**
+ * Where a user is about to move a panel, as `canDrop` sees it (7.9.0). Positions are the ones the
+ * move applies: under RTL, a drop on the zone drawn on the screen's right is `'left'`.
+ * - `group`: into a group, on one side (a new split) or `'center'` (as a tab, also between tabs);
+ * - `edge`: along a workspace edge, as a full-width or full-height strip;
+ * - `float`: into a floating window, pinned to a corner, or free (`anchor: null`, a tab dropped
+ *   on nothing).
+ */
+export type PanelDropTarget =
+  | { kind: 'group'; leafId: string; position: DropPosition }
+  | { kind: 'edge'; side: SplitDirection }
+  | { kind: 'float'; anchor: FloatAnchor | null };
+
+/** The argument `canDrop` receives: which panel, of which registered kind, is going where. (7.9.0) */
+export interface PanelDrop {
+  panelId: string;
+  component: string;
+  to: PanelDropTarget;
+}
+
+/**
  * Grid layout branch node containing nested splits and relative flex sizes.
  */
 export interface LayoutGridNode {
@@ -525,6 +545,8 @@ export interface InternalWindowActions extends WorkspaceActions {
   getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
   /** @internal */
   registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
+  /** @internal Whether the user may move `panelId` to `to`: its type's rules, then `canDrop`. (7.9.0) */
+  isDropAllowed: (panelId: string, to: PanelDropTarget) => boolean;
 }
 
 /** Represents custom CSS classes injected into layout parts. */
@@ -608,6 +630,7 @@ export interface WorkspaceCoreConfig {
   zIndexBase?: number;
   defaultSplitRatio?: number;
   defaultEdgeSplitRatio?: number;
+  canDrop?: (drop: PanelDrop) => boolean;
 }
 
 /** @internal What a workspace store exposes: its actions, and a subscribable snapshot. */

@@ -20,6 +20,19 @@ export interface PanelRegistryEntry {
     favoritePosition?: { x: number | string; y: number | string; width: number | string; height: number | string };
     /** Enables/disables window drag interactions. */
     canDrag?: boolean;
+    /**
+     * `false`: the user can't make this panel floating. A tab drag can't end in a floating window
+     * (dropped on nothing or on a corner, it stays where it was), and the "Float" and taskbar
+     * "Maximize" menu items are hidden. A window the app floated itself can still be moved. The
+     * app's own `floatPanel` always works. @default true (7.9.0)
+     */
+    canFloat?: boolean;
+    /**
+     * `false`: the user can't dock this panel. Dragging it offers no group, tab or edge targets
+     * (corners still anchor a floating window), so it stays floating. The app's own docking calls
+     * always work; give the type `initialTarget: 'floating'` so it opens floating. @default true (7.9.0)
+     */
+    canDock?: boolean;
     /** Enables/disables minimizing of the panel instance. */
     canMinimize?: boolean;
     /** Enables/disables closing actions for the tab/window. */

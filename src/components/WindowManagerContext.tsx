@@ -17,7 +17,7 @@ export { defaultPredefinedMessages } from './predefinedMessages';
 export type { DirtyStateOptions };
 
 // Moved in 7.6.1; re-exported so every existing import of this module keeps working.
-export type { MessageDescriptor, MessageFormatter, SplitOrientation, SplitDirection, DropPosition, DropTarget, LayoutGridNode, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, WorkspaceActions, InternalWindowActions, HostClasses, SerializedLayout, WindowManagerProviderProps, WorkspaceCoreConfig, WorkspaceCore } from '../types';
+export type { MessageDescriptor, MessageFormatter, SplitOrientation, SplitDirection, DropPosition, DropTarget, PanelDrop, PanelDropTarget, LayoutGridNode, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, WorkspaceActions, InternalWindowActions, HostClasses, SerializedLayout, WindowManagerProviderProps, WorkspaceCoreConfig, WorkspaceCore } from '../types';
 export { defaultFormatMessage, formatLabel } from '../core/messages';
 export { createWorkspaceCore } from '../core/workspaceCore';
 

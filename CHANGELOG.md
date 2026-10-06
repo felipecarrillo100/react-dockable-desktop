@@ -10,7 +10,45 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
-Found while porting 7.8.0 to vdd. No API or behaviour change.
+## [7.9.0] — 2026-10-06
+
+Control over where users can move panels: per-panel-type rules and an app-wide veto, all opt-in.
+Without them nothing changes, and the app's own API calls are never restricted.
+
+### Added
+
+- **`canFloat` and `canDock` per panel type**, next to `canDrag`, `canMinimize` and `canClose`.
+  `canFloat: false` keeps a panel in the grid: a tab drag can't end in a floating window (dropped on
+  nothing or on a corner, it stays where it was), and "Float Window" and the taskbar's "Maximize" are
+  hidden. `canDock: false` keeps a panel floating: dragging it offers no group, tab or edge targets.
+- **`canDrop`, an app-wide veto.** `createWorkspace({ canDrop: ({ panelId, component, to }) => boolean })`
+  is asked for every place a dragged panel could go, and for the "Float" and "Maximize" menu items.
+  `to` is a `PanelDropTarget`: a group (`leafId` and a `position`, `'center'` also covering a drop
+  between tabs), a workspace `edge`, or a `float` (a corner `anchor`, or `null` for a tab dropped on
+  nothing). A forbidden target isn't offered: its drop zone, edge or corner doesn't appear, and
+  releasing there does nothing. It's asked again at release, so a rule that changes mid-drag holds.
+  Positions are the ones the move applies: under RTL, the zone drawn on the screen's right is `'left'`.
+  If it throws, the move is allowed and the error is logged. New types: `PanelDrop`, `PanelDropTarget`.
+- Both apply only to what the user does. `floatPanel`, `dockPanelToGroup`, `openPanel` and the other
+  calls always work.
+- **`startPointerDrag` takes an optional `onCancel`**, called instead of `onEnd` when the drag is cut
+  short (see Fixed).
+
+### Fixed
+
+- **A drag built on `startPointerDrag` could outlive its element.** It ended only on pointerup or
+  pointercancel, so a window losing focus mid-drag, or the dragged element being removed (an overlay
+  widget closed during its own drag, a panel closed during a splitter drag), left its listeners
+  attached and its classes on the page, such as the resize cursor. It now also ends on window blur
+  and on a lost pointer capture (listened for on the document, where browsers fire it when the
+  capturing element is removed). The built-in splitters, window resize handles, sidebar resizer and
+  overlay widgets all use it.
+- **The API check missed part of the public API.** Types the API refers to without exporting
+  (the workspace config's own type behind `WorkspaceConfig`, among others) were left out of
+  `api/react-dockable-desktop.api.md`, so a member removed from them would not have failed CI. The
+  report now includes them (`includeForgottenExports`), and `scripts/api-check.mjs` compares them by
+  name: 172 declarations are tracked instead of 161. Found while checking that `canDrop` appeared
+  in the report.
 
 ### Docs
 
@@ -20,10 +58,20 @@ Found while porting 7.8.0 to vdd. No API or behaviour change.
 
 ### Tests
 
+- `ReleaseB.test.tsx` (16 tests): `canFloat` (no float on nothing, no corners, no "Float Window", the
+  app's `floatPanel` still works), `canDock` (no group or edge targets, only corners; the app can
+  still dock it), `canDrop` (its argument, vetoed zones and edges not offered, RTL positions, tab
+  insertion into a vetoed group, a rule changed mid-drag in a tab drag and in a window drag, a
+  throwing `canDrop`, no rules meaning every target), and `startPointerDrag` ending on blur and on a
+  lost capture. Each rule was seen failing with it broken; the two safety layers (not offered while
+  hovering, asked again at release) are pinned separately.
+- `dockZones.browser.ts` (18 tests, real Chrome): a tab dropped on each group zone and each workspace
+  edge lands where the user pointed, on screen, in LTR and RTL. With the RTL flip removed, exactly the
+  RTL left/right cases fail.
 - `ReleaseA.test.tsx`: empty groups inside a split keep the built-in message; only the root group
   shows the `emptyWorkspace` view. 7.8.0 behaved this way, but no test pinned it. A redundant
   root-only check in `WorkspaceGrid` was removed: nested grids never receive the prop, which is
-  what the new test now proves.
+  what the new test now proves. (Found while porting 7.8.0 to vdd.)
 
 ## [7.8.0] — 2026-10-06
 
@@ -1121,7 +1169,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.8.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.9.0...HEAD
+[7.9.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.8.0...v7.9.0
 [7.8.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.4...v7.8.0
 [7.7.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.3...v7.7.4
 [7.7.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.2...v7.7.3

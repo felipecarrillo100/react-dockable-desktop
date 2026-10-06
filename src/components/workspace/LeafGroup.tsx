@@ -27,7 +27,7 @@ export interface LeafGroupProps {
 export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
-  const { openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActionsInternal();
+  const { openPanel, closeLeafGroup, setActivePanel, isDropAllowed } = useWindowManagerActionsInternal();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const { windowClass, windowBodyClass } = useStyleClasses();
@@ -295,10 +295,17 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
           // during an active drag, and doesn't exist at all on touch. activeDropZone
           // already tracks this for mouse, pen, and touch alike (see updateHoverFromPoint).
           const isActive = (pos: DropPosition) => activeDropZone?.leafId === leaf.id && activeDropZone.position === pos;
+          // A target the rules forbid isn't offered at all (7.9.0). Zones are drawn by screen side;
+          // the move flips left and right under RTL, and canDrop sees the side the move applies.
+          const dragged = state.draggedPanelId;
+          const applied = (pos: DropPosition): DropPosition =>
+            state.isRtl && (pos === 'left' || pos === 'right') ? (pos === 'left' ? 'right' : 'left') : pos;
+          const offer = (pos: DropPosition) => isDropAllowed(dragged, { kind: 'group', leafId: leaf.id, position: applied(pos) });
           return (
           <div className="rdd-dock-drop-zone-overlay">
             <div className="rdd-dock-target-cross">
               {/* Top target */}
+              {offer('top') && (
               <div
                 data-leaf-id={leaf.id}
                 data-drop-zone="top"
@@ -308,7 +315,9 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
               >
                 ▲
               </div>
+              )}
               {/* Bottom target */}
+              {offer('bottom') && (
               <div
                 data-leaf-id={leaf.id}
                 data-drop-zone="bottom"
@@ -318,7 +327,9 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
               >
                 ▼
               </div>
+              )}
               {/* Left target */}
+              {offer('left') && (
               <div
                 data-leaf-id={leaf.id}
                 data-drop-zone="left"
@@ -328,7 +339,9 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
               >
                 ◀
               </div>
+              )}
               {/* Right target */}
+              {offer('right') && (
               <div
                 data-leaf-id={leaf.id}
                 data-drop-zone="right"
@@ -338,7 +351,9 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
               >
                 ▶
               </div>
+              )}
               {/* Center target */}
+              {offer('center') && (
               <div
                 data-leaf-id={leaf.id}
                 data-drop-zone="center"
@@ -348,6 +363,7 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
               >
                 ▣
               </div>
+              )}
             </div>
           </div>
           );
