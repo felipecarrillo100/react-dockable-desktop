@@ -176,9 +176,8 @@ describe('Panel System (Side Panels & Nested Modals)', () => {
     mount();
 
     // 1. Open a left side panel
-    let leftId: string | null = null;
     await act(async () => {
-      leftId = await testActions.openLeftPanel(TestComponent, { message: 'Left' }, { title: 'Left Drawer' });
+      await testActions.openLeftPanel(TestComponent, { message: 'Left' }, { title: 'Left Drawer' });
     });
 
     // 2. Open two stacked modals

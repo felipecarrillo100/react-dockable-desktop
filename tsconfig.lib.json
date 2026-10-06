@@ -1,0 +1,10 @@
+{
+  // The library source only, without its tests: what `npm run lint` type-checks. The demos and
+  // the tests are still covered by tsconfig.app.json (the editor) but not gated yet.
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.lib.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": ["src/**/__tests__", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

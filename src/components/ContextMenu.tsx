@@ -316,8 +316,8 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       );
       setMenuState(CLOSED);
       setSubmenuIndex(null);
-      timers.current.open && clearTimeout(timers.current.open);
-      timers.current.close && clearTimeout(timers.current.close);
+      if (timers.current.open) clearTimeout(timers.current.open);
+      if (timers.current.close) clearTimeout(timers.current.close);
       timers.current.open = null;
       timers.current.close = null;
       onHide?.();

@@ -258,7 +258,7 @@ describe('Floating Windows', () => {
   });
 
   it('clamps width/height (but not position) of an anchored window when the workspace shrinks', () => {
-    let roCallbacks: ResizeObserverCallback[] = [];
+    const roCallbacks: ResizeObserverCallback[] = [];
     const OriginalRO = globalThis.ResizeObserver;
     // @ts-ignore
     globalThis.ResizeObserver = class {

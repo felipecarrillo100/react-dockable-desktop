@@ -19,4 +19,41 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // The library (`npm run lint` gates on errors here, in CI too).
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      // A Vite dev-server rule for apps: a library module exporting hooks and constants beside
+      // its components is normal, and fast refresh is not ours to keep.
+      'react-refresh/only-export-components': 'off',
+      // A leading underscore marks a deliberately unused name (a callback parameter, a
+      // destructured field dropped on purpose).
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_', varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_',
+      }],
+      // Warnings until they are worked through: some `any`s are in public types, where `unknown`
+      // would break a user's build.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // `interface Workspace extends WorkspaceClient {}`: an interface rather than an alias, so the
+      // API reference lists the members under the public name.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'with-single-extends' }],
+      // React Compiler rules (react-hooks 7). The library is not compiled with the React Compiler;
+      // fixing these means changing hook code, so they are worked through as warnings first.
+      'react-hooks/refs': 'warn',
+      'react-hooks/globals': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+    },
+  },
+  // The library's own tests: probes count renders in module variables and stub browser APIs.
+  {
+    files: ['src/**/__tests__/**/*.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
+      'react-hooks/globals': 'off',
+      'react-hooks/immutability': 'off',
+    },
+  },
 ])

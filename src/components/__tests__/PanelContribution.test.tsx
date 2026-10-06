@@ -163,7 +163,7 @@ describe('PanelContribution', () => {
 
     // Map 1 becomes active, defaults to 'pan'.
     act(() => { lastActions.focusPanel('map-1'); });
-    let active = () => lastContribution!.toolbarItems!.find((i: any) => i.active)!.id;
+    const active = () => lastContribution!.toolbarItems!.find((i: any) => i.active)!.id;
     expect(active()).toBe('pan');
 
     // User switches Map 1 to 'draw' via its own toolbar contribution's onToggle.

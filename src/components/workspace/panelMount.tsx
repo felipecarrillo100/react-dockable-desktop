@@ -81,7 +81,7 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
     restorePanelDom(cachedEl, { refocus: isActiveRef.current });
 
     const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
           panelHost.setDimensions(panelId, { width, height });
