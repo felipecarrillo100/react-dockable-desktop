@@ -53,6 +53,12 @@ export interface RddDesktopProps {
   taskbarVisibility?: TaskbarVisibility;
   /** Enables the library's own transitions/animations (tab hover, dock preview, etc.). Never affects the consumer's own page. @default true */
   animations?: boolean;
+  /**
+   * What the workspace shows while no panel is docked: a welcome screen, a "pick a file" prompt.
+   * It fills the empty group in place of the built-in message; the group stays a drop target, so a
+   * floating window can still be docked into it. Floating windows still show over it. (7.8.0)
+   */
+  emptyWorkspace?: React.ReactNode;
 }
 
 /**
@@ -73,7 +79,7 @@ export interface RddDesktopProps {
  * </DockableDesktopProvider>
  * ```
  */
-export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', animations = true }) => {
+export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defaultPanelIcon, taskbarVisibility = 'autohide', animations = true, emptyWorkspace }) => {
   // The context menu comes from <DockableDesktopProvider contextMenuAdapter={…}>. This built-in
   // fallback only renders when no provider supplies one (the library's own tests).
   const contextMenuAdapter: ContextMenuAdapter = DefaultContextMenuAdapter;
@@ -397,6 +403,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
               onTabHover={handleTabHover}
               defaultPanelIcon={defaultPanelIcon}
               onRequestClosePanel={handleRequestClose}
+              emptyWorkspace={emptyWorkspace}
             />
           ) : (
             <div className="rdd-empty-workspace-grid">

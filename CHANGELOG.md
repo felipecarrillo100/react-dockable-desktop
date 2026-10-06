@@ -10,6 +10,54 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.8.0] — 2026-10-06
+
+More control over how the desktop looks and where panels open, all opt-in: without the new options,
+nothing changes. The API check confirms every change is an addition.
+
+### Added
+
+- **Your own empty-workspace view.** `<RddDesktop emptyWorkspace={<Welcome />}>` shows your element
+  while no panel is docked, in place of the built-in "Empty Workspace Section" message: a welcome
+  screen, a logo, "Open a file" buttons. Floating windows still show over it, and a window can still
+  be dropped onto it to dock. Other empty groups in a split keep the built-in message.
+- **Open a panel beside another.** `openPanel(id, component, { dockTo: { panel, position, size } })`
+  docks a new panel as a tab in that panel's group (`position: 'center'`) or in a new group split off
+  on one side, taking `size` (0.1–0.9) of the split. It wins over `initialTarget`. If the target
+  panel isn't docked, the new panel is placed as usual, with a development warning.
+- **State attributes for your CSS.** Tabs carry `data-rdd-selected` (shown in their group),
+  `data-rdd-focused` (the workspace's active panel) and `data-rdd-dirty`; floating windows carry
+  `data-rdd-focused` and `data-rdd-maximized`. Each is present only while it is true, so
+  `[data-rdd-dirty]` styles unsaved panels without relying on internal class names. The existing
+  classes are unchanged.
+- **Per-panel-type classes.** `className` and `tabClassName` in a panel type's `defaultOptions`
+  add your class to every panel of that type (on its content element, which moves with it) and to
+  its tab.
+- **`keepAlive: false`**, per panel type: the component unmounts while the panel is an unselected
+  tab or minimized, and mounts afresh when shown, to free what a heavy, rarely shown panel holds.
+  Its own state is lost each time; its tab, title and lifecycle continue, and `onClose` is called
+  only when it is really closed. The taskbar shows a placeholder preview for it. The default is
+  unchanged: panels stay mounted and keep their state.
+
+### Docs
+
+- New page, **[Using it with MUI, Bootstrap or Tailwind](https://felipecarrillo100.github.io/react-dockable-desktop/guide/ui-frameworks)**:
+  dark-mode bridging for each, the z-index of the library's layers next to the frameworks', why a
+  framework popup opened inside one of the library's modals appears behind it and the two fixes,
+  resets, and the order to try when overriding styles.
+- Theming: **Styling by state and by panel type**. Layout: **Opening beside another panel**. Panel
+  Registry: **Freeing a hidden panel**. The `openPanel` options, `RddDesktop` props and
+  `defaultOptions` tables list the new options.
+
+### Tests
+
+- `ReleaseA.test.tsx` (15 tests): the empty view (shown and gone as panels dock and close; a
+  floating window can still dock into it), the state attributes on tabs and windows, `dockTo`
+  (sides, centre, size clamping, winning over `initialTarget`, the fallback and its warning, no
+  effect on an open panel), the per-type classes (also after floating), and `keepAlive: false`
+  (unmount and fresh remount, no `onClose` on hide, the placeholder preview, the default
+  unchanged, and no leak over 50 hide/show cycles). Each was seen failing with its feature broken.
+
 ## [7.7.4] — 2026-10-06
 
 A written stability policy, and CI that enforces it. No API or behaviour change.
@@ -1058,7 +1106,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.4...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.8.0...HEAD
+[7.8.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.4...v7.8.0
 [7.7.4]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.3...v7.7.4
 [7.7.3]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.2...v7.7.3
 [7.7.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.1...v7.7.2

@@ -10,7 +10,7 @@ import { isSerializable } from '../components/serializable';
 import { sameTitle, sameDirtyOptions } from '../components/sameUpdate';
 import type { MessageDescriptor, SplitOrientation, SplitDirection, DropPosition, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, InternalWindowActions, SerializedLayout, WorkspaceCoreConfig, WorkspaceCore } from '../types';
 import { PanelEventBus } from './eventBus';
-import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, resolveActivePanelId, removePanelFromTree, addPanelToLeaf, isLoneOccupant, hasLeaf, findFirstLeafId, splitLeafInTree } from './layoutTree';
+import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, resolveActivePanelId, removePanelFromTree, addPanelToLeaf, isLoneOccupant, hasLeaf, findFirstLeafId, findLeafIdOf, splitLeafInTree } from './layoutTree';
 import { DEFAULT_FLOAT_RECT, parseLayoutPayload, parseInitialState } from './serialize';
 
 /**
@@ -323,6 +323,14 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       return;
     }
 
+    const dockTo = options?.dockTo;
+    if (dockTo && isNew && process.env.NODE_ENV === 'development' && !findLeafIdOf(stateRef.current.gridRoot, dockTo.panel)) {
+      console.warn(
+        `[react-dockable-desktop] openPanel("${resolvedId}") could not dock beside "${dockTo.panel}": ` +
+        `that panel is not docked (not open, floating or minimized), so the new panel was placed as usual.`
+      );
+    }
+
     setState(prev => {
       const exists = prev.panels[resolvedId];
       const entry = registry.get(component);
@@ -358,8 +366,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
         }
       }
 
-      // Case 2: New panel
-      const targetState = target === 'tabbed' ? 'docked' : target;
+      // Case 2: New panel. `dockTo` beside a docked panel wins over the target.
+      const dockLeaf = dockTo ? findLeafIdOf(prev.gridRoot, dockTo.panel) : null;
+      const targetState = dockLeaf ? 'docked' : (target === 'tabbed' ? 'docked' : target);
       const newPanelInfo: PanelInfo = {
         id: resolvedId,
         title,
@@ -370,6 +379,18 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
         dedupeKey: options?.dedupeKey,
       };
       const nextPanels = { ...prev.panels, [resolvedId]: newPanelInfo };
+
+      if (dockTo && dockLeaf) {
+        const share = Math.min(0.9, Math.max(0.1, dockTo.size ?? prev.splitRatio));
+        return {
+          ...prev,
+          gridRoot: dockTo.position === 'center'
+            ? addPanelToLeaf(prev.gridRoot, dockLeaf, resolvedId)
+            : splitLeafInTree(prev.gridRoot, dockLeaf, resolvedId, dockTo.position, share),
+          panels: nextPanels,
+          activePanelId
+        };
+      }
 
       if (target === 'floating') {
         maxZRef.current += 1;

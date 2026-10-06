@@ -480,6 +480,11 @@ export interface ModalsApi {
 export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
     anchor?: FloatAnchor | null;
     dedupeKey?: string;
+    dockTo?: {
+        panel: string;
+        position: DropPosition;
+        size?: number;
+    };
     focus?: boolean;
     initialTarget?: 'floating' | 'docked' | 'tabbed';
     props?: P;
@@ -616,6 +621,9 @@ export interface PanelRegistryEntry {
         defaultAnchor?: FloatAnchor;
         disableLivePreview?: boolean;
         renderHeaderActions?: (panelId: string) => React.ReactNode;
+        className?: string;
+        tabClassName?: string;
+        keepAlive?: boolean;
     };
 }
 
@@ -726,6 +734,7 @@ export const RddDesktop: React$1.FC<RddDesktopProps>;
 export interface RddDesktopProps {
     animations?: boolean;
     defaultPanelIcon?: React$1.ReactNode;
+    emptyWorkspace?: React$1.ReactNode;
     skin?: string;
     taskbarVisibility?: TaskbarVisibility;
 }

@@ -30,6 +30,22 @@ export interface PanelRegistryEntry {
     disableLivePreview?: boolean;
     /** Custom header actions renderer, placing custom components in the window/tab titlebar. */
     renderHeaderActions?: (panelId: string) => React.ReactNode;
+    /**
+     * Class added to each panel of this type, on its own content element (`.rdd-panel-content`),
+     * which moves with the panel between groups, windows and the taskbar preview. (7.8.0)
+     */
+    className?: string;
+    /** Class added to the tab of each panel of this type. (7.8.0) */
+    tabClassName?: string;
+    /**
+     * `false` unmounts the panel's component while it is hidden (an unselected tab, or minimized)
+     * and mounts it afresh when it is shown, to free what a heavy, rarely shown panel holds. Its
+     * own state is lost each time; its tab, title and lifecycle continue (`onClose` is not called),
+     * and the taskbar shows a placeholder instead of a live preview. While it is unmounted,
+     * `saveLayout()` saves its open-time props. @default true: panels stay mounted and keep their
+     * state, as they always have. (7.8.0)
+     */
+    keepAlive?: boolean;
   };
 }
 

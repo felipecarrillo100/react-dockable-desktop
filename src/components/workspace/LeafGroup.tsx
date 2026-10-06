@@ -19,10 +19,12 @@ export interface LeafGroupProps {
   hoveredTab: { leafId: string; panelId: string; index: number; side: 'left' | 'right' } | null;
   onTabHover: (leafId: string, panelId: string, index: number, side: 'left' | 'right' | null) => void;
   defaultPanelIcon?: React.ReactNode;
+  /** Set on the root group only: shown in place of the built-in message while it has no panels. */
+  emptyWorkspace?: React.ReactNode;
   onRequestClosePanel: (id: string) => Promise<void> | void;
 }
 
-export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel }) => {
+export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, activeDropZone, onHoverDropZone, onTabDragStart, hoveredTab, onTabHover, defaultPanelIcon, onRequestClosePanel, emptyWorkspace }) => {
   const state = useWindowManagerState();
   const registry = useRegistry();
   const { openPanel, closeLeafGroup, setActivePanel } = useWindowManagerActionsInternal();
@@ -183,6 +185,10 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
                 data-leaf-id={leaf.id}
                 data-rdd-tab={id}
                 data-tab-index={String(idx)}
+                // State for app CSS (7.8.0): present when true, so `[data-rdd-dirty]` matches.
+                data-rdd-selected={isSelected ? '' : undefined}
+                data-rdd-focused={isGloballyActive ? '' : undefined}
+                data-rdd-dirty={panel?.dirty ? '' : undefined}
                 onClick={() => selectTab(id)}
                 onPointerDown={(e) => {
                   if (options?.canDrag !== false) {
@@ -200,7 +206,7 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
                     onTabHover(leaf.id, '', -1, null);
                   }
                 }}
-                className={`rdd-workspace-tab ${tabFocusClass} ${sideClass}`}
+                className={`rdd-workspace-tab ${tabFocusClass} ${sideClass}${options?.tabClassName ? ` ${options.tabClassName}` : ''}`}
                 style={{ cursor: options?.canDrag === false ? 'default' : 'pointer' }}
               >
                 <span className="rdd-text-truncate rdd-workspace-tab-title">
@@ -275,6 +281,8 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
               >
         {leaf.activePanelId && state.panels[leaf.activePanelId] ? (
           <PreservedDOMWrapper key={leaf.activePanelId} panelId={leaf.activePanelId} />
+        ) : emptyWorkspace !== undefined && leaf.panels.length === 0 ? (
+          <div className="rdd-empty-workspace">{emptyWorkspace}</div>
         ) : (
           <div className="rdd-empty-leaf-placeholder">
             <span>{formatLabel(messages.emptyGroup, formatMessage)}</span>

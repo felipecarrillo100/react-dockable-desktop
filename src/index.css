@@ -2938,6 +2938,13 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 /* Empty workspace grid (no panels loaded) */
+.rdd-empty-workspace {
+  /* The app's own empty-workspace view: the full group body, none of the built-in message's styling. */
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
 .rdd-empty-workspace-grid {
   width: 100%;
   height: 100%;

@@ -45,6 +45,38 @@ The type is `PanelRegistryEntry['defaultOptions']` (`PanelRegistryEntry` is expo
 | `defaultAnchor` | `FloatAnchor` (`'top-left' \| 'top-right' \| 'bottom-left' \| 'bottom-right'`) | — (unanchored) | Every instance of this component opens pre-anchored to the given workspace corner when floated — see the `anchor` option in [Workspace](./workspace-client#openpanel-options), which this is the per-component default for. |
 | `disableLivePreview` | `boolean` | `false` | Show a placeholder instead of a live thumbnail in the preview that pops up when the pointer is over this panel's taskbar button (while it is minimized). A canvas-rendered view (a WebGL map) that blurs in the scaled-down preview can instead be marked with `data-rdd-preview-unscale` on its container, which renders it at full resolution there. |
 | `renderHeaderActions` | `(panelId: string) => ReactNode` | — | Inject React nodes into the panel tab header (e.g. export buttons). |
+| `className` | `string` | — | Class added to each panel of this type, on its own content element (`.rdd-panel-content`). That element moves with the panel, so the class applies docked, floating and in the taskbar preview. (7.8.0) |
+| `tabClassName` | `string` | — | Class added to the tab of each panel of this type. (7.8.0) |
+| `keepAlive` | `boolean` | `true` | `false` unmounts the panel's component while it is hidden and mounts it afresh when shown — see [Freeing a hidden panel](#freeing-a-hidden-panel-keepalive-false) below. (7.8.0) |
+
+#### Freeing a hidden panel (`keepAlive: false`)
+
+By default a panel is never unmounted while it is open: moving it, hiding it behind another tab or
+minimizing it keeps its component, its state, its scroll position and anything it holds (a canvas, a
+video, a WebGL context). That is the right default for almost every panel.
+
+For a heavy panel that is rarely shown, `keepAlive: false` trades that for memory: its component
+unmounts while the panel is **an unselected tab or minimized**, and mounts afresh when it is shown
+again.
+
+```ts
+const workspace = createWorkspace({
+  panels: {
+    report: { component: ReportPanel, defaultOptions: { title: 'Report', keepAlive: false } },
+  },
+});
+```
+
+What to expect:
+
+- **Its own state is lost each time it is hidden**, like a component that unmounts anywhere else.
+  Keep what must survive outside it (a store, `props`, `useSaveState`).
+- **Its tab, title, dirty flag and lifecycle continue.** Hiding is not closing: `onClose` is not
+  called; it is called once, when the panel is really closed.
+- **The taskbar shows a placeholder** instead of a live preview while it is minimized.
+- **While it is unmounted, `saveLayout()` saves its open-time `props`**, since there is no component
+  to report state through `useSaveState`.
+- A floating window is always shown, so a floating panel stays mounted.
 
 #### Locked / pinned panel pattern
 

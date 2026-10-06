@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.7.4-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.8.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -28,12 +28,13 @@ serialised layout format**, so a layout saved by either library loads in the oth
 - **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
 - **Panel Overlay** — per-panel overlay layer with anchored toolbars (`RddPanelToolbar`, `RddToolbarButton`, `RddToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; an axis can span the panel instead of carrying a fixed size, so a strip or column tracks the panel as it resizes — set declaratively or by dragging an edge out until it snaps; `useFloatingWidgets()` opens N named windows dynamically from data or event handlers
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
-- **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed, across docking, floating, and tab-switching alike, all by default; WebGL, maps, terminals, and forms retain full state with zero integration work
+- **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed, across docking, floating, and tab-switching alike, all by default; WebGL, maps, terminals, and forms retain full state with zero integration work (a heavy, rarely shown panel type can opt out with `keepAlive: false`)
 - **i18n & RTL** — full Right-to-Left layout support; `dir="rtl"` flips every control, tab order, and drop zone automatically
 - **Inter-Panel Pub/Sub** — lightweight typed event bus for decoupled panel-to-panel communication
-- **Imperative API** — the workspace from `createWorkspace()` opens, closes, focuses, and serializes panels from anywhere — inside or outside React
+- **Imperative API** — the workspace from `createWorkspace()` opens, closes, focuses, and serializes panels from anywhere — inside or outside React; `dockTo` opens a panel beside another, on any side or as a tab
 - **Layout Serialization** — save and restore the full workspace as a JSON string; survives page reloads
 - **7 Built-in Skins** — VSCode, macOS, Chrome, Slate, Nord, Obsidian, Tokyo — all fully themeable via CSS variables
+- **Works beside your UI framework** — MUI, Bootstrap, Tailwind and others: every class is `rdd-` prefixed, state attributes (`data-rdd-dirty`, `data-rdd-focused`, …) and per-panel-type classes to style against, and your own empty-workspace view ([guide →](https://felipecarrillo100.github.io/react-dockable-desktop/guide/ui-frameworks))
 - **Toast Notifications** — imperative singleton `toast.info/success/warning/error/promise()` with queue, pause-on-hover, progress bar, and a `ToastAdapter` interface for delegating to a third-party notification library
 - **Drag-Resize Primitives** — `startPointerDrag()` and `computeResizedRect()`, the same pointer-capture mechanics and 8-directional resize math the built-in resizers use, exported for building custom resizable UI inside your own panel content ([guide →](https://felipecarrillo100.github.io/react-dockable-desktop/guide/advanced#building-custom-drag-resize-interactions))
 - **Zero extra dependencies** — no runtime dependencies beyond React itself; everything is bundled in
@@ -462,6 +463,7 @@ Complete guides, API reference, and interactive demo at:
 | [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `RddPanelOverlay`, panel toolbars, `RddFloatingWidget`, `useFloatingWidgets` |
 | [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<RddToasts>`, queue behaviour, theming, `ToastAdapter` |
 | [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrading across major versions |
+| [UI Frameworks](https://felipecarrillo100.github.io/react-dockable-desktop/guide/ui-frameworks) | Using it with MUI, Bootstrap or Tailwind: dark mode, z-index, overrides |
 | [Stability & Versioning](https://felipecarrillo100.github.io/react-dockable-desktop/guide/stability) | What the public API is, deprecation and support periods |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |
 

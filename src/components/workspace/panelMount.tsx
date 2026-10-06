@@ -6,12 +6,21 @@ import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { restorePanelDom } from '../domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
-import type { PanelInfo, MessageDescriptor, MessageFormatter } from '../../types';
+import type { PanelInfo, MessageDescriptor, MessageFormatter, WorkspaceState } from '../../types';
 import type { MessageKey } from '../predefinedMessages';
 import type { PanelRegistry } from '../PanelRegistry';
 import { FormContainerProvider } from '../FormContainerContext';
 import type { FormContainerContract, ContainerType } from '../FormContainerContext';
 import { usePanelHost } from './panelHost';
+import { isShownInGrid } from '../../core/layoutTree';
+
+/** Whether a panel is on screen: floating, or the selected tab of its group (not minimized). */
+const isPanelShown = (s: WorkspaceState, panelId: string): boolean => {
+  const state = s.panels[panelId]?.state;
+  if (state === 'floating') return true;
+  if (state !== 'docked') return false;
+  return isShownInGrid(s.gridRoot, panelId);
+};
 
 /**
  * Where a panel's element waits while no slot shows it. One per page, shared on purpose: every
@@ -112,7 +121,8 @@ export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) =>
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   const regEntry = panel ? registry.get(panel.component) : null;
-  const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || false;
+  // A panel that unmounts while hidden has nothing to preview while minimized.
+  const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || regEntry?.defaultOptions?.keepAlive === false || false;
 
   const lastSize = panelHost.getDimensions(panelId) || { width: 800, height: 500 };
   const origW = lastSize.width;
@@ -321,11 +331,15 @@ export const PanelMount: React.FC<{ panelId: string }> = React.memo(({ panelId }
   const registry = useRegistry();
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
+  // keepAlive: false (7.8.0): only those panels ask whether they are shown, so the rest pay nothing.
+  const keepAlive = (panel && registry.get(panel.component)?.defaultOptions?.keepAlive) !== false;
+  const shown = useWindowManagerState(s => keepAlive || isPanelShown(s, panelId));
   if (!panel) return null;
+  const typeClass = registry.get(panel.component)?.defaultOptions?.className;
   return createPortal(
     <FormContainerProviderWrapper panelId={panelId}>
-      <div className="rdd-panel-content" data-rdd-panel={panelId} dir={dir}>
-        {renderPanelContent(panelId, panel, registry, messages, formatMessage)}
+      <div className={`rdd-panel-content${typeClass ? ` ${typeClass}` : ''}`} data-rdd-panel={panelId} dir={dir}>
+        {shown && renderPanelContent(panelId, panel, registry, messages, formatMessage)}
       </div>
     </FormContainerProviderWrapper>,
     panelHost.getOrCreateElement(panelId),
