@@ -558,3 +558,35 @@ describe('a layout saved by 6.4.0 restores under 7.x', () => {
     }
   });
 });
+
+describe('a layout saved by 7.7.3 restores in every later 7.x (STABILITY.md)', () => {
+  // fixtures/layout-7.7.3.json was written by saveLayout() running the 7.7.3 source, not
+  // hand-built: a split, panel props and a dedupeKey, a message-descriptor title, a floating window
+  // anchored to a corner, a minimized panel and the active panel. Layouts saved by 7.x are part of
+  // the stability contract: this fixture stays, and each release that changes the format adds one.
+  const saved = readFileSync(join(__dirname, 'fixtures', 'layout-7.7.3.json'), 'utf8');
+  const Plain: React.FC = () => <div />;
+
+  it('restores every panel where it was, and saves it back unchanged', () => {
+    const ws = createWorkspace({ panels: { map: { component: Plain }, editor: { component: Plain } }, initialState: saved });
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const r = createRoot(el);
+    act(() => { r.render(<DockableDesktopProvider workspace={ws}><RddDesktop /></DockableDesktopProvider>); });
+    try {
+      const state = ws._core.getSnapshot();
+      expect(ws.getOpenPanelIds().sort()).toEqual(['editor-1', 'editor-2', 'editor-3', 'map-1', 'map-2']);
+      expect(state.activePanelId).toBe('editor-1');
+      expect(state.panels['map-1'].props).toEqual({ zoom: 7, center: [4.35, 50.85] });
+      expect(state.panels['editor-1'].dedupeKey).toBe('notes.md');
+      expect(state.panels['editor-1'].title).toEqual({ id: 'app.notes', defaultMessage: 'Notes' });
+      expect(state.panels['map-2'].state).toBe('minimized');
+      expect(state.floating.find(f => f.id === 'editor-3')).toMatchObject({ anchor: 'bottom-right', width: 420, height: 300 });
+      expect(state.gridRoot.type).toBe('branch');
+      expect(JSON.parse(ws.saveLayout())).toEqual(JSON.parse(saved));
+    } finally {
+      act(() => r.unmount());
+      el.remove();
+    }
+  });
+});

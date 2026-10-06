@@ -22,6 +22,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The API check compares with the report at the last release tag, so it needs the tags.
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -42,6 +45,11 @@ jobs:
 
       - name: Build Library
         run: npm run build
+
+      # The public API (STABILITY.md): the committed report must match the built declarations,
+      # and a breaking change since the last release fails unless the major version went up.
+      - name: API check
+        run: npm run api:check
 
       - name: Generate API Docs (TypeDoc)
         run: npm run docs:generate

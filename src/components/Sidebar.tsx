@@ -813,7 +813,7 @@ export const SecondarySidebar: React.ForwardRefExoticComponent<RddSecondarySideb
  * Returns sidebar control functions from anywhere inside a `<RddSidebar>` tree,
  * including floating panels rendered via `{children}`.
  *
- * @throws Error if used outside of a {@link Sidebar}.
+ * @throws Error if used outside of an {@link RddSidebar}.
  */
 export function useSidebar(): SidebarContextValue {
   const ctx = useContext(SidebarContext);
@@ -825,7 +825,7 @@ export function useSidebar(): SidebarContextValue {
  * Returns tab-specific control functions for components rendered inside a
  * sidebar tab's `renderContent` tree.
  *
- * @throws Error if used outside of a {@link Sidebar} tab's `renderContent` tree.
+ * @throws Error if used outside of an {@link RddSidebar} tab's `renderContent` tree.
  */
 export function useSidebarTab(): SidebarTabContextValue {
   const ctx = useContext(SidebarTabContext);

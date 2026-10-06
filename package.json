@@ -1,6 +1,6 @@
 {
   "name": "react-dockable-desktop",
-  "version": "7.7.3",
+  "version": "7.7.4",
   "license": "MIT",
   "description": "A premium, state-of-the-art window manager and dockable layout engine for React. Supports fluid grid splits, tabbed groups, floating resizable windows, zero-unmount state preservation, context menus, and internationalization.",
   "main": "dist/index.cjs",
@@ -20,7 +20,8 @@
   ],
   "files": [
     "dist",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "STABILITY.md"
   ],
   "keywords": [
     "react",
@@ -60,6 +61,8 @@
     "test": "vitest run",
     "test:browser": "vitest run -c vitest.browser.config.ts",
     "test:watch": "vitest",
+    "api:report": "tsup && api-extractor run --local",
+    "api:check": "api-extractor run && node scripts/api-check.mjs",
     "lint": "tsc -p tsconfig.lib.json && eslint src --max-warnings 0 && knip --no-progress",
     "version:sync": "node scripts/sync-version.js",
     "version": "node scripts/sync-version.js && git add README.md CHANGELOG.md docs-site/.vitepress/config.ts"
@@ -70,6 +73,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@microsoft/api-extractor": "^7.59.4",
     "@monaco-editor/react": "^4.6.0",
     "@types/leaflet": "^1.9.12",
     "@types/node": "^24.12.3",
