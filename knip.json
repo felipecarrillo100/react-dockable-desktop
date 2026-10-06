@@ -1,0 +1,30 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "demo*/main.tsx",
+    "tests/browser/harness/main.tsx",
+    "tests/browser/**/*.browser.ts",
+    "docs-site/.vitepress/config.ts",
+    "scripts/*.{js,mjs}",
+    "demo*/bootstrap.ts",
+    "src/components/__tests__/fixtures/*.fixture.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "demo*/**/*.{ts,tsx}",
+    "tests/**/*.{ts,tsx}",
+    "scripts/*.{js,mjs}"
+  ],
+  "ignore": [
+    "tests/migration-fixture/**"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "duplicates": "off"
+  },
+  "ignoreDependencies": [
+    "@luciad/ria",
+    "monaco-editor",
+    "katex"
+  ]
+}

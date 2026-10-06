@@ -831,4 +831,3 @@ export function useSidebarTab(): SidebarTabContextValue {
   return ctx;
 }
 
-export default Sidebar;

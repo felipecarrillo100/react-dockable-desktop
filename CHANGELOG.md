@@ -24,6 +24,12 @@ Nothing in the published package changes.
   lockfile's peer dependencies differently; npm 11 and 12 accept it unchanged. Node 20 is past its
   end of life.
 - `recycle_bin/` deleted (7 files, unused since August).
+- **Dead code is checked too.** `npm run lint` also runs [knip](https://knip.dev) (`knip.json`), which
+  reports unused files, exports and dependencies across the library, the demos, the tests and the
+  scripts. Its first run found little dead code in the library: three default exports nothing
+  imports (`DockableDesktopProvider`, `PanelRegistry`, `Sidebar`; the named exports remain) and
+  the unused `copyfiles` dev dependency, all removed. The published type declarations are
+  byte-identical.
 
 ## [7.7.2] — 2026-10-05
 
