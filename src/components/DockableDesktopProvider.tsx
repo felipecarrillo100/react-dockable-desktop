@@ -94,4 +94,3 @@ export const DockableDesktopProvider: React.FC<DockableDesktopProviderProps> = (
   );
 };
 
-export default DockableDesktopProvider;

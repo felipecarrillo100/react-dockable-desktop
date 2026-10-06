@@ -74,4 +74,3 @@ export class PanelRegistry {
 
 /** Global singleton instance of the Panel Registry. */
 export const globalPanelRegistry: PanelRegistry = new PanelRegistry();
-export default globalPanelRegistry;
