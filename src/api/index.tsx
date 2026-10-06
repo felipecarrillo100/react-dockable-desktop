@@ -6,7 +6,8 @@
  * with the internal components under their 7.0 names.
  */
 import React, { forwardRef, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { WorkspaceClient, type WorkspaceClientConfig } from '../WorkspaceClient';
+import { WorkspaceClient, type PanelDefinition, type WorkspaceClientConfig } from '../WorkspaceClient';
+import type { OpenPanelOptions } from '../types';
 import { WorkspaceInstanceContext } from '../components/WorkspaceInstanceContext';
 import { useOptionalWindowManagerState, usePredefinedMessages, type MessageDescriptor, type PanelInfo } from '../components/WindowManagerContext';
 import { useFormContainer, type CloseOptions, type ContainerType, type FormContainerContract } from '../components/FormContainerContext';
@@ -20,7 +21,7 @@ import { ContextMenu, ContextMenuProvider, type ContextMenuAdapter, type Context
 
 // ─── Workspace ──────────────────────────────────────────────────────────────────
 
-/** Configuration for {@link createWorkspace}. */
+/** Configuration for `createWorkspace()`. */
 export interface WorkspaceConfig extends Omit<WorkspaceClientConfig, 'predefinedMessages'> {
   /** Overrides any subset of the built-in message table. */
   messages?: Record<string, MessageDescriptor>;
@@ -34,6 +35,46 @@ export interface WorkspaceConfig extends Omit<WorkspaceClientConfig, 'predefined
 // An interface rather than an alias, so the API reference lists the members under this name.
 export interface Workspace<TEvents extends object = Record<string, unknown>> extends WorkspaceClient<TEvents> {}
 
+/** The type-only mark {@link definePanels} puts on a map. No such value exists at runtime. */
+declare const panelsBrand: unique symbol;
+
+/** A panel map marked by {@link definePanels}, so `createWorkspace` types `openPanel` from it (7.10.0). */
+export type PanelMap<TPanels extends Record<string, PanelDefinition> = Record<string, PanelDefinition>> = TPanels & { readonly [panelsBrand]: true };
+
+/** The props `openPanel` passes to a registered panel: its component's props, without `panelId`. */
+export type PanelPropsOf<TDefinition> = TDefinition extends { component: React.ComponentType<infer P> } ? Omit<P, 'panelId'> : never;
+
+/**
+ * Marks a panel map for typing (7.10.0). Returns it unchanged; a workspace created from it gets a
+ * typed `openPanel`: only registered names, and `props` checked against that panel's component.
+ *
+ * @example
+ * ```ts
+ * const panels = definePanels({ map: { component: MapPanel }, chart: { component: ChartPanel } });
+ * const workspace = createWorkspace({ panels });
+ * workspace.openPanel('c1', 'chart', { props: { series: 3 } });   // checked against ChartPanel's props
+ * ```
+ */
+export function definePanels<const TPanels extends Record<string, PanelDefinition>>(panels: TPanels): PanelMap<TPanels> {
+  return panels as PanelMap<TPanels>;
+}
+
+/**
+ * A workspace created from {@link definePanels}: the same object, with `openPanel` typed from the
+ * registry. Pass it anywhere a {@link Workspace} goes. `useWorkspace()` stays untyped; keep this
+ * one for typed calls.
+ */
+export interface TypedWorkspace<TPanels extends Record<string, PanelDefinition>, TEvents extends object = Record<string, unknown>> extends Workspace<TEvents> {
+  /** `openPanel`, typed: a registered name, and that panel's props. */
+  openPanel<K extends keyof TPanels & string>(id: string, component: K, options?: OpenPanelOptions<PanelPropsOf<TPanels[K]>>): void;
+}
+
+/**
+ * Creates a workspace from a map marked by {@link definePanels} (7.10.0): `openPanel` takes only
+ * the registered names, with `props` checked against each panel's component. To name the events
+ * as well, pass both type arguments: `createWorkspace<typeof panels, AppEvents>({ panels })`.
+ */
+export function createWorkspace<TPanels extends Record<string, PanelDefinition>, TEvents extends object = Record<string, unknown>>(config: WorkspaceConfig & { panels: PanelMap<TPanels> }): TypedWorkspace<TPanels, TEvents>;
 /**
  * Creates a workspace. Pass it to `<DockableDesktopProvider workspace={…}>`.
  *
@@ -46,9 +87,10 @@ export interface Workspace<TEvents extends object = Record<string, unknown>> ext
  * });
  * ```
  */
-export function createWorkspace<TEvents extends object = Record<string, unknown>>(config: WorkspaceConfig = {}): Workspace<TEvents> {
+export function createWorkspace<TEvents extends object = Record<string, unknown>>(config?: WorkspaceConfig): Workspace<TEvents>;
+export function createWorkspace(config: WorkspaceConfig = {}): Workspace {
   const { messages, ...rest } = config;
-  return new WorkspaceClient<TEvents>({ ...rest, predefinedMessages: messages });
+  return new WorkspaceClient({ ...rest, predefinedMessages: messages });
 }
 
 /**

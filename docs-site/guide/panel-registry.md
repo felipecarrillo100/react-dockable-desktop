@@ -105,6 +105,37 @@ const workspace = createWorkspace({
 
 A panel locked this way has no tab context menu (every built-in item is off), so custom items it adds with `usePanelContextMenu` don't appear on its tab.
 
+## Typed registry: `definePanels`
+
+Wrap the map in `definePanels()` and the workspace's `openPanel` is typed from it: only registered
+names are accepted, and `props` is checked against that panel's component (without `panelId`, which
+the library passes). Opt-in: a plain map keeps working exactly as before.
+
+```tsx
+import { createWorkspace, definePanels } from 'react-dockable-desktop';
+
+const panels = definePanels({
+  map:   { component: MapPanel },
+  chart: { component: ChartPanel },   // ChartPanel: React.FC<{ panelId: string; series: number }>
+});
+export const workspace = createWorkspace({ panels });
+
+workspace.openPanel('c1', 'chart', { props: { series: 3 } });   // ✓
+workspace.openPanel('m1', 'mpa');                               // ✗ not a registered panel
+workspace.openPanel('c2', 'chart', { props: { series: '3' } }); // ✗ series is a number
+```
+
+`definePanels` returns its argument unchanged; the typing is all at compile time. With a typed event
+bus as well, pass both type arguments: `createWorkspace<typeof panels, AppEvents>({ panels })`.
+
+The typing comes from the workspace `createWorkspace` returns. `useWorkspace()` returns the untyped
+`Workspace`, so for typed calls inside components, import that same `workspace` (it's the one you
+passed to `<DockableDesktopProvider>`). The typed workspace is still a `Workspace` and goes anywhere
+one does.
+
+Panels registered later with `registry.register()` aren't in the type; open them through
+`useWorkspace()`.
+
 ## Imperative registration (advanced)
 
 For dynamic panel types registered after the workspace is created, use `workspace.registry.register()` — or, inside React, `useWorkspace().registry.register()`:

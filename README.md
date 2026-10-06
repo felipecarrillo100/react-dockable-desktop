@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.9.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.10.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -32,6 +32,8 @@ serialised layout format**, so a layout saved by either library loads in the oth
 - **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed, across docking, floating, and tab-switching alike, all by default; WebGL, maps, terminals, and forms retain full state with zero integration work (a heavy, rarely shown panel type can opt out with `keepAlive: false`)
 - **i18n & RTL** — full Right-to-Left layout support; `dir="rtl"` flips every control, tab order, and drop zone automatically
 - **Inter-Panel Pub/Sub** — lightweight typed event bus for decoupled panel-to-panel communication
+- **Your Own Tab Content** — `renderTabContent` puts your icon, title, badge or status dot in every tab; dragging, keyboard and accessibility stay the library's
+- **Typed Panel Registry** — wrap the panel map in `definePanels()` and `openPanel` accepts only registered names, with props checked against each panel's component
 - **Imperative API** — the workspace from `createWorkspace()` opens, closes, focuses, and serializes panels from anywhere — inside or outside React; `dockTo` opens a panel beside another, on any side or as a tab
 - **Layout Serialization** — save and restore the full workspace as a JSON string; survives page reloads
 - **7 Built-in Skins** — VSCode, macOS, Chrome, Slate, Nord, Obsidian, Tokyo — all fully themeable via CSS variables

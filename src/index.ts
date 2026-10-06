@@ -10,8 +10,8 @@
  */
 
 // ─── Workspace ──────────────────────────────────────────────────────────────────
-export { createWorkspace, useWorkspace } from './api';
-export type { Workspace, WorkspaceConfig } from './api';
+export { createWorkspace, definePanels, useWorkspace } from './api';
+export type { Workspace, WorkspaceConfig, TypedWorkspace, PanelMap, PanelPropsOf } from './api';
 export type { PanelDefinition, BuiltInEvents } from './WorkspaceClient';
 export { DockableDesktopProvider } from './components/DockableDesktopProvider';
 export type { DockableDesktopProviderProps } from './components/DockableDesktopProvider';
@@ -32,6 +32,7 @@ export type {
   DropPosition,
   DropTarget,
   PanelDrop,
+  TabContentProps,
   PanelDropTarget,
   LayoutGridNode,
   LayoutLeafNode,

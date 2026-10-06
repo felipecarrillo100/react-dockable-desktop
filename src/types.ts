@@ -54,6 +54,28 @@ export type PanelDropTarget =
   | { kind: 'edge'; side: SplitDirection }
   | { kind: 'float'; anchor: FloatAnchor | null };
 
+/**
+ * What `renderTabContent` receives for each tab (7.10.0). `title` is already formatted and `icon`
+ * is the icon the built-in content shows, so the built-in content is one line to re-create:
+ * `<>{icon} {title}{dirty && ' *'}</>`.
+ */
+export interface TabContentProps {
+  /** The panel's instance id. */
+  panelId: string;
+  /** The panel's registered kind: branch on it for a per-type look. */
+  component: string;
+  /** The title, formatted: messages resolved, functions called. */
+  title: string;
+  /** The icon the built-in content shows: set at runtime, else the registration's, else the default. */
+  icon: React.ReactNode;
+  /** Has unsaved changes; the built-in content shows ` *`. */
+  dirty: boolean;
+  /** The tab shown in its group. */
+  selected: boolean;
+  /** The workspace's active panel. */
+  focused: boolean;
+}
+
 /** The argument `canDrop` receives: which panel, of which registered kind, is going where. (7.9.0) */
 export interface PanelDrop {
   panelId: string;

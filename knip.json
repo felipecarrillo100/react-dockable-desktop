@@ -7,7 +7,7 @@
     "docs-site/.vitepress/config.ts",
     "scripts/*.{js,mjs}",
     "demo*/bootstrap.ts",
-    "src/components/__tests__/fixtures/*.fixture.ts"
+    "src/components/__tests__/fixtures/*.fixture.{ts,tsx}"
   ],
   "project": [
     "src/**/*.{ts,tsx}",

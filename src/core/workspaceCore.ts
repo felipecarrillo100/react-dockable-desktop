@@ -16,7 +16,7 @@ import { DEFAULT_FLOAT_RECT, parseLayoutPayload, parseInitialState } from './ser
 /**
  * @internal Builds a workspace store: the layout state, every action on it, and the event bus.
  * It has no React dependency — it exists (and accepts calls) before any provider mounts, and a
- * provider only subscribes to it. See {@link createWorkspace} for the public face.
+ * provider only subscribes to it. See `createWorkspace()` for the public face.
  */
 export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore {
   const registry = config.registry;

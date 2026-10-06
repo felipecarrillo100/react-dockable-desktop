@@ -266,6 +266,7 @@ import type { RddDesktopProps, TaskbarVisibility } from 'react-dockable-desktop'
 | `taskbarVisibility` | `TaskbarVisibility` | `'autohide'` | When the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows it only while at least one panel is minimized. `'autohide'` shows it only while at least one panel is minimized, collapsed to an 8px peek strip (12px on touch screens) at the bottom of the workspace: it expands when the pointer reaches it, collapses 400ms after the pointer leaves — never while the pointer is on it — and opens for 2s when a panel is minimized. |
 | `animations` | `boolean` | `true` | Enables the library's own transitions/animations (tab hover, dock preview, etc.). Set to `false` to disable them — scoped to only the library's own elements, never the host page's. |
 | `emptyWorkspace` | `ReactNode` | the built-in "Empty Workspace Section" message | What the workspace shows while no panel is docked: a welcome screen, a logo, "Open a file" buttons. It fills the empty group; floating windows still show over it, and a window can still be dropped onto it to dock. Other empty groups in a split keep the built-in message. (7.8.0) |
+| `renderTabContent` | `(tab: TabContentProps) => ReactNode` | the built-in icon, title and dirty marker | Your own content for each tab in the grid. See [Your own tab content](#your-own-tab-content). (7.10.0) |
 
 ```tsx
 <RddDesktop skin="nord" taskbarVisibility="autohide" defaultPanelIcon={<FolderIcon />} />
@@ -274,6 +275,43 @@ import type { RddDesktopProps, TaskbarVisibility } from 'react-dockable-desktop'
 ```
 
 To change only the text of the built-in empty message, override `emptyGroup` in `messages` instead.
+
+### Your own tab content
+
+`renderTabContent` replaces what's inside each tab in the grid: the icon, the title and the dirty
+marker. Use it for a badge, a status dot, a two-line title, a different icon per state. It's set once,
+on the desktop; branch on `component` for a per-type look.
+
+```tsx
+<RddDesktop
+  renderTabContent={(tab) => (
+    <>
+      {tab.icon} {tab.title}
+      {tab.dirty && <span className="unsaved-dot" />}
+      {tab.component === 'inbox' && <Badge count={unread} />}
+    </>
+  )}
+/>
+```
+
+It receives a `TabContentProps`:
+
+| Field | Type | |
+|---|---|---|
+| `panelId` | `string` | The panel's instance id. |
+| `component` | `string` | The panel's registered kind. |
+| `title` | `string` | The title, formatted: messages resolved, functions called. |
+| `icon` | `ReactNode` | The icon the built-in content shows: set at runtime, else the registration's, else the default. |
+| `dirty` | `boolean` | Has unsaved changes. |
+| `selected` | `boolean` | The tab shown in its group. |
+| `focused` | `boolean` | The workspace's active panel. |
+
+The built-in content is `{tab.icon} {tab.title}{tab.dirty && ' *'}`, so starting from it is one line.
+
+The tab itself stays the library's: dragging, keyboard navigation, `role="tab"`, its context menu,
+its state attributes and classes, the header actions and the close button all keep working. Keep the
+content non-interactive (no buttons or links): it sits inside the tab, which is the control.
+Floating-window title bars and the taskbar are unchanged.
 
 ## `DockableDesktopProvider` props
 

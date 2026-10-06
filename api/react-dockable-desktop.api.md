@@ -170,6 +170,11 @@ export interface ContextMenuSubMenu {
 }
 
 // @public
+export function createWorkspace<TPanels extends Record<string, PanelDefinition>, TEvents extends object = Record<string, unknown>>(config: WorkspaceConfig & {
+    panels: PanelMap<TPanels>;
+}): TypedWorkspace<TPanels, TEvents>;
+
+// @public
 export function createWorkspace<TEvents extends object = Record<string, unknown>>(config?: WorkspaceConfig): Workspace<TEvents>;
 
 // @public
@@ -327,6 +332,9 @@ export const defaultMessages: {
         readonly defaultMessage: "Panel";
     };
 };
+
+// @public
+export function definePanels<const TPanels extends Record<string, PanelDefinition>>(panels: TPanels): PanelMap<TPanels>;
 
 // @public
 export interface DirtyStateOptions {
@@ -669,6 +677,16 @@ export interface PanelInfo {
 }
 
 // @public
+export type PanelMap<TPanels extends Record<string, PanelDefinition> = Record<string, PanelDefinition>> = TPanels & {
+    readonly [panelsBrand]: true;
+};
+
+// @public
+export type PanelPropsOf<TDefinition> = TDefinition extends {
+    component: React$1.ComponentType<infer P>;
+} ? Omit<P, 'panelId'> : never;
+
+// @public
 export class PanelRegistry {
     get(id: string): PanelRegistryEntry | undefined;
     getRegisteredIds(): string[];
@@ -705,6 +723,9 @@ export interface PanelRegistryEntry {
         keepAlive?: boolean;
     };
 }
+
+// @public
+const panelsBrand: unique symbol;
 
 // @public
 export interface PanelSidebarSection {
@@ -815,6 +836,7 @@ export interface RddDesktopProps {
     animations?: boolean;
     defaultPanelIcon?: React$1.ReactNode;
     emptyWorkspace?: React$1.ReactNode;
+    renderTabContent?: (tab: TabContentProps) => React$1.ReactNode;
     skin?: string;
     taskbarVisibility?: TaskbarVisibility;
 }
@@ -1218,6 +1240,17 @@ export function startPointerDrag<TStart>(config: PointerDragConfig<TStart>): voi
 export type Stretch = 'width' | 'height' | 'both';
 
 // @public
+export interface TabContentProps {
+    component: string;
+    dirty: boolean;
+    focused: boolean;
+    icon: React$1.ReactNode;
+    panelId: string;
+    selected: boolean;
+    title: string;
+}
+
+// @public
 export type TaskbarVisibility = 'always' | 'compact' | 'autohide';
 
 // @public
@@ -1386,6 +1419,11 @@ export interface ToolbarToggleItem {
 
 // @public
 export type ToolbarVariant = 'transparent' | 'frosted' | 'solid';
+
+// @public
+export interface TypedWorkspace<TPanels extends Record<string, PanelDefinition>, TEvents extends object = Record<string, unknown>> extends Workspace<TEvents> {
+    openPanel<K extends keyof TPanels & string>(id: string, component: K, options?: OpenPanelOptions<PanelPropsOf<TPanels[K]>>): void;
+}
 
 // @public
 export function useActiveContribution(): PanelContribution | null;
