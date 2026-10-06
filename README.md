@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.7.3-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.7.4-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -436,7 +436,7 @@ Every release is documented in one place — see the
 **[CHANGELOG](https://github.com/felipecarrillo100/react-dockable-desktop/blob/main/CHANGELOG.md)**
 for the full, up-to-date history of additions, fixes, and breaking changes.
 
-Upgrading across a major version? See the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration).
+Upgrading across a major version? See the [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration). What may change in which release is in [STABILITY.md](STABILITY.md).
 
 ---
 
@@ -462,6 +462,7 @@ Complete guides, API reference, and interactive demo at:
 | [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `RddPanelOverlay`, panel toolbars, `RddFloatingWidget`, `useFloatingWidgets` |
 | [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<RddToasts>`, queue behaviour, theming, `ToastAdapter` |
 | [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrading across major versions |
+| [Stability & Versioning](https://felipecarrillo100.github.io/react-dockable-desktop/guide/stability) | What the public API is, deprecation and support periods |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |
 
 ---

@@ -46,7 +46,7 @@ export interface DropTarget {
  */
 export interface LayoutGridNode {
   type: 'branch';
-  /** Split orientation orientation indicator. */
+  /** Split orientation: `horizontal` places the children side by side, `vertical` stacks them. */
   orientation: SplitOrientation;
   /** Children branches or leaf panels. */
   children: LayoutNode[];
@@ -262,7 +262,7 @@ export interface WorkspaceActions {
   openPanel: <P extends object = Record<string, unknown>>(id: string, component: string, options?: OpenPanelOptions<P>) => void;
   /**
    * Closes a panel immediately, bypassing dirty-state close guards.
-   * For guarded close, use {@link requestClosePanel}.
+   * For guarded close, use {@link WorkspaceActions.requestClosePanel}.
    * @param id - Panel instance ID.
    */
   closePanel: (id: string) => void;
@@ -353,7 +353,7 @@ export interface WorkspaceActions {
    * Serializes the entire workspace state to a JSON string.
    * Includes grid layout, floating window positions, minimized panels, panel metadata, and the
    * globally active panel (see {@link SerializedLayout.activePanelId}).
-   * @returns JSON string suitable for storage and later restoration via {@link loadLayout}.
+   * @returns JSON string suitable for storage and later restoration via {@link WorkspaceActions.loadLayout}.
    * @example
    * ```ts
    * localStorage.setItem('layout', actions.saveLayout());
@@ -369,7 +369,7 @@ export interface WorkspaceActions {
    * layouts saved before that field existed take). It is never seeded from an arbitrary entry in
    * `panels`.
    *
-   * @param layoutJson - JSON string produced by {@link saveLayout}.
+   * @param layoutJson - JSON string produced by {@link WorkspaceActions.saveLayout}.
    * @returns `true` if the layout was successfully parsed and applied, `false` otherwise.
    */
   loadLayout: (layoutJson: string) => boolean;
