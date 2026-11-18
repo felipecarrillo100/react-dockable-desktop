@@ -22,22 +22,6 @@ const isPanelShown = (s: WorkspaceState, panelId: string): boolean => {
   return isShownInGrid(s.gridRoot, panelId);
 };
 
-/**
- * Where a panel's element waits while no slot shows it. One per page, shared on purpose: every
- * workspace's elements are distinct, so parking them side by side in one hidden node is harmless.
- */
-export const hiddenContainerId = 'preserved-dom-container';
-
-const park = (el: HTMLElement): void => {
-  let hiddenContainer = document.getElementById(hiddenContainerId);
-  if (!hiddenContainer) {
-    hiddenContainer = document.createElement('div');
-    hiddenContainer.id = hiddenContainerId;
-    hiddenContainer.style.display = 'none';
-    document.body.appendChild(hiddenContainer);
-  }
-  hiddenContainer.appendChild(el);
-};
 
 
 // ==========================================
@@ -105,7 +89,7 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
 
     return () => {
       resizeObserver.disconnect();
-      park(cachedEl);
+      panelHost.park(cachedEl);
     };
   }, [panelId, panelHost]);
 
@@ -143,7 +127,7 @@ export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) =>
     host.appendChild(cachedEl);
     restorePanelDom(cachedEl, { refocus: false }); // a preview shows the panel's place; it never takes focus
 
-    return () => park(cachedEl);
+    return () => panelHost.park(cachedEl);
   }, [panelId, disableLivePreview, panelHost]);
 
   if (disableLivePreview) {

@@ -10,6 +10,22 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.10.1] — 2026-11-18
+
+Internal groundwork for widgets that can leave their panel (a planned feature). No API change and
+no behaviour change.
+
+### Changed
+
+- **Widgets opened with `useFloatingWidgets().open()` now keep their placement in the overlay**
+  (`RddPanelOverlay`) instead of inside each widget, as vdd and ndd already do. Their anchor and
+  stretch are seeded from the config on the first open, kept when the same id is opened again, and
+  reset by closing it, all exactly as before. A drag that ends after its widget closed no longer
+  has anywhere to leave a placement behind. `<RddFloatingWidget>` used directly is unchanged.
+- **A hidden panel waits in the hidden store of its workspace's own document**, rather than one
+  always found on the global `document`. For a page with one document, which is every page today,
+  nothing changes: the store is still `#preserved-dom-container`, hidden, in `<body>`.
+
 ## [7.10.0] — 2026-10-07
 
 Your own tab content, and an opt-in typed panel registry. Both opt-in: without them nothing changes.
@@ -1191,7 +1207,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...HEAD
+[7.10.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.0...v7.10.1
 [7.10.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.9.0...v7.10.0
 [7.9.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.8.0...v7.9.0
 [7.8.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.7.4...v7.8.0

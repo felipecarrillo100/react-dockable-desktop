@@ -105,19 +105,34 @@ export interface RddFloatingWidgetProps {
 export function PanelFloatingWindow(props: RddFloatingWidgetProps): React.ReactElement | null {
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
-  return <FloatingWindowBody key={props.id} ctx={ctx} {...props} />;
+  // `controlledAnchor` is set last, so no stray prop on the public component can turn it on.
+  return <FloatingWindowBody key={props.id} ctx={ctx} {...props} controlledAnchor={undefined} />;
+}
+
+/**
+ * @internal A managed widget (`useFloatingWidgets().open()`): its anchor and stretch are owned by
+ * the overlay's store (`PanelOverlayRoot`), as in vdd and ndd, so the overlay always knows where
+ * each managed widget sits. Not exported from the package.
+ */
+export function ManagedFloatingWindow(props: RddFloatingWidgetProps & { anchor: FloatAnchor }): React.ReactElement | null {
+  const ctx = useContext(PanelOverlayContext);
+  if (!props.open) return null;
+  const { anchor, ...rest } = props;
+  return <FloatingWindowBody key={props.id} ctx={ctx} {...rest} controlledAnchor={anchor} />;
 }
 
 // ─── Internal: FloatingWindowBody ─────────────────────────────────────────────
 
 interface FloatingWindowBodyProps extends RddFloatingWidgetProps {
   ctx: PanelOverlayCtx | null;
+  /** Controlled anchor, used only by `ManagedFloatingWindow`. `undefined` keeps it internal. */
+  controlledAnchor: FloatAnchor | undefined;
 }
 
 type WindowMode = 'docked' | 'free';
 
 
-function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose }: FloatingWindowBodyProps): React.ReactElement {
+function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose, controlledAnchor }: FloatingWindowBodyProps): React.ReactElement {
   const isRtl = useOptionalWindowManagerState(s => s.isRtl, false);
   // Resolved here rather than at the call site, so a descriptor title re-resolves whenever the
   // formatter changes. Both hooks fall back to the message's own `defaultMessage` when there is no
@@ -125,7 +140,10 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   const [mode, setMode] = useState<WindowMode>('docked');
-  const [currentAnchor, setCurrentAnchor] = useState<FloatAnchor>(defaultAnchor);
+  const [internalAnchor, setInternalAnchor] = useState<FloatAnchor>(defaultAnchor);
+  // Controlled only for managed widgets, whose placement lives in the overlay's store.
+  const isAnchorControlled = controlledAnchor !== undefined;
+  const currentAnchor = isAnchorControlled ? controlledAnchor : internalAnchor;
   // `size` is deliberately left untouched while an axis is stretched — the render branch below
   // simply stops reading it, exactly as a maximized workspace window keeps its x/y/w/h. Releasing
   // the axis therefore restores the previous size with no snapshot and no bookkeeping.
@@ -152,15 +170,15 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   const stackOffsetRef = useRef(0);
 
   /**
-   * The single write path for placement. Anchor is always internal; stretch is internal only when
-   * uncontrolled. Either way the pair is reported once, so a listener never observes a half-applied
-   * transition.
+   * The single write path for placement. Anchor and stretch are each internal only when
+   * uncontrolled (the anchor is controlled only for managed widgets). Either way the pair is
+   * reported once, so a listener never observes a half-applied transition.
    */
   const applyPlacement = useCallback((anchor: FloatAnchor, next: Stretch | null): void => {
-    setCurrentAnchor(anchor);
+    if (!isAnchorControlled) setInternalAnchor(anchor);
     if (!isStretchControlled) setInternalStretch(next);
     onPlacementChangeRef.current?.({ anchor, stretch: next });
-  }, [isStretchControlled, onPlacementChangeRef]);
+  }, [isAnchorControlled, isStretchControlled, onPlacementChangeRef]);
 
   const dragState = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number; hasDragged: boolean } | null>(null);
 
