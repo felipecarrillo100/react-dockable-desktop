@@ -39,3 +39,6 @@ docs-site/api/
 
 # Local-only notes, not meant for version control
 RETROSPECTIVE.md
+
+# Claude Code project instructions (local only)
+CLAUDE.md

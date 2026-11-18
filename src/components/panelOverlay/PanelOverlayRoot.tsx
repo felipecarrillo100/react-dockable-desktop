@@ -4,11 +4,11 @@
  */
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import type { FloatAnchor } from '../WindowManagerContext';
-import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
+import type { ManagedWidget, PanelFloatPlacement, Stretch, ToolbarPosition } from './types';
 import { PanelToolbarContext, PanelManagerContext, PanelOverlayContext } from './context';
 import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx } from './context';
 import { bucketsFor, ANCHORS } from '../../core/stretch';
-import { PanelFloatingWindow } from './FloatingWidget';
+import { ManagedFloatingWindow } from './FloatingWidget';
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
 
@@ -43,6 +43,10 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   const [hoveredZone, setHoveredZone] = useState<FloatAnchor | null>(null);
   const [topId, setTopId] = useState<string | null>(null);
   const [managedWindows, setManagedWindows] = useState<Map<string, ManagedWidget>>(() => new Map());
+  // Where each managed widget sits, owned here rather than inside the widget, so the overlay
+  // always knows (vdd's and ndd's overlay stores keep the same record). Seeded once per open from
+  // the config, then updated by gestures; closing drops it, so close-then-open is the reset.
+  const [managedPlacements, setManagedPlacements] = useState<Record<string, PanelFloatPlacement>>({});
   const zCounterRef = useRef(100);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +106,11 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       next.set(id, config);
       return next;
     });
+    // Re-opening a live id refreshes its config but leaves it where the user put it.
+    setManagedPlacements(prev => (id in prev ? prev : {
+      ...prev,
+      [id]: { anchor: config.anchor ?? 'top-right', stretch: config.stretch ?? null },
+    }));
   }, []);
 
   const closeManaged = useCallback((id: string): void => {
@@ -110,10 +119,25 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       next.delete(id);
       return next;
     });
+    setManagedPlacements(prev => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }, []);
 
   const closeAllManaged = useCallback((): void => {
     setManagedWindows(new Map());
+    setManagedPlacements({});
+  }, []);
+
+  /**
+   * A gesture's report. Ignored for a widget that is no longer open: a gesture can land after a
+   * close, and writing then would leave a placement that the next open would wrongly reuse.
+   */
+  const setManagedPlacement = useCallback((id: string, placement: PanelFloatPlacement): void => {
+    setManagedPlacements(prev => (id in prev ? { ...prev, [id]: placement } : prev));
   }, []);
 
   const managedWindowIds = useMemo(() => Array.from(managedWindows.keys()), [managedWindows]);
@@ -163,22 +187,28 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
           >
             {children}
             {draggingId !== null && <DropZoneOverlay hoveredZone={hoveredZone} />}
-            {Array.from(managedWindows.entries()).map(([id, cfg]) => (
-              <PanelFloatingWindow
-                key={id}
-                id={id}
-                title={cfg.title}
-                icon={cfg.icon}
-                open={true}
-                onClose={() => closeManaged(id)}
-                defaultAnchor={cfg.anchor ?? 'top-right'}
-                defaultWidth={cfg.width ?? 320}
-                defaultHeight={cfg.height ?? 240}
-                defaultStretch={cfg.stretch}
-              >
-                {cfg.content}
-              </PanelFloatingWindow>
-            ))}
+            {Array.from(managedWindows.entries()).map(([id, cfg]) => {
+              const placement = managedPlacements[id]
+                ?? { anchor: cfg.anchor ?? 'top-right', stretch: cfg.stretch ?? null };
+              return (
+                <ManagedFloatingWindow
+                  key={id}
+                  id={id}
+                  title={cfg.title}
+                  icon={cfg.icon}
+                  open={true}
+                  onClose={() => closeManaged(id)}
+                  defaultAnchor={placement.anchor}
+                  anchor={placement.anchor}
+                  stretch={placement.stretch}
+                  onPlacementChange={p => setManagedPlacement(id, p)}
+                  defaultWidth={cfg.width ?? 320}
+                  defaultHeight={cfg.height ?? 240}
+                >
+                  {cfg.content}
+                </ManagedFloatingWindow>
+              );
+            })}
           </div>
         </PanelOverlayContext.Provider>
       </PanelManagerContext.Provider>

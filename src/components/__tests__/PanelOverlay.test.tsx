@@ -33,6 +33,10 @@
  * PO29: ...and re-resolves when the formatter changes, with no reopen (the reported bug)
  * PO30: A plain string title still renders unchanged
  * PO31: The close button's tooltip comes from the message catalogue, not hardcoded English
+ * PO32: A managed widget's placement is owned by the overlay: a gesture moves it, a re-open keeps it
+ * PO33: ...close then open re-seeds it from the config
+ * PO34: ...a gesture that lands after a close leaves nothing behind for the next open
+ * PO35: The panel host parks elements in its own document, not the global one
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React, { useEffect } from 'react';
@@ -47,6 +51,7 @@ import {
 } from '../PanelOverlay';
 import type { ManagedWidget } from '../PanelOverlay';
 import { WindowManagerProvider } from '../WindowManagerContext';
+import { createPanelHost } from '../workspace/panelHost';
 import type { MessageFormatter } from '../WindowManagerContext';
 
 let container: HTMLDivElement;
@@ -1458,5 +1463,92 @@ describe('PO28–PO31: localisable float titles', () => {
     expect(close().getAttribute('aria-label')).toBe('Cerrar');
     rerenderWith(ru);
     expect(close().getAttribute('title')).toBe('Закрыть');
+  });
+});
+
+// ─── PO32–PO35: the overlay owns managed placement (7.10.1) ────────────────────
+
+describe('PO32–PO34: managed-widget placement lives in the overlay', () => {
+  let mgr: ReturnType<typeof usePanelFloatingWindowManager> | null = null;
+  const ManagerProbe: React.FC = () => { mgr = usePanelFloatingWindowManager(); return null; };
+  const strip: ManagedWidget = {
+    title: 'Strip', content: <span />, anchor: 'bottom-left', stretch: 'width', width: 240, height: 160,
+  };
+  const win = () => container.querySelector('.rdd-panel-float') as HTMLElement;
+  /** Drags the strip's left end inwards: that releases the stretch and pins the right end. */
+  const releaseLeftEnd = (finish = true) => {
+    const handle = win().querySelector('.rdd-resize-w') as HTMLElement;
+    act(() => { handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: 10, clientY: 500, button: 0 })); });
+    act(() => { handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: 110, clientY: 500 })); });
+    if (finish) act(() => { handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: 110, clientY: 500 })); });
+    return handle;
+  };
+  let restore: () => void = () => {};
+  beforeEach(() => {
+    restore = stubGeometry({ overlay: domRect(0, 0, 800, 600), float: domRect(8, 432, 784, 160) });
+    act(() => {
+      root = createRoot(container);
+      root.render(<PanelOverlayRoot><ManagerProbe /></PanelOverlayRoot>);
+    });
+    act(() => { mgr!.open('strip', strip); });
+  });
+  afterEach(() => { restore(); mgr = null; });
+
+  it('PO32: a gesture moves a managed widget, and re-opening the same id leaves it there', () => {
+    expect(win().style.insetInlineStart).toBe('8px');   // seeded: bottom-left
+    releaseLeftEnd();
+    // Now bottom-right and no longer stretched, which only happens if the store took the report:
+    // a stretched strip pins both ends, so the inline-end inset alone would not tell them apart.
+    const released = () => {
+      expect(win().style.insetInlineEnd).toBe('8px');
+      expect(win().style.insetInlineStart).toBe('');
+      expect(win().style.width).not.toBe('');
+    };
+    released();
+    act(() => { mgr!.open('strip', { ...strip, anchor: 'top-left' }); });
+    released();                                          // a re-open refreshes config, not placement
+    expect(win().style.top).toBe('');
+  });
+
+  it('PO33: close then open re-seeds the placement from the config', () => {
+    releaseLeftEnd();
+    act(() => { mgr!.close('strip'); });
+    act(() => { mgr!.open('strip', strip); });
+    expect(win().style.insetInlineStart).toBe('8px');
+    expect(win().style.width).toBe('');                 // stretched again
+  });
+
+  it('PO34: a gesture that ends after the widget closed leaves nothing for the next open', () => {
+    // A docked 300x200 widget at top-left; dragging its bottom edge past the panel arms the
+    // block axis to snap to stretched, which is applied when the drag ends.
+    restore();
+    restore = stubGeometry({ overlay: domRect(0, 0, 800, 600), float: domRect(8, 0, 300, 200) });
+    const box: ManagedWidget = { title: 'Box', content: <span />, anchor: 'top-left', width: 300, height: 200 };
+    act(() => { mgr!.closeAll(); });
+    act(() => { mgr!.open('box', box); });
+    const handle = win().querySelector('.rdd-resize-s') as HTMLElement;
+    act(() => { handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: 150, clientY: 198, button: 0 })); });
+    act(() => { handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: 150, clientY: 900 })); });
+    // Closed mid-drag. A browser then fires lostpointercapture at the document (the capturing
+    // handle was removed), which ends the drag and reports the snap for a widget that is gone.
+    act(() => { mgr!.close('box'); });
+    act(() => { document.dispatchEvent(new PointerEvent('lostpointercapture', { bubbles: true, pointerId: 8 })); });
+    act(() => { mgr!.open('box', box); });
+    expect(win().style.height).toBe('200px');           // the config's placement, not the late snap
+  });
+});
+
+describe('PO35: the panel host parks in its own document', () => {
+  it('creates the hidden store in the host\'s document, not the global one', () => {
+    const other = document.implementation.createHTMLDocument('other');
+    const host = createPanelHost(other);
+    const el = host.getOrCreateElement('p1');
+    expect(el.ownerDocument).toBe(other);
+    host.park(el);
+    const store = other.getElementById('preserved-dom-container');
+    expect(store).not.toBeNull();
+    expect(store!.style.display).toBe('none');
+    expect(el.parentElement).toBe(store);
+    expect(document.getElementById('preserved-dom-container')).toBeNull();
   });
 });
