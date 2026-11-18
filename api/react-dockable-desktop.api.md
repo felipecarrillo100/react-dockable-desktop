@@ -420,16 +420,39 @@ export interface HostClasses {
 }
 
 // @internal
+type HostedPanelPlacement = {
+    kind: 'dock';
+    dockTo: {
+        panel: string;
+        position: DropPosition;
+        size?: number;
+    };
+} | {
+    kind: 'float';
+    rect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+};
+
+// @internal
 interface InternalWindowActions extends WorkspaceActions {
     // (undocumented)
     getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
     isDropAllowed: (panelId: string, to: PanelDropTarget) => boolean;
+    // Warning: (ae-forgotten-export) The symbol "HostedPanelPlacement" needs to be exported by the entry point index.d.ts
+    openHostedPanel: (id: string, owner: PanelOwner, title: PanelInfo['title'], at: HostedPanelPlacement) => boolean;
     // (undocumented)
     registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
+    registerHostedCloseHandler: (id: string, onClose: () => void) => () => void;
     // (undocumented)
     registerPanelContextMenu: (panelId: string, getItems: () => ContextMenuItem[]) => () => void;
+    removeHostedPanel: (id: string) => void;
     // (undocumented)
     setActivePanel: (id: string | null) => void;
+    setHostedOptions: (id: string, options: NonNullable<PanelOwner['options']>) => void;
 }
 
 // @public
@@ -669,6 +692,7 @@ export interface PanelInfo {
         anchor?: FloatAnchor | null;
     };
     lastLeafId?: string;
+    owner?: PanelOwner;
     previousState?: 'docked' | 'floating';
     props?: Record<string, unknown>;
     serializable: boolean;
@@ -680,6 +704,17 @@ export interface PanelInfo {
 export type PanelMap<TPanels extends Record<string, PanelDefinition> = Record<string, PanelDefinition>> = TPanels & {
     readonly [panelsBrand]: true;
 };
+
+// @public
+export interface PanelOwner {
+    // @internal
+    options?: {
+        canFloat?: boolean;
+        canDock?: boolean;
+    };
+    panelId: string;
+    widgetId: string;
+}
 
 // @public
 export type PanelPropsOf<TDefinition> = TDefinition extends {

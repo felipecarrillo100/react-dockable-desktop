@@ -103,6 +103,7 @@
     "PanelHandle",
     "PanelInfo",
     "PanelMap",
+    "PanelOwner",
     "PanelPropsOf",
     "PanelRegistryEntry",
     "PanelSidebarSection",

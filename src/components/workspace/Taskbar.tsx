@@ -12,6 +12,7 @@ import { isMenuKey, menuEventAt, LONG_PRESS_MS, CANCEL_MOVE_PX } from './helpers
 import { DefaultGridIcon } from './icons';
 import { PreviewDOMWrapper } from './panelMount';
 import type { TaskbarVisibility } from '../WindowManager';
+import { optionsFor } from '../../core/panelOptions';
 
 /** The minimized panel whose preview is showing, and where its taskbar item is. */
 export type HoveredMinimized = { id: string; rect: DOMRect; title: WorkspaceState['minimized'][number]['title']; component: string; fromTouch?: boolean };
@@ -72,8 +73,8 @@ export const Taskbar = ({
         className="rdd-taskbar-items-container"
       >
         {state.minimized.map(m => {
-          const regEntry = registry.get(m.component);
-          const icon = state.panels[m.id]?.icon ?? (regEntry?.defaultOptions?.icon || defaultPanelIcon || DefaultGridIcon);
+          const options = optionsFor(registry, state.panels[m.id], m.component);
+          const icon = state.panels[m.id]?.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon);
 
           return (
             <button

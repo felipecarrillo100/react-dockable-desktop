@@ -10,6 +10,7 @@ import { tabDropSide, isMenuKey, menuEventAt, refocusAfterTabClose, domIdPart } 
 import { DefaultGridIcon } from './icons';
 import { PreservedDOMWrapper } from './panelMount';
 import type { TabContentProps } from '../../types';
+import { optionsFor } from '../../core/panelOptions';
 
 export interface LeafGroupProps {
   leaf: LayoutLeafNode;
@@ -160,8 +161,7 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
             const isSelected = leaf.activePanelId === id;
             const isGloballyActive = state.activePanelId === id;
 
-            const registryEntry = registry.get(panel.component);
-            const options = registryEntry?.defaultOptions;
+            const options = optionsFor(registry, panel);
 
             const isHovered = hoveredTab && hoveredTab.leafId === leaf.id && hoveredTab.panelId === id;
             const isLast = idx === leaf.panels.length - 1;

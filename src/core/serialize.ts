@@ -3,7 +3,8 @@
  * @description Reading a saved layout: parsing, migrating, and repairing it on load.
  */
 import type { LayoutNode, FloatAnchor, PanelInfo, WorkspaceState, SerializedLayout } from '../types';
-import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, repairLayoutTree } from './layoutTree';
+import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, repairLayoutTree, removePanelFromTree } from './layoutTree';
+import { HOSTED_COMPONENT } from './panelOptions';
 import type { ActiveTargetScope } from './layoutTree';
 
 export type ParsedLayoutPayload = Pick<SerializedLayout, 'gridRoot' | 'floating' | 'minimized' | 'panels'> & {
@@ -98,11 +99,34 @@ export function parseLayoutPayload(input: unknown): ParsedLayoutPayload | null {
   return { gridRoot, floating, minimized: parsed.minimized as SerializedLayout['minimized'], panels, activePanelId };
 }
 
+/**
+ * A parsed layout without hosted panels (7.11.0). A hosted panel shows a widget its owner panel
+ * mounts; `saveLayout()` never writes one, so one in a layout came from a hand-made JSON and has no
+ * content to show. It is dropped with every reference to it, and `owner` is stripped elsewhere.
+ */
+export function withoutHostedPanels(payload: ParsedLayoutPayload): ParsedLayoutPayload {
+  const hosted = Object.values(payload.panels).filter(p => p.component === HOSTED_COMPONENT).map(p => p.id);
+  if (hosted.length === 0) return payload;
+  const panels = { ...payload.panels };
+  let gridRoot: LayoutNode = payload.gridRoot;
+  for (const id of hosted) {
+    delete panels[id];
+    gridRoot = removePanelFromTree(gridRoot, id) || EMPTY_LEAF;
+  }
+  const gone = new Set(hosted);
+  const floating = payload.floating.filter(w => !gone.has(w.id));
+  const minimized = payload.minimized.filter(m => !gone.has(m.id));
+  const activePanelId = payload.activePanelId !== null && gone.has(payload.activePanelId)
+    ? deriveActivePanelId({ gridRoot, floating, panels } as ActiveTargetScope)
+    : payload.activePanelId;
+  return { gridRoot, floating, minimized, panels, activePanelId };
+}
+
 export function parseInitialState(json: string | null): Pick<WorkspaceState, 'gridRoot' | 'floating' | 'minimized' | 'panels' | 'activePanelId'> {
   if (json) {
     try {
       const payload = parseLayoutPayload(JSON.parse(json));
-      if (payload) return payload;
+      if (payload) return withoutHostedPanels(payload);
     } catch {
       // fall through to empty canvas
     }
