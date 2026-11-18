@@ -10,6 +10,8 @@
  *   ntabs=N         N extra tabs in the first group
  *   ov=1            panel p3 hosts a PanelOverlayRoot with an inner floating widget
  *   pt=VARIANT      …and a top panel toolbar of that variant (frosted | solid | transparent)
+ *   wo=1            panel p3 (needs ov=1) also opens a managed widget `wo` (useFloatingWidgets):
+ *                   a counter, a text field and a box with height: 100% (#wo-fill)
  *   cs=dark|light|none   colour scheme the app sets on <html> (none = app sets nothing)
  *   zb=N            zIndexBase passed to the provider
  *   grow=1          no rdd-fill-viewport on the wrapper (the workspace grows with its content)
@@ -38,7 +40,7 @@ import {
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
   RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, RddToasts, useModals, useSidePanels, RddConfirm, toast,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
-  RddPanelToolbar, RddToolbarItem,
+  RddPanelToolbar, RddToolbarItem, useFloatingWidgets,
 } from '../../../src/index';
 
 const q = new URLSearchParams(location.search);
@@ -75,10 +77,33 @@ function ProbePanel() {
   );
 }
 
+/** A managed widget's content: state to keep (a counter, a text field) and a box that fills it. */
+function ManagedContent() {
+  const [count, setCount] = useState(0);
+  return (
+    <div id="wo-fill" style={{ height: '100%', boxSizing: 'border-box', border: '1px solid #888' }}>
+      <button id="wo-inc" onClick={() => setCount(c => c + 1)}>+</button>
+      <span id="wo-count">{count}</span>
+      <input id="wo-input" defaultValue="" />
+    </div>
+  );
+}
+
+/** Opens the `wo` managed widget once; needs to sit inside the overlay to reach its manager. */
+function ManagedOpener() {
+  const widgets = useFloatingWidgets();
+  useEffect(() => {
+    widgets.open('wo', { title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right', width: 200, height: 180 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 function OverlayPanel() {
   const [open, setOpen] = useState(true);
   return (
     <RddPanelOverlay>
+      {q.get('wo') === '1' && <ManagedOpener />}
       <div style={{ width: '100%', height: '100%', background: '#224' }} id="ovbg" />
       {q.get('pt') && (
         <RddPanelToolbar position="top" variant={q.get('pt') as 'frosted'}>

@@ -11,10 +11,11 @@ import { startPointerDrag, computeResizedRect } from '../dragResize';
 import type { ResizeDir } from '../dragResize';
 import type { PanelFloatPlacement, Stretch } from './types';
 import { PanelOverlayContext } from './context';
-import type { PanelOverlayCtx } from './context';
+import type { PanelOverlayCtx, ManagedPlacement, ControlledPlacement } from './context';
 import { stretchesInline, stretchesBlock, addAxis, releaseAxis, bucketsFor, withInlineHalf, withBlockHalf } from '../../core/stretch';
 import { getHoveredZone, MIN_W, MIN_H, DOCK_INSET, DOCK_GAP, SNAP_IN, SNAP_OUT } from '../../core/panelOverlayGeometry';
 import { useLatestRef } from '../../utils/useLatestRef';
+import { trackPanelDom, restorePanelDom } from '../domPreservation';
 
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
@@ -105,55 +106,85 @@ export interface RddFloatingWidgetProps {
 export function PanelFloatingWindow(props: RddFloatingWidgetProps): React.ReactElement | null {
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
-  // `controlledAnchor` is set last, so no stray prop on the public component can turn it on.
-  return <FloatingWindowBody key={props.id} ctx={ctx} {...props} controlledAnchor={undefined} />;
+  // The internal props are set last, so no stray prop on the public component can turn them on.
+  return <FloatingWindowBody key={props.id} ctx={ctx} {...props} controlled={undefined} contentEl={undefined} />;
 }
 
 /**
- * @internal A managed widget (`useFloatingWidgets().open()`): its anchor and stretch are owned by
- * the overlay's store (`PanelOverlayRoot`), as in vdd and ndd, so the overlay always knows where
- * each managed widget sits. Not exported from the package.
+ * @internal A managed widget (`useFloatingWidgets().open()`). Its whole placement (anchor,
+ * stretch, docked or free, position, size) is owned by the overlay's store (`PanelOverlayRoot`),
+ * as in vdd and ndd, so it survives this frame unmounting. Its content is rendered once by the
+ * overlay into `contentEl`, which the frame only shows. Not exported from the package.
  */
-export function ManagedFloatingWindow(props: RddFloatingWidgetProps & { anchor: FloatAnchor }): React.ReactElement | null {
+export function ManagedFloatingWindow(
+  props: Omit<RddFloatingWidgetProps, 'defaultAnchor' | 'defaultWidth' | 'defaultHeight' | 'children'>
+    & { controlled: ControlledPlacement; contentEl: HTMLElement },
+): React.ReactElement | null {
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
-  const { anchor, ...rest } = props;
-  return <FloatingWindowBody key={props.id} ctx={ctx} {...rest} controlledAnchor={anchor} />;
+  const { placement } = props.controlled;
+  return (
+    <FloatingWindowBody
+      key={props.id} ctx={ctx} {...props}
+      defaultAnchor={placement.anchor} defaultWidth={placement.size.w} defaultHeight={placement.size.h}
+    />
+  );
 }
 
 // ─── Internal: FloatingWindowBody ─────────────────────────────────────────────
 
 interface FloatingWindowBodyProps extends RddFloatingWidgetProps {
   ctx: PanelOverlayCtx | null;
-  /** Controlled anchor, used only by `ManagedFloatingWindow`. `undefined` keeps it internal. */
-  controlledAnchor: FloatAnchor | undefined;
+  /** The overlay's placement, used only by `ManagedFloatingWindow`. `undefined` keeps it internal. */
+  controlled: ControlledPlacement | undefined;
+  /** Content the overlay renders elsewhere; the body shows this element instead of `children`. */
+  contentEl: HTMLElement | undefined;
 }
 
-type WindowMode = 'docked' | 'free';
+type WindowMode = ManagedPlacement['mode'];
+type FieldSetter<T> = (next: T | ((prev: T) => T)) => void;
+
+/**
+ * One field of the placement: the frame's own state, or the overlay's when `controlled`. The
+ * setter takes a value or an updater, like `useState`'s, so the drag code reads the same either way.
+ */
+function usePlacementField<K extends keyof ManagedPlacement>(
+  controlled: ControlledPlacement | undefined, key: K, initial: ManagedPlacement[K],
+): [ManagedPlacement[K], FieldSetter<ManagedPlacement[K]>] {
+  const [internal, setInternal] = useState<ManagedPlacement[K]>(initial);
+  const updateRef = useLatestRef(controlled?.update);
+  const isControlled = controlled !== undefined;
+  const set = useCallback<FieldSetter<ManagedPlacement[K]>>((next) => {
+    if (!isControlled) { setInternal(next); return; }
+    // None of the fields is a function, so a function here is always an updater.
+    updateRef.current?.(prev => ({
+      [key]: typeof next === 'function' ? (next as (p: ManagedPlacement[K]) => ManagedPlacement[K])(prev[key]) : next,
+    }) as Partial<ManagedPlacement>);
+  }, [isControlled, key, updateRef]);
+  return [isControlled ? controlled.placement[key] : internal, set];
+}
 
 
-function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose, controlledAnchor }: FloatingWindowBodyProps): React.ReactElement {
+function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose, controlled, contentEl }: FloatingWindowBodyProps): React.ReactElement {
   const isRtl = useOptionalWindowManagerState(s => s.isRtl, false);
   // Resolved here rather than at the call site, so a descriptor title re-resolves whenever the
   // formatter changes. Both hooks fall back to the message's own `defaultMessage` when there is no
   // provider, so an overlay used outside a WindowManager keeps working.
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
-  const [mode, setMode] = useState<WindowMode>('docked');
-  const [internalAnchor, setInternalAnchor] = useState<FloatAnchor>(defaultAnchor);
-  // Controlled only for managed widgets, whose placement lives in the overlay's store.
-  const isAnchorControlled = controlledAnchor !== undefined;
-  const currentAnchor = isAnchorControlled ? controlledAnchor : internalAnchor;
+  // Each field is the frame's own state, except for a managed widget, whose overlay owns them all.
+  const [mode, setMode] = usePlacementField(controlled, 'mode', 'docked' as WindowMode);
+  const [currentAnchor, setAnchor] = usePlacementField(controlled, 'anchor', defaultAnchor);
   // `size` is deliberately left untouched while an axis is stretched — the render branch below
   // simply stops reading it, exactly as a maximized workspace window keeps its x/y/w/h. Releasing
   // the axis therefore restores the previous size with no snapshot and no bookkeeping.
-  const [internalStretch, setInternalStretch] = useState<Stretch | null>(defaultStretch ?? null);
-  // Controlled when the prop is present at all — `null` is a meaningful value ("not stretched"),
-  // so only `undefined` means "manage it yourself".
-  const isStretchControlled = stretchProp !== undefined;
-  const stretch = isStretchControlled ? (stretchProp ?? null) : internalStretch;
-  const [freePos, setFreePos] = useState<{ x: number; y: number } | null>(null);
-  const [size, setSize] = useState({ w: defaultWidth, h: defaultHeight });
+  const [ownStretch, setOwnStretch] = usePlacementField(controlled, 'stretch', defaultStretch ?? null);
+  // Controlled by the caller when the prop is present at all — `null` is a meaningful value ("not
+  // stretched"), so only `undefined` means "manage it yourself". Never for a managed widget.
+  const isStretchControlled = stretchProp !== undefined && controlled === undefined;
+  const stretch = isStretchControlled ? (stretchProp ?? null) : ownStretch;
+  const [freePos, setFreePos] = usePlacementField(controlled, 'freePos', null);
+  const [size, setSize] = usePlacementField(controlled, 'size', { w: defaultWidth, h: defaultHeight });
   const windowRef = useRef<HTMLDivElement>(null);
 
   // Refs to avoid stale closures in pointer handlers
@@ -170,15 +201,15 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
   const stackOffsetRef = useRef(0);
 
   /**
-   * The single write path for placement. Anchor and stretch are each internal only when
-   * uncontrolled (the anchor is controlled only for managed widgets). Either way the pair is
-   * reported once, so a listener never observes a half-applied transition.
+   * The single write path for anchor and stretch. Stretch is written here only when the caller
+   * doesn't control it. Either way the pair is reported once, so a listener never observes a
+   * half-applied transition.
    */
   const applyPlacement = useCallback((anchor: FloatAnchor, next: Stretch | null): void => {
-    if (!isAnchorControlled) setInternalAnchor(anchor);
-    if (!isStretchControlled) setInternalStretch(next);
+    setAnchor(anchor);
+    if (!isStretchControlled) setOwnStretch(next);
     onPlacementChangeRef.current?.({ anchor, stretch: next });
-  }, [isAnchorControlled, isStretchControlled, onPlacementChangeRef]);
+  }, [setAnchor, setOwnStretch, isStretchControlled, onPlacementChangeRef]);
 
   const dragState = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number; hasDragged: boolean } | null>(null);
 
@@ -652,7 +683,9 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
           {CloseIcon}
         </button>
       </div>
-      <div className="rdd-panel-float__body">{children}</div>
+      {contentEl
+        ? <WidgetContentSlot el={contentEl} />
+        : <div className="rdd-panel-float__body">{children}</div>}
       </div>
       {handleDirs.map(dir => (
         <div
@@ -663,4 +696,25 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       ))}
     </div>
   );
+}
+
+// ─── Internal: WidgetContentSlot ──────────────────────────────────────────────
+
+/**
+ * The body of a managed widget's frame. The content lives in `el`, rendered once by the overlay
+ * for the widget's whole life; this only attaches it, and puts back the scroll offsets a detached
+ * element loses (the same records workspace panels use).
+ */
+function WidgetContentSlot({ el }: { el: HTMLElement }): React.ReactElement {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    trackPanelDom(el);
+    if (el.parentNode !== body) body.appendChild(el);
+    restorePanelDom(el, { refocus: false });
+    // Taken back out on unmount, so the element is never left inside a frame React has removed.
+    return () => { if (el.parentNode === body) body.removeChild(el); };
+  }, [el]);
+  return <div ref={bodyRef} className="rdd-panel-float__body" />;
 }

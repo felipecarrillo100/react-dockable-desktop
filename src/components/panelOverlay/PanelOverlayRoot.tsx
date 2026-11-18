@@ -3,12 +3,23 @@
  * @description The Panel Overlay root: provides the overlay contexts and draws the corner drop zones.
  */
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { FloatAnchor } from '../WindowManagerContext';
-import type { ManagedWidget, PanelFloatPlacement, Stretch, ToolbarPosition } from './types';
+import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
 import { PanelToolbarContext, PanelManagerContext, PanelOverlayContext } from './context';
-import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx } from './context';
+import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx, ManagedPlacement } from './context';
+import { forgetPanelDom } from '../domPreservation';
 import { bucketsFor, ANCHORS } from '../../core/stretch';
 import { ManagedFloatingWindow } from './FloatingWidget';
+
+/** Where a managed widget starts: its config's corner, stretch and size, docked. */
+const seedPlacement = (config: ManagedWidget): ManagedPlacement => ({
+  anchor: config.anchor ?? 'top-right',
+  stretch: config.stretch ?? null,
+  mode: 'docked',
+  freePos: null,
+  size: { w: config.width ?? 320, h: config.height ?? 240 },
+});
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
 
@@ -43,10 +54,16 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   const [hoveredZone, setHoveredZone] = useState<FloatAnchor | null>(null);
   const [topId, setTopId] = useState<string | null>(null);
   const [managedWindows, setManagedWindows] = useState<Map<string, ManagedWidget>>(() => new Map());
-  // Where each managed widget sits, owned here rather than inside the widget, so the overlay
-  // always knows (vdd's and ndd's overlay stores keep the same record). Seeded once per open from
-  // the config, then updated by gestures; closing drops it, so close-then-open is the reset.
-  const [managedPlacements, setManagedPlacements] = useState<Record<string, PanelFloatPlacement>>({});
+  // Where each managed widget sits and how big it is, owned here rather than inside its frame, so
+  // the overlay always knows and the frame can unmount (vdd's and ndd's overlay stores keep the
+  // same record). Seeded once per open from the config, then updated by gestures; closing drops
+  // it, so close-then-open is the reset.
+  const [managedPlacements, setManagedPlacements] = useState<Record<string, ManagedPlacement>>({});
+  // Each managed widget's content element, `div.rdd-panel-float__content`. The content is rendered
+  // into it once, for the widget's whole life, and the element is what moves: so its state, and
+  // the DOM state of what it holds, survive whatever happens to the frame.
+  // A stable Map, written only by open and close, never during render.
+  const [contentEls] = useState(() => new Map<string, HTMLDivElement>());
   const zCounterRef = useRef(100);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -101,17 +118,31 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   }, []);
 
   const openManaged = useCallback((id: string, config: ManagedWidget): void => {
+    if (!contentEls.has(id)) {
+      const el = (containerRef.current?.ownerDocument ?? document).createElement('div');
+      el.className = 'rdd-panel-float__content';
+      // The content is portalled into this element, so React events in it don't reach the frame:
+      // bring the widget to the front natively, as a pointerdown anywhere in the frame does.
+      el.addEventListener('pointerdown', () => focusWindow(id));
+      contentEls.set(id, el);
+    }
     setManagedWindows(prev => {
       const next = new Map(prev);
       next.set(id, config);
       return next;
     });
     // Re-opening a live id refreshes its config but leaves it where the user put it.
-    setManagedPlacements(prev => (id in prev ? prev : {
-      ...prev,
-      [id]: { anchor: config.anchor ?? 'top-right', stretch: config.stretch ?? null },
-    }));
-  }, []);
+    setManagedPlacements(prev => (id in prev ? prev : { ...prev, [id]: seedPlacement(config) }));
+  }, [contentEls, focusWindow]);
+
+  /** Drops a closed widget's content element; its content unmounts with the portal. */
+  const forgetContentEl = useCallback((id: string): void => {
+    const el = contentEls.get(id);
+    if (!el) return;
+    contentEls.delete(id);
+    forgetPanelDom(el);
+    el.remove();
+  }, [contentEls]);
 
   const closeManaged = useCallback((id: string): void => {
     setManagedWindows(prev => {
@@ -125,20 +156,23 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       delete next[id];
       return next;
     });
-  }, []);
+    forgetContentEl(id);
+  }, [forgetContentEl]);
 
   const closeAllManaged = useCallback((): void => {
     setManagedWindows(new Map());
     setManagedPlacements({});
-  }, []);
+    Array.from(contentEls.keys()).forEach(forgetContentEl);
+  }, [contentEls, forgetContentEl]);
 
   /**
    * A gesture's report. Ignored for a widget that is no longer open: a gesture can land after a
    * close, and writing then would leave a placement that the next open would wrongly reuse.
    */
-  const setManagedPlacement = useCallback((id: string, placement: PanelFloatPlacement): void => {
-    setManagedPlacements(prev => (id in prev ? { ...prev, [id]: placement } : prev));
-  }, []);
+  const updateManagedPlacement = useCallback(
+    (id: string, patch: (prev: ManagedPlacement) => Partial<ManagedPlacement>): void => {
+      setManagedPlacements(prev => (id in prev ? { ...prev, [id]: { ...prev[id], ...patch(prev[id]) } } : prev));
+    }, []);
 
   const managedWindowIds = useMemo(() => Array.from(managedWindows.keys()), [managedWindows]);
 
@@ -188,25 +222,22 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
             {children}
             {draggingId !== null && <DropZoneOverlay hoveredZone={hoveredZone} />}
             {Array.from(managedWindows.entries()).map(([id, cfg]) => {
-              const placement = managedPlacements[id]
-                ?? { anchor: cfg.anchor ?? 'top-right', stretch: cfg.stretch ?? null };
+              const placement = managedPlacements[id] ?? seedPlacement(cfg);
+              const el = contentEls.get(id);
+              if (!el) return null;   // openManaged always sets it first; defensive only
               return (
-                <ManagedFloatingWindow
-                  key={id}
-                  id={id}
-                  title={cfg.title}
-                  icon={cfg.icon}
-                  open={true}
-                  onClose={() => closeManaged(id)}
-                  defaultAnchor={placement.anchor}
-                  anchor={placement.anchor}
-                  stretch={placement.stretch}
-                  onPlacementChange={p => setManagedPlacement(id, p)}
-                  defaultWidth={cfg.width ?? 320}
-                  defaultHeight={cfg.height ?? 240}
-                >
-                  {cfg.content}
-                </ManagedFloatingWindow>
+                <React.Fragment key={id}>
+                  {createPortal(cfg.content, el)}
+                  <ManagedFloatingWindow
+                    id={id}
+                    title={cfg.title}
+                    icon={cfg.icon}
+                    open={true}
+                    onClose={() => closeManaged(id)}
+                    controlled={{ placement, update: patch => updateManagedPlacement(id, patch) }}
+                    contentEl={el}
+                  />
+                </React.Fragment>
               );
             })}
           </div>
