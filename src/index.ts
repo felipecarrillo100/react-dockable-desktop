@@ -39,6 +39,7 @@ export type {
   LayoutNode,
   FloatingWindow,
   PanelInfo,
+  PanelOwner,
   OpenPanelOptions,
   WorkspaceState,
   WorkspaceActions,

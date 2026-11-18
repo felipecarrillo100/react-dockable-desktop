@@ -10,6 +10,15 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+Groundwork for widgets that can leave their panel (7.11.0). Nothing creates such a panel yet.
+
+### Added
+
+- **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
+  of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,
+  exists only at runtime, and is never written by `saveLayout()` (nor reported by `onPanelsExcluded`).
+  A layout that names one, which only a hand-made JSON can, loads without it.
+
 ## [7.10.1] — 2026-11-18
 
 Internal groundwork for widgets that can leave their panel (a planned feature). No API change and

@@ -11,6 +11,7 @@ import type { ResizeDir } from '../dragResize';
 import { initialFocusFor } from './helpers';
 import { DefaultGridIcon } from './icons';
 import { PreservedDOMWrapper } from './panelMount';
+import { optionsFor } from '../../core/panelOptions';
 
 export interface FloatingWindowsProps extends Pick<InternalWindowActions, 'setActivePanel' | 'focusPanel' | 'maximizePanel' | 'minimizePanel' | 'getPanelContextMenuItems' | 'showContextMenu'> {
   state: WorkspaceState;
@@ -39,8 +40,7 @@ export const FloatingWindows = ({
       const isDragged = state.draggedPanelId === w.id;
       const isFocused = state.activePanelId === w.id;
 
-      const registryEntry = registry.get(panel.component);
-      const options = registryEntry?.defaultOptions;
+      const options = optionsFor(registry, panel);
 
       return (
         <div

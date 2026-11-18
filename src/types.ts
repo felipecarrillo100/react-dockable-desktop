@@ -190,6 +190,22 @@ export interface PanelInfo {
    *  shown instead of the registration's `defaultOptions.icon`. Never saved by `saveLayout()`;
    *  `loadLayout()` keeps it for a panel that is still open. */
   icon?: React.ReactNode;
+  /**
+   * Set on a panel that shows a managed widget moved out of its owner panel, whose `component` is
+   * the reserved `'rdd:widget'`. Runtime only: such a panel is never written by `saveLayout()`, and
+   * the owner panel saves its widgets itself. (7.11.0)
+   */
+  owner?: PanelOwner;
+}
+
+/** Who a hosted panel belongs to: see {@link PanelInfo.owner}. (7.11.0) */
+export interface PanelOwner {
+  /** The panel whose overlay opened the widget. */
+  panelId: string;
+  /** The widget's id in that overlay (`useFloatingWidgets().open(id, …)`). */
+  widgetId: string;
+  /** @internal The widget's own capabilities, applied by `optionsFor`. */
+  options?: { canFloat?: boolean; canDock?: boolean };
 }
 
 /**
@@ -569,7 +585,24 @@ export interface InternalWindowActions extends WorkspaceActions {
   registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
   /** @internal Whether the user may move `panelId` to `to`: its type's rules, then `canDrop`. (7.9.0) */
   isDropAllowed: (panelId: string, to: PanelDropTarget) => boolean;
+  /**
+   * @internal Opens a hosted panel: one showing a managed widget moved out of its owner panel
+   * (7.11.0). Docked beside `dockTo.panel`, or floating exactly at `rect` (not cascaded). Returns
+   * `false`, changing nothing, when the id is taken or the panel to dock beside isn't docked.
+   */
+  openHostedPanel: (id: string, owner: PanelOwner, title: PanelInfo['title'], at: HostedPanelPlacement) => boolean;
+  /** @internal Removes a hosted panel without its close handler: the widget is going back. (7.11.0) */
+  removeHostedPanel: (id: string) => void;
+  /** @internal Updates a hosted panel's own capabilities (the widget re-opened). (7.11.0) */
+  setHostedOptions: (id: string, options: NonNullable<PanelOwner['options']>) => void;
+  /** @internal Called when a hosted panel is closed (×, menu, `closePanel`): the widget closes. (7.11.0) */
+  registerHostedCloseHandler: (id: string, onClose: () => void) => () => void;
 }
+
+/** @internal Where a hosted panel opens. (7.11.0) */
+export type HostedPanelPlacement =
+  | { kind: 'dock'; dockTo: { panel: string; position: DropPosition; size?: number } }
+  | { kind: 'float'; rect: { x: number; y: number; width: number; height: number } };
 
 /** Represents custom CSS classes injected into layout parts. */
 export interface HostClasses {

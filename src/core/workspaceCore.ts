@@ -8,10 +8,11 @@ import type { DirtyStateOptions } from '../components/dirtyOptions';
 import type { ContextMenuItem, ShowContextMenuOptions } from '../components/ContextMenu';
 import { isSerializable } from '../components/serializable';
 import { sameTitle, sameDirtyOptions } from '../components/sameUpdate';
-import type { PanelDropTarget, MessageDescriptor, SplitOrientation, SplitDirection, DropPosition, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, OpenPanelOptions, WorkspaceState, InternalWindowActions, SerializedLayout, WorkspaceCoreConfig, WorkspaceCore } from '../types';
+import type { PanelDropTarget, MessageDescriptor, SplitOrientation, SplitDirection, DropPosition, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, PanelOwner, HostedPanelPlacement, OpenPanelOptions, WorkspaceState, InternalWindowActions, SerializedLayout, WorkspaceCoreConfig, WorkspaceCore } from '../types';
 import { PanelEventBus } from './eventBus';
 import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, resolveActivePanelId, removePanelFromTree, addPanelToLeaf, isLoneOccupant, hasLeaf, findFirstLeafId, findLeafIdOf, splitLeafInTree } from './layoutTree';
-import { DEFAULT_FLOAT_RECT, parseLayoutPayload, parseInitialState } from './serialize';
+import { DEFAULT_FLOAT_RECT, parseLayoutPayload, parseInitialState, withoutHostedPanels } from './serialize';
+import { optionsFor, HOSTED_COMPONENT } from './panelOptions';
 
 /**
  * @internal Builds a workspace store: the layout state, every action on it, and the event bus.
@@ -56,6 +57,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
 
   const closeGuardsRef: { current: Record<string, () => boolean | Promise<boolean>> } = { current: {} };
   const stateProvidersRef: { current: Record<string, () => unknown> } = { current: {} };
+  /** Hosted panels' close handlers, by panel id: the widget's overlay registers them (7.11.0). */
+  const hostedCloseHandlersRef = { current: new Map<string, () => void>() };
 
   const eventBusRef = { current: new PanelEventBus() };
   // Seeded from the restored windows (7.4.1): starting at the base, a focused restored window was
@@ -179,11 +182,11 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     // reproduced the 6de3381 defect class in reverse (visible tab rendered unfocused, and every
     // contributed control stayed bound to whatever replaced this panel while it was minimized).
     const nextActive = activate ? id : prev.activePanelId;
-    const entry = registry.get(panel.component);
+    const options = optionsFor(registry, panel);
 
     const floatBack = (): WorkspaceState => {
       maxZRef.current += 1;
-      const favPos = panel.lastFloatingRect || entry?.defaultOptions?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
+      const favPos = panel.lastFloatingRect || options?.favoritePosition || { x: 300, y: 150, width: 450, height: 350 };
       const cascaded = getCascadedPosition(favPos, prev.floating);
       return {
         ...prev,
@@ -214,7 +217,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       };
     }
     // Leaf group ceased to exist: float it instead if floatable!
-    if (entry?.defaultOptions?.canDrag !== false) return floatBack();
+    if (options?.canDrag !== false) return floatBack();
 
     // Leaf group ceased to exist but not floatable: dock into fallback leaf group
     const targetLeafId = findFirstLeafId(prev.gridRoot) || 'group-default';
@@ -236,10 +239,10 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     const panel = prev.panels[id];
     if (!panel) return prev;
 
-    const entry = registry.get(panel.component);
-    if (entry?.defaultOptions?.canDrag === false) return prev;
+    const options = optionsFor(registry, panel);
+    if (options?.canDrag === false) return prev;
 
-    const favPos = rect || entry?.defaultOptions?.favoritePosition || DEFAULT_FLOAT_RECT;
+    const favPos = rect || options?.favoritePosition || DEFAULT_FLOAT_RECT;
     const cleanRoot = removePanelFromTree(prev.gridRoot, id);
     // Floating an already-floating panel re-places it rather than adding a second window.
     const otherWindows = prev.floating.filter(w => w.id !== id);
@@ -418,47 +421,104 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     if (isNew || isRedirect) eventBusRef.current.publish('layout:changed', {});
   };
 
+  /** The state without panel `id`, wherever it was; its guard and state provider are dropped. */
+  const withoutPanel = (prev: WorkspaceState, id: string): WorkspaceState => {
+    delete closeGuardsRef.current[id];
+    delete stateProvidersRef.current[id];
+
+    const nextPanels = { ...prev.panels };
+    delete nextPanels[id];
+
+    const nextRoot = removePanelFromTree(prev.gridRoot, id)
+      || { type: 'leaf' as const, id: 'group-default', panels: [], activePanelId: null };
+    const nextFloating = prev.floating.filter(w => w.id !== id);
+
+    // Closing the active panel used to leave `activePanelId` pointing at the panel just deleted.
+    // `removePanelFromTree` has already promoted the next tab in its leaf, so re-deriving picks
+    // whatever the user can now actually see.
+    const nextActivePanelId = prev.activePanelId === id
+      ? deriveActivePanelId({ gridRoot: nextRoot, floating: nextFloating, panels: nextPanels })
+      : prev.activePanelId;
+
+    return {
+      ...prev,
+      gridRoot: nextRoot,
+      floating: nextFloating,
+      minimized: prev.minimized.filter(m => m.id !== id),
+      panels: nextPanels,
+      activePanelId: nextActivePanelId
+    };
+  };
+
   const closePanel = (id: string) => {
-    const exists = id in stateRef.current.panels;
+    const panel = stateRef.current.panels[id];
     setState(prev => {
-      const panel = prev.panels[id];
-      if (!panel) return prev;
-
-      const registryEntry = registry.get(panel.component);
-      if (registryEntry?.defaultOptions?.canClose === false) {
-        return prev;
-      }
-
-      delete closeGuardsRef.current[id];
-      delete stateProvidersRef.current[id];
-
-      const nextPanels = { ...prev.panels };
-      delete nextPanels[id];
-
-      const nextRoot = removePanelFromTree(prev.gridRoot, id)
-        || { type: 'leaf' as const, id: 'group-default', panels: [], activePanelId: null };
-      const nextFloating = prev.floating.filter(w => w.id !== id);
-
-      // Closing the active panel used to leave `activePanelId` pointing at the panel just deleted.
-      // `removePanelFromTree` has already promoted the next tab in its leaf, so re-deriving picks
-      // whatever the user can now actually see.
-      const nextActivePanelId = prev.activePanelId === id
-        ? deriveActivePanelId({ gridRoot: nextRoot, floating: nextFloating, panels: nextPanels })
-        : prev.activePanelId;
-
-      return {
-        ...prev,
-        gridRoot: nextRoot,
-        floating: nextFloating,
-        minimized: prev.minimized.filter(m => m.id !== id),
-        panels: nextPanels,
-        activePanelId: nextActivePanelId
-      };
+      const current = prev.panels[id];
+      if (!current || optionsFor(registry, current)?.canClose === false) return prev;
+      return withoutPanel(prev, id);
     });
-    if (exists) {
+    // Published whenever the panel existed, even if `canClose: false` refused it: unchanged.
+    if (panel) {
       eventBusRef.current.publish('panel:closed', { id });
       eventBusRef.current.publish('layout:changed', {});
+      // A hosted panel closed from the page (×, menu, the app's closePanel): its widget closes
+      // too (7.11.0). A hosted panel can always close. The handler belongs to the widget's overlay.
+      if (panel.owner) hostedCloseHandlersRef.current.get(id)?.();
     }
+  };
+
+  // ── Hosted panels (7.11.0): a managed widget moved out of its owner panel ──
+  // They exist only at runtime: saveLayout skips them and loadLayout never creates one.
+
+  const openHostedPanel = (id: string, owner: PanelOwner, title: PanelInfo['title'], at: HostedPanelPlacement): boolean => {
+    const now = stateRef.current;
+    if (id in now.panels) return false;
+    const leaf = at.kind === 'dock' ? findLeafIdOf(now.gridRoot, at.dockTo.panel) : null;
+    if (at.kind === 'dock' && !leaf) return false;
+    const info: PanelInfo = { id, title, component: HOSTED_COMPONENT, state: at.kind === 'dock' ? 'docked' : 'floating', serializable: false, owner };
+    if (at.kind === 'float') maxZRef.current += 1;
+    const z = maxZRef.current;
+    setState(prev => {
+      if (id in prev.panels) return prev;
+      const panels = { ...prev.panels, [id]: info };
+      if (at.kind === 'float') {
+        return { ...prev, panels, floating: [...prev.floating, { ...at.rect, id, z, anchor: null }], activePanelId: id };
+      }
+      const target = findLeafIdOf(prev.gridRoot, at.dockTo.panel);
+      if (!target) return prev;
+      const share = Math.min(0.9, Math.max(0.1, at.dockTo.size ?? prev.splitRatio));
+      const gridRoot = at.dockTo.position === 'center'
+        ? addPanelToLeaf(prev.gridRoot, target, id)
+        : splitLeafInTree(prev.gridRoot, target, id, at.dockTo.position, share);
+      return { ...prev, panels, gridRoot, activePanelId: id };
+    });
+    eventBusRef.current.publish('panel:opened', { id, component: HOSTED_COMPONENT });
+    eventBusRef.current.publish('layout:changed', {});
+    return true;
+  };
+
+  const removeHostedPanel = (id: string) => {
+    if (!stateRef.current.panels[id]?.owner) return;
+    setState(prev => (prev.panels[id]?.owner ? withoutPanel(prev, id) : prev));
+    eventBusRef.current.publish('panel:closed', { id });
+    eventBusRef.current.publish('layout:changed', {});
+  };
+
+  const setHostedOptions = (id: string, options: NonNullable<PanelOwner['options']>) => {
+    setState(prev => {
+      const panel = prev.panels[id];
+      if (!panel?.owner) return prev;
+      const was = panel.owner.options;
+      if (was?.canFloat === options.canFloat && was?.canDock === options.canDock) return prev;
+      return { ...prev, panels: { ...prev.panels, [id]: { ...panel, owner: { ...panel.owner, options } } } };
+    });
+  };
+
+  const registerHostedCloseHandler = (id: string, onClose: () => void) => {
+    hostedCloseHandlersRef.current.set(id, onClose);
+    return () => {
+      if (hostedCloseHandlersRef.current.get(id) === onClose) hostedCloseHandlersRef.current.delete(id);
+    };
   };
 
   const registerCloseGuard = (id: string, guard: () => boolean | Promise<boolean>) => {
@@ -550,8 +610,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       const panel = prev.panels[id];
       if (!panel || panel.state === 'minimized') return prev;
 
-      const registryEntry = registry.get(panel.component);
-      if (registryEntry?.defaultOptions?.canMinimize === false) {
+      if (optionsFor(registry, panel)?.canMinimize === false) {
         return prev;
       }
 
@@ -633,7 +692,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
 
   const floatPanel = (id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
     const panel = stateRef.current.panels[id];
-    const willFloat = !!panel && registry.get(panel.component)?.defaultOptions?.canDrag !== false;
+    const willFloat = !!panel && optionsFor(registry, panel)?.canDrag !== false;
     setState(prev => applyFloat(prev, id, { rect, anchor }));
     if (willFloat) eventBusRef.current.publish('layout:changed', {});
   };
@@ -955,7 +1014,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   const isDropAllowed = (panelId: string, to: PanelDropTarget): boolean => {
     const panel = stateRef.current.panels[panelId];
     if (!panel) return false;
-    const options = registry.get(panel.component)?.defaultOptions;
+    const options = optionsFor(registry, panel);
     if (to.kind === 'float') {
       // Blocks *becoming* floating; a window that already floats may still change corner.
       if (options?.canFloat === false && panel.state !== 'floating') return false;
@@ -974,6 +1033,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   const saveLayout = () => {
     const currentPanels = stateRef.current.panels;
     const excludedIds: string[] = [];
+    // Hosted panels (7.11.0) are never saved and never reported as excluded: the owner panel
+    // saves its widgets itself.
+    const hostedIds: string[] = [];
     const includedPanels: Record<string, PanelInfo> = {};
 
     // A registered state provider (see registerStateProvider) is pulled fresh on every save —
@@ -981,6 +1043,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     // time for provider-backed panels. Panels with no provider keep their static open-time
     // props/serializable classification unchanged.
     for (const [id, info] of Object.entries(currentPanels)) {
+      if (info.owner || info.component === HOSTED_COMPONENT) { hostedIds.push(id); continue; }
       const provider = stateProvidersRef.current[id];
       const dynamicValue = provider?.();
       const hasDynamicValue = provider !== undefined && dynamicValue !== undefined;
@@ -1007,7 +1070,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     let gridRoot = stateRef.current.gridRoot;
     let floating = stateRef.current.floating;
     let minimized = stateRef.current.minimized;
-    for (const id of excludedIds) {
+    for (const id of [...excludedIds, ...hostedIds]) {
       gridRoot = removePanelFromTree(gridRoot, id) || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null };
       floating = floating.filter(w => w.id !== id);
       minimized = minimized.filter(m => m.id !== id);
@@ -1042,8 +1105,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
 
   const loadLayout = (layoutJson: string): boolean => {
     try {
-      const payload = parseLayoutPayload(JSON.parse(layoutJson));
-      if (!payload) return false;
+      const parsed = parseLayoutPayload(JSON.parse(layoutJson));
+      if (!parsed) return false;
+      const payload = withoutHostedPanels(parsed);
       maxZRef.current = Math.max(maxZRef.current, topZ(payload.floating));
       setState(prev => {
         // A panel that stays open keeps its runtime icon: the component that set it isn't
@@ -1053,6 +1117,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
           // A panel saved without a title — it had a function title, which a layout can't hold —
           // takes its registered default title, as a newly opened one would.
           const info = saved.title ? saved : { ...saved, title: registry.get(saved.component)?.defaultOptions?.title || id };
+          // An `owner` can only come from a hand-made layout: a hosted panel is never saved.
+          if ('owner' in info) delete (info as Partial<PanelInfo>).owner;
           const was = prev.panels[id];
           panels[id] = was?.icon !== undefined && was.component === info.component ? { ...info, icon: was.icon } : info;
         }
@@ -1153,6 +1219,10 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     requestClosePanel,
     dockPanelToWorkspaceEdge,
     setActivePanel,
+    openHostedPanel,
+    removeHostedPanel,
+    setHostedOptions,
+    registerHostedCloseHandler,
     setDirection,
     registerPanelContextMenu,
     getPanelContextMenuItems,

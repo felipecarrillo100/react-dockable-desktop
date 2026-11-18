@@ -13,6 +13,7 @@ import { FormContainerProvider } from '../FormContainerContext';
 import type { FormContainerContract, ContainerType } from '../FormContainerContext';
 import { usePanelHost } from './panelHost';
 import { isShownInGrid } from '../../core/layoutTree';
+import { optionsFor } from '../../core/panelOptions';
 
 /** Whether a panel is on screen: floating, or the selected tab of its group (not minimized). */
 const isPanelShown = (s: WorkspaceState, panelId: string): boolean => {
@@ -104,9 +105,9 @@ export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) =>
   const messages = usePredefinedMessages();
   const hostRef = useRef<HTMLDivElement | null>(null);
 
-  const regEntry = panel ? registry.get(panel.component) : null;
+  const options = optionsFor(registry, panel);
   // A panel that unmounts while hidden has nothing to preview while minimized.
-  const disableLivePreview = regEntry?.defaultOptions?.disableLivePreview || regEntry?.defaultOptions?.keepAlive === false || false;
+  const disableLivePreview = options?.disableLivePreview || options?.keepAlive === false || false;
 
   const lastSize = panelHost.getDimensions(panelId) || { width: 800, height: 500 };
   const origW = lastSize.width;
@@ -133,7 +134,7 @@ export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) =>
   if (disableLivePreview) {
     const displayW = origW * scale;
     const displayH = origH * scale;
-    const rawTitle = panel?.title || regEntry?.defaultOptions?.title || messages.untitledPanel;
+    const rawTitle = panel?.title || options?.title || messages.untitledPanel;
     const title = formatLabel(rawTitle, formatMessage);
     const initialChar = (Array.from(title)[0] || 'P').toUpperCase();
 
@@ -316,10 +317,10 @@ export const PanelMount: React.FC<{ panelId: string }> = React.memo(({ panelId }
   const formatMessage = useFormatMessage();
   const messages = usePredefinedMessages();
   // keepAlive: false (7.8.0): only those panels ask whether they are shown, so the rest pay nothing.
-  const keepAlive = (panel && registry.get(panel.component)?.defaultOptions?.keepAlive) !== false;
+  const keepAlive = (panel && optionsFor(registry, panel)?.keepAlive) !== false;
   const shown = useWindowManagerState(s => keepAlive || isPanelShown(s, panelId));
   if (!panel) return null;
-  const typeClass = registry.get(panel.component)?.defaultOptions?.className;
+  const typeClass = optionsFor(registry, panel)?.className;
   return createPortal(
     <FormContainerProviderWrapper panelId={panelId}>
       <div className={`rdd-panel-content${typeClass ? ` ${typeClass}` : ''}`} data-rdd-panel={panelId} dir={dir}>

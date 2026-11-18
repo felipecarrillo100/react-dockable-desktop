@@ -10,6 +10,7 @@ import type { PanelRegistry } from '../PanelRegistry';
 import { initialFocusFor } from './helpers';
 import { ContextMenuIcons } from './icons';
 import type { HoveredMinimized } from './Taskbar';
+import { optionsFor } from '../../core/panelOptions';
 
 export interface WorkspaceMenusDeps {
   state: WorkspaceState;
@@ -29,8 +30,7 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
     e.preventDefault();
     const panel = state.panels[id];
     if (!panel) return;
-    const registryEntry = registry.get(panel.component);
-    const options = registryEntry?.defaultOptions;
+    const options = optionsFor(registry, panel);
 
     const items = [];
     // Floating it is a move the rules decide (7.9.0): canFloat, then the app's canDrop.
@@ -80,7 +80,7 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
     // A panel that was floating only goes back to floating; one from a group is floated, which the
     // rules decide (7.9.0).
     const canMaximize = panel?.previousState === 'floating'
-      || (registry.get(panel?.component ?? '')?.defaultOptions?.canDrag !== false && isDropAllowed(id, { kind: 'float', anchor: null }));
+      || (optionsFor(registry, panel)?.canDrag !== false && isDropAllowed(id, { kind: 'float', anchor: null }));
     showContextMenu({
       event: e,
       initialFocus: initialFocusFor(e),
