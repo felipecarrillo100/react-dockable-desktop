@@ -4031,6 +4031,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
   min-height: 0;
 }
 
+/* A managed widget's content element (7.11), the body's only child. The body is a block, so the
+   element takes its full size, as .rdd-panel-content does for workspace panels: content with
+   height: 100% fills the body exactly as it did when it was the body's own child. */
+.rdd-panel-float__content {
+  width: 100%;
+  height: 100%;
+}
+
 
 /* ── Docking drop zones (visible while dragging a floating window) ── */
 /* Armed for resize-to-stretch: the clamps already hold the widget exactly where a stretched axis

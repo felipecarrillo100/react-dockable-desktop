@@ -19,6 +19,18 @@ Groundwork for widgets that can leave their panel (7.11.0). Nothing creates such
   exists only at runtime, and is never written by `saveLayout()` (nor reported by `onPanelsExcluded`).
   A layout that names one, which only a hand-made JSON can, loads without it.
 
+### Changed
+
+- **A widget opened with `useFloatingWidgets().open()` now renders its content once, into its own
+  element:** `div.rdd-panel-float__content`, the only child of `.rdd-panel-float__body`, with
+  `width: 100%; height: 100%`. Content laid out with `height: 100%` fills the widget exactly as before,
+  and the body still scrolls. CSS that targets the body's direct child (`.rdd-panel-float__body > …`)
+  no longer matches; drop the `>` or target your own class. `RddFloatingWidget` is unchanged.
+- **The widget's whole placement now lives in the overlay:** docked or free, its free position and its
+  size, as well as the anchor and stretch moved there in 7.10.1. Nothing changes on screen.
+- **A pointerdown anywhere in such a widget's content brings it to the front,** even when the content
+  stops the event's propagation.
+
 ## [7.10.1] — 2026-11-18
 
 Internal groundwork for widgets that can leave their panel (a planned feature). No API change and

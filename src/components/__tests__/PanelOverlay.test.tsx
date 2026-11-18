@@ -37,9 +37,15 @@
  * PO33: ...close then open re-seeds it from the config
  * PO34: ...a gesture that lands after a close leaves nothing behind for the next open
  * PO35: The panel host parks elements in its own document, not the global one
+ * PO36: A managed widget's content renders into its own element, the body's only child; a
+ *       declarative widget's doesn't, and the content still sees the overlay's contexts
+ * PO37: ...the whole placement (docked or free, position, size) lives in the overlay, so it
+ *       survives the frame unmounting, and the frame shows the same content element again
+ * PO38: ...closing unmounts the content and drops its element; a re-open starts fresh
+ * PO39: ...a pointerdown in the content brings the widget to the front
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import {
@@ -52,6 +58,8 @@ import {
 import type { ManagedWidget } from '../PanelOverlay';
 import { WindowManagerProvider } from '../WindowManagerContext';
 import { createPanelHost } from '../workspace/panelHost';
+import { ManagedFloatingWindow } from '../panelOverlay/FloatingWidget';
+import type { ManagedPlacement } from '../panelOverlay/context';
 import type { MessageFormatter } from '../WindowManagerContext';
 
 let container: HTMLDivElement;
@@ -1550,5 +1558,132 @@ describe('PO35: the panel host parks in its own document', () => {
     expect(store!.style.display).toBe('none');
     expect(el.parentElement).toBe(store);
     expect(document.getElementById('preserved-dom-container')).toBeNull();
+  });
+});
+
+// ─── PO36–PO39: a managed widget's content element (7.11, M2) ─────────────────
+
+describe('PO36–PO39: a managed widget renders its content once, into its own element', () => {
+  let mgr: ReturnType<typeof usePanelFloatingWindowManager> | null = null;
+  const ManagerProbe: React.FC = () => { mgr = usePanelFloatingWindowManager(); return null; };
+  const mounted = vi.fn();
+  const unmounted = vi.fn();
+  /** Content with state and a mount/unmount record, that also reads the overlay's context. */
+  const Content: React.FC = () => {
+    const [n, setN] = useState(0);
+    const manager = usePanelFloatingWindowManager();
+    useEffect(() => { mounted(); return () => unmounted(); }, []);
+    return <button id="po-count" data-has-manager={String(manager.openIds !== undefined)} onClick={() => setN(x => x + 1)}>{n}</button>;
+  };
+  const box: ManagedWidget = { title: 'Box', content: <Content />, anchor: 'top-left', width: 260, height: 180 };
+  const body = () => container.querySelector('[data-rdd-widget="box"] .rdd-panel-float__body') as HTMLElement;
+
+  beforeEach(() => {
+    mounted.mockClear(); unmounted.mockClear();
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        <PanelOverlayRoot>
+          <ManagerProbe />
+          <PanelFloatingWindow id="decl" title="Decl" open defaultAnchor="bottom-right" defaultWidth={100} defaultHeight={80} onClose={() => {}}>
+            <span id="decl-content" />
+          </PanelFloatingWindow>
+        </PanelOverlayRoot>,
+      );
+    });
+    act(() => { mgr!.open('box', box); });
+  });
+  afterEach(() => { mgr = null; });
+
+  it('PO36: the content sits in div.rdd-panel-float__content, the body\'s only child', () => {
+    const el = body().firstElementChild as HTMLElement;
+    expect(body().children).toHaveLength(1);
+    expect(el.className).toBe('rdd-panel-float__content');
+    expect(el.querySelector('#po-count')).not.toBeNull();
+    expect(el.querySelector('#po-count')!.getAttribute('data-has-manager')).toBe('true');
+    // A declarative widget is unchanged: its children are the body's own.
+    const declBody = container.querySelector('[data-rdd-widget="decl"] .rdd-panel-float__body')!;
+    expect(declBody.firstElementChild!.id).toBe('decl-content');
+  });
+
+  it('PO38: closing unmounts the content and drops its element; a re-open starts fresh', () => {
+    const el = body().firstElementChild as HTMLElement;
+    const count = () => container.querySelector('#po-count') as HTMLElement;
+    act(() => { count().click(); });
+    expect(count().textContent).toBe('1');
+    act(() => { mgr!.close('box'); });
+    expect(unmounted).toHaveBeenCalledTimes(1);
+    expect(el.isConnected).toBe(false);
+    expect(container.querySelector('.rdd-panel-float__content')).toBeNull();
+    act(() => { mgr!.open('box', box); });
+    expect(body().firstElementChild).not.toBe(el);
+    expect(count().textContent).toBe('0');
+    const second = body().firstElementChild;
+    act(() => { mgr!.closeAll(); });
+    expect(unmounted).toHaveBeenCalledTimes(2);
+    expect(container.querySelector('.rdd-panel-float__content')).toBeNull();
+    act(() => { mgr!.open('box', box); });
+    expect(body().firstElementChild).not.toBe(second);
+  });
+
+  it('PO39: a pointerdown in the content brings the widget to the front', () => {
+    const win = () => container.querySelector('[data-rdd-widget="box"]') as HTMLElement;
+    const decl = container.querySelector('[data-rdd-widget="decl"]') as HTMLElement;
+    act(() => { decl.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 })); });
+    expect(win().classList.contains('rdd-panel-float--active')).toBe(false);
+    const count = container.querySelector('#po-count') as HTMLElement;
+    act(() => { count.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 })); });
+    expect(win().classList.contains('rdd-panel-float--active')).toBe(true);
+  });
+});
+
+describe('PO37: a managed placement survives the frame unmounting', () => {
+  it('keeps free mode, position and size, and shows the same content element again', () => {
+    const restore = stubGeometry({ overlay: domRect(0, 0, 800, 600), float: domRect(8, 0, 260, 180) });
+    const el = document.createElement('div');
+    el.className = 'rdd-panel-float__content';
+    let stored: ManagedPlacement | null = null;
+    let setShow: (v: boolean) => void = () => {};
+    const Frame: React.FC = () => {
+      const [show, setShowState] = useState(true);
+      setShow = setShowState;
+      const [p, setP] = useState<ManagedPlacement>({
+        anchor: 'top-left', stretch: null, mode: 'docked', freePos: null, size: { w: 260, h: 180 },
+      });
+      stored = p;
+      return show ? (
+        <ManagedFloatingWindow
+          id="m" title="M" open onClose={() => {}} contentEl={el}
+          controlled={{ placement: p, update: patch => setP(prev => ({ ...prev, ...patch(prev) })) }}
+        />
+      ) : null;
+    };
+    act(() => {
+      root = createRoot(container);
+      root.render(<PanelOverlayRoot><Frame /></PanelOverlayRoot>);
+    });
+    const win = () => container.querySelector('[data-rdd-widget="m"]') as HTMLElement;
+    expect(el.parentElement).toBe(win().querySelector('.rdd-panel-float__body'));
+    // Drag it free: from (8,0) by (+60,+40).
+    const header = win().querySelector('.rdd-panel-float__header') as HTMLElement;
+    act(() => { header.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 50, clientY: 10, button: 0 })); });
+    act(() => { win().dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 3, clientX: 110, clientY: 50 })); });
+    act(() => { win().dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 3, clientX: 110, clientY: 50 })); });
+    // Then widen it by 40 from its east edge.
+    const east = win().querySelector('.rdd-resize-e') as HTMLElement;
+    act(() => { east.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 4, clientX: 328, clientY: 100, button: 0 })); });
+    act(() => { east.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 4, clientX: 368, clientY: 100 })); });
+    act(() => { east.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 4, clientX: 368, clientY: 100 })); });
+    expect(stored).toMatchObject({ mode: 'free', freePos: { x: 68, y: 40 }, size: { w: 300, h: 180 } });
+    const placed = () => ({ left: win().style.left, top: win().style.top, width: win().style.width, height: win().style.height });
+    expect(placed()).toEqual({ left: '68px', top: '40px', width: '300px', height: '180px' });
+
+    act(() => { setShow(false); });
+    expect(win()).toBeNull();
+    expect(el.parentElement).toBeNull();                 // taken out with its frame
+    act(() => { setShow(true); });
+    expect(placed()).toEqual({ left: '68px', top: '40px', width: '300px', height: '180px' });
+    expect(el.parentElement).toBe(win().querySelector('.rdd-panel-float__body'));
+    restore();
   });
 });
