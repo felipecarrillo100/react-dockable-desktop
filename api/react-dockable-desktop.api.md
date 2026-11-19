@@ -448,7 +448,7 @@ interface InternalWindowActions extends WorkspaceActions {
     openHostedPanel: (id: string, owner: PanelOwner, title: PanelInfo['title'], at: HostedPanelPlacement) => boolean;
     // (undocumented)
     registerContextMenuFn: (fn: (options: ShowContextMenuOptions) => void) => () => void;
-    registerHostedCloseHandler: (id: string, onClose: () => void) => () => void;
+    registerHostedCloseHandler: (id: string, onClose: () => void, onDrop?: () => void) => () => void;
     // (undocumented)
     registerPanelContextMenu: (panelId: string, getItems: () => ContextMenuItem[]) => () => void;
     removeHostedPanel: (id: string) => void;
@@ -1542,6 +1542,9 @@ export function useSidePanels(): SidePanelsApi;
 export function useToolbar(): ToolbarContextValue;
 
 // @public
+export function useWidget(): WidgetHandle | null;
+
+// @public
 export function useWorkspace<TEvents extends object = Record<string, unknown>>(): Workspace<TEvents>;
 
 // @public
@@ -1549,6 +1552,15 @@ export function useWorkspaceState(): WorkspaceState;
 
 // @public (undocumented)
 export function useWorkspaceState<T>(selector: (state: WorkspaceState) => T): T;
+
+// @public
+export interface WidgetHandle {
+    id: string;
+    location: WidgetLocation;
+    onMoved(cb: () => void): () => void;
+    onWillMove(cb: () => void): () => void;
+    ownerPanelId: string | null;
+}
 
 // @public
 export type WidgetLocation = 'panel' | 'docked' | 'tabbed' | 'floating' | 'minimized';

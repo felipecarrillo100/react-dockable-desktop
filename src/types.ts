@@ -595,8 +595,11 @@ export interface InternalWindowActions extends WorkspaceActions {
   removeHostedPanel: (id: string) => void;
   /** @internal Updates a hosted panel's own capabilities (the widget re-opened). (7.11.0) */
   setHostedOptions: (id: string, options: NonNullable<PanelOwner['options']>) => void;
-  /** @internal Called when a hosted panel is closed (×, menu, `closePanel`): the widget closes. (7.11.0) */
-  registerHostedCloseHandler: (id: string, onClose: () => void) => () => void;
+  /**
+   * @internal `onClose` is called when a hosted panel is closed (×, menu, `closePanel`): the widget
+   * closes. `onDrop`, just before a `loadLayout` drops it: the widget is about to go home. (7.11.0)
+   */
+  registerHostedCloseHandler: (id: string, onClose: () => void, onDrop?: () => void) => () => void;
 }
 
 /** @internal Where a hosted panel opens. (7.11.0) */

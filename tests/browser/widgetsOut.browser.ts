@@ -224,3 +224,36 @@ describe('managed widget title menu', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// M5: useWidget() and the move callbacks, with real layout.
+
+describe('managed widget move callbacks', () => {
+  it('onWillMove sees the old size and onMoved the new one; location re-renders', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    const fill = () => rectOf(page, '#wo-fill');
+    const inPanel = await fill();
+    expect(await move(page, { to: 'docked', position: 'bottom', size: 0.5 })).toEqual({ ok: true });
+    await settle(page, 400);
+    const docked = await fill();
+    expect(Math.round(docked.width)).not.toBe(Math.round(inPanel.width));
+    const moves = () => page.evaluate(() => (window as unknown as { __woMoves: string[] }).__woMoves);
+    expect(await moves()).toEqual([
+      `will ${Math.round(inPanel.width)}x${Math.round(inPanel.height)}`,
+      `moved ${Math.round(docked.width)}x${Math.round(docked.height)}`,
+    ]);
+    expect(await page.getAttribute('#wo-fill', 'data-location')).toBe('docked');
+    // The user's own move: minimise the hosted panel, then restore it.
+    await actions(page, 'minimizePanel', 'p3/wo');
+    await settle(page, 400);
+    expect(await page.getAttribute('#wo-fill', 'data-location')).toBe('minimized');
+    await actions(page, 'restorePanel', 'p3/wo');
+    await settle(page, 400);
+    const m = await moves();
+    expect(m).toHaveLength(6);
+    expect(m[2]).toMatch(/^will /);
+    expect(m[5]).toMatch(/^moved \d+x\d+$/);
+    expect(m[5]).not.toBe('moved 0x0');
+    await close();
+    expect(errors).toEqual([]);
+  });
+});

@@ -2,7 +2,7 @@
  * @file PanelOverlayRoot.tsx
  * @description The Panel Overlay root: provides the overlay contexts and draws the corner drop zones.
  */
-import React, { useState, useRef, useCallback, useMemo, useEffect, useContext } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import type { FloatAnchor } from '../WindowManagerContext';
 import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
@@ -11,7 +11,10 @@ import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx, ManagedPlacemen
 import { forgetPanelDom } from '../domPreservation';
 import { bucketsFor, ANCHORS } from '../../core/stretch';
 import { ManagedFloatingWindow } from './FloatingWidget';
-import { useWidgetHosting } from './useWidgetHosting';
+import { useWidgetHosting, useWidgetContainer } from './useWidgetHosting';
+import type { WidgetHosting } from './useWidgetHosting';
+import { WidgetContext } from './widgetContext';
+import type { WidgetHandle } from './widgetContext';
 import { ContextMenuContext } from '../ContextMenu';
 import { initialFocusFor } from '../workspace/helpers';
 
@@ -248,7 +251,7 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
               if (!el) return null;   // openManaged always sets it first; defensive only
               return (
                 <React.Fragment key={id}>
-                  {createPortal(cfg.content, el)}
+                  {createPortal(<WidgetScope id={id} hosting={hosting}>{cfg.content}</WidgetScope>, el)}
                   {/* Out of the panel, a hosted panel shows the content and there is no frame. */}
                   {!(id in hosting.hostedIds) && <ManagedFloatingWindow
                     id={id}
@@ -271,6 +274,31 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       </PanelManagerContext.Provider>
     </PanelToolbarContext.Provider>
   );
+}
+
+// ─── Internal: WidgetScope ────────────────────────────────────────────────────
+
+/**
+ * Provides `useWidget()` to one managed widget's content, and calls its `onMoved` callbacks
+ * whenever its element has landed in another container.
+ */
+function WidgetScope({ id, hosting, children }: { id: string; hosting: WidgetHosting; children: React.ReactNode }): React.ReactElement {
+  const { location, key } = useWidgetContainer(hosting.hostedIds[id], hosting.ownerPanelId ?? '');
+  const { listen, settled, ownerPanelId } = hosting;
+  const lastKey = useRef(key);
+  useLayoutEffect(() => {
+    if (lastKey.current === key) return;
+    lastKey.current = key;
+    settled(id);
+  }, [key, id, settled]);
+  const handle = useMemo<WidgetHandle>(() => ({
+    id,
+    ownerPanelId,
+    location,
+    onWillMove: cb => listen(id, 'will', cb),
+    onMoved: cb => listen(id, 'moved', cb),
+  }), [id, ownerPanelId, location, listen]);
+  return <WidgetContext.Provider value={handle}>{children}</WidgetContext.Provider>;
 }
 
 // ─── Internal: DropZoneOverlay ────────────────────────────────────────────────

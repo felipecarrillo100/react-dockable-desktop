@@ -154,6 +154,7 @@ export {
   ToolbarItem as RddToolbarItem,
   PanelFloatingWindow as RddFloatingWidget,
   usePanelFloatingWindowManager as useFloatingWidgets,
+  useWidget,
 } from './components/PanelOverlay';
 export type {
   RddPanelOverlayProps,
@@ -175,6 +176,7 @@ export type {
   WidgetTarget,
   MoveResult,
   WidgetMenuContext,
+  WidgetHandle,
 } from './components/PanelOverlay';
 
 // ─── Panel contributions: active-panel-driven toolbar and sidebar content ──────
