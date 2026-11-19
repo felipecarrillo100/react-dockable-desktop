@@ -66,14 +66,17 @@ export const renderPanelContent = (
 const HostedWidgetSlot: React.FC<{ panelId: string }> = ({ panelId }) => {
   const panelHost = usePanelHost();
   const slotRef = useRef<HTMLDivElement | null>(null);
+  // Read here, not only in the effect: a widget closed and re-opened out of its panel in one tick
+  // gets a new element under the same panel id, and React keeps this slot mounted. The panel's
+  // entry is new then, so this re-renders and the effect attaches the new element.
+  const el = panelHost.getHostedContent(panelId);
   useLayoutEffect(() => {
     const slot = slotRef.current;
-    const el = panelHost.getHostedContent(panelId);
     if (!slot || !el) return;
     slot.appendChild(el);
     restorePanelDom(el, { refocus: false });
     return () => { if (el.parentNode === slot) slot.removeChild(el); };
-  }, [panelId, panelHost]);
+  }, [el]);
   return <div ref={slotRef} className="rdd-hosted-widget" />;
 };
 

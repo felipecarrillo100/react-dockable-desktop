@@ -42,7 +42,7 @@ import {
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
   RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, RddToasts, useModals, useSidePanels, RddConfirm, toast,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
-  RddPanelToolbar, RddToolbarItem, useFloatingWidgets, useWidget,
+  RddPanelToolbar, RddToolbarItem, useFloatingWidgets, useWidget, type WidgetMenuContext, type WidgetPlacement,
 } from '../../../src/index';
 
 const q = new URLSearchParams(location.search);
@@ -116,21 +116,24 @@ function ManagedContent() {
 /** Opens the `wo` managed widget once; needs to sit inside the overlay to reach its manager. */
 function ManagedOpener() {
   const widgets = useFloatingWidgets();
+  const config = {
+    title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right' as const, width: 200, height: 180,
+    canDock: true, canFloat: true,
+    titleMenu: (w: WidgetMenuContext) => w.location === 'panel'
+      ? [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
+      : [{ label: 'Back into the panel', action: () => w.move({ to: 'panel' }) }],
+  };
   // eslint-disable-next-line react-hooks/immutability
   (window as unknown as { __wo: unknown }).__wo = widgets;
+  // Re-opens `wo` with the same config at a saved placement, as an app would after a reload.
+  // eslint-disable-next-line react-hooks/immutability
+  (window as unknown as { __woOpen: unknown }).__woOpen = (placement?: WidgetPlacement) => widgets.open('wo', { ...config, placement });
   useEffect(() => {
-    widgets.open('wo', {
-      title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right', width: 200, height: 180,
-      canDock: true, canFloat: true,
-      titleMenu: w => w.location === 'panel'
-        ? [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
-        : [{ label: 'Back into the panel', action: () => w.move({ to: 'panel' }) }],
-    });
+    widgets.open('wo', config);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
 }
-
 function OverlayPanel() {
   const [open, setOpen] = useState(true);
   return (

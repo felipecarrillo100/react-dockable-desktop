@@ -91,7 +91,25 @@ export interface ManagedWidget {
    *   : [{ label: 'Back into the map', action: () => w.move({ to: 'panel' }) }]
    */
   titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[];
+  /**
+   * Open **at** a placement saved earlier with `useFloatingWidgets().placement(id)` (7.11.0): where
+   * it was in the panel, and whether it was docked, tabbed or floating out of it. Used only on the
+   * first open of an id, like `anchor`; a re-open of a live id leaves it where it is.
+   *
+   * A value this version can't read (another `v`, or broken fields) falls back to the config's own
+   * `anchor` / `width` / `height` / `stretch`. A valid one is clamped into the panel as it is now; in
+   * a panel that has no size yet (a background tab) a free position waits until it has one. If
+   * moving out of the panel is refused (the owner isn't docked), the widget stays in the panel.
+   */
+  placement?: WidgetPlacement;
 }
+
+/**
+ * Where a managed widget is, as plain JSON (7.11.0): from `useFloatingWidgets().placement(id)`,
+ * back to `open(id, { placement })`. Opaque: store it as it is (JSON-serialisable) and don't read
+ * its fields; they may change between versions, and `v` says which. The same in vdd and ndd.
+ */
+export type WidgetPlacement = { readonly v: 1 } & Record<string, unknown>;
 
 /** What {@link ManagedWidget.titleMenu} is given to build its items from (7.11.0). */
 export interface WidgetMenuContext {

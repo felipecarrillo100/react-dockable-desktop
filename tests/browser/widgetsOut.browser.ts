@@ -49,9 +49,16 @@ describe('managed widget content element', () => {
     await page.fill('#wo-input', 'typed');
     const title = await rectOf(page, '[data-rdd-widget="wo"] .rdd-panel-float__header');
     const overlay = await rectOf(page, '[data-rdd-panel="p3"] .rdd-panel-overlay-root');
-    // Free first, then onto the top-left drop zone.
-    await drag(page, title.x + 20, title.y + 8, title.x - 60, title.y - 60);
-    await drag(page, title.x - 40, title.y - 52, overlay.x + 20, overlay.y + 20);
+    // Free first, then onto the top-left drop zone. By the middle of the header: its start is the
+    // title-menu button, which never drags.
+    const mid = title.x + title.width / 2;
+    await drag(page, mid, title.y + 8, mid - 60, title.y - 300);
+    const freed = await rectOf(page, '[data-rdd-widget="wo"] .rdd-panel-float__header');
+    expect(Math.round(freed.y)).toBeLessThan(Math.round(title.y) - 200);       // it really moved
+    await drag(page, freed.x + freed.width / 2, freed.y + 8, overlay.x + 20, overlay.y + 20);
+    // Docked top-left (stacked under the declarative w1 there): inline-start inset, no free `left`.
+    const style = await page.$eval('[data-rdd-widget="wo"]', el => ({ left: (el as HTMLElement).style.left, start: (el as HTMLElement).style.insetInlineStart }));
+    expect(style).toEqual({ left: '', start: '8px' });
     const state = await page.evaluate(() => ({
       count: document.getElementById('wo-count')?.textContent,
       input: (document.getElementById('wo-input') as HTMLInputElement).value,
@@ -253,6 +260,73 @@ describe('managed widget move callbacks', () => {
     expect(m[2]).toMatch(/^will /);
     expect(m[5]).toMatch(/^moved \d+x\d+$/);
     expect(m[5]).not.toBe('moved 0x0');
+    await close();
+    expect(errors).toEqual([]);
+  });
+});
+
+// M6: WidgetPlacement, with real layout.
+
+const placementOf = (page: Page) => page.evaluate(() =>
+  (window as unknown as { __wo: { placement(id: string): unknown } }).__wo.placement('wo'));
+const reopen = (page: Page, placement: unknown) => page.evaluate((p) => {
+  const w = window as unknown as { __wo: { close(id: string): void }; __woOpen(p: unknown): void };
+  w.__wo.close('wo');
+  w.__woOpen(p);
+}, placement);
+/** The widget's gaps to the overlay's edges. */
+const gaps = (page: Page) => page.evaluate(() => {
+  const o = document.querySelector('[data-rdd-panel="p3"] .rdd-panel-overlay-root')!.getBoundingClientRect();
+  const w = document.querySelector('[data-rdd-widget="wo"]')!.getBoundingClientRect();
+  return { left: Math.round(w.left - o.left), top: Math.round(w.top - o.top), right: Math.round(o.right - w.right), bottom: Math.round(o.bottom - w.bottom), width: Math.round(w.width), height: Math.round(w.height) };
+});
+
+describe('managed widget placement', () => {
+  it('a free position made by a drag comes back where it was', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    const title = await rectOf(page, '[data-rdd-widget="wo"] .rdd-panel-float__header');
+    // By the middle of the header (its start is the title-menu button, which never drags), up into
+    // the middle of the panel, away from every corner's drop zone.
+    const mid = title.x + title.width / 2;
+    await drag(page, mid, title.y + 8, mid - 10, title.y - 300);
+    const before = await gaps(page);
+    const saved = await placementOf(page);
+    expect(saved).toMatchObject({ v: 1, at: 'panel', mode: 'free' });
+    await reopen(page, saved);
+    await settle(page, 300);
+    expect(await gaps(page)).toEqual(before);
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('restored while its panel is a background tab, it is placed when the tab is shown', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    const saved = { v: 1, at: 'panel', anchor: 'top-left', stretch: null, mode: 'free', offset: { corner: 'bottom-right', inline: 16, block: 24 }, width: 180, height: 120 };
+    await actions(page, 'openPanel', 'bg', 'probe', { title: 'Background', dockTo: { panel: 'p3', position: 'center' } });
+    await settle(page, 300);
+    await reopen(page, saved);
+    await settle(page, 200);
+    expect(await placementOf(page)).toEqual(saved);      // held, not measured against a hidden panel
+    await page.click('[data-rdd-tab="p3"]');
+    await settle(page, 400);
+    expect(await gaps(page)).toMatchObject({ right: 16, bottom: 24, width: 180, height: 120 });
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('out of the panel: closed and reopened at its placement, it docks again beside its owner', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    expect(await move(page, { to: 'docked', position: 'bottom', size: 0.4 })).toEqual({ ok: true });
+    await settle(page, 300);
+    const saved = await placementOf(page);
+    expect(saved).toMatchObject({ v: 1, at: 'docked', position: 'bottom', size: 0.4, home: { at: 'panel' } });
+    await reopen(page, JSON.parse(JSON.stringify(saved)));
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('docked');
+    expect(await snapshot(page)).toMatchObject({ slot: 'hosted', fills: true });
+    expect(await move(page, { to: 'panel' })).toEqual({ ok: true });
+    await settle(page, 300);
+    expect(await snapshot(page)).toMatchObject({ slot: 'frame' });
     await close();
     expect(errors).toEqual([]);
   });

@@ -388,6 +388,7 @@ export interface FloatingWidgetsApi {
     move(id: string, to: WidgetTarget): MoveResult;
     open(id: string, config: ManagedWidget): void;
     openIds: string[];
+    placement(id: string): WidgetPlacement | null;
 }
 
 // @public
@@ -497,6 +498,7 @@ export interface ManagedWidget {
     content: React$1.ReactNode;
     height?: number;
     icon?: React$1.ReactNode;
+    placement?: WidgetPlacement;
     stretch?: Stretch;
     title: PanelTitle;
     titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[];
@@ -1574,6 +1576,11 @@ export interface WidgetMenuContext {
     location: WidgetLocation;
     move(to: WidgetTarget): MoveResult;
 }
+
+// @public
+export type WidgetPlacement = {
+    readonly v: 1;
+} & Record<string, unknown>;
 
 // @public
 export type WidgetTarget = {
