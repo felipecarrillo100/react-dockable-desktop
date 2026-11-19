@@ -43,6 +43,13 @@ export interface PanelHost {
   getLifecycle(id: string): PanelLifecycleRegistry | undefined;
   getOrCreateLifecycle(id: string): PanelLifecycleRegistry;
   deleteLifecycle(id: string): void;
+  /**
+   * A hosted panel's content (7.11.0): the element of the managed widget it shows, registered by
+   * the widget's overlay before it opens the panel and cleared after it removes it. The hosted
+   * panel's slot only attaches it.
+   */
+  getHostedContent(id: string): HTMLElement | undefined;
+  setHostedContent(id: string, el: HTMLElement | null): void;
 }
 
 /**
@@ -62,6 +69,7 @@ export function createPanelHost(ownerDocument?: Document): PanelHost {
   const elements = new Map<string, HTMLDivElement>();
   const dimensions = new Map<string, { width: number; height: number }>();
   const lifecycle = new Map<string, PanelLifecycleRegistry>();
+  const hostedContent = new Map<string, HTMLElement>();
 
   return {
     getOrCreateElement(id) {
@@ -108,11 +116,18 @@ export function createPanelHost(ownerDocument?: Document): PanelHost {
       return entry;
     },
     deleteLifecycle: (id) => { lifecycle.delete(id); },
+    getHostedContent: (id) => hostedContent.get(id),
+    setHostedContent: (id, el) => { if (el) hostedContent.set(id, el); else hostedContent.delete(id); },
   };
 }
 
 /** @internal The nearest provider's panel host. */
 export const PanelHostContext: Context<PanelHost | null> = createContext<PanelHost | null>(null);
+
+/** @internal The nearest provider's panel host, or null outside one (a panel overlay used standalone). */
+export function useOptionalPanelHost(): PanelHost | null {
+  return useContext(PanelHostContext);
+}
 
 /** @internal The nearest provider's panel host. Throws outside a provider, as the slots never render there. */
 export function usePanelHost(): PanelHost {

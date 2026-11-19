@@ -10,9 +10,26 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
-Groundwork for widgets that can leave their panel (7.11.0). Nothing creates such a panel yet.
+Widgets that can leave their panel (7.11.0, in progress).
 
 ### Added
+
+- **`useFloatingWidgets().move(id, to)` and `.location(id)`: a managed widget can leave its panel
+  and come back, without remounting its content.** `to` is a `WidgetTarget`:
+  `{ to: 'docked', position, size? }` beside its owner panel, `{ to: 'tabbed' }` in the owner's group,
+  `{ to: 'floating', rect? }`, or `{ to: 'panel' }` back to where it last was in the panel. Out of the
+  panel it is a workspace panel of its own (`'<ownerId>/<widgetId>'`), with the widget's title and icon:
+  the user can move, minimise and close it like any other, and it appears in `getOpenPanelIds()`, the
+  taskbar and the panel events, but never in `saveLayout()`. The content stays rendered in the owner
+  panel's tree, so it keeps its state and its owner's contexts (`usePanel()` is still the owner).
+  - **`move()` returns a `MoveResult`** instead of throwing; a refusal (`not-open`, `owner-not-docked`,
+    `owner-not-kept-alive`, `no-workspace`) changes nothing.
+  - **Closing it in the page closes the widget:** the × on its tab or title bar, its menu's Close, or
+    `closePanel()` on it. So do `close(id)`, `closeAll()` and the owner panel closing.
+  - **The owner hidden or minimised** leaves the widget out and on screen.
+  - **`loadLayout()`** never keeps a widget's panel; the widget goes back into its own panel.
+  - New types: `WidgetTarget`, `WidgetLocation` (`'panel' | 'docked' | 'tabbed' | 'floating' |
+    'minimized'`) and `MoveResult`.
 
 - **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
   of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,

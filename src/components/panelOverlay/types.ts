@@ -68,3 +68,37 @@ export interface ManagedWidget {
    */
   stretch?: Stretch;
 }
+
+/**
+ * Where a managed widget is shown (7.11.0). `'panel'` is inside its owner panel, as a floating
+ * widget; the others are a workspace panel of its own, beside its owner (`'docked'`), a tab in its
+ * owner's group (`'tabbed'`), a floating window (`'floating'`), or minimised to the taskbar.
+ */
+export type WidgetLocation = 'panel' | 'docked' | 'tabbed' | 'floating' | 'minimized';
+
+/**
+ * Where to move a managed widget with `useFloatingWidgets().move()` (7.11.0). Its owner panel is
+ * always the reference: `'docked'` splits the owner's group on that side (`size` is the new
+ * panel's share, 0.1–0.9, as in `openPanel`'s `dockTo`), `'tabbed'` adds a tab to the owner's
+ * group. `'floating'` opens a floating window at `rect` (workspace pixels), or where the widget is
+ * on screen. `'panel'` brings it back to where it last was inside the panel.
+ */
+export type WidgetTarget =
+  | { to: 'panel' }
+  | { to: 'docked'; position: 'left' | 'right' | 'top' | 'bottom'; size?: number }
+  | { to: 'tabbed' }
+  | { to: 'floating'; rect?: { x: number; y: number; width: number; height: number } };
+
+/**
+ * What `move()` did (7.11.0). A refusal changes nothing:
+ * - `not-open`: no widget with that id is open in this overlay;
+ * - `owner-not-docked`: `'docked'` and `'tabbed'` need the owner panel in the grid (a floating or
+ *   minimised owner can still move a widget to `'floating'`);
+ * - `owner-not-kept-alive`: the owner's panel type has `keepAlive: false`, so it unmounts while
+ *   hidden and would take the widget with it;
+ * - `no-workspace`: the overlay isn't in a workspace panel (no `DockableDesktopProvider`, or a
+ *   modal or drawer), so there is nowhere to move to.
+ */
+export type MoveResult =
+  | { ok: true }
+  | { ok: false; reason: 'not-open' | 'owner-not-docked' | 'owner-not-kept-alive' | 'no-workspace' };

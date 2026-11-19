@@ -116,6 +116,14 @@
   height: 100%;
 }
 
+/* A hosted panel's body (7.11): it shows a managed widget moved out of its panel. It scrolls as the
+   widget's own body does, so the content behaves the same in either place. */
+.rdd-hosted-widget {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
 
 /* ── Docking drop zones (visible while dragging a floating window) ── */
 /* Armed for resize-to-stretch: the clamps already hold the widget exactly where a stretched axis

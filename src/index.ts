@@ -171,6 +171,9 @@ export type {
   FloatingWidgetsApi,
   Stretch,
   PanelFloatPlacement,
+  WidgetLocation,
+  WidgetTarget,
+  MoveResult,
 } from './components/PanelOverlay';
 
 // ─── Panel contributions: active-panel-driven toolbar and sidebar content ──────

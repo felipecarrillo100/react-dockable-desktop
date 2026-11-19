@@ -384,6 +384,8 @@ export interface FloatingWidgetsApi {
     close(id: string): void;
     closeAll(): void;
     isOpen(id: string): boolean;
+    location(id: string): WidgetLocation | null;
+    move(id: string, to: WidgetTarget): MoveResult;
     open(id: string, config: ManagedWidget): void;
     openIds: string[];
 }
@@ -557,6 +559,14 @@ export interface ModalsApi {
     // (undocumented)
     update: (id: OverlayId, updates: OverlayUpdate) => void;
 }
+
+// @public
+export type MoveResult = {
+    ok: true;
+} | {
+    ok: false;
+    reason: 'not-open' | 'owner-not-docked' | 'owner-not-kept-alive' | 'no-workspace';
+};
 
 // @public
 export interface OpenPanelOptions<P extends object = Record<string, unknown>> {
@@ -1536,6 +1546,28 @@ export function useWorkspaceState(): WorkspaceState;
 
 // @public (undocumented)
 export function useWorkspaceState<T>(selector: (state: WorkspaceState) => T): T;
+
+// @public
+export type WidgetLocation = 'panel' | 'docked' | 'tabbed' | 'floating' | 'minimized';
+
+// @public
+export type WidgetTarget = {
+    to: 'panel';
+} | {
+    to: 'docked';
+    position: 'left' | 'right' | 'top' | 'bottom';
+    size?: number;
+} | {
+    to: 'tabbed';
+} | {
+    to: 'floating';
+    rect?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+};
 
 // Warning: (ae-forgotten-export) The symbol "WorkspaceClient" needs to be exported by the entry point index.d.ts
 //
