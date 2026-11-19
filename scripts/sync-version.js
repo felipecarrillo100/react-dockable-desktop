@@ -18,27 +18,32 @@ import { fileURLToPath } from 'url';
 
 const root    = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+// A version as written in these files, including a pre-release (7.11.0-next.0). In a shields.io
+// badge a '-' is written '--', since a single one separates the badge's label, message and colour.
+const V = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?`;
+const BADGE_V = String.raw`\d+\.\d+\.\d+(?:--[0-9A-Za-z.]+)?`;
+const badgeVersion = version.replace(/-/g, '--');
 
 const FILES = [
   {
     file: 'README.md',
     patterns: [
       // npm badge: img.shields.io/badge/npm-vX.Y.Z-blue.svg
-      { re: /(shields\.io\/badge\/npm-v)[\d.]+(-blue\.svg)/g, sub: `$1${version}$2` },
+      { re: new RegExp(String.raw`(shields\.io/badge/npm-v)${BADGE_V}(-blue\.svg)`, 'g'), sub: `$1${badgeVersion}$2` },
     ],
   },
   {
     file: 'CHANGELOG.md',
     patterns: [
       // Unreleased compare link: .../compare/vX.Y.Z...HEAD
-      { re: /(compare\/v)[\d.]+(\.\.\.HEAD)/g, sub: `$1${version}$2` },
+      { re: new RegExp(String.raw`(compare/v)${V}(\.\.\.HEAD)`, 'g'), sub: `$1${version}$2` },
     ],
   },
   {
     file: 'docs-site/.vitepress/config.ts',
     patterns: [
       // Nav version badge: text: 'vX.Y.Z'
-      { re: /(text:\s*['"])v[\d.]+(['"])/g, sub: `$1v${version}$2` },
+      { re: new RegExp(String.raw`(text:\s*['"])v${V}(['"])`, 'g'), sub: `$1v${version}$2` },
     ],
   },
 ];

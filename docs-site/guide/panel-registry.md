@@ -50,6 +50,7 @@ The type is `PanelRegistryEntry['defaultOptions']` (`PanelRegistryEntry` is expo
 | `className` | `string` | — | Class added to each panel of this type, on its own content element (`.rdd-panel-content`). That element moves with the panel, so the class applies docked, floating and in the taskbar preview. (7.8.0) |
 | `tabClassName` | `string` | — | Class added to the tab of each panel of this type. (7.8.0) |
 | `keepAlive` | `boolean` | `true` | `false` unmounts the panel's component while it is hidden and mounts it afresh when shown — see [Freeing a hidden panel](#freeing-a-hidden-panel-keepalive-false) below. (7.8.0) |
+| `preserveEmbeds` | `boolean` | `false` | An `<iframe>` (or other embedded document or media) in the panel doesn't reload when the panel moves: docked, floated, minimised, restored, or the grid changing around it. Uses `moveBefore()` in Chrome and Edge 133+ and Firefox 144+; in Safari it reloads as before. (7.11.0) |
 
 #### Freeing a hidden panel (`keepAlive: false`)
 
