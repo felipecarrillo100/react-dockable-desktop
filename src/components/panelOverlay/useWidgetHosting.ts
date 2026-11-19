@@ -17,6 +17,7 @@ import { optionsFor } from '../../core/panelOptions';
 import { findLeafIdOf } from '../../core/layoutTree';
 import type { HostedPanelPlacement, PanelInfo, WorkspaceState } from '../../types';
 import type { ContextMenuItem } from '../ContextMenu';
+import type { OutTarget } from '../../core/widgetPlacement';
 import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
 
 interface HostingDeps {
@@ -43,6 +44,8 @@ export interface WidgetHosting {
   menuItems(id: string): ContextMenuItem[];
   /** The owner panel's id, or null when the overlay isn't in a workspace panel. */
   ownerPanelId: string | null;
+  /** Where a widget out of its panel is, as a saved placement's target; null in the panel. */
+  outTarget(id: string): OutTarget | null;
   /** Subscribes to a widget's `onWillMove` / `onMoved`. */
   listen(id: string, kind: 'will' | 'moved', cb: () => void): () => void;
   /** The widget is in its new container: calls `onMoved` once it has a size. */
@@ -81,7 +84,8 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   const ownerId = useContext(FormContainerContext).instanceId;
   const [hostedIds, setHostedIds] = useState<Record<string, string>>(NO_HOSTED);
   // The same record, read synchronously by move() and the cleanup; with each one's close-handler unregister.
-  const hostedRef = useRef(new Map<string, { panelId: string; unregister: () => void }>());
+  // `target` is the last move's target, for placement(): what the grid alone can't say (which side, how big).
+  const hostedRef = useRef(new Map<string, { panelId: string; unregister: () => void; target: WidgetTarget }>());
   // Each widget's onWillMove / onMoved callbacks, and the container each hosted one was last seen in.
   const listenersRef = useRef(new Map<string, { will: Set<() => void>; moved: Set<() => void> }>());
   const lastKeyRef = useRef(new Map<string, string>());
@@ -174,7 +178,7 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     // The app's titleMenu items lead the hosted panel's own menus.
     const unregisterMenu = actions.registerPanelContextMenu(panelId, () => latestRef.current.menuItems(id));
     const unregister = (): void => { unregisterClose(); unregisterMenu(); };
-    hostedRef.current.set(id, { panelId, unregister });
+    hostedRef.current.set(id, { panelId, unregister, target: to.to === 'floating' ? { to: 'floating', rect: at.kind === 'float' ? at.rect : undefined } : to });
     if (sync) lastKeyRef.current.set(id, containerKey(sync.getSnapshot(), panelId, ownerId));
     setHosted(id, panelId);
     return { ok: true };
@@ -241,6 +245,28 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
 
   const ownerPanelId = sync && sync.getSnapshot().panels[ownerId] ? ownerId : null;
 
+  const outTarget = (id: string): OutTarget | null => {
+    const entry = hostedRef.current.get(id);
+    const s = sync?.getSnapshot();
+    if (!entry || !s?.panels[entry.panelId]) return null;
+    const where = containerKey(s, entry.panelId, ownerId).split('|')[0];
+    const win = s.floating.find(w => w.id === entry.panelId);
+    if (where === 'floating' && win) {
+      const n = (v: number | string) => (typeof v === 'number' ? v : parseFloat(v) || 0);
+      return { at: 'floating', rect: { x: n(win.x), y: n(win.y), width: n(win.width), height: n(win.height) } };
+    }
+    if (where === 'tabbed') return { at: 'tabbed' };
+    const t = entry.target;
+    if (where === 'docked') {
+      // The side and size it was docked with; a user's drag elsewhere in the grid keeps them.
+      return t.to === 'docked' ? { at: 'docked', position: t.position, ...(t.size !== undefined ? { size: t.size } : {}) } : { at: 'docked', position: 'bottom' };
+    }
+    // Minimised: where it was before.
+    if (t.to === 'floating' && t.rect) return { at: 'floating', rect: t.rect };
+    if (t.to === 'docked') return { at: 'docked', position: t.position, ...(t.size !== undefined ? { size: t.size } : {}) };
+    return { at: 'tabbed' };
+  };
+
   // A hosted panel that left the workspace without this overlay asking (only loadLayout can do
   // that: it never keeps one) sends its widget back into the panel.
   const alive = useOptionalWindowManagerState(
@@ -263,6 +289,11 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
       for (const [id, entry] of hostedRef.current) {
         if (!(entry.panelId in st.panels)) continue;   // gone: a close, or the reconcile above
         const key = containerKey(st, entry.panelId, ownerId);
+        // Floating: remember its window, so a later minimise still knows where it was.
+        const win = key === 'floating' ? st.floating.find(w => w.id === entry.panelId) : undefined;
+        if (win && typeof win.x === 'number' && typeof win.y === 'number' && typeof win.width === 'number' && typeof win.height === 'number') {
+          entry.target = { to: 'floating', rect: { x: win.x, y: win.y, width: win.width, height: win.height } };
+        }
         const last = lastKeyRef.current.get(id);
         lastKeyRef.current.set(id, key);
         if (last !== undefined && last !== key) fire(id, 'will');
@@ -278,7 +309,7 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   }, []);
 
   // Fresh functions each render are fine: callers reach them through the manager context's memo.
-  return useMemo(() => ({ hostedIds, move, location, release, refresh, menuItems, ownerPanelId, listen, settled }),
+  return useMemo(() => ({ hostedIds, move, location, release, refresh, menuItems, ownerPanelId, listen, settled, outTarget }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [hostedIds, actions, sync, panelHost, registry, ownerId, release, ownerPanelId, listen, settled]);
 }

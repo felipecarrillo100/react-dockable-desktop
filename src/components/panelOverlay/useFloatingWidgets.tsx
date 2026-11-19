@@ -3,7 +3,7 @@
  * @description The hooks that open floating widgets from code: one widget, or a set managed by id.
  */
 import { useState, useContext, useCallback, useMemo } from 'react';
-import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
+import type { ManagedWidget, MoveResult, WidgetLocation, WidgetPlacement, WidgetTarget } from './types';
 import { PanelManagerContext } from './context';
 
 // ─── usePanelFloatingWindow ───────────────────────────────────────────────────
@@ -68,6 +68,15 @@ export interface FloatingWidgetsApi {
    * re-render anything by itself.
    */
   location(id: string): WidgetLocation | null;
+  /**
+   * Where a widget is, as plain JSON to save with the rest of your panel's state (7.11.0): in the
+   * panel (corner, stretch, free position, size) or out of it (docked, tabbed or floating, and where
+   * it goes back to). Give it back to `open(id, { placement })` after a reload. `null` if it isn't open.
+   * @example
+   * const saved = widgets.placement('table');                 // store it
+   * widgets.open('table', { ...config, placement: saved });  // later: it opens where it was
+   */
+  placement(id: string): WidgetPlacement | null;
 }
 
 /**
@@ -97,5 +106,6 @@ export function usePanelFloatingWindowManager(): FloatingWidgetsApi {
     openIds: ids,
     move: (id: string, to: WidgetTarget): MoveResult => ctx ? ctx.moveManaged(id, to) : { ok: false, reason: 'not-open' },
     location: (id: string): WidgetLocation | null => ctx ? ctx.locationOf(id) : null,
+    placement: (id: string): WidgetPlacement | null => ctx ? ctx.placementOf(id) : null,
   }), [ctx, ids]);
 }

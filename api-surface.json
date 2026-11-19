@@ -172,6 +172,7 @@
     "WidgetHandle",
     "WidgetLocation",
     "WidgetMenuContext",
+    "WidgetPlacement",
     "WidgetTarget",
     "Workspace",
     "WorkspaceActions",

@@ -9,6 +9,10 @@ import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
 import { PanelToolbarContext, PanelManagerContext, PanelOverlayContext } from './context';
 import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx, ManagedPlacement } from './context';
 import { forgetPanelDom } from '../domPreservation';
+import { toPanelForm, fromPanelForm, parsePlacement } from '../../core/widgetPlacement';
+import type { PanelBox, PanelForm, OutTarget } from '../../core/widgetPlacement';
+import type { WidgetPlacement, WidgetTarget } from './types';
+import { useOptionalWindowManagerState } from '../WindowManagerContext';
 import { bucketsFor, ANCHORS } from '../../core/stretch';
 import { ManagedFloatingWindow } from './FloatingWidget';
 import { useWidgetHosting, useWidgetContainer } from './useWidgetHosting';
@@ -26,6 +30,20 @@ const seedPlacement = (config: ManagedWidget): ManagedPlacement => ({
   freePos: null,
   size: { w: config.width ?? 320, h: config.height ?? 240 },
 });
+
+/** A saved out-of-panel target as a move; a floating rect is clamped into the workspace as it is now. */
+function targetOf(out: OutTarget, root: HTMLElement | null): WidgetTarget {
+  if (out.at === 'tabbed') return { to: 'tabbed' };
+  if (out.at === 'docked') return { to: 'docked', position: out.position, ...(out.size !== undefined ? { size: out.size } : {}) };
+  const viewport = root?.closest('.rdd-workspace-viewport') as HTMLElement | null | undefined;
+  const vw = viewport?.clientWidth ?? 0;
+  const vh = viewport?.clientHeight ?? 0;
+  const r = out.rect;
+  if (vw <= 0 || vh <= 0) return { to: 'floating', rect: r };
+  const width = Math.min(r.width, vw);
+  const height = Math.min(r.height, vh);
+  return { to: 'floating', rect: { x: Math.min(r.x, vw - width), y: Math.min(r.y, vh - height), width, height } };
+}
 
 // ─── PanelOverlayRoot ─────────────────────────────────────────────────────────
 
@@ -78,6 +96,24 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   const closeWidgetRef = useRef<(id: string) => void>(() => {});
   const hosting = useWidgetHosting({ contentEls, configs: configsRef, containerRef, closeWidget: closeWidgetRef });
   const { release: releaseHosted, refresh: refreshHosted } = hosting;
+  // move() and outTarget() change identity each render; open and placement() call the latest.
+  const hostingRef = useRef(hosting);
+  useEffect(() => { hostingRef.current = hosting; });
+  const isRtl = useOptionalWindowManagerState(s => s.isRtl, false);
+  const isRtlRef = useRef(isRtl);
+  useEffect(() => { isRtlRef.current = isRtl; });
+  // The store again, for placement(), which is called between renders.
+  const placementsRef = useRef(managedPlacements);
+  useEffect(() => { placementsRef.current = managedPlacements; });
+  // Restored free positions waiting for the panel to have a size (a hidden panel measures 0×0).
+  const pendingRef = useRef(new Map<string, PanelForm>());
+  const [pendingCount, setPendingCount] = useState(0);
+  /** The panel's size and direction now, or null while it has none. */
+  const boxNow = (): PanelBox | null => {
+    const el = containerRef.current;
+    return el && el.clientWidth > 0 && el.clientHeight > 0
+      ? { width: el.clientWidth, height: el.clientHeight, rtl: isRtlRef.current } : null;
+  };
   // The context menu the title icon opens; none outside a provider, and then the icon stays decorative.
   const contextMenu = useContext(ContextMenuContext);
 
@@ -148,8 +184,18 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       next.set(id, config);
       return next;
     });
-    // Re-opening a live id refreshes its config but leaves it where the user put it.
-    setManagedPlacements(prev => (id in prev ? prev : { ...prev, [id]: seedPlacement(config) }));
+    if (reopened) return;   // a re-open of a live id refreshes its config, but leaves it where it is
+    // A saved placement, read and applied to the panel as it is now; else the config's own.
+    const saved = config.placement !== undefined ? parsePlacement(config.placement) : null;
+    let seed = seedPlacement(config);
+    if (saved?.home) {
+      const { state, deferred } = fromPanelForm(saved.home, boxNow());
+      seed = state;
+      if (deferred) { pendingRef.current.set(id, saved.home); setPendingCount(c => c + 1); }
+    }
+    setManagedPlacements(prev => (id in prev ? prev : { ...prev, [id]: seed }));
+    // Out of the panel, as saved. A refusal leaves it in the panel.
+    if (saved?.out) hostingRef.current.move(id, targetOf(saved.out, containerRef.current));
   }, [contentEls, focusWindow, refreshHosted]);
 
   /** Drops a closed widget's content element; its content unmounts with the portal. */
@@ -162,6 +208,7 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   }, [contentEls]);
 
   const closeManaged = useCallback((id: string): void => {
+    pendingRef.current.delete(id);
     releaseHosted(id);
     configsRef.current.delete(id);
     setManagedWindows(prev => {
@@ -180,6 +227,7 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   useEffect(() => { closeWidgetRef.current = closeManaged; });
 
   const closeAllManaged = useCallback((): void => {
+    pendingRef.current.clear();
     Array.from(configsRef.current.keys()).forEach(releaseHosted);
     configsRef.current.clear();
     setManagedWindows(new Map());
@@ -196,6 +244,39 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       setManagedPlacements(prev => (id in prev ? { ...prev, [id]: { ...prev[id], ...patch(prev[id]) } } : prev));
     }, []);
 
+  /** Where a widget is, as JSON to save: see `WidgetPlacement`. */
+  const placementOf = useCallback((id: string): WidgetPlacement | null => {
+    if (!configsRef.current.has(id)) return null;
+    const pending = pendingRef.current.get(id);
+    const current = placementsRef.current[id];
+    const home = pending ?? (current ? toPanelForm(current, boxNow()) : null);
+    if (!home) return null;
+    const out = hostingRef.current.outTarget(id);
+    return (out ? { v: 1, home, ...out } : home) as unknown as WidgetPlacement;
+  }, []);
+
+  // Apply restored free positions once the panel has a size.
+  useEffect(() => {
+    if (pendingCount === 0) return;
+    const apply = (): void => {
+      const box = boxNow();
+      if (!box || pendingRef.current.size === 0) return;
+      for (const [id, form] of pendingRef.current) {
+        const { state } = fromPanelForm(form, box);
+        updateManagedPlacement(id, () => state);
+      }
+      pendingRef.current.clear();
+      setPendingCount(0);
+    };
+    apply();
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCount]);
+
   const managedWindowIds = useMemo(() => Array.from(managedWindows.keys()), [managedWindows]);
 
   const toolbarCtxValue = useMemo<PanelToolbarCtx>(() => ({
@@ -211,7 +292,8 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
     closeAllManaged,
     moveManaged: hosting.move,
     locationOf: hosting.location,
-  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged, hosting.move, hosting.location]);
+    placementOf,
+  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged, hosting.move, hosting.location, placementOf]);
 
   const coreCtxValue = useMemo<PanelOverlayCtx>(() => ({
     topId,

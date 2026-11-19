@@ -23,6 +23,12 @@
  * WO15: the user's own moves of the hosted panel (minimise, restore, float) call them too
  * WO16: nothing is called for a no-op, a refusal, or a close; a layout load sending it home is a
  *       move; unsubscribing stops the calls
+ * WO17: placement(): null when not open; the panel form; docked, tabbed and floating out of it,
+ *       with home; a minimised one remembers where it was
+ * WO18: open({ placement }) puts it back in the panel; a broken value uses the config; a re-open
+ *       of a live id ignores it; a free position waits for the panel to have a size
+ * WO19: open({ placement }) out of the panel moves it out after opening, and back goes home;
+ *       refused, it stays in the panel
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useEffect, useState } from 'react';
@@ -603,5 +609,136 @@ describe('WO16: when nothing is called, and the rest', () => {
     await frames();
     expect(extra).not.toHaveBeenCalled();
     expect(calls).toHaveLength(2);
+  });
+});
+
+// ─── M6: WidgetPlacement ──────────────────────────────────────────────────────
+
+describe('WO17: placement()', () => {
+  it('is null for a widget that isn\'t open, and the panel form in the panel', () => {
+    mount();
+    expect(api!.placement('nope')).toBeNull();
+    expect(api!.placement('table')).toEqual({ v: 1, at: 'panel', anchor: 'bottom-left', stretch: null, mode: 'docked', width: 240, height: 160 });
+  });
+
+  it('out of the panel: where, plus home', () => {
+    const ws = mount();
+    const home = api!.placement('table');
+    act(() => { api!.move('table', { to: 'docked', position: 'right', size: 0.3 }); });
+    expect(api!.placement('table')).toEqual({ v: 1, at: 'docked', position: 'right', size: 0.3, home });
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    expect(api!.placement('table')).toEqual({ v: 1, at: 'tabbed', home });
+    act(() => { api!.move('table', { to: 'floating', rect: { x: 40, y: 50, width: 300, height: 200 } }); });
+    expect(api!.placement('table')).toEqual({ v: 1, at: 'floating', rect: { x: 40, y: 50, width: 300, height: 200 }, home });
+    // The user moves the window, then minimises it: it remembers the window as it was last.
+    act(() => { ws.updateFloatingPosition('map/table', { x: 90, y: 70 }); });
+    act(() => { ws.minimizePanel('map/table'); });
+    expect(api!.placement('table')).toEqual({ v: 1, at: 'floating', rect: { x: 90, y: 70, width: 300, height: 200 }, home });
+  });
+
+  it('is plain JSON', () => {
+    mount();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    const p = api!.placement('table');
+    expect(JSON.parse(JSON.stringify(p))).toEqual(p);
+  });
+});
+
+describe('WO18: open({ placement }) in the panel', () => {
+  const saved = { v: 1, at: 'panel', anchor: 'top-right', stretch: 'height', mode: 'docked', width: 280, height: 190 } as const;
+
+  it('puts it where it was saved', () => {
+    mount();
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: saved }); });
+    expect(api!.placement('table')).toEqual(saved);
+    expect((frame() as HTMLElement).style.insetInlineEnd).toBe('8px');   // top-right
+  });
+
+  it('a value it can\'t read falls back to the config', () => {
+    mount();
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: { ...saved, v: 2 } as never }); });
+    expect(api!.placement('table')).toMatchObject({ anchor: 'bottom-left', width: 240, height: 160 });
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: { ...saved, anchor: 'nowhere' } as never }); });
+    expect(api!.placement('table')).toMatchObject({ anchor: 'bottom-left' });
+  });
+
+  it('a re-open of a live id ignores it, in or out of the panel', () => {
+    mount();
+    act(() => { api!.open('table', { ...table, placement: saved }); });
+    expect(api!.placement('table')).toMatchObject({ anchor: 'bottom-left' });
+    act(() => { api!.open('table', { ...table, placement: { v: 1, at: 'tabbed', home: saved } as never }); });
+    expect(api!.location('table')).toBe('panel');
+  });
+
+  it('a free position waits for the panel to have a size, and is kept meanwhile', () => {
+    // jsdom lays nothing out: the overlay measures 0x0, as a hidden panel does.
+    mount();
+    const freeSaved = { v: 1, at: 'panel', anchor: 'top-left', stretch: null, mode: 'free', offset: { corner: 'bottom-right', inline: 16, block: 24 }, width: 200, height: 100 };
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: freeSaved as never }); });
+    expect(api!.placement('table')).toEqual(freeSaved);          // not re-measured against 0x0
+    expect((frame() as HTMLElement).style.left).toBe('');         // shown docked meanwhile
+  });
+
+  it('a free position is placed at once when the panel has a size', () => {
+    // jsdom defines these on Element.prototype; shadow them on HTMLElement and delete afterwards.
+    const sized = (dim: number) => ({ configurable: true, get(this: HTMLElement) { return this.classList.contains('rdd-panel-overlay-root') ? dim : 0; } });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', sized(800));
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', sized(600));
+    try {
+      mount();
+      act(() => { api!.close('table'); });
+      act(() => { api!.open('table', { ...table, placement: { v: 1, at: 'panel', anchor: 'top-left', stretch: null, mode: 'free', offset: { corner: 'bottom-right', inline: 16, block: 24 }, width: 200, height: 100 } as never }); });
+      expect((frame() as HTMLElement).style.left).toBe(`${800 - 200 - 16}px`);
+      expect((frame() as HTMLElement).style.top).toBe(`${600 - 100 - 24}px`);
+    } finally {
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth;
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientHeight;
+    }
+  });
+});
+
+describe('WO19: open({ placement }) out of the panel', () => {
+  const home = { v: 1, at: 'panel', anchor: 'top-right', stretch: null, mode: 'docked', width: 280, height: 190 };
+
+  it('moves it out after opening, and going back goes home', () => {
+    const ws = mount();
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: { v: 1, at: 'docked', position: 'bottom', size: 0.4, home } as never }); });
+    expect(api!.location('table')).toBe('docked');
+    expect(state(ws).panels['map/table']).toBeDefined();
+    expect(api!.placement('table')).toEqual({ v: 1, at: 'docked', position: 'bottom', size: 0.4, home });
+    act(() => { api!.move('table', { to: 'panel' }); });
+    expect(api!.placement('table')).toEqual(home);
+  });
+
+  it('closed and re-opened out of the panel in one go, the same panel id shows the new content', () => {
+    mount();
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    const saved = api!.placement('table');
+    const old = content();
+    act(() => { api!.close('table'); api!.open('table', { ...table, placement: saved! }); });
+    expect(content()).not.toBe(old);
+    expect(content()!.parentElement!.classList.contains('rdd-hosted-widget')).toBe(true);
+    expect(content()!.querySelector('#wo-count')).not.toBeNull();
+  });
+
+  it('floating at its saved rect', () => {
+    const ws = mount();
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: { v: 1, at: 'floating', rect: { x: 20, y: 30, width: 300, height: 200 }, home } as never }); });
+    expect(state(ws).floating.find(w => w.id === 'map/table')).toMatchObject({ x: 20, y: 30, width: 300, height: 200 });
+  });
+
+  it('refused (the owner is floating), it stays in the panel', () => {
+    const ws = mount();
+    act(() => { ws.floatPanel('map'); });
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, placement: { v: 1, at: 'tabbed', home } as never }); });
+    expect(api!.location('table')).toBe('panel');
+    expect(api!.placement('table')).toEqual(home);
   });
 });

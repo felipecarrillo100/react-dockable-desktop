@@ -55,6 +55,21 @@ Widgets that can leave their panel (7.11.0, in progress).
     it has none, as when minimised, on the next frames). Restore it there.
   - Both return their unsubscribe function, and neither is called for a close.
   - New type: `WidgetHandle`.
+- **`useFloatingWidgets().placement(id)` and `open(id, { placement })`: a widget opens where it was
+  after a reload.** `placement()` returns a `WidgetPlacement`: opaque, versioned, plain JSON, the same
+  in vdd and ndd. Store it with your panel's own state.
+  - It records where the widget is in the panel (corner, stretch, docked or free, size), or where it
+    is out of it (docked beside its owner, tabbed, floating) together with where it goes back to.
+  - A free position is kept as an offset from the panel corner it was nearest, so it keeps its gap on a
+    bigger or smaller panel, and mirrors in RTL.
+  - Given back in `open()`, it applies only on the first open of an id, as `anchor` does. A value that
+    can't be read (another version, broken fields) uses the config's own `anchor`, size and `stretch`
+    instead.
+  - A valid value is clamped into the panel as it is now. In a panel that has no size yet (a
+    background tab), a free position waits until the panel is shown.
+  - A placement out of the panel moves the widget out after it opens; if that's refused, the widget
+    stays in the panel.
+  - New type: `WidgetPlacement`.
 
 - **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
   of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,
