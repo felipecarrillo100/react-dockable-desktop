@@ -42,7 +42,7 @@ import {
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
   RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, RddToasts, useModals, useSidePanels, RddConfirm, toast,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
-  RddPanelToolbar, RddToolbarItem, useFloatingWidgets,
+  RddPanelToolbar, RddToolbarItem, useFloatingWidgets, useWidget,
 } from '../../../src/index';
 
 const q = new URLSearchParams(location.search);
@@ -83,6 +83,18 @@ function ProbePanel() {
 function ManagedContent() {
   const [count, setCount] = useState(0);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const widget = useWidget();
+  const fillRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // What a map would do: read its size before a move and after it (window.__woMoves).
+    if (!widget) return;
+    const w = window as unknown as { __woMoves: string[] };
+    w.__woMoves ??= [];   // once: the effect re-subscribes whenever the handle changes
+    const size = () => `${fillRef.current?.offsetWidth}x${fillRef.current?.offsetHeight}`;
+    const off1 = widget.onWillMove(() => w.__woMoves.push(`will ${size()}`));
+    const off2 = widget.onMoved(() => w.__woMoves.push(`moved ${size()}`));
+    return () => { off1(); off2(); };
+  }, [widget?.onWillMove, widget?.onMoved]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     // A WebGL context, as a map would hold: a move must not lose it.
     const canvas = canvasRef.current!;
@@ -92,7 +104,7 @@ function ManagedContent() {
     w.__woGl = canvas.getContext('webgl');
   }, []);
   return (
-    <div id="wo-fill" style={{ height: '100%', boxSizing: 'border-box', border: '1px solid #888' }}>
+    <div id="wo-fill" ref={fillRef} data-location={widget?.location} style={{ height: '100%', boxSizing: 'border-box', border: '1px solid #888' }}>
       <button id="wo-inc" onClick={() => setCount(c => c + 1)}>+</button>
       <span id="wo-count">{count}</span>
       <input id="wo-input" defaultValue="" />

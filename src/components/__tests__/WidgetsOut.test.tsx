@@ -18,6 +18,11 @@
  * WO11: out of the panel, the app's items lead the hosted tab's menu, before Minimize and Close;
  *       no built-in Float. An ordinary panel's menu is unchanged
  * WO12: a floating hosted panel's title-bar menu is the app's items, then Close
+ * WO13: useWidget(): null outside a widget; id, owner and a location that re-renders on change
+ * WO14: onWillMove runs before the element moves, onMoved after it landed, in that order
+ * WO15: the user's own moves of the hosted panel (minimise, restore, float) call them too
+ * WO16: nothing is called for a no-op, a refusal, or a close; a layout load sending it home is a
+ *       move; unsubscribing stops the calls
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useEffect, useState } from 'react';
@@ -26,6 +31,7 @@ import { act } from 'react';
 import {
   createWorkspace, DockableDesktopProvider, RddDesktop, RddPanelOverlay, useFloatingWidgets,
   type Workspace, type FloatingWidgetsApi, type ManagedWidget, type WidgetMenuContext,
+  useWidget, type WidgetHandle,
 } from '../../index';
 import type { InternalWindowActions } from '../../types';
 import { findLeafIdOf } from '../../core/layoutTree';
@@ -444,5 +450,158 @@ describe('WO12: a floating hosted panel\'s title-bar menu', () => {
     mount();
     act(() => { api!.move('table', { to: 'floating' }); });
     expect($('[data-rdd-window="map/table"] .rdd-btn-more-actions')).toBeNull();
+  });
+});
+
+// ─── M5: useWidget() and the move callbacks ───────────────────────────────────
+
+let widget: WidgetHandle | null = null;
+const calls: string[] = [];
+/** Records its handle, and what each callback saw: where the content element was at that moment. */
+const Probe: React.FC = () => {
+  widget = useWidget();
+  const w = widget;
+  useEffect(() => {
+    if (!w) return;
+    const where = () => content()?.parentElement?.className ?? 'nowhere';
+    const offWill = w.onWillMove(() => calls.push(`will@${where()}`));
+    const offMoved = w.onMoved(() => calls.push(`moved@${where()}`));
+    return () => { offWill(); offMoved(); };
+  }, [w?.onWillMove, w?.onMoved]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return <span id="wo-loc">{w?.location ?? 'none'}</span>;
+};
+const probed: ManagedWidget = { ...table, content: <Probe /> };
+const frames = () => act(async () => { await new Promise(r => setTimeout(r, 80)); });
+const loc = () => document.getElementById('wo-loc')?.textContent;
+function mountProbe(): Workspace {
+  const ws = mount();
+  act(() => { api!.close('table'); });
+  act(() => { api!.open('table', probed); });
+  calls.length = 0;
+  return ws;
+}
+afterEach(() => { widget = null; calls.length = 0; });
+
+describe('WO13: useWidget()', () => {
+  it('is null outside a managed widget', () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => { root!.render(<Probe />); });
+    expect(widget).toBeNull();
+  });
+
+  it('gives the id, the owner panel, and a location that re-renders when it changes', () => {
+    const ws = mountProbe();
+    expect(widget).toMatchObject({ id: 'table', ownerPanelId: 'map', location: 'panel' });
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    expect(loc()).toBe('docked');
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    expect(loc()).toBe('tabbed');
+    act(() => { ws.minimizePanel('map/table'); });
+    expect(loc()).toBe('minimized');
+    act(() => { api!.move('table', { to: 'panel' }); });
+    expect(loc()).toBe('panel');
+  });
+
+  it('has no owner panel outside a workspace panel', () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => { root!.render(<Owner />); });
+    act(() => { api!.open('table', probed); });
+    expect(widget).toMatchObject({ id: 'table', ownerPanelId: null, location: 'panel' });
+  });
+});
+
+describe('WO14: the order of the callbacks', () => {
+  it('onWillMove before the element moves, onMoved after it landed', async () => {
+    mountProbe();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    expect(calls).toEqual(['will@rdd-panel-float__body']);
+    await frames();
+    expect(calls).toEqual(['will@rdd-panel-float__body', 'moved@rdd-hosted-widget']);
+    act(() => { api!.move('table', { to: 'panel' }); });
+    await frames();
+    expect(calls.slice(2)).toEqual(['will@rdd-hosted-widget', 'moved@rdd-panel-float__body']);
+  });
+
+  it('out to out is one move: one will, one moved', async () => {
+    mountProbe();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    await frames();
+    calls.length = 0;
+    act(() => { api!.move('table', { to: 'floating', rect: { x: 0, y: 0, width: 200, height: 100 } }); });
+    await frames();
+    expect(calls).toEqual(['will@rdd-hosted-widget', 'moved@rdd-hosted-widget']);
+  });
+});
+
+describe('WO15: the user\'s own moves', () => {
+  it('minimising and restoring the hosted panel call both', async () => {
+    const ws = mountProbe();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    await frames();
+    calls.length = 0;
+    act(() => { ws.minimizePanel('map/table'); });
+    expect(calls).toEqual(['will@rdd-hosted-widget']);
+    await frames();
+    expect(calls).toHaveLength(2);
+    act(() => { ws.restorePanel('map/table'); });
+    expect(calls[2]).toMatch(/^will@/);
+    await frames();
+    expect(calls).toHaveLength(4);
+    expect(calls[3]).toBe('moved@rdd-hosted-widget');
+  });
+
+  it('floating it from the grid calls both', async () => {
+    const ws = mountProbe();
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    await frames();
+    calls.length = 0;
+    act(() => { ws.floatPanel('map/table'); });
+    await frames();
+    expect(calls).toEqual(['will@rdd-hosted-widget', 'moved@rdd-hosted-widget']);
+    expect(loc()).toBe('floating');
+  });
+});
+
+describe('WO16: when nothing is called, and the rest', () => {
+  it('a no-op, a refusal and a close call nothing', async () => {
+    const ws = mountProbe();
+    act(() => { api!.move('table', { to: 'panel' }); });
+    act(() => { ws.floatPanel('map'); });
+    act(() => { api!.move('table', { to: 'tabbed' }); });          // refused: owner floating
+    await frames();
+    expect(calls).toEqual([]);
+    act(() => { ws.dockPanel('map'); });
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    await frames();
+    calls.length = 0;
+    act(() => { ws.closePanel('map/table'); });
+    await frames();
+    expect(calls).toEqual([]);
+  });
+
+  it('a layout load sending it home is a move', async () => {
+    const ws = mountProbe();
+    const layout = ws.saveLayout();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    await frames();
+    calls.length = 0;
+    act(() => { ws.loadLayout(layout); });
+    await frames();
+    expect(calls).toEqual(['will@rdd-hosted-widget', 'moved@rdd-panel-float__body']);
+  });
+
+  it('unsubscribing stops the calls', async () => {
+    mountProbe();
+    const extra = vi.fn();
+    const off = widget!.onWillMove(extra);
+    off();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    await frames();
+    expect(extra).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(2);
   });
 });

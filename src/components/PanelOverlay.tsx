@@ -16,3 +16,5 @@ export { PanelFloatingWindow } from './panelOverlay/FloatingWidget';
 export type { RddFloatingWidgetProps } from './panelOverlay/FloatingWidget';
 export { usePanelFloatingWindow, usePanelFloatingWindowManager } from './panelOverlay/useFloatingWidgets';
 export type { UsePanelFloatingWindowReturn, FloatingWidgetsApi } from './panelOverlay/useFloatingWidgets';
+export { useWidget } from './panelOverlay/widgetContext';
+export type { WidgetHandle } from './panelOverlay/widgetContext';

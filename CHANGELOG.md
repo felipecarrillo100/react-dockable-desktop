@@ -43,6 +43,18 @@ Widgets that can leave their panel (7.11.0, in progress).
     built-in Minimize and Close. The built-in Float isn't offered for such a panel, because your
     items replace it.
   - New type: `WidgetMenuContext`.
+- **`useWidget()`:** inside a managed widget's content, the widget's own side; `null` elsewhere.
+  `usePanel()` there is still the owner panel.
+  - It gives `{ id, ownerPanelId, location, onWillMove, onMoved }`. `location` re-renders the
+    component when it changes.
+  - **`onWillMove(cb)`** is called just before the content element moves to another container: in or
+    out of its panel, between docked, tabbed and floating, minimised or restored. Your own `move()`
+    calls, the user's drags and menus, and a layout load sending it home all count. Save what a move
+    would disturb here, such as a map's view.
+  - **`onMoved(cb)`** is called once the element is in its new container and has its new size (when
+    it has none, as when minimised, on the next frames). Restore it there.
+  - Both return their unsubscribe function, and neither is called for a close.
+  - New type: `WidgetHandle`.
 
 - **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
   of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,

@@ -59,6 +59,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   const stateProvidersRef: { current: Record<string, () => unknown> } = { current: {} };
   /** Hosted panels' close handlers, by panel id: the widget's overlay registers them (7.11.0). */
   const hostedCloseHandlersRef = { current: new Map<string, () => void>() };
+  /** ...and what to call just before a layout load drops one (it never keeps a hosted panel). */
+  const hostedDropHandlersRef = { current: new Map<string, () => void>() };
 
   const eventBusRef = { current: new PanelEventBus() };
   // Seeded from the restored windows (7.4.1): starting at the base, a focused restored window was
@@ -514,10 +516,12 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     });
   };
 
-  const registerHostedCloseHandler = (id: string, onClose: () => void) => {
+  const registerHostedCloseHandler = (id: string, onClose: () => void, onDrop?: () => void) => {
     hostedCloseHandlersRef.current.set(id, onClose);
+    if (onDrop) hostedDropHandlersRef.current.set(id, onDrop);
     return () => {
       if (hostedCloseHandlersRef.current.get(id) === onClose) hostedCloseHandlersRef.current.delete(id);
+      if (onDrop && hostedDropHandlersRef.current.get(id) === onDrop) hostedDropHandlersRef.current.delete(id);
     };
   };
 
@@ -1108,6 +1112,10 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
       const parsed = parseLayoutPayload(JSON.parse(layoutJson));
       if (!parsed) return false;
       const payload = withoutHostedPanels(parsed);
+      // The live hosted panels are about to go: tell their owners first, while their content is still in place.
+      for (const [id, panel] of Object.entries(stateRef.current.panels)) {
+        if (panel.owner) hostedDropHandlersRef.current.get(id)?.();
+      }
       maxZRef.current = Math.max(maxZRef.current, topZ(payload.floating));
       setState(prev => {
         // A panel that stays open keeps its runtime icon: the component that set it isn't

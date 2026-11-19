@@ -54,6 +54,7 @@
     "useSidebar",
     "useSidebarTab",
     "useToolbar",
+    "useWidget",
     "useWorkspace",
     "useWorkspaceState"
   ],
@@ -168,6 +169,7 @@
     "ToolbarToggleItem",
     "ToolbarVariant",
     "TypedWorkspace",
+    "WidgetHandle",
     "WidgetLocation",
     "WidgetMenuContext",
     "WidgetTarget",
