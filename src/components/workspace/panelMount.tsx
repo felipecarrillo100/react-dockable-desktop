@@ -14,6 +14,24 @@ import type { FormContainerContract, ContainerType } from '../FormContainerConte
 import { usePanelHost } from './panelHost';
 import { isShownInGrid } from '../../core/layoutTree';
 import { optionsFor } from '../../core/panelOptions';
+import { moveInto, moveIntoWhenConnected, leaveSlot, setPreserveEmbeds, preservesEmbeds } from '../domMove';
+import type { PanelHost } from './panelHost';
+
+/**
+ * For an element that keeps its embeds (`preserveEmbeds`, 7.11.0): parks it before React removes
+ * this slot's node. The slot's own cleanup is a passive effect, which runs after the node, with the
+ * element still in it, has been removed: that detaches the element, and an iframe in it reloads.
+ * A layout cleanup runs before. Any other element is left to the passive cleanup, as before.
+ */
+function useParkBeforeRemoval(hostRef: React.RefObject<HTMLDivElement | null>, panelId: string, panelHost: PanelHost): void {
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    return () => {
+      const el = panelHost.getElement(panelId);
+      if (host && el && el.parentNode === host && preservesEmbeds(el)) panelHost.park(el);
+    };
+  }, [hostRef, panelId, panelHost]);
+}
 
 /** Whether a panel is on screen: floating, or the selected tab of its group (not minimized). */
 const isPanelShown = (s: WorkspaceState, panelId: string): boolean => {
@@ -73,15 +91,19 @@ const HostedWidgetSlot: React.FC<{ panelId: string }> = ({ panelId }) => {
   useLayoutEffect(() => {
     const slot = slotRef.current;
     if (!slot || !el) return;
-    slot.appendChild(el);
+    // This slot is inside the hosted panel's own element, which the workspace may not have attached
+    // yet: an element that keeps its embeds waits for it (see domMove.ts).
+    const cancel = moveIntoWhenConnected(slot, el);
     restorePanelDom(el, { refocus: false });
-    return () => { if (el.parentNode === slot) slot.removeChild(el); };
+    return () => { cancel(); leaveSlot(slot, el); };
   }, [el]);
   return <div ref={slotRef} className="rdd-hosted-widget" />;
 };
 
 export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const panelHost = usePanelHost();
+  const registry = useRegistry();
+  const preserve = useWindowManagerState(s => optionsFor(registry, s.panels[panelId])?.preserveEmbeds === true);
   const hostRef = useRef<HTMLDivElement | null>(null);
   // Only the active panel gets focus back after a move (see domPreservation.ts). A selector, so
   // this wrapper re-renders only when this panel's active flag flips.
@@ -94,7 +116,9 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
     if (!host) return;
 
     const cachedEl = panelHost.getOrCreateElement(panelId);
-    host.appendChild(cachedEl);
+    // Only ever switched on here: a widget that keeps its embeds also marks its owner's element.
+    if (preserve) setPreserveEmbeds(cachedEl, true);
+    moveInto(host, cachedEl);
     restorePanelDom(cachedEl, { refocus: isActiveRef.current });
 
     const resizeObserver = new ResizeObserver((entries) => {
@@ -115,7 +139,8 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
       resizeObserver.disconnect();
       panelHost.park(cachedEl);
     };
-  }, [panelId, panelHost]);
+  }, [panelId, panelHost, preserve]);
+  useParkBeforeRemoval(hostRef, panelId, panelHost);
 
   return <div ref={hostRef} className="rdd-panel-dom-host" />;
 };
@@ -148,11 +173,12 @@ export const PreviewDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) =>
     const cachedEl = panelHost.getElement(panelId);
     if (!cachedEl) return;
 
-    host.appendChild(cachedEl);
+    moveInto(host, cachedEl);
     restorePanelDom(cachedEl, { refocus: false }); // a preview shows the panel's place; it never takes focus
 
     return () => panelHost.park(cachedEl);
   }, [panelId, disableLivePreview, panelHost]);
+  useParkBeforeRemoval(hostRef, panelId, panelHost);
 
   if (disableLivePreview) {
     const displayW = origW * scale;

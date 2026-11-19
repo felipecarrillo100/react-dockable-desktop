@@ -60,6 +60,14 @@ export interface PanelRegistryEntry {
      * state, as they always have. (7.8.0)
      */
     keepAlive?: boolean;
+    /**
+     * Keep embedded documents and media alive when the panel moves (7.11.0): an `<iframe>` doesn't
+     * reload when the panel is docked, floated, minimised or restored. The library then moves the
+     * panel's element with `moveBefore()`, which keeps that state, in browsers that have it
+     * (Chrome and Edge 133+, Firefox 144+); in the others (Safari) it moves as before and an iframe
+     * reloads. Off by default. @default false
+     */
+    preserveEmbeds?: boolean;
   };
 }
 

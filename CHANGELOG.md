@@ -70,6 +70,21 @@ Widgets that can leave their panel (7.11.0, in progress).
   - A placement out of the panel moves the widget out after it opens; if that's refused, the widget
     stays in the panel.
   - New type: `WidgetPlacement`.
+- **`focusPanel(id, { restore: true })`** on the workspace (`useWorkspace()`, `createWorkspace()`):
+  also restores a minimised panel before focusing it, with `restorePanel`'s events. It is a second
+  overload; `focusPanel(id)` behaves as before (a minimised panel becomes the active one but stays
+  minimised), and the `WorkspaceActions` type is unchanged.
+- **`updatePanelProps(id, props | (prev) => next)`:** replaces the props an open panel was opened
+  with, or derives them from the current ones. The panel re-renders with them, `serializable` is
+  re-checked (so `saveLayout()` saves or excludes it accordingly), and `layout:changed` is
+  published. It does nothing for a panel that isn't open.
+- **`preserveEmbeds`**, on a panel type's `defaultOptions` and on a managed widget: an `<iframe>` (or
+  other embedded document or media) inside doesn't reload when the panel or widget moves: docked,
+  floated, minimised, restored, the grid changing around it, or a widget out of its panel and
+  back. The library then moves the element with `moveBefore()` where the browser has it (Chrome
+  and Edge 133+, Firefox 144+); in the others (Safari) an iframe reloads as before. Off by default.
+  A widget with it also moves its owner panel's element this way, since that element carries the
+  widget.
 
 - **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
   of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,

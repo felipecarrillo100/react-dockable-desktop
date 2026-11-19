@@ -10,6 +10,7 @@
  */
 import { createContext, useContext, type Context } from 'react';
 import { trackPanelDom } from '../domPreservation';
+import { park as parkIn } from '../domMove';
 import type { ContainerType } from '../FormContainerContext';
 
 export interface PanelLifecycleRegistry {
@@ -53,12 +54,6 @@ export interface PanelHost {
 }
 
 /**
- * Where a panel's element waits while no slot shows it: one per document, shared on purpose. Every
- * workspace's elements are distinct, so parking them side by side in one hidden node is harmless.
- */
-const hiddenContainerId = 'preserved-dom-container';
-
-/**
  * @param ownerDocument The document this host creates and parks its elements in. Defaults to the
  *   global one, looked up on first use rather than here, so a provider can be created where there
  *   is no DOM (server rendering) as long as no element is asked for. vdd's `PanelDomCache` takes
@@ -85,17 +80,8 @@ export function createPanelHost(ownerDocument?: Document): PanelHost {
     getElement: (id) => elements.get(id),
     ids: () => Array.from(elements.keys()),
     forget: (id) => { elements.delete(id); },
-    park(el) {
-      const d = doc();
-      let store = d.getElementById(hiddenContainerId);
-      if (!store) {
-        store = d.createElement('div');
-        store.id = hiddenContainerId;
-        store.style.display = 'none';
-        d.body.appendChild(store);
-      }
-      store.appendChild(el);
-    },
+    // The hidden store is found or created in this host's document (see domMove.ts).
+    park(el) { parkIn(el, doc()); },
     getDimensions: (id) => dimensions.get(id),
     setDimensions: (id, size) => { dimensions.set(id, size); },
     getLifecycle: (id) => lifecycle.get(id),

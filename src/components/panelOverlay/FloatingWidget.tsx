@@ -16,6 +16,7 @@ import { stretchesInline, stretchesBlock, addAxis, releaseAxis, bucketsFor, with
 import { getHoveredZone, MIN_W, MIN_H, DOCK_INSET, DOCK_GAP, SNAP_IN, SNAP_OUT } from '../../core/panelOverlayGeometry';
 import { useLatestRef } from '../../utils/useLatestRef';
 import { trackPanelDom, restorePanelDom } from '../domPreservation';
+import { moveIntoWhenConnected, leaveSlot } from '../domMove';
 
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
@@ -734,10 +735,12 @@ function WidgetContentSlot({ el }: { el: HTMLElement }): React.ReactElement {
     const body = bodyRef.current;
     if (!body) return;
     trackPanelDom(el);
-    if (el.parentNode !== body) body.appendChild(el);
+    // A widget that keeps its embeds waits for this frame to be in the document (see domMove.ts).
+    const cancel = el.parentNode !== body ? moveIntoWhenConnected(body, el) : () => {};
     restorePanelDom(el, { refocus: false });
-    // Taken back out on unmount, so the element is never left inside a frame React has removed.
-    return () => { if (el.parentNode === body) body.removeChild(el); };
+    // Taken back out on unmount, so the element is never left inside a frame React has removed
+    // (parked instead, for a widget that keeps its embeds).
+    return () => { cancel(); leaveSlot(body, el); };
   }, [el]);
   return <div ref={bodyRef} className="rdd-panel-float__body" />;
 }

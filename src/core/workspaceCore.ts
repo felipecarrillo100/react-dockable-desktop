@@ -125,7 +125,12 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     return { x, y, width, height };
   };
 
-  const focusPanel = (id: string) => {
+  const focusPanel = (id: string, options?: { restore?: boolean }) => {
+    // Restoring brings it back and focuses it, with restorePanel's events (7.11.0).
+    if (options?.restore && stateRef.current.panels[id]?.state === 'minimized') {
+      restorePanel(id);
+      return;
+    }
     setState(prev => {
       const panel = prev.panels[id];
       if (!panel) return prev;
@@ -569,6 +574,18 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
         }
       };
     });
+  };
+
+  const updatePanelProps = (id: string, props: Record<string, unknown> | ((prev: Record<string, unknown> | undefined) => Record<string, unknown>)) => {
+    const panel = stateRef.current.panels[id];
+    if (!panel || panel.owner) return;   // a hosted panel has no props of its own
+    const next = typeof props === 'function' ? props(panel.props) : props;
+    setState(prev => {
+      const p = prev.panels[id];
+      if (!p) return prev;
+      return { ...prev, panels: { ...prev.panels, [id]: { ...p, props: next, serializable: isSerializable(next) } } };
+    });
+    eventBusRef.current.publish('layout:changed', {});
   };
 
   const setPanelIcon = (id: string, icon: React.ReactNode | null) => {
@@ -1206,6 +1223,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     updateFloatingPosition,
     isDropAllowed,
     focusPanel,
+    updatePanelProps,
     isOpen,
     getOpenPanelIds,
     findPanelId,

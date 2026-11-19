@@ -102,6 +102,13 @@ export interface ManagedWidget {
    * moving out of the panel is refused (the owner isn't docked), the widget stays in the panel.
    */
   placement?: WidgetPlacement;
+  /**
+   * Keep embedded documents and media alive when the widget moves (7.11.0): an `<iframe>` in it
+   * doesn't reload when it moves out of its panel, back, or between docked, tabbed and floating.
+   * Uses `moveBefore()` where the browser has it (Chrome and Edge 133+, Firefox 144+); in the others
+   * an iframe reloads as before. As `preserveEmbeds` on a panel type's `defaultOptions`. @default false
+   */
+  preserveEmbeds?: boolean;
 }
 
 /**

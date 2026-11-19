@@ -227,8 +227,19 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    * Activates the given panel regardless of its current state.
    * For floating panels: raises z-index so the window appears on top.
    * For docked panels: selects the tab within its leaf group.
+   * For minimized panels: makes it the active one, but leaves it minimized.
    */
-  focusPanel(id: string): void { this._dispatch(a => a.focusPanel(id)); }
+  focusPanel(id: string): void;
+  /**
+   * As `focusPanel(id)`; with `restore: true`, a minimized panel is restored first, with
+   * `restorePanel`'s events (7.11.0).
+   * @example
+   * ```ts
+   * workspace.focusPanel('map-1', { restore: true });   // bring the map forward, wherever it is
+   * ```
+   */
+  focusPanel(id: string, options: { restore?: boolean }): void;
+  focusPanel(id: string, options?: { restore?: boolean }): void { this._core.actions.focusPanel(id, options); }
 
   /** Returns `true` if a panel with this ID is currently open. */
   isOpen(id: string): boolean { return this._actions.isOpen(id); }
@@ -307,6 +318,11 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   /** Updates a panel's displayed title. */
   updatePanelTitle(id: string, title: string | MessageDescriptor | (() => string)): void {
     this._dispatch(a => a.updatePanelTitle(id, title));
+  }
+
+  /** Replaces an open panel's props, or derives them from the current ones (7.11.0). See {@link WorkspaceActions.updatePanelProps}. */
+  updatePanelProps(...args: Parameters<WorkspaceActions['updatePanelProps']>): void {
+    this._dispatch(a => a.updatePanelProps(...args));
   }
 
   /** Sets an open panel's tab/window/taskbar icon; `null` restores its registration's icon. Not saved by `saveLayout()`. */
