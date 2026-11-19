@@ -74,7 +74,7 @@ export interface FloatingWidgetsApi {
    * it goes back to). Give it back to `open(id, { placement })` after a reload. `null` if it isn't open.
    * @example
    * const saved = widgets.placement('table');                 // store it
-   * widgets.open('table', { ...config, placement: saved });  // later: it opens where it was
+   * widgets.open('table', { ...config, placement: saved ?? undefined });  // later: it opens where it was
    */
   placement(id: string): WidgetPlacement | null;
 }

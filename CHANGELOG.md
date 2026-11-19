@@ -10,6 +10,54 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.11.0] — 2026-11-19
+
+**Widgets that can leave their panel.** A managed floating widget (`useFloatingWidgets()`) can be
+docked beside its panel, become a tab in its group, or float as a window of its own, and come back,
+without its content remounting: its state, a canvas and its WebGL context, and a playing `<video>`
+all survive. It stays owned by its panel (`usePanel()` inside it is still the owner). Its
+placement can be saved and restored, and iframes can be kept from reloading as panels and widgets
+move. Guide: [Widgets Out of the Panel](https://felipecarrillo100.github.io/react-dockable-desktop/guide/widgets-out-of-the-panel).
+
+This release is the two pre-releases below, tried by a client in production code, plus two small
+fixes and a docs review. Coming from 7.10.1, read both sections below: **7.11.0-next.0** for the
+feature and its **Changed** points (the content wrapper `div.rdd-panel-float__content`), and
+**7.11.0-next.1** for the fixes and additions that followed.
+
+In short, new:
+- on `useFloatingWidgets()`: `move()`, `location()` and `placement()`;
+- on `ManagedWidget`: `canDock`, `canFloat`, `titleMenu`, `placement` and `preserveEmbeds`;
+- `useWidget()`, returning a `WidgetHandle` (`id`, `ownerPanelId`, `panelId`, `location`,
+  `onWillMove`, `onMoved`);
+- on the workspace: `focusPanel(id, { restore })` and `updatePanelProps()`;
+- `preserveEmbeds` on panel types, and `PanelInfo.owner`;
+- types `WidgetTarget`, `WidgetLocation`, `MoveResult`, `WidgetMenuContext`, `WidgetHandle`,
+  `WidgetPlacement` and `PanelOwner`;
+- CSS classes `.rdd-panel-float__content`, `.rdd-hosted-widget`, `.rdd-workspace-tab-icon--menu` and
+  `.rdd-window-title-icon--menu`.
+
+### Fixed
+
+- **`onMoved` now follows every move that called `onWillMove`.** A `move()` from floating to floating
+  (a new `rect`), or from a tab to a tab in the same group, called `onWillMove` but never `onMoved`,
+  so content restoring its view in `onMoved` didn't.
+- **`move(id, { to: 'floating' })` without a `rect`, for a widget already out of its panel,** opens
+  where its panel is on screen, at its size (a floating one stays where it is). It opened at the
+  workspace's top-left corner, at the config's size.
+
+### Docs
+
+- **"Content with its own view", corrected:** a chart, a timeline or a profile keeps its visible range
+  on every size change, in the content itself (a splitter drag has the same effect as a move), from a
+  camera computed from the range rather than a fit, which drifts by its margin. A map keeping its
+  camera through `onWillMove` / `onMoved` is unchanged. Also: a `<video>` needs nothing to survive a
+  move.
+- **Reviewed against the code:** the guide, the Panel Overlay, Workspace, Layout, Event Bus, Context
+  Menus, Theming, Panel Registry and Panel Contributions pages, the README and the API comments now
+  describe widgets out of the panel as they behave (the floating ⋮ menu has Close but no Minimize;
+  `placement()` returns `null` for a widget that isn't open; a widget's panel is never saved and has
+  no props of its own; `'rdd:'` component keys are reserved).
+
 ## [7.11.0-next.1] — 2026-11-19
 
 **Pre-release** on npm's `next` tag, from the first feedback on 7.11.0-next.0. Additions and fixes
@@ -80,8 +128,8 @@ Additions only: an app that uses none of it sees no change, apart from the point
   `ContextMenuItem[]`, built each time the menu opens.
   - In the panel, the title icon becomes a button that opens the items. Without an icon it shows a
     menu glyph. Without `titleMenu` nothing changes.
-  - Out of the panel, the items lead its tab's menu and its floating title-bar menu, before the
-    built-in Minimize and Close. The built-in Float isn't offered for such a panel, because your
+  - Out of the panel, the items lead its tab's menu (before the built-in Minimize and Close) and its
+    floating title-bar ⋮ menu (before Close). The built-in Float isn't offered for such a panel, because your
     items replace it.
   - New type: `WidgetMenuContext`.
 - **`useWidget()`:** inside a managed widget's content, the widget's own side; `null` elsewhere.
@@ -98,7 +146,7 @@ Additions only: an app that uses none of it sees no change, apart from the point
   - New type: `WidgetHandle`.
 - **`useFloatingWidgets().placement(id)` and `open(id, { placement })`: a widget opens where it was
   after a reload.** `placement()` returns a `WidgetPlacement`: opaque, versioned, plain JSON, the same
-  in vdd and ndd. Store it with your panel's own state.
+  in the Vue and Angular editions. Store it with your panel's own state.
   - It records where the widget is in the panel (corner, stretch, docked or free, size), or where it
     is out of it (docked beside its owner, tabbed, floating) together with where it goes back to.
   - A free position is kept as an offset from the panel corner it was nearest, so it keeps its gap on a
@@ -118,7 +166,7 @@ Additions only: an app that uses none of it sees no change, apart from the point
 - **`updatePanelProps(id, props | (prev) => next)`:** replaces the props an open panel was opened
   with, or derives them from the current ones. The panel re-renders with them, `serializable` is
   re-checked (so `saveLayout()` saves or excludes it accordingly), and `layout:changed` is
-  published. It does nothing for a panel that isn't open.
+  published. It does nothing for a panel that isn't open, or for a managed widget's own panel.
 - **`preserveEmbeds`**, on a panel type's `defaultOptions` and on a managed widget: an `<iframe>` (or
   other embedded document or media) inside doesn't reload when the panel or widget moves: docked,
   floated, minimised, restored, the grid changing around it, or a widget out of its panel and
@@ -1340,7 +1388,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...HEAD
+[7.11.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0
 [7.11.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.0...v7.11.0-next.1
 [7.11.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0-next.0
 [7.10.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.0...v7.10.1

@@ -85,16 +85,17 @@ import { isSerializable } from 'react-dockable-desktop';
 if (!isSerializable(myProps)) { /* ... */ }
 ```
 
-### Changing them later: `updatePanelProps`
+### Changing them later: `updatePanelProps` (7.11.0)
 
 ```ts
 workspace.updatePanelProps('section-1', { line: newLine });            // replace them
-workspace.updatePanelProps('section-1', prev => ({ ...prev, zoom: 2 })); // or derive them (7.11.0)
+workspace.updatePanelProps('section-1', prev => ({ ...prev, zoom: 2 })); // or derive them
 ```
 
 The panel re-renders with the new props, `serializable` is re-checked against them (so the next
 `saveLayout()` saves or excludes the panel accordingly), and `layout:changed` is published. It does
-nothing for a panel that isn't open.
+nothing for a panel that isn't open, or for a managed widget's own panel, which has no props of its
+own ([Widgets Out of the Panel](./widgets-out-of-the-panel)).
 
 ### Reporting state pulled fresh at save time
 
@@ -218,7 +219,8 @@ Two more built-in events, added alongside per-panel props:
 
 ```ts
 // Fires when the panels' placement changes: open, close, minimize, restore, float, dock,
-// dock to a group or an edge, re-order, and a dedupe redirect — one signal for autosave-style
+// dock to a group or an edge, re-order, a dedupe redirect, a props change (updatePanelProps),
+// and a managed widget moving out of its panel or back — one signal for autosave-style
 // consumers. It does NOT fire for split-divider drags, floating-window moves and resizes,
 // maximizing a floating window, title/icon/dirty changes, loadLayout(), or a useSaveState
 // value changing on its own (that's a pull, unobservable without the panel notifying separately).
@@ -324,6 +326,10 @@ The tab itself stays the library's: dragging, keyboard navigation, `role="tab"`,
 its state attributes and classes, the header actions and the close button all keep working. Keep the
 content non-interactive (no buttons or links): it sits inside the tab, which is the control.
 Floating-window title bars and the taskbar are unchanged.
+
+A managed widget's own tab ([Widgets Out of the Panel](./widgets-out-of-the-panel), 7.11.0) arrives
+with `component: 'rdd:widget'`. Its built-in icon opens the widget's menu; with your content in its
+place, a right-click on the tab and the menu key still do.
 
 ## `DockableDesktopProvider` props
 

@@ -135,11 +135,11 @@ workspace.subscribe('layout:panels-excluded', data => {
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `'panel:opened'` | `{ id: string; component: string }` | A new panel was opened with `openPanel()`. (`loadLayout()` publishes no events.) |
+| `'panel:opened'` | `{ id: string; component: string }` | A new panel was opened with `openPanel()`, or a managed widget moved out of its panel (`component: 'rdd:widget'`, 7.11.0). (`loadLayout()` publishes no events.) |
 | `'panel:closed'` | `{ id: string }` | A panel was closed. |
 | `'panel:minimized'` | `{ id: string }` | A panel was sent to the taskbar. |
 | `'panel:restored'` | `{ id: string }` | A minimized panel was restored. |
-| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and a dedupe redirect into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), split-ratio drags, floating-window moves and resizes, or toggling a floating window's maximized state. |
+| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, a dedupe redirect, `updatePanelProps()` and a managed widget moving out of its panel or back (7.11.0) into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), split-ratio drags, floating-window moves and resizes, or toggling a floating window's maximized state. |
 | `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from `useSaveState`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
 
 Built-in events are available on typed workspaces too — they are intersected in automatically via `BuiltInEvents`.

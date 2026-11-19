@@ -18,10 +18,10 @@ export interface WidgetHandle {
   ownerPanelId: string | null;
   /**
    * The id of the widget's own panel while it is out of its owner panel, for workspace calls such
-   * as `updatePanelTitle`; `null` while it is in the panel (7.11.0-next.1).
+   * as `updatePanelTitle`; `null` while it is in the panel (7.11.0).
    */
   panelId: string | null;
-  /** Where it is shown now. A component that reads it re-renders when it changes. */
+  /** Where it is shown now. A component that calls `useWidget()` re-renders when it changes. */
   location: WidgetLocation;
   /**
    * Called just before the widget's content element moves to another container: into or out of
@@ -31,8 +31,8 @@ export interface WidgetHandle {
   onWillMove(cb: () => void): () => void;
   /**
    * Called once the element is in its new container and has its new size (or, with no size, as
-   * when minimised, on the next frames). Restore what you saved in `onWillMove` here. Returns the
-   * unsubscribe function.
+   * when minimised, on the next frames), after every move that called `onWillMove`. Restore what
+   * you saved in `onWillMove` here. Returns the unsubscribe function.
    */
   onMoved(cb: () => void): () => void;
 }

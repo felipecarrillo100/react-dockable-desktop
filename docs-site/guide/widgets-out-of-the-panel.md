@@ -9,11 +9,6 @@ Typical uses: a results table that started as a small widget over a map, docked 
 more rows; a chart pulled out of a dashboard panel to sit next to another one; a legend floated
 out of the way.
 
-::: tip Pre-release
-Until 7.11.0 is released, this ships as pre-releases (`7.11.0-next.N`) on npm's `next` tag:
-`npm install react-dockable-desktop@next`.
-:::
-
 ## In one example
 
 ```tsx
@@ -56,7 +51,7 @@ there too:
 widgets.move('results', { to: 'docked', position: 'bottom', size: 0.35 }); // beside its owner panel
 widgets.move('results', { to: 'tabbed' });                                 // a tab in the owner's group
 widgets.move('results', { to: 'floating', rect: { x: 80, y: 60, width: 420, height: 300 } });
-widgets.move('results', { to: 'floating' });                               // where it is on screen now
+widgets.move('results', { to: 'floating' });                               // where it is on screen now, at its size
 widgets.move('results', { to: 'panel' });                                  // back where it last was in the panel
 
 widgets.location('results'); // 'panel' | 'docked' | 'tabbed' | 'floating' | 'minimized' | null
@@ -64,9 +59,9 @@ widgets.location('results'); // 'panel' | 'docked' | 'tabbed' | 'floating' | 'mi
 
 | Target | Where |
 |---|---|
-| `{ to: 'docked', position, size? }` | A new group split off the **owner's** group on that side. `size` is its share, 0.1–0.9 |
+| `{ to: 'docked', position, size? }` | A new group split off the **owner's** group on that side (`'top'`, `'bottom'`, `'left'`, `'right'`). `size` is its share, 0.1–0.9; by default the workspace's `defaultSplitRatio` |
 | `{ to: 'tabbed' }` | A tab in the owner's group |
-| `{ to: 'floating', rect? }` | A floating window at `rect` (workspace pixels), or where the widget is on screen, at its size |
+| `{ to: 'floating', rect? }` | A floating window at `rect` (workspace pixels). Without `rect`: where the widget is on screen, at its size (its frame in the panel, or its own panel out of it; a floating one stays where it is) |
 | `{ to: 'panel' }` | Back into the panel, exactly where it was before it left |
 
 The owner panel is always the reference. `move()` never throws; it returns a `MoveResult`, and a
@@ -109,6 +104,7 @@ Going back into the panel is always explicit: your own item calling `move({ to: 
 Inside a widget's content, `useWidget()` tells it about the widget; it returns `null` elsewhere.
 
 ```tsx
+import { useEffect, useRef } from 'react';
 import { useWidget } from 'react-dockable-desktop';
 
 function ResultsTable() {
@@ -130,41 +126,58 @@ function ResultsTable() {
 |---|---|
 | `id`, `ownerPanelId` | The widget's id, and its owner panel's (`null` when the overlay isn't in a workspace panel) |
 | `panelId` | Its own panel's id while it is out of its panel, for workspace calls such as `updatePanelTitle`; `null` in the panel |
-| `location` | Where it is now. Reading it re-renders the component when it changes |
+| `location` | Where it is now. A component that calls `useWidget()` re-renders when it changes |
 | `onWillMove(cb)` | Just before the element moves to another container: in or out of the panel, between docked, tabbed and floating, minimised or restored, by your code, the user, or a layout load |
 | `onMoved(cb)` | Once it is in its new container and has its new size (when it has none, as when minimised, on the next frames) |
 
-Neither callback runs for a close, a refused move or a move to where it already is. Both return
-their unsubscribe function.
+Neither callback runs for a close, a refused move, or `move({ to: 'panel' })` while the widget is
+already in the panel. Every other move calls both, once each, floating to floating included. Both
+return their unsubscribe function.
 
 ## Content with its own view
 
 A move changes the size of the widget's content. Content with a view of its own (a map, a chart, a
-canvas you pan) decides what to keep, in `onWillMove`, and gives it back in `onMoved`, when the new
-size is known. What to keep depends on what the view shows:
+canvas you pan) needs to know what to keep. That depends on what the view shows:
 
-- **A place** (a map, a canvas you pan and zoom): keep the camera. Save it in `onWillMove`, restore
-  it in `onMoved`. A bigger panel shows more around the same centre.
-- **A range** (a chart, a timeline, a profile): keep what is visible. Save the visible bounds in
-  `onWillMove`, and fit to them in `onMoved`, letting each axis scale on its own. A saved camera
-  would not do: from a big panel back to a small one, it shows only part of the range.
+- **A place** (a map, a canvas you pan and zoom): keep the camera across the move. Save it in
+  `onWillMove` and restore it in `onMoved`, when the new size is known. A bigger panel shows more
+  around the same centre.
+- **A range** (a chart, a timeline, a profile): keep the visible range on **every** size change, in
+  the chart itself, not in the move hooks. A splitter drag or a resized float changes the size just
+  as a move does. Record the range whenever the user pans or zooms at an unchanged size; on a new
+  size, set the camera from that range: its centre at the view's centre, and on each axis a scale of
+  pixels ÷ range. A move then needs no hook at all.
 
 ```tsx
+// A chart that keeps its visible range on every size change: moves included, no hooks needed.
 useEffect(() => {
-  if (!widget) return;
-  let visible: Bounds | null = null;
-  const offWill = widget.onWillMove(() => { visible = chart.current?.visibleBounds() ?? null; });
-  const offMoved = widget.onMoved(() => { if (visible) chart.current?.fit(visible); });
-  return () => { offWill(); offMoved(); };
-}, [widget?.onWillMove, widget?.onMoved]);
+  const view = chart.current!;
+  let range: Range | null = null;
+  let size = { w: view.width, h: view.height };
+  const offCamera = view.onCameraChange(() => {    // the user panned or zoomed
+    if (view.width === size.w && view.height === size.h) range = view.visibleRange();
+  });
+  const ro = new ResizeObserver(() => {             // a move, a splitter, a float's edge
+    size = { w: view.width, h: view.height };
+    if (range) view.setCamera(cameraFor(range, size.w, size.h));   // centre, and pixels ÷ range per axis
+  });
+  ro.observe(view.element);
+  return () => { offCamera(); ro.disconnect(); };
+}, []);
 ```
+
+Prefer a camera computed from the range over a "fit to bounds": a fit usually adds a margin, so the
+range would widen a little on every move.
+
+**A `<video>`** needs nothing: every move keeps it playing, at its position, without a reload. Its
+element is moved, not re-created. (An `<iframe>` is different; see `preserveEmbeds` below.)
 
 ## Saving and restoring: `placement()`
 
 ```ts
 const saved = widgets.placement('results');      // plain JSON: store it with your panel's state
-// after a reload:
-widgets.open('results', { ...results, placement: saved });
+// after a reload (`placement()` gives null for a widget that isn't open):
+widgets.open('results', { ...results, placement: saved ?? undefined });
 ```
 
 A `WidgetPlacement` is opaque, versioned JSON, the same in the Vue and Angular libraries. It
@@ -186,8 +199,9 @@ panel, with their placements, once the layout is loaded.
 ## Iframes and media: `preserveEmbeds`
 
 An element that is moved in the page is normally removed and re-inserted, and an `<iframe>` in it
-reloads. Set `preserveEmbeds: true` on the widget (or on a panel type's `defaultOptions`) and the
-library moves it with `moveBefore()`, which keeps the embedded document alive:
+reloads. Set `preserveEmbeds: true` on the widget and the library moves its content with
+`moveBefore()`, which keeps the embedded document alive. (On a panel type's `defaultOptions`, the
+same option covers that panel's own moves; see [Panel Registry](./panel-registry).)
 
 ```ts
 widgets.open('preview', { title: 'Preview', content: <iframe src={url} />, preserveEmbeds: true });
@@ -201,8 +215,9 @@ without the option. A widget with it also moves its owner panel's element this w
 - **Its panel's id** is `'<ownerId>/<widgetId>'`. It appears in `getOpenPanelIds()`, the taskbar
   and the panel events (`panel:opened`, `panel:closed`), because the user handles it like a panel.
   Its component key is the reserved `'rdd:widget'`, and `PanelInfo.owner` says whose it is.
-- **Moving it from one place out of the panel to another** replaces its panel: listeners see
-  `panel:closed` then `panel:opened` for that id. The content is untouched.
+- **Moving it with `move()` from one place out of the panel to another** replaces its panel:
+  listeners see `panel:closed` then `panel:opened` for that id. The content is untouched. A user's
+  drag moves the same panel, with no such events.
 - **The built-in Float item** isn't offered in such a panel's menu; your `titleMenu` items replace it.
 - **Its title** is the widget's `title`, and a re-open with a new one updates it wherever the widget
   is. That is the place for a live title (`'Table · Map 1'`). A title set on its panel with

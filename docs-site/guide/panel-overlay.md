@@ -589,15 +589,21 @@ marker.on('click', () => {
 `ManagedWidget.content` is a `ReactNode` — it is not JSON-serializable. If you need to persist which windows are open across page reloads, store `manager.openIds` yourself and re-call `manager.open()` on startup with content rebuilt from your own config. To bring each one back **where it was** too, store `manager.placement(id)` with it and pass it as `placement` (7.11.0, see [Saving and restoring](./widgets-out-of-the-panel#saving-and-restoring-placement)):
 
 ```tsx
-// On restore:
-const savedIds = JSON.parse(localStorage.getItem('open-feeds') ?? '[]');
-savedIds.forEach(id => {
-  const cam = CAMERAS.find(c => c.id === id);
-  if (cam) floats.open(cam.id, { title: cam.name, icon: <CameraIcon />, content: <CameraFeed cameraId={cam.id} /> });
-});
+// On unload: which widgets are open, and where each one is.
+localStorage.setItem('open-feeds', JSON.stringify(
+  floats.openIds.map(id => ({ id, placement: floats.placement(id) })),
+));
 
-// On unload:
-localStorage.setItem('open-feeds', JSON.stringify(floats.openIds));
+// On restore:
+const saved: { id: string; placement: WidgetPlacement | null }[] =
+  JSON.parse(localStorage.getItem('open-feeds') ?? '[]');
+saved.forEach(({ id, placement }) => {
+  const cam = CAMERAS.find(c => c.id === id);
+  if (cam) floats.open(cam.id, {
+    title: cam.name, icon: <CameraIcon />, content: <CameraFeed cameraId={cam.id} />,
+    placement: placement ?? undefined,
+  });
+});
 ```
 
 ---
@@ -770,7 +776,7 @@ All exported from `'react-dockable-desktop'`:
 | `Stretch` | Type | `'width' \| 'height' \| 'both'` — which axes span the panel |
 | `PanelFloatPlacement` | Interface | `{ anchor, stretch }` — reported by `onPlacementChange` |
 | `ManagedWidget` | Interface | Config for `manager.open(id, config)` |
-| `useWidget` | Hook | Inside a managed widget: `{ id, ownerPanelId, location, onWillMove, onMoved }` (7.11.0) |
+| `useWidget` | Hook | Inside a managed widget: `{ id, ownerPanelId, panelId, location, onWillMove, onMoved }` (7.11.0) |
 | `WidgetHandle` | Interface | What `useWidget()` returns (7.11.0) |
 | `WidgetTarget`, `WidgetLocation`, `MoveResult` | Types | `move()`'s target, `location()`'s value, `move()`'s result (7.11.0) |
 | `WidgetMenuContext` | Interface | What `titleMenu(w)` is given (7.11.0) |
