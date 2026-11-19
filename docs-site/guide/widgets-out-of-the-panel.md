@@ -10,7 +10,7 @@ more rows; a chart pulled out of a dashboard panel to sit next to another one; a
 out of the way.
 
 ::: tip Pre-release
-7.11.0 is first published as `7.11.0-next.0` on npm's `next` tag:
+Until 7.11.0 is released, this ships as pre-releases (`7.11.0-next.N`) on npm's `next` tag:
 `npm install react-dockable-desktop@next`.
 :::
 
@@ -41,7 +41,14 @@ function ResultsButton() {
 ```
 
 The widget opens in the panel as usual. Its title icon is now a button with your menu. Out of the
-panel it is a workspace panel of its own, and the same items lead its tab's and title bar's menus.
+panel it is a workspace panel of its own, and the same items lead its menus. Its icon opens them
+there too:
+
+| Where the widget is | Its menu opens from |
+|---|---|
+| In the panel | The title icon |
+| Docked or a tab | The tab's icon, or a right-click on the tab (the menu key from the keyboard) |
+| Floating | The title bar's icon, or its ⋮ button |
 
 ## Moving it: `move()` and `location()`
 
@@ -122,12 +129,35 @@ function ResultsTable() {
 | Field | |
 |---|---|
 | `id`, `ownerPanelId` | The widget's id, and its owner panel's (`null` when the overlay isn't in a workspace panel) |
+| `panelId` | Its own panel's id while it is out of its panel, for workspace calls such as `updatePanelTitle`; `null` in the panel |
 | `location` | Where it is now. Reading it re-renders the component when it changes |
 | `onWillMove(cb)` | Just before the element moves to another container: in or out of the panel, between docked, tabbed and floating, minimised or restored, by your code, the user, or a layout load |
 | `onMoved(cb)` | Once it is in its new container and has its new size (when it has none, as when minimised, on the next frames) |
 
 Neither callback runs for a close, a refused move or a move to where it already is. Both return
 their unsubscribe function.
+
+## Content with its own view
+
+A move changes the size of the widget's content. Content with a view of its own (a map, a chart, a
+canvas you pan) decides what to keep, in `onWillMove`, and gives it back in `onMoved`, when the new
+size is known. What to keep depends on what the view shows:
+
+- **A place** (a map, a canvas you pan and zoom): keep the camera. Save it in `onWillMove`, restore
+  it in `onMoved`. A bigger panel shows more around the same centre.
+- **A range** (a chart, a timeline, a profile): keep what is visible. Save the visible bounds in
+  `onWillMove`, and fit to them in `onMoved`, letting each axis scale on its own. A saved camera
+  would not do: from a big panel back to a small one, it shows only part of the range.
+
+```tsx
+useEffect(() => {
+  if (!widget) return;
+  let visible: Bounds | null = null;
+  const offWill = widget.onWillMove(() => { visible = chart.current?.visibleBounds() ?? null; });
+  const offMoved = widget.onMoved(() => { if (visible) chart.current?.fit(visible); });
+  return () => { offWill(); offMoved(); };
+}, [widget?.onWillMove, widget?.onMoved]);
+```
 
 ## Saving and restoring: `placement()`
 
@@ -174,6 +204,14 @@ without the option. A widget with it also moves its owner panel's element this w
 - **Moving it from one place out of the panel to another** replaces its panel: listeners see
   `panel:closed` then `panel:opened` for that id. The content is untouched.
 - **The built-in Float item** isn't offered in such a panel's menu; your `titleMenu` items replace it.
+- **Its title** is the widget's `title`, and a re-open with a new one updates it wherever the widget
+  is. That is the place for a live title (`'Table · Map 1'`). A title set on its panel with
+  `updatePanelTitle` stays across moves out of the panel, until the next re-open or the way back.
+- **With your own `renderTabContent`,** the tab shows your content, so its icon opens nothing; the
+  right-click and the menu key still do.
+- **Panel contributions:** while a widget's panel is the active one, `useActiveContribution()` gives
+  its owner's contribution, so the owner's toolbar items and sidebar tabs stay while the user works
+  in the widget.
 - **CSS:** a managed widget's content now sits in `div.rdd-panel-float__content` inside
   `.rdd-panel-float__body`, so a selector on the body's direct child (`.rdd-panel-float__body > …`)
   no longer matches it. Out of the panel, its panel's body is `.rdd-hosted-widget`.
@@ -189,7 +227,7 @@ without the option. A widget with it also moves its owner panel's element this w
 | `ManagedWidget.titleMenu(w)` | `(w: WidgetMenuContext) => ContextMenuItem[]`; `w` is `{ id, location, canDock, canFloat, move, close }` |
 | `ManagedWidget.placement` | Open at a saved `WidgetPlacement` |
 | `ManagedWidget.preserveEmbeds` | Keep iframes alive across moves |
-| `useWidget()` | `WidgetHandle \| null` |
+| `useWidget()` | `WidgetHandle \| null`: `{ id, ownerPanelId, panelId, location, onWillMove, onMoved }` |
 
 See also: [Panel Overlay](./panel-overlay), [Workspace](./workspace-client) (`focusPanel(id, { restore })`,
 `updatePanelProps`), [Layout System](./layout).

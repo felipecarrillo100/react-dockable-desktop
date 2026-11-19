@@ -232,6 +232,58 @@ describe('managed widget title menu', () => {
   });
 });
 
+// 7.11.0-next.1: out of the panel, the title icon opens the same menu (MapEvolution's feedback).
+
+describe('managed widget title menu out of the panel', () => {
+  const labels = (page: Page) => page.$$eval('.rdd-context-menu:not(.rdd-context-menu--submenu) .rdd-context-menu__label', els => els.map(e => e.textContent));
+
+  it('a drag from the tab icon moves nothing, and a click on it opens the widget\'s menu', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    await move(page, { to: 'tabbed' });
+    await settle(page, 300);
+    const tabs = () => page.$$eval('[data-rdd-tab]', els => els.map(e => e.getAttribute('data-rdd-tab')));
+    const before = await tabs();
+    const icon = await rectOf(page, '[data-rdd-tab="p3/wo"] .rdd-workspace-tab-icon--menu');
+    const cx = icon.x + icon.width / 2, cy = icon.y + icon.height / 2;
+    await drag(page, cx, cy, cx - 200, cy + 250);
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('tabbed');
+    expect(await tabs()).toEqual(before);
+    await page.keyboard.press('Escape');
+    await page.click('[data-rdd-tab="p3/wo"] .rdd-workspace-tab-icon--menu');
+    await settle(page, 200);
+    const l = await labels(page);
+    expect(l[0]).toBe('Back into the panel');
+    expect(l).toContain('Close Tab');
+    await page.click('.rdd-context-menu__item:has-text("Back into the panel")');
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('panel');
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('floating: a drag from the title icon moves nothing, and a click on it opens the menu', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    await move(page, { to: 'floating', rect: { x: 120, y: 120, width: 320, height: 220 } });
+    await settle(page, 300);
+    const win = await rectOf(page, '[data-rdd-window="p3/wo"]');
+    const icon = await rectOf(page, '[data-rdd-window="p3/wo"] .rdd-window-title-icon--menu');
+    const cx = icon.x + icon.width / 2, cy = icon.y + icon.height / 2;
+    await drag(page, cx, cy, cx + 150, cy + 100);
+    await settle(page, 300);
+    const after = await rectOf(page, '[data-rdd-window="p3/wo"]');
+    expect({ x: after.x, y: after.y }).toEqual({ x: win.x, y: win.y });
+    await page.keyboard.press('Escape');
+    await page.click('[data-rdd-window="p3/wo"] .rdd-window-title-icon--menu');
+    await settle(page, 200);
+    const l = await labels(page);
+    expect(l[0]).toBe('Back into the panel');
+    expect(l).toContain('Close Panel');
+    await close();
+    expect(errors).toEqual([]);
+  });
+});
+
 // M5: useWidget() and the move callbacks, with real layout.
 
 describe('managed widget move callbacks', () => {

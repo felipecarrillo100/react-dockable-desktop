@@ -1567,6 +1567,7 @@ export interface WidgetHandle {
     onMoved(cb: () => void): () => void;
     onWillMove(cb: () => void): () => void;
     ownerPanelId: string | null;
+    panelId: string | null;
 }
 
 // @public

@@ -29,6 +29,12 @@
  *       of a live id ignores it; a free position waits for the panel to have a size
  * WO19: open({ placement }) out of the panel moves it out after opening, and back goes home;
  *       refused, it stays in the panel
+ * WO20: an active widget panel gives its owner's contribution; an ordinary panel its own (next.1)
+ * WO21: a title set on the widget panel is kept across moves out of the panel; a re-open applies
+ *       the widget's title (next.1)
+ * WO22: useWidget().panelId: null in the panel, the widget panel's id out of it (next.1)
+ * WO23: out of the panel, the tab icon and the floating title icon open the widget's menu; an
+ *       ordinary panel's icon opens nothing (next.1)
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useEffect, useState } from 'react';
@@ -37,7 +43,7 @@ import { act } from 'react';
 import {
   createWorkspace, DockableDesktopProvider, RddDesktop, RddPanelOverlay, useFloatingWidgets,
   type Workspace, type FloatingWidgetsApi, type ManagedWidget, type WidgetMenuContext,
-  useWidget, type WidgetHandle,
+  useWidget, type WidgetHandle, usePanelContribution, useActiveContribution,
 } from '../../index';
 import type { InternalWindowActions } from '../../types';
 import { findLeafIdOf } from '../../core/layoutTree';
@@ -740,5 +746,123 @@ describe('WO19: open({ placement }) out of the panel', () => {
     act(() => { api!.open('table', { ...table, placement: { v: 1, at: 'tabbed', home } as never }); });
     expect(api!.location('table')).toBe('panel');
     expect(api!.placement('table')).toEqual(home);
+  });
+});
+
+// ─── 7.11.0-next.1: MapEvolution's feedback on next.0 ─────────────────────────
+
+describe('WO20: a widget\'s panel brings its owner\'s contribution', () => {
+  const OwnerWithTools: React.FC = () => {
+    usePanelContribution(React.useMemo(() => ({ sidebarSections: [{ id: 'tools', label: 'Tools', content: null }] }), []));
+    return <RddPanelOverlay><Grab /></RddPanelOverlay>;
+  };
+  const PlainWithOwn: React.FC = () => {
+    usePanelContribution(React.useMemo(() => ({ sidebarSections: [{ id: 'own', label: 'Own', content: null }] }), []));
+    return <div />;
+  };
+  const Shell: React.FC = () => {
+    const active = useActiveContribution();
+    return <span id="wo-contrib">{active?.sidebarSections?.map(s => s.id).join(',') ?? 'none'}</span>;
+  };
+  const contrib = () => document.getElementById('wo-contrib')?.textContent;
+  function mountTools(): Workspace {
+    const ws = createWorkspace({ panels: { map: { component: OwnerWithTools }, other: { component: PlainWithOwn } } });
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => { root!.render(<DockableDesktopProvider workspace={ws}><RddDesktop /><Shell /></DockableDesktopProvider>); });
+    act(() => { ws.openPanel('map', 'map', { title: 'Map' }); });
+    act(() => { api!.open('table', table); });
+    return ws;
+  }
+
+  it('the active widget panel shows the owner\'s; an ordinary panel shows its own', () => {
+    const ws = mountTools();
+    act(() => { ws.focusPanel('map'); });
+    expect(contrib()).toBe('tools');
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    act(() => { ws.focusPanel('map/table'); });
+    expect(state(ws).activePanelId).toBe('map/table');
+    expect(contrib()).toBe('tools');
+    act(() => { ws.openPanel('other', 'other', { title: 'Other' }); });
+    act(() => { ws.focusPanel('other'); });
+    expect(contrib()).toBe('own');
+    act(() => { api!.move('table', { to: 'floating' }); });
+    act(() => { ws.focusPanel('map/table'); });
+    expect(contrib()).toBe('tools');
+  });
+});
+
+describe('WO21: the widget panel\'s title across moves', () => {
+  it('a title set with updatePanelTitle is kept from one place out of the panel to another', () => {
+    const ws = mount();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    act(() => { ws.updatePanelTitle('map/table', 'Table · Map 1'); });
+    act(() => { api!.move('table', { to: 'floating' }); });
+    expect(state(ws).panels['map/table'].title).toBe('Table · Map 1');
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    expect(state(ws).panels['map/table'].title).toBe('Table · Map 1');
+  });
+
+  it('a first move out takes the widget\'s title, and a re-open still applies a new one', () => {
+    const ws = mount();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    expect(state(ws).panels['map/table'].title).toBe('Table');
+    act(() => { ws.updatePanelTitle('map/table', 'Custom'); });
+    act(() => { api!.open('table', { ...table, title: 'Table · Map 2' }); });
+    expect(state(ws).panels['map/table'].title).toBe('Table · Map 2');
+  });
+});
+
+describe('WO22: useWidget().panelId', () => {
+  it('is null in the panel, the widget panel\'s id out of it, and null again back home', () => {
+    const ws = mountProbe();
+    expect(widget!.panelId).toBeNull();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    expect(widget!.panelId).toBe('map/table');
+    act(() => { api!.move('table', { to: 'floating' }); });
+    expect(widget!.panelId).toBe('map/table');
+    act(() => { ws.minimizePanel('map/table'); });
+    expect(widget!.panelId).toBe('map/table');
+    act(() => { api!.move('table', { to: 'panel' }); });
+    expect(widget!.panelId).toBeNull();
+  });
+});
+
+describe('WO23: the title icon opens the menu out of the panel', () => {
+  const withMenu: ManagedWidget = { ...table, titleMenu: () => [{ label: 'Back into the map' }] };
+
+  it('the tab icon of a widget panel opens the same menu as a right-click on its tab', () => {
+    mount();
+    act(() => { api!.open('table', withMenu); });
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    const icon = $('[data-rdd-tab="map/table"] .rdd-workspace-tab-icon') as HTMLElement;
+    expect(icon.classList.contains('rdd-workspace-tab-icon--menu')).toBe(true);
+    act(() => { icon.click(); });
+    expect(menu()).toEqual(['Back into the map', '---', 'Minimize Panel', '---', 'Close Tab']);
+  });
+
+  it('an ordinary panel\'s tab icon opens nothing', () => {
+    mount();
+    const icon = $('[data-rdd-tab="map"] .rdd-workspace-tab-icon') as HTMLElement;
+    expect(icon.classList.contains('rdd-workspace-tab-icon--menu')).toBe(false);
+    act(() => { icon.click(); });
+    expect(menu()).toBeNull();
+  });
+
+  it('the floating title-bar icon opens the ⋮ menu; without a titleMenu it is plain', () => {
+    mount();
+    act(() => { api!.move('table', { to: 'floating' }); });
+    const plain = $('[data-rdd-window="map/table"] .rdd-window-title-icon') as HTMLElement;
+    expect(plain.classList.contains('rdd-window-title-icon--menu')).toBe(false);
+    act(() => { plain.click(); });
+    expect(menu()).toBeNull();
+    act(() => { api!.move('table', { to: 'panel' }); });
+    act(() => { api!.open('table', withMenu); });
+    act(() => { api!.move('table', { to: 'floating' }); });
+    const icon = $('[data-rdd-window="map/table"] .rdd-window-title-icon') as HTMLElement;
+    expect(icon.classList.contains('rdd-window-title-icon--menu')).toBe(true);
+    act(() => { icon.click(); });
+    expect(menu()).toEqual(['Back into the map', '---', 'Close Panel']);
   });
 });
