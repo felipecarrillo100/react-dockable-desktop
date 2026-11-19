@@ -1,0 +1,179 @@
+/**
+ * @file useWidgetHosting.ts
+ * @description Moving a panel overlay's managed widgets out of their owner panel and back (7.11.0).
+ *
+ * A widget out of its panel is shown by a hosted panel: a workspace panel of the reserved kind
+ * `'rdd:widget'`, owned by this overlay, whose body attaches the widget's content element. The
+ * content itself stays rendered here, in the owner panel's tree, so nothing remounts and it keeps
+ * its owner's contexts. This overlay owns its hosted panels: it opens and removes them, closes the
+ * widget when the user closes one, and removes them all when it unmounts (the owner closed).
+ */
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import { FormContainerContext } from '../FormContainerContext';
+import { WindowStoreSyncContext, useOptionalWindowManagerActionsInternal, useOptionalWindowManagerState, useRegistry } from '../WindowManagerContext';
+import { useOptionalPanelHost } from '../workspace/panelHost';
+import { optionsFor } from '../../core/panelOptions';
+import { findLeafIdOf } from '../../core/layoutTree';
+import type { HostedPanelPlacement, PanelInfo, WorkspaceState } from '../../types';
+import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
+
+interface HostingDeps {
+  /** Each open widget's content element. */
+  contentEls: Map<string, HTMLDivElement>;
+  /** Each open widget's config, kept current by open and close. */
+  configs: { current: Map<string, ManagedWidget> };
+  /** The overlay root, to find a widget's frame on screen. */
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  /** Closes a widget for real: the user closed its hosted panel. */
+  closeWidget: { current: (id: string) => void };
+}
+
+export interface WidgetHosting {
+  /** Widget id → its hosted panel's id, for the widgets that are out of the panel. */
+  hostedIds: Record<string, string>;
+  move(id: string, to: WidgetTarget): MoveResult;
+  location(id: string): WidgetLocation | null;
+  /** Removes a widget's hosted panel, if it has one, without closing anything: for close(). */
+  release(id: string): void;
+  /** Re-applies a re-opened widget's title and icon to its hosted panel. */
+  refresh(id: string, config: ManagedWidget): void;
+}
+
+const NO_HOSTED: Record<string, string> = {};
+
+export function useWidgetHosting({ contentEls, configs, containerRef, closeWidget }: HostingDeps): WidgetHosting {
+  const actions = useOptionalWindowManagerActionsInternal();
+  const sync = useContext(WindowStoreSyncContext);
+  const panelHost = useOptionalPanelHost();
+  const registry = useRegistry();
+  const ownerId = useContext(FormContainerContext).instanceId;
+  const [hostedIds, setHostedIds] = useState<Record<string, string>>(NO_HOSTED);
+  // The same record, read synchronously by move() and the cleanup; with each one's close-handler unregister.
+  const hostedRef = useRef(new Map<string, { panelId: string; unregister: () => void }>());
+
+  const setHosted = (id: string, panelId: string | null): void => {
+    setHostedIds(prev => {
+      if (panelId === null) {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return prev[id] === panelId ? prev : { ...prev, [id]: panelId };
+    });
+  };
+
+  /** Forgets a widget's hosted panel; removes it from the workspace unless it is already gone. */
+  const detach = useCallback((id: string, remove: boolean): void => {
+    const entry = hostedRef.current.get(id);
+    if (!entry) return;
+    hostedRef.current.delete(id);
+    entry.unregister();
+    if (remove) actions?.removeHostedPanel(entry.panelId);
+    panelHost?.setHostedContent(entry.panelId, null);
+    setHosted(id, null);
+  }, [actions, panelHost]);
+
+  /** Where the widget's frame is on screen, in workspace pixels: where `'floating'` opens by default. */
+  const frameRect = (id: string, config: ManagedWidget): { x: number; y: number; width: number; height: number } => {
+    const root = containerRef.current;
+    const frame = root
+      ? Array.from(root.querySelectorAll<HTMLElement>('[data-rdd-widget]')).find(el => el.getAttribute('data-rdd-widget') === id)
+      : undefined;
+    const viewport = root?.closest('.rdd-workspace-viewport');
+    const f = frame?.getBoundingClientRect();
+    const v = viewport?.getBoundingClientRect();
+    return {
+      x: f && v ? Math.round(f.left - v.left) : 0,
+      y: f && v ? Math.round(f.top - v.top) : 0,
+      width: f && f.width > 0 ? Math.round(f.width) : (config.width ?? 320),
+      height: f && f.height > 0 ? Math.round(f.height) : (config.height ?? 240),
+    };
+  };
+
+  const move = (id: string, to: WidgetTarget): MoveResult => {
+    const config = configs.current.get(id);
+    const el = contentEls.get(id);
+    if (!config || !el) return { ok: false, reason: 'not-open' };
+    const current = hostedRef.current.get(id);
+    if (to.to === 'panel') {
+      detach(id, true);
+      return { ok: true };
+    }
+    const s = sync?.getSnapshot();
+    const owner = s?.panels[ownerId];
+    // An overlay in a modal, a drawer or outside any provider has no workspace panel to move beside.
+    if (!actions || !panelHost || !owner || owner.owner) return { ok: false, reason: 'no-workspace' };
+    if (optionsFor(registry, owner)?.keepAlive === false) return { ok: false, reason: 'owner-not-kept-alive' };
+    if (to.to !== 'floating' && owner.state !== 'docked') return { ok: false, reason: 'owner-not-docked' };
+
+    const at: HostedPanelPlacement = to.to === 'floating'
+      ? { kind: 'float', rect: to.rect ?? frameRect(id, config) }
+      : to.to === 'tabbed'
+        ? { kind: 'dock', dockTo: { panel: ownerId, position: 'center' } }
+        : { kind: 'dock', dockTo: { panel: ownerId, position: to.position, ...(to.size !== undefined ? { size: to.size } : {}) } };
+    // Already out: the hosted panel is replaced rather than moved, so every target takes one path.
+    // Its content stays rendered here throughout; only the element moves.
+    if (current) detach(id, true);
+    const panelId = `${ownerId}/${id}`;
+    panelHost.setHostedContent(panelId, el);
+    const opened = actions.openHostedPanel(panelId, { panelId: ownerId, widgetId: id }, config.title as PanelInfo['title'], at);
+    if (!opened) {
+      panelHost.setHostedContent(panelId, null);
+      return { ok: false, reason: 'owner-not-docked' };
+    }
+    if (config.icon !== undefined) actions.setPanelIcon(panelId, config.icon);
+    // An in-page close of the hosted panel closes the widget (D17); going back is move({ to: 'panel' }).
+    const unregister = actions.registerHostedCloseHandler(panelId, () => {
+      detach(id, false);
+      closeWidget.current(id);
+    });
+    hostedRef.current.set(id, { panelId, unregister });
+    setHosted(id, panelId);
+    return { ok: true };
+  };
+
+  const location = (id: string): WidgetLocation | null => {
+    if (!configs.current.has(id)) return null;
+    const entry = hostedRef.current.get(id);
+    const s = sync?.getSnapshot();
+    const panel = entry && s?.panels[entry.panelId];
+    if (!entry || !s || !panel) return 'panel';
+    if (panel.state === 'floating') return 'floating';
+    if (panel.state === 'minimized') return 'minimized';
+    return findLeafIdOf(s.gridRoot, entry.panelId) === findLeafIdOf(s.gridRoot, ownerId) ? 'tabbed' : 'docked';
+  };
+
+  const release = useCallback((id: string): void => detach(id, true), [detach]);
+
+  const refresh = (id: string, config: ManagedWidget): void => {
+    const entry = hostedRef.current.get(id);
+    if (!entry || !actions) return;
+    actions.updatePanelTitle(entry.panelId, config.title as PanelInfo['title']);
+    actions.setPanelIcon(entry.panelId, config.icon ?? null);
+  };
+
+  // A hosted panel that left the workspace without this overlay asking (only loadLayout can do
+  // that: it never keeps one) sends its widget back into the panel.
+  const alive = useOptionalWindowManagerState(
+    (st: WorkspaceState) => Object.values(hostedIds).filter(h => h in st.panels).join('\n'), '');
+  useEffect(() => {
+    const present = new Set(alive.split('\n'));
+    for (const [id, panelId] of Object.entries(hostedIds)) {
+      if (!present.has(panelId)) detach(id, false);
+    }
+  }, [alive, hostedIds, detach]);
+
+  // The owner closed, or its overlay unmounted: its widgets go with it, and so do their hosted panels.
+  const detachRef = useRef(detach);
+  useEffect(() => { detachRef.current = detach; });
+  useEffect(() => () => {
+    for (const id of Array.from(hostedRef.current.keys())) detachRef.current(id, true);
+  }, []);
+
+  // Fresh functions each render are fine: callers reach them through the manager context's memo.
+  return useMemo(() => ({ hostedIds, move, location, release, refresh }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [hostedIds, actions, sync, panelHost, registry, ownerId, release]);
+}

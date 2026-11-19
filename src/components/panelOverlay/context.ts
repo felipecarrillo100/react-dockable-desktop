@@ -6,7 +6,7 @@
 import type React from 'react';
 import { createContext } from 'react';
 import type { FloatAnchor } from '../../types';
-import type { ManagedWidget, PanelFloatPlacement, Stretch, ToolbarPosition } from './types';
+import type { ManagedWidget, MoveResult, PanelFloatPlacement, Stretch, ToolbarPosition, WidgetLocation, WidgetTarget } from './types';
 
 // ─── Internal types ───────────────────────────────────────────────────────────
 
@@ -42,6 +42,8 @@ export interface PanelManagerCtx {
   openManaged(id: string, config: ManagedWidget): void;
   closeManaged(id: string): void;
   closeAllManaged(): void;
+  moveManaged(id: string, to: WidgetTarget): MoveResult;
+  locationOf(id: string): WidgetLocation | null;
 }
 export const PanelManagerContext: React.Context<PanelManagerCtx | null> = createContext<PanelManagerCtx | null>(null);
 

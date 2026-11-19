@@ -57,6 +57,26 @@ export const renderPanelContent = (
   return <Component {...(panel.props ?? {})} panelId={id} />;
 };
 
+/**
+ * A hosted panel's body (7.11.0): it shows the content element of the managed widget it hosts.
+ * The content is rendered once, by the widget's overlay in its owner panel, so nothing here mounts
+ * it; this only attaches the element, and takes it back out on unmount unless it has already gone
+ * somewhere else (back into its panel).
+ */
+const HostedWidgetSlot: React.FC<{ panelId: string }> = ({ panelId }) => {
+  const panelHost = usePanelHost();
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const slot = slotRef.current;
+    const el = panelHost.getHostedContent(panelId);
+    if (!slot || !el) return;
+    slot.appendChild(el);
+    restorePanelDom(el, { refocus: false });
+    return () => { if (el.parentNode === slot) slot.removeChild(el); };
+  }, [panelId, panelHost]);
+  return <div ref={slotRef} className="rdd-hosted-widget" />;
+};
+
 export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) => {
   const panelHost = usePanelHost();
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -324,7 +344,9 @@ export const PanelMount: React.FC<{ panelId: string }> = React.memo(({ panelId }
   return createPortal(
     <FormContainerProviderWrapper panelId={panelId}>
       <div className={`rdd-panel-content${typeClass ? ` ${typeClass}` : ''}`} data-rdd-panel={panelId} dir={dir}>
-        {shown && renderPanelContent(panelId, panel, registry, messages, formatMessage)}
+        {shown && (panel.owner
+          ? <HostedWidgetSlot panelId={panelId} />
+          : renderPanelContent(panelId, panel, registry, messages, formatMessage))}
       </div>
     </FormContainerProviderWrapper>,
     panelHost.getOrCreateElement(panelId),

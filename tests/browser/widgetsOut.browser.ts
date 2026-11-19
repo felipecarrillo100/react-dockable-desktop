@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Page } from 'playwright-core';
-import { openHarness, rectOf, drag } from './lib';
+import { openHarness, rectOf, drag, settle, actions } from './lib';
 
 // Widgets out of the panel (7.11, step 1). M2: a managed widget's content renders once into its
 // own element, div.rdd-panel-float__content, which sits between the frame's body and the content.
@@ -75,6 +75,109 @@ describe('managed widget content element', () => {
     expect((await z()).w1).toBeGreaterThan((await z()).wo);
     await page.click('#wo-count');
     expect((await z()).wo).toBeGreaterThan((await z()).w1);
+    await close();
+    expect(errors).toEqual([]);
+  });
+});
+
+// M3: moving out of the panel and back. The content element is marked with a JS property, so
+// "the same element" means the very node, and the WebGL context stands in for a map's.
+
+const move = (page: Page, to: unknown) => page.evaluate((t) =>
+  (window as unknown as { __wo: { move(id: string, to: unknown): unknown } }).__wo.move('wo', t), to);
+const locationOf = (page: Page) => page.evaluate(() =>
+  (window as unknown as { __wo: { location(id: string): unknown } }).__wo.location('wo'));
+const snapshot = (page: Page) => page.evaluate(() => {
+  const el = document.querySelector('.rdd-panel-float__content') as (HTMLElement & { __mark?: string }) | null;
+  const fill = document.getElementById('wo-fill');
+  const w = window as unknown as { __woLost: number; __woGl: WebGLRenderingContext | null };
+  const slot = el?.parentElement;
+  // What the content must fill: the frame's body, or the hosted panel's whole content box (the
+  // slot itself would shrink to its content without its own sizing, and prove nothing).
+  const box = slot?.classList.contains('rdd-hosted-widget') ? slot.closest('.rdd-panel-content') : slot;
+  return {
+    same: el?.__mark === 'original',
+    count: document.getElementById('wo-count')?.textContent,
+    input: (document.getElementById('wo-input') as HTMLInputElement | null)?.value,
+    glAlive: !!w.__woGl && !w.__woGl.isContextLost() && w.__woLost === 0,
+    slot: slot?.classList.contains('rdd-hosted-widget') ? 'hosted' : slot?.classList.contains('rdd-panel-float__body') ? 'frame' : 'none',
+    fills: !!box && !!fill && fill.offsetHeight === box.clientHeight && fill.offsetWidth === box.clientWidth,
+    frame: !!document.querySelector('[data-rdd-widget="wo"]'),
+  };
+});
+
+describe('managed widget out of its panel and back', () => {
+  it('keeps the same element, its state and its WebGL context through every move', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    await page.evaluate(() => { (document.querySelector('.rdd-panel-float__content') as HTMLElement & { __mark?: string }).__mark = 'original'; });
+    await page.click('#wo-inc');
+    await page.fill('#wo-input', 'typed');
+    const kept = { same: true, count: '1', input: 'typed', glAlive: true, fills: true };
+
+    const steps: [unknown, string, string][] = [
+      [{ to: 'docked', position: 'bottom', size: 0.4 }, 'docked', 'hosted'],
+      [{ to: 'tabbed' }, 'tabbed', 'hosted'],
+      [{ to: 'floating', rect: { x: 80, y: 80, width: 320, height: 240 } }, 'floating', 'hosted'],
+      [{ to: 'panel' }, 'panel', 'frame'],
+      [{ to: 'floating' }, 'floating', 'hosted'],
+    ];
+    for (const [to, where, slot] of steps) {
+      expect(await move(page, to), JSON.stringify(to)).toEqual({ ok: true });
+      await settle(page, 300);
+      expect(await locationOf(page)).toBe(where);
+      expect(await snapshot(page), where).toMatchObject({ ...kept, slot, frame: slot === 'frame' });
+    }
+
+    // Minimised and restored by the user's workspace actions, then home.
+    await actions(page, 'minimizePanel', 'p3/wo');
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('minimized');
+    await actions(page, 'restorePanel', 'p3/wo');
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('floating');
+    expect(await snapshot(page)).toMatchObject({ ...kept, slot: 'hosted' });
+    expect(await move(page, { to: 'panel' })).toEqual({ ok: true });
+    await settle(page, 300);
+    expect(await snapshot(page)).toMatchObject({ ...kept, slot: 'frame', frame: true });
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('the × on its tab closes the widget, and the owner closing closes it too', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    await move(page, { to: 'tabbed' });
+    await settle(page, 300);
+    await page.click('[data-rdd-tab="p3/wo"] .rdd-close-tab-x');
+    await settle(page, 300);
+    expect(await page.evaluate(() => (window as unknown as { __wo: { isOpen(id: string): boolean } }).__wo.isOpen('wo'))).toBe(false);
+    expect(await page.$('.rdd-panel-float__content')).toBeNull();
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('the owner closing removes its hosted panel', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    await move(page, { to: 'docked', position: 'left' });
+    await settle(page, 300);
+    await actions(page, 'closePanel', 'p3');
+    await settle(page, 300);
+    const ids = await page.evaluate(() => Object.keys((window as unknown as { __wm: { state: { panels: object } } }).__wm.state.panels));
+    expect(ids).not.toContain('p3/wo');
+    expect(await page.$('.rdd-panel-float__content')).toBeNull();
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('works the same under RTL', async () => {
+    const { page, errors, close } = await openHarness(WO + '&dir=html');
+    await page.evaluate(() => { (document.querySelector('.rdd-panel-float__content') as HTMLElement & { __mark?: string }).__mark = 'original'; });
+    await page.click('#wo-inc');
+    expect(await move(page, { to: 'docked', position: 'bottom' })).toEqual({ ok: true });
+    await settle(page, 300);
+    expect(await snapshot(page)).toMatchObject({ same: true, count: '1', glAlive: true, slot: 'hosted', fills: true });
+    expect(await move(page, { to: 'panel' })).toEqual({ ok: true });
+    await settle(page, 300);
+    expect(await snapshot(page)).toMatchObject({ same: true, count: '1', slot: 'frame', fills: true });
     await close();
     expect(errors).toEqual([]);
   });

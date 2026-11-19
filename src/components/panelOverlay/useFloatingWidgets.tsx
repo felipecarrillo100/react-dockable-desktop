@@ -3,7 +3,7 @@
  * @description The hooks that open floating widgets from code: one widget, or a set managed by id.
  */
 import { useState, useContext, useCallback, useMemo } from 'react';
-import type { ManagedWidget } from './types';
+import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
 import { PanelManagerContext } from './context';
 
 // ─── usePanelFloatingWindow ───────────────────────────────────────────────────
@@ -49,8 +49,25 @@ export interface FloatingWidgetsApi {
   closeAll(): void;
   /** Returns `true` if the named window is currently open. */
   isOpen(id: string): boolean;
-  /** IDs of all currently open managed windows. Changes to this array trigger re-renders. */
+  /** IDs of all currently open managed windows, wherever they are shown. Changes to this array trigger re-renders. */
   openIds: string[];
+  /**
+   * Moves a widget out of its panel or back (7.11.0), without remounting its content: docked
+   * beside its owner panel, a tab in the owner's group, a floating window, or back into the panel
+   * where it last was. Out of the panel it is a workspace panel of its own, which the user can
+   * move, minimise and close like any other; closing it closes the widget. It never goes into a
+   * saved layout. Returns a result rather than throwing; a refusal changes nothing.
+   * @example
+   * const widgets = useFloatingWidgets();
+   * widgets.move('table', { to: 'docked', position: 'bottom', size: 0.35 });
+   * widgets.move('table', { to: 'panel' });
+   */
+  move(id: string, to: WidgetTarget): MoveResult;
+  /**
+   * Where a widget is shown (7.11.0), or `null` if it isn't open. Read when called; it doesn't
+   * re-render anything by itself.
+   */
+  location(id: string): WidgetLocation | null;
 }
 
 /**
@@ -78,5 +95,7 @@ export function usePanelFloatingWindowManager(): FloatingWidgetsApi {
     closeAll: () => ctx?.closeAllManaged(),
     isOpen: (id: string) => ids.includes(id),
     openIds: ids,
+    move: (id: string, to: WidgetTarget): MoveResult => ctx ? ctx.moveManaged(id, to) : { ok: false, reason: 'not-open' },
+    location: (id: string): WidgetLocation | null => ctx ? ctx.locationOf(id) : null,
   }), [ctx, ids]);
 }

@@ -11,7 +11,8 @@
  *   ov=1            panel p3 hosts a PanelOverlayRoot with an inner floating widget
  *   pt=VARIANT      …and a top panel toolbar of that variant (frosted | solid | transparent)
  *   wo=1            panel p3 (needs ov=1) also opens a managed widget `wo` (useFloatingWidgets):
- *                   a counter, a text field and a box with height: 100% (#wo-fill)
+ *                   a counter, a text field, a WebGL canvas and a box with height: 100% (#wo-fill);
+ *                   its manager is exposed as `window.__wo`
  *   cs=dark|light|none   colour scheme the app sets on <html> (none = app sets nothing)
  *   zb=N            zIndexBase passed to the provider
  *   grow=1          no rdd-fill-viewport on the wrapper (the workspace grows with its content)
@@ -80,11 +81,21 @@ function ProbePanel() {
 /** A managed widget's content: state to keep (a counter, a text field) and a box that fills it. */
 function ManagedContent() {
   const [count, setCount] = useState(0);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    // A WebGL context, as a map would hold: a move must not lose it.
+    const canvas = canvasRef.current!;
+    const w = window as unknown as { __woLost: number; __woGl: WebGLRenderingContext | null };
+    w.__woLost = 0;
+    canvas.addEventListener('webglcontextlost', () => { w.__woLost += 1; });
+    w.__woGl = canvas.getContext('webgl');
+  }, []);
   return (
     <div id="wo-fill" style={{ height: '100%', boxSizing: 'border-box', border: '1px solid #888' }}>
       <button id="wo-inc" onClick={() => setCount(c => c + 1)}>+</button>
       <span id="wo-count">{count}</span>
       <input id="wo-input" defaultValue="" />
+      <canvas id="wo-canvas" ref={canvasRef} width={40} height={20} />
     </div>
   );
 }
@@ -92,6 +103,8 @@ function ManagedContent() {
 /** Opens the `wo` managed widget once; needs to sit inside the overlay to reach its manager. */
 function ManagedOpener() {
   const widgets = useFloatingWidgets();
+  // eslint-disable-next-line react-hooks/immutability
+  (window as unknown as { __wo: unknown }).__wo = widgets;
   useEffect(() => {
     widgets.open('wo', { title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right', width: 200, height: 180 });
     // eslint-disable-next-line react-hooks/exhaustive-deps

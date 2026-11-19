@@ -2,7 +2,7 @@
  * @file PanelOverlayRoot.tsx
  * @description The Panel Overlay root: provides the overlay contexts and draws the corner drop zones.
  */
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { FloatAnchor } from '../WindowManagerContext';
 import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
@@ -11,6 +11,7 @@ import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx, ManagedPlacemen
 import { forgetPanelDom } from '../domPreservation';
 import { bucketsFor, ANCHORS } from '../../core/stretch';
 import { ManagedFloatingWindow } from './FloatingWidget';
+import { useWidgetHosting } from './useWidgetHosting';
 
 /** Where a managed widget starts: its config's corner, stretch and size, docked. */
 const seedPlacement = (config: ManagedWidget): ManagedPlacement => ({
@@ -64,8 +65,14 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   // the DOM state of what it holds, survive whatever happens to the frame.
   // A stable Map, written only by open and close, never during render.
   const [contentEls] = useState(() => new Map<string, HTMLDivElement>());
+  // The configs again, for code that must read them synchronously (moving a widget out).
+  const configsRef = useRef(new Map<string, ManagedWidget>());
   const zCounterRef = useRef(100);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Set below; the hosting hook needs it before it exists (a user's close of a hosted panel).
+  const closeWidgetRef = useRef<(id: string) => void>(() => {});
+  const hosting = useWidgetHosting({ contentEls, configs: configsRef, containerRef, closeWidget: closeWidgetRef });
+  const { release: releaseHosted, refresh: refreshHosted } = hosting;
 
   const registerToolbar = useCallback((pos: ToolbarPosition, size: number): (() => void) => {
     setToolbarSizes(prev => ({ ...prev, [pos]: size }));
@@ -126,6 +133,9 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       el.addEventListener('pointerdown', () => focusWindow(id));
       contentEls.set(id, el);
     }
+    const reopened = configsRef.current.has(id);
+    configsRef.current.set(id, config);
+    if (reopened) refreshHosted(id, config);
     setManagedWindows(prev => {
       const next = new Map(prev);
       next.set(id, config);
@@ -133,7 +143,7 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
     });
     // Re-opening a live id refreshes its config but leaves it where the user put it.
     setManagedPlacements(prev => (id in prev ? prev : { ...prev, [id]: seedPlacement(config) }));
-  }, [contentEls, focusWindow]);
+  }, [contentEls, focusWindow, refreshHosted]);
 
   /** Drops a closed widget's content element; its content unmounts with the portal. */
   const forgetContentEl = useCallback((id: string): void => {
@@ -145,6 +155,8 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   }, [contentEls]);
 
   const closeManaged = useCallback((id: string): void => {
+    releaseHosted(id);
+    configsRef.current.delete(id);
     setManagedWindows(prev => {
       const next = new Map(prev);
       next.delete(id);
@@ -157,13 +169,16 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       return next;
     });
     forgetContentEl(id);
-  }, [forgetContentEl]);
+  }, [forgetContentEl, releaseHosted]);
+  useEffect(() => { closeWidgetRef.current = closeManaged; });
 
   const closeAllManaged = useCallback((): void => {
+    Array.from(configsRef.current.keys()).forEach(releaseHosted);
+    configsRef.current.clear();
     setManagedWindows(new Map());
     setManagedPlacements({});
     Array.from(contentEls.keys()).forEach(forgetContentEl);
-  }, [contentEls, forgetContentEl]);
+  }, [contentEls, forgetContentEl, releaseHosted]);
 
   /**
    * A gesture's report. Ignored for a widget that is no longer open: a gesture can land after a
@@ -187,7 +202,9 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
     openManaged,
     closeManaged,
     closeAllManaged,
-  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged]);
+    moveManaged: hosting.move,
+    locationOf: hosting.location,
+  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged, hosting.move, hosting.location]);
 
   const coreCtxValue = useMemo<PanelOverlayCtx>(() => ({
     topId,
@@ -228,7 +245,8 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
               return (
                 <React.Fragment key={id}>
                   {createPortal(cfg.content, el)}
-                  <ManagedFloatingWindow
+                  {/* Out of the panel, a hosted panel shows the content and there is no frame. */}
+                  {!(id in hosting.hostedIds) && <ManagedFloatingWindow
                     id={id}
                     title={cfg.title}
                     icon={cfg.icon}
@@ -236,7 +254,7 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
                     onClose={() => closeManaged(id)}
                     controlled={{ placement, update: patch => updateManagedPlacement(id, patch) }}
                     contentEl={el}
-                  />
+                  />}
                 </React.Fragment>
               );
             })}

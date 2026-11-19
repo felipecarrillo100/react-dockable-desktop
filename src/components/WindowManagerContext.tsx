@@ -251,6 +251,10 @@ export const useWindowManagerActionsInternal = (): InternalWindowActions => {
 };
 
 
+/** @internal {@link useWindowManagerActionsInternal}, or null outside a provider (a panel overlay used standalone). */
+export const useOptionalWindowManagerActionsInternal = (): InternalWindowActions | null => useContext(WindowActionsContext);
+
+
 /**
  * React hook to retrieve the active i18n formatter.
  */
