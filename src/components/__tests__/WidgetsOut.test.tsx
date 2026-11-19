@@ -11,6 +11,13 @@
  *      all close the widget; a layout load sends it back into the panel
  * WO7: the owner minimised: the widget stays out and on screen
  * WO8: the hosted panel follows the widget's title and icon, also on a re-open
+ * WO9: canDock / canFloat are the hosted panel's user rules (false by default), and a re-open
+ *      changes them while out
+ * WO10: in the panel, titleMenu turns the title icon into a button that opens the app's items,
+ *       given where the widget is; an item can move it out. Without titleMenu the icon stays plain
+ * WO11: out of the panel, the app's items lead the hosted tab's menu, before Minimize and Close;
+ *       no built-in Float. An ordinary panel's menu is unchanged
+ * WO12: a floating hosted panel's title-bar menu is the app's items, then Close
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useEffect, useState } from 'react';
@@ -18,8 +25,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import {
   createWorkspace, DockableDesktopProvider, RddDesktop, RddPanelOverlay, useFloatingWidgets,
-  type Workspace, type FloatingWidgetsApi, type ManagedWidget,
+  type Workspace, type FloatingWidgetsApi, type ManagedWidget, type WidgetMenuContext,
 } from '../../index';
+import type { InternalWindowActions } from '../../types';
 import { findLeafIdOf } from '../../core/layoutTree';
 
 let api: FloatingWidgetsApi | null = null;
@@ -304,5 +312,137 @@ describe('WO8: title and icon', () => {
     expect(state(ws).panels['map/table'].title).toBe('Rows');
     expect($('[data-rdd-tab="map/table"] .r-icon')).not.toBeNull();
     expect(api!.location('table')).toBe('tabbed');            // a re-open doesn't move it
+  });
+});
+
+// ─── M4: capabilities and titleMenu ───────────────────────────────────────────
+
+const coreActions = (ws: Workspace) => (ws as unknown as { _core: { actions: InternalWindowActions } })._core.actions;
+/** The open menu, top level: each item's label, and '---' for a separator. */
+const menu = () => {
+  const m = document.querySelector('.rdd-context-menu:not(.rdd-context-menu--submenu)');
+  return m ? [...m.children].map(c => c.tagName === 'HR' ? '---' : c.querySelector('.rdd-context-menu__label')?.textContent ?? '?') : null;
+};
+const menuItem = (label: string) => [...document.querySelectorAll<HTMLElement>('.rdd-context-menu__item')]
+  .find(b => b.querySelector('.rdd-context-menu__label')?.textContent === label)!;
+const rightClick = (sel: string) => act(() => {
+  $(sel)!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+});
+
+describe('WO9: canDock / canFloat', () => {
+  it('are false by default, and a re-open changes them while out', () => {
+    const ws = mount();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    const a = coreActions(ws);
+    expect(a.isDropAllowed('map/table', { kind: 'float', anchor: null })).toBe(false);
+    expect(a.isDropAllowed('map/table', { kind: 'edge', side: 'left' })).toBe(false);
+    act(() => { api!.open('table', { ...table, canFloat: true }); });
+    expect(a.isDropAllowed('map/table', { kind: 'float', anchor: null })).toBe(true);
+    expect(a.isDropAllowed('map/table', { kind: 'edge', side: 'left' })).toBe(false);
+    act(() => { api!.open('table', { ...table, canFloat: true, canDock: true }); });
+    expect(a.isDropAllowed('map/table', { kind: 'edge', side: 'left' })).toBe(true);
+  });
+
+  it('a widget opened with them carries them out', () => {
+    const ws = mount();
+    act(() => { api!.close('table'); });
+    act(() => { api!.open('table', { ...table, canDock: true }); });
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    expect(coreActions(ws).isDropAllowed('map/table', { kind: 'edge', side: 'left' })).toBe(true);
+    expect(coreActions(ws).isDropAllowed('map/table', { kind: 'float', anchor: null })).toBe(false);
+  });
+});
+
+describe('WO10: titleMenu in the panel', () => {
+  it('turns the title icon into a button that opens the app\'s items, given where the widget is', () => {
+    mount();
+    let seen: WidgetMenuContext | null = null;
+    act(() => {
+      api!.open('table', {
+        ...table, canDock: true, icon: <i className="t-icon" />,
+        titleMenu: w => { seen = w; return [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }, { label: 'Close it', action: () => w.close() }]; },
+      });
+    });
+    const button = $('[data-rdd-widget="table"] button.rdd-panel-float__menu') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    expect(button.querySelector('.t-icon')).not.toBeNull();
+    act(() => { button.click(); });
+    expect(menu()).toEqual(['Dock below', 'Close it']);
+    expect(seen).toMatchObject({ id: 'table', location: 'panel', canDock: true, canFloat: false });
+    act(() => { menuItem('Dock below').click(); });
+    expect(api!.location('table')).toBe('docked');
+  });
+
+  it('a "Close" item closes the widget for real', () => {
+    mount();
+    act(() => { api!.open('table', { ...table, titleMenu: w => [{ label: 'Close it', action: () => w.close() }] }); });
+    act(() => { ($('button.rdd-panel-float__menu') as HTMLElement).click(); });
+    act(() => { menuItem('Close it').click(); });
+    expect(api!.isOpen('table')).toBe(false);
+  });
+
+  it('without titleMenu the icon stays plain, and with no icon there is no button', () => {
+    mount();
+    expect($('.rdd-panel-float__menu')).toBeNull();
+    act(() => { api!.open('table', { ...table, icon: <i className="t-icon" /> }); });
+    expect($('span.rdd-panel-float__icon .t-icon')).not.toBeNull();
+    expect($('.rdd-panel-float__menu')).toBeNull();
+  });
+
+  it('with titleMenu and no icon, the button shows a menu glyph', () => {
+    mount();
+    act(() => { api!.open('table', { ...table, titleMenu: () => [{ label: 'x' }] }); });
+    expect($('button.rdd-panel-float__menu svg')).not.toBeNull();
+  });
+});
+
+describe('WO11: the hosted tab\'s menu', () => {
+  it('leads with the app\'s items, then Minimize and Close; no built-in Float', () => {
+    const ws = mount();
+    let seen: WidgetMenuContext | null = null;
+    act(() => { api!.open('table', { ...table, canFloat: true, titleMenu: w => { seen = w; return [{ label: 'Back into the map', action: () => w.move({ to: 'panel' }) }]; } }); });
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    rightClick('[data-rdd-tab="map/table"]');
+    expect(menu()).toEqual(['Back into the map', '---', 'Minimize Panel', '---', 'Close Tab']);
+    expect(seen).toMatchObject({ location: 'tabbed', canFloat: true });
+    act(() => { menuItem('Back into the map').click(); });
+    expect(api!.location('table')).toBe('panel');
+    expect(ws.isOpen('map/table')).toBe(false);
+    // Back home, nothing is left registered under the hosted panel's id.
+    expect(coreActions(ws).getPanelContextMenuItems('map/table')).toEqual([]);
+  });
+
+  it('without titleMenu it is the built-in items only, still without Float', () => {
+    mount();
+    act(() => { api!.open('table', { ...table, canFloat: true }); });
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    rightClick('[data-rdd-tab="map/table"]');
+    expect(menu()).toEqual(['Minimize Panel', '---', 'Close Tab']);
+  });
+
+  it('an ordinary panel\'s menu is unchanged: Float first', () => {
+    mount();
+    rightClick('[data-rdd-tab="map"]');
+    expect(menu()![0]).toBe('Float Window');
+  });
+});
+
+describe('WO12: a floating hosted panel\'s title-bar menu', () => {
+  it('is the app\'s items, then Close, which closes the widget', () => {
+    mount();
+    act(() => { api!.open('table', { ...table, titleMenu: () => [{ label: 'Back into the map' }] }); });
+    act(() => { api!.move('table', { to: 'floating', rect: { x: 10, y: 10, width: 200, height: 150 } }); });
+    act(() => { ($('[data-rdd-window="map/table"] .rdd-btn-more-actions') as HTMLElement).click(); });
+    const labels = menu()!;
+    expect(labels.slice(0, 2)).toEqual(['Back into the map', '---']);
+    expect(labels).toEqual(['Back into the map', '---', 'Close Panel']);
+    act(() => { menuItem('Close Panel').click(); });
+    expect(api!.isOpen('table')).toBe(false);
+  });
+
+  it('without titleMenu there is no menu button', () => {
+    mount();
+    act(() => { api!.move('table', { to: 'floating' }); });
+    expect($('[data-rdd-window="map/table"] .rdd-btn-more-actions')).toBeNull();
   });
 });

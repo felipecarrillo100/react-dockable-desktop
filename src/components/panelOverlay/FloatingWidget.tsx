@@ -107,7 +107,7 @@ export function PanelFloatingWindow(props: RddFloatingWidgetProps): React.ReactE
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
   // The internal props are set last, so no stray prop on the public component can turn them on.
-  return <FloatingWindowBody key={props.id} ctx={ctx} {...props} controlled={undefined} contentEl={undefined} />;
+  return <FloatingWindowBody key={props.id} ctx={ctx} {...props} controlled={undefined} contentEl={undefined} onTitleMenu={undefined} />;
 }
 
 /**
@@ -118,7 +118,7 @@ export function PanelFloatingWindow(props: RddFloatingWidgetProps): React.ReactE
  */
 export function ManagedFloatingWindow(
   props: Omit<RddFloatingWidgetProps, 'defaultAnchor' | 'defaultWidth' | 'defaultHeight' | 'children'>
-    & { controlled: ControlledPlacement; contentEl: HTMLElement },
+    & { controlled: ControlledPlacement; contentEl: HTMLElement; onTitleMenu: ((e: React.MouseEvent) => void) | undefined },
 ): React.ReactElement | null {
   const ctx = useContext(PanelOverlayContext);
   if (!props.open) return null;
@@ -139,6 +139,8 @@ interface FloatingWindowBodyProps extends RddFloatingWidgetProps {
   controlled: ControlledPlacement | undefined;
   /** Content the overlay renders elsewhere; the body shows this element instead of `children`. */
   contentEl: HTMLElement | undefined;
+  /** A managed widget's `titleMenu`: when set, the title icon is a button that opens it. */
+  onTitleMenu: ((e: React.MouseEvent) => void) | undefined;
 }
 
 type WindowMode = ManagedPlacement['mode'];
@@ -165,7 +167,7 @@ function usePlacementField<K extends keyof ManagedPlacement>(
 }
 
 
-function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose, controlled, contentEl }: FloatingWindowBodyProps): React.ReactElement {
+function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defaultHeight, defaultStretch, stretch: stretchProp, onPlacementChange, stretchable = true, children, ctx, onClose, controlled, contentEl, onTitleMenu }: FloatingWindowBodyProps): React.ReactElement {
   const isRtl = useOptionalWindowManagerState(s => s.isRtl, false);
   // Resolved here rather than at the call site, so a descriptor title re-resolves whenever the
   // formatter changes. Both hooks fall back to the message's own `defaultMessage` when there is no
@@ -670,7 +672,21 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
           they can straddle the edge instead of being half clipped. */}
       <div className="rdd-panel-float__frame">
       <div className="rdd-panel-float__header" onPointerDown={handleHeaderPointerDown}>
-        {icon && <span className="rdd-panel-float__icon">{icon}</span>}
+        {onTitleMenu ? (
+          <button
+            type="button"
+            className="rdd-panel-float__icon rdd-panel-float__menu"
+            // Not a drag: the header starts one on pointerdown, as the close button also prevents.
+            onPointerDown={e => e.stopPropagation()}
+            // Stopped, as the workspace's own menu buttons do: the menu closes on a document click.
+            onClick={e => { e.stopPropagation(); onTitleMenu(e); }}
+            title={formatLabel(messages.moreActions, formatMessage)}
+            aria-label={formatLabel(messages.moreActions, formatMessage)}
+            aria-haspopup="menu"
+          >
+            {icon ?? MenuIcon}
+          </button>
+        ) : icon && <span className="rdd-panel-float__icon">{icon}</span>}
         <span className="rdd-panel-float__title">{formatLabel(title, formatMessage)}</span>
         <button
           type="button"
@@ -697,6 +713,13 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     </div>
   );
 }
+
+/** The title button's glyph for a widget with a titleMenu and no icon of its own. */
+const MenuIcon = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
+  </svg>
+);
 
 // ─── Internal: WidgetContentSlot ──────────────────────────────────────────────
 

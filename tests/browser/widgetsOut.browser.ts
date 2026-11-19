@@ -182,3 +182,45 @@ describe('managed widget out of its panel and back', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// M4: the title icon as a menu button, in the panel and out of it.
+
+describe('managed widget title menu', () => {
+  it('a click opens the app\'s items without starting a drag, and an item moves the widget out', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    const before = await rectOf(page, '[data-rdd-widget="wo"]');
+    await page.click('[data-rdd-widget="wo"] .rdd-panel-float__menu');
+    await settle(page, 200);
+    const after = await rectOf(page, '[data-rdd-widget="wo"]');
+    expect({ x: after.x, y: after.y }).toEqual({ x: before.x, y: before.y });
+    expect(await page.evaluate(() => document.body.classList.contains('rdd-dragging-active'))).toBe(false);
+    await page.click('.rdd-context-menu__item:has-text("Dock below")');
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('docked');
+    // Out of the panel, the same items lead the hosted tab's menu.
+    await page.click('[data-rdd-tab="p3/wo"]', { button: 'right' });
+    await settle(page, 200);
+    const labels = await page.$$eval('.rdd-context-menu:not(.rdd-context-menu--submenu) .rdd-context-menu__label', els => els.map(e => e.textContent));
+    expect(labels[0]).toBe('Back into the panel');
+    expect(labels).not.toContain('Float Window');
+    await page.click('.rdd-context-menu__item:has-text("Back into the panel")');
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('panel');
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('opened from the keyboard, the menu focuses its first item', async () => {
+    const { page, errors, close } = await openHarness(WO);
+    await page.focus('[data-rdd-widget="wo"] .rdd-panel-float__menu');
+    await page.keyboard.press('Enter');
+    await settle(page, 200);
+    expect(await page.evaluate(() => document.activeElement?.querySelector('.rdd-context-menu__label')?.textContent
+      ?? document.activeElement?.textContent)).toContain('Dock below');
+    await page.keyboard.press('Enter');
+    await settle(page, 300);
+    expect(await locationOf(page)).toBe('docked');
+    await close();
+    expect(errors).toEqual([]);
+  });
+});

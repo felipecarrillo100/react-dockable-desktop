@@ -2,7 +2,7 @@
  * @file PanelOverlayRoot.tsx
  * @description The Panel Overlay root: provides the overlay contexts and draws the corner drop zones.
  */
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import type { FloatAnchor } from '../WindowManagerContext';
 import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
@@ -12,6 +12,8 @@ import { forgetPanelDom } from '../domPreservation';
 import { bucketsFor, ANCHORS } from '../../core/stretch';
 import { ManagedFloatingWindow } from './FloatingWidget';
 import { useWidgetHosting } from './useWidgetHosting';
+import { ContextMenuContext } from '../ContextMenu';
+import { initialFocusFor } from '../workspace/helpers';
 
 /** Where a managed widget starts: its config's corner, stretch and size, docked. */
 const seedPlacement = (config: ManagedWidget): ManagedPlacement => ({
@@ -73,6 +75,8 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   const closeWidgetRef = useRef<(id: string) => void>(() => {});
   const hosting = useWidgetHosting({ contentEls, configs: configsRef, containerRef, closeWidget: closeWidgetRef });
   const { release: releaseHosted, refresh: refreshHosted } = hosting;
+  // The context menu the title icon opens; none outside a provider, and then the icon stays decorative.
+  const contextMenu = useContext(ContextMenuContext);
 
   const registerToolbar = useCallback((pos: ToolbarPosition, size: number): (() => void) => {
     setToolbarSizes(prev => ({ ...prev, [pos]: size }));
@@ -254,6 +258,10 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
                     onClose={() => closeManaged(id)}
                     controlled={{ placement, update: patch => updateManagedPlacement(id, patch) }}
                     contentEl={el}
+                    onTitleMenu={cfg.titleMenu && contextMenu ? (e) => {
+                      const items = hosting.menuItems(id);
+                      if (items.length > 0) contextMenu.show({ event: e, items, initialFocus: initialFocusFor(e) });
+                    } : undefined}
                   />}
                 </React.Fragment>
               );

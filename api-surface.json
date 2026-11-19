@@ -169,6 +169,7 @@
     "ToolbarVariant",
     "TypedWorkspace",
     "WidgetLocation",
+    "WidgetMenuContext",
     "WidgetTarget",
     "Workspace",
     "WorkspaceActions",

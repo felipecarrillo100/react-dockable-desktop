@@ -492,11 +492,14 @@ export type LayoutNode = LayoutGridNode | LayoutLeafNode;
 // @public
 export interface ManagedWidget {
     anchor?: FloatAnchor;
+    canDock?: boolean;
+    canFloat?: boolean;
     content: React$1.ReactNode;
     height?: number;
     icon?: React$1.ReactNode;
     stretch?: Stretch;
     title: PanelTitle;
+    titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[];
     width?: number;
 }
 
@@ -1549,6 +1552,16 @@ export function useWorkspaceState<T>(selector: (state: WorkspaceState) => T): T;
 
 // @public
 export type WidgetLocation = 'panel' | 'docked' | 'tabbed' | 'floating' | 'minimized';
+
+// @public
+export interface WidgetMenuContext {
+    canDock: boolean;
+    canFloat: boolean;
+    close(): void;
+    id: string;
+    location: WidgetLocation;
+    move(to: WidgetTarget): MoveResult;
+}
 
 // @public
 export type WidgetTarget = {

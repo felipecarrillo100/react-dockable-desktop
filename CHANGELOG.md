@@ -30,6 +30,19 @@ Widgets that can leave their panel (7.11.0, in progress).
   - **`loadLayout()`** never keeps a widget's panel; the widget goes back into its own panel.
   - New types: `WidgetTarget`, `WidgetLocation` (`'panel' | 'docked' | 'tabbed' | 'floating' |
     'minimized'`) and `MoveResult`.
+- **`ManagedWidget.canDock` and `.canFloat`:** whether the user may dock or float the widget out of
+  its panel. Out of the panel they are its workspace panel's rules for drags and drops (with your
+  `canDrop`), as `canDock` / `canFloat` are for panel types. Both default to `false`, restrict the
+  user only (`move()` always works), and change with another `open()`.
+- **`ManagedWidget.titleMenu(w)`:** the menu on the widget's title icon, in your own words. It is
+  given a `WidgetMenuContext` (`{ id, location, canDock, canFloat, move, close }`) and returns
+  `ContextMenuItem[]`, built each time the menu opens.
+  - In the panel, the title icon becomes a button that opens the items. Without an icon it shows a
+    menu glyph. Without `titleMenu` nothing changes.
+  - Out of the panel, the items lead its tab's menu and its floating title-bar menu, before the
+    built-in Minimize and Close. The built-in Float isn't offered for such a panel, because your
+    items replace it.
+  - New type: `WidgetMenuContext`.
 
 - **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
   of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,

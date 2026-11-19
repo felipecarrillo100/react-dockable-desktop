@@ -7,6 +7,7 @@ import type React from 'react';
 import type { FloatAnchor } from '../../types';
 // Type-only, so this stays a one-way dependency: PanelProviderContext imports nothing from here.
 import type { PanelTitle } from '../PanelProviderContext';
+import type { ContextMenuItem } from '../ContextMenu';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,45 @@ export interface ManagedWidget {
    * @see Stretch
    */
   stretch?: Stretch;
+  /**
+   * The user may move it out of the panel into a docked panel or a tab (7.11.0): drags of its
+   * workspace panel, and what the app offers in {@link ManagedWidget.titleMenu}. Restricts the user
+   * only; `move()` always works. Changeable while open: call `open()` again. @default false
+   */
+  canDock?: boolean;
+  /**
+   * The user may move it out of the panel into a floating window (7.11.0). As
+   * {@link ManagedWidget.canDock}: the user only, changeable with another `open()`. @default false
+   */
+  canFloat?: boolean;
+  /**
+   * The menu on the widget's title icon (7.11.0), in the app's own words: a "Dock below the map" or
+   * "Back into the map" item calls `w.move()`. With it, the title icon becomes a button that opens
+   * these items. Out of the panel, the items lead its workspace panel's tab and title-bar menus,
+   * before the built-in Minimize and Close; the built-in Float is left out, because these replace it.
+   * Called each time the menu opens, so items can depend on where the widget is.
+   * @example
+   * titleMenu: w => w.location === 'panel'
+   *   ? [{ label: 'Dock below the map', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
+   *   : [{ label: 'Back into the map', action: () => w.move({ to: 'panel' }) }]
+   */
+  titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[];
+}
+
+/** What {@link ManagedWidget.titleMenu} is given to build its items from (7.11.0). */
+export interface WidgetMenuContext {
+  /** The widget's id. */
+  id: string;
+  /** Where it is now. */
+  location: WidgetLocation;
+  /** Its config's `canDock`. */
+  canDock: boolean;
+  /** Its config's `canFloat`. */
+  canFloat: boolean;
+  /** `useFloatingWidgets().move()` for this widget. */
+  move(to: WidgetTarget): MoveResult;
+  /** Closes the widget, wherever it is. */
+  close(): void;
 }
 
 /**
