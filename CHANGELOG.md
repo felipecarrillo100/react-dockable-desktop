@@ -10,7 +10,14 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
-Widgets that can leave their panel (7.11.0, in progress).
+## [7.11.0-next.0] — 2026-11-19
+
+**Pre-release** on npm's `next` tag (`npm install react-dockable-desktop@next`), for feedback before
+7.11.0. Widgets that can leave their panel: a managed floating widget can be docked beside its
+panel, become a tab in its group, or float as a window of its own, and come back, without its
+content remounting. Its placement can be saved and restored; iframes can be kept from reloading
+when panels and widgets move. See the new guide, [Widgets Out of the Panel](https://felipecarrillo100.github.io/react-dockable-desktop/guide/widgets-out-of-the-panel).
+Additions only: an app that uses none of it sees no change, apart from the points under **Changed** below.
 
 ### Added
 
@@ -85,7 +92,6 @@ Widgets that can leave their panel (7.11.0, in progress).
   and Edge 133+, Firefox 144+); in the others (Safari) an iframe reloads as before. Off by default.
   A widget with it also moves its owner panel's element this way, since that element carries the
   widget.
-
 - **`PanelInfo.owner` and the `PanelOwner` type.** Set on a panel that shows a managed widget moved out
   of its owner panel: `{ panelId, widgetId }`. Such a panel has the reserved component `'rdd:widget'`,
   exists only at runtime, and is never written by `saveLayout()` (nor reported by `onPanelsExcluded`).
@@ -1300,7 +1306,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.0...HEAD
+[7.11.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0-next.0
 [7.10.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.0...v7.10.1
 [7.10.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.9.0...v7.10.0
 [7.9.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.8.0...v7.9.0

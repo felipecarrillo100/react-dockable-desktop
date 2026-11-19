@@ -513,7 +513,10 @@ function SurveillanceMapInner() {
 | `close(id)` | `(id: string) => void` | Closes and unmounts the managed window with this ID. |
 | `closeAll()` | `() => void` | Closes all currently open managed windows. |
 | `isOpen(id)` | `(id: string) => boolean` | Returns `true` if a managed window with this ID is open. |
-| `openIds` | `string[]` | Array of IDs of all currently open managed windows. |
+| `openIds` | `string[]` | Array of IDs of all currently open managed windows, wherever they are shown. |
+| `move(id, to)` | `(id: string, to: WidgetTarget) => MoveResult` | Moves the widget out of its panel (docked, tabbed, floating) or back (7.11.0). See [Widgets Out of the Panel](./widgets-out-of-the-panel). |
+| `location(id)` | `(id: string) => WidgetLocation \| null` | Where it is: `'panel'`, `'docked'`, `'tabbed'`, `'floating'` or `'minimized'` (7.11.0). |
+| `placement(id)` | `(id: string) => WidgetPlacement \| null` | Where it is, as JSON to save and give back to `open(id, { placement })` (7.11.0). |
 
 ### `ManagedWidget`
 
@@ -526,8 +529,19 @@ interface ManagedWidget {
   width?: number;           // default: 320
   height?: number;          // default: 240
   stretch?: Stretch;        // axes that span the panel; default: none
+  // 7.11.0, see Widgets Out of the Panel:
+  canDock?: boolean;        // the user may dock it or make it a tab out of the panel; default: false
+  canFloat?: boolean;       // the user may float it out of the panel; default: false
+  titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[]; // the title icon's menu, in your own words
+  placement?: WidgetPlacement;  // open where it was saved (first open of an id only)
+  preserveEmbeds?: boolean; // an iframe inside doesn't reload when it moves; default: false
 }
 ```
+
+Since 7.11.0 a managed widget's content renders once into its own element,
+`div.rdd-panel-float__content` (full width and height of the body), so it can move out of the
+panel and back without remounting. CSS on the body's direct child (`.rdd-panel-float__body > …`)
+no longer matches the content.
 
 ### Localised titles
 
@@ -572,7 +586,7 @@ marker.on('click', () => {
 
 ### Serialization note
 
-`ManagedWidget.content` is a `ReactNode` — it is not JSON-serializable. If you need to persist which windows are open across page reloads, store `manager.openIds` yourself and re-call `manager.open()` on startup with content rebuilt from your own config:
+`ManagedWidget.content` is a `ReactNode` — it is not JSON-serializable. If you need to persist which windows are open across page reloads, store `manager.openIds` yourself and re-call `manager.open()` on startup with content rebuilt from your own config. To bring each one back **where it was** too, store `manager.placement(id)` with it and pass it as `placement` (7.11.0, see [Saving and restoring](./widgets-out-of-the-panel#saving-and-restoring-placement)):
 
 ```tsx
 // On restore:
@@ -756,6 +770,11 @@ All exported from `'react-dockable-desktop'`:
 | `Stretch` | Type | `'width' \| 'height' \| 'both'` — which axes span the panel |
 | `PanelFloatPlacement` | Interface | `{ anchor, stretch }` — reported by `onPlacementChange` |
 | `ManagedWidget` | Interface | Config for `manager.open(id, config)` |
+| `useWidget` | Hook | Inside a managed widget: `{ id, ownerPanelId, location, onWillMove, onMoved }` (7.11.0) |
+| `WidgetHandle` | Interface | What `useWidget()` returns (7.11.0) |
+| `WidgetTarget`, `WidgetLocation`, `MoveResult` | Types | `move()`'s target, `location()`'s value, `move()`'s result (7.11.0) |
+| `WidgetMenuContext` | Interface | What `titleMenu(w)` is given (7.11.0) |
+| `WidgetPlacement` | Type | Opaque, versioned JSON from `placement()` (7.11.0) |
 | `FloatingWidgetsApi` | Interface | Return type of `useFloatingWidgets` |
 | `ToolbarVariant` | Type | `'transparent' \| 'frosted' \| 'solid'` |
 | `ButtonVariant` | Type | `'ghost' \| 'soft' \| 'outlined' \| 'filled'` |
@@ -764,6 +783,7 @@ All exported from `'react-dockable-desktop'`:
 
 ## See also
 
+- [Widgets Out of the Panel →](./widgets-out-of-the-panel) — dock, tab or float a managed widget beside its panel, without remounting it
 - [Toolbar →](./toolbar) — workspace-level tool strip with radio, toggle, and group items
 - [Panel Contributions →](./panel-contributions) — the other direction: publish content *out* to the workspace Toolbar/Sidebar
 - [Context Menus →](./context-menus) — `usePanelContextMenu`, right-click menus

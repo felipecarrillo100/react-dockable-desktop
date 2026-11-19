@@ -48,7 +48,8 @@ workspace.openPanel(id, componentKey, options?)  // open / focus a panel; a mini
 workspace.closePanel(id)                          // close immediately (no guard)
 workspace.minimizePanel(id)                       // send to taskbar
 workspace.restorePanel(id, { focus? })            // restore from taskbar (focus defaults to true)
-workspace.focusPanel(id)                          // bring to front / select tab
+workspace.focusPanel(id)                          // bring to front / select tab; a minimized one stays minimized
+workspace.focusPanel(id, { restore: true })       // ...and restore a minimized one first (7.11.0)
 ```
 
 ### `openPanel` options
@@ -56,7 +57,7 @@ workspace.focusPanel(id)                          // bring to front / select tab
 | Option | Type | Description |
 |---|---|---|
 | `title` | `string \| MessageDescriptor \| (() => string)` | Overrides the panel tab/window title. A function is called each time the title renders, and isn't saved in a layout. |
-| `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | Initial placement. Defaults to `'docked'` when a grid exists. |
+| `initialTarget` | `'floating' \| 'docked' \| 'tabbed'` | Initial placement. Defaults to `'docked'` when a grid exists. `'tabbed'` is the same as `'docked'`: a tab in the active group. To open it beside a particular panel, use `dockTo`. |
 | `anchor` | `FloatAnchor \| null` | Pin a new floating window to a workspace corner. No effect when docked/tabbed. |
 | `focus` | `boolean` | Set `activePanelId` to this panel. Default `true`. |
 | `props` | `object` | Custom per-instance data spread onto the panel component alongside `panelId` — see **Per-panel props** below. Unconstrained, matching the `props` argument of `useModals().open` and `useSidePanels().openLeft`/`openRight`. |
@@ -83,6 +84,17 @@ import { isSerializable } from 'react-dockable-desktop';
 // Check before opening, if you want to warn early instead of discovering it at save time:
 if (!isSerializable(myProps)) { /* ... */ }
 ```
+
+### Changing them later: `updatePanelProps`
+
+```ts
+workspace.updatePanelProps('section-1', { line: newLine });            // replace them
+workspace.updatePanelProps('section-1', prev => ({ ...prev, zoom: 2 })); // or derive them (7.11.0)
+```
+
+The panel re-renders with the new props, `serializable` is re-checked against them (so the next
+`saveLayout()` saves or excludes the panel accordingly), and `layout:changed` is published. It does
+nothing for a panel that isn't open.
 
 ### Reporting state pulled fresh at save time
 
