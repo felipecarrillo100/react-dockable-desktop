@@ -9,7 +9,7 @@ import type { MessageKey } from '../predefinedMessages';
 import type { PanelRegistry } from '../PanelRegistry';
 import type { ResizeDir } from '../dragResize';
 import { initialFocusFor } from './helpers';
-import { DefaultGridIcon } from './icons';
+import { DefaultGridIcon, ContextMenuIcons } from './icons';
 import { PreservedDOMWrapper } from './panelMount';
 import { optionsFor } from '../../core/panelOptions';
 
@@ -135,9 +135,13 @@ export const FloatingWindows = ({
                     e.stopPropagation();
                     const customItems = getPanelContextMenuItems(w.id);
                     if (customItems.length === 0) return;
+                    // A hosted panel's menu is its widget's titleMenu, then the built-in Close (7.11.0).
+                    const closeItem = panel.owner && options?.canClose !== false
+                      ? [{ separator: true as const }, { label: formatLabel(messages.closePanel, formatMessage), icon: ContextMenuIcons.close, action: () => handleRequestClose(w.id) }]
+                      : [];
                     showContextMenu({
                       event: e,
-                      items: customItems,
+                      items: [...customItems, ...closeItem],
                       initialFocus: initialFocusFor(e),
                     });
                   }}

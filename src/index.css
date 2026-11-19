@@ -4001,6 +4001,22 @@ html.rdd-no-animations [class*="rdd-"]::after {
   color: var(--rdd-panel-float-title-color-active, rgba(255, 255, 255, 0.9));
 }
 
+/* The title icon as a button, for a managed widget with a titleMenu (7.11): same size and colour
+   as the plain icon, plus a button's affordances. */
+.rdd-panel-float__menu {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  border-radius: calc(3px * var(--rdd-radius-scale, 1));
+}
+.rdd-panel-float__menu:hover {
+  opacity: 1;
+  background-color: var(--rdd-custom-btn-hover-bg, rgba(255, 255, 255, 0.12));
+}
+
 .rdd-panel-float__close {
   display: inline-flex;
   align-items: center;

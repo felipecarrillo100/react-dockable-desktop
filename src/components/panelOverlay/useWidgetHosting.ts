@@ -16,6 +16,7 @@ import { useOptionalPanelHost } from '../workspace/panelHost';
 import { optionsFor } from '../../core/panelOptions';
 import { findLeafIdOf } from '../../core/layoutTree';
 import type { HostedPanelPlacement, PanelInfo, WorkspaceState } from '../../types';
+import type { ContextMenuItem } from '../ContextMenu';
 import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
 
 interface HostingDeps {
@@ -36,9 +37,15 @@ export interface WidgetHosting {
   location(id: string): WidgetLocation | null;
   /** Removes a widget's hosted panel, if it has one, without closing anything: for close(). */
   release(id: string): void;
-  /** Re-applies a re-opened widget's title and icon to its hosted panel. */
+  /** Re-applies a re-opened widget's title, icon and capabilities to its hosted panel. */
   refresh(id: string, config: ManagedWidget): void;
+  /** The widget's `titleMenu` items for where it is now; empty without one. */
+  menuItems(id: string): ContextMenuItem[];
 }
+
+/** A widget's own capabilities, as its hosted panel's options. */
+const capabilities = (config: ManagedWidget): { canFloat: boolean; canDock: boolean } =>
+  ({ canFloat: config.canFloat ?? false, canDock: config.canDock ?? false });
 
 const NO_HOSTED: Record<string, string> = {};
 
@@ -51,6 +58,8 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   const [hostedIds, setHostedIds] = useState<Record<string, string>>(NO_HOSTED);
   // The same record, read synchronously by move() and the cleanup; with each one's close-handler unregister.
   const hostedRef = useRef(new Map<string, { panelId: string; unregister: () => void }>());
+  // The hosted panels' menu getters are registered once, so they call the latest functions.
+  const latestRef = useRef<{ menuItems: (id: string) => ContextMenuItem[] }>({ menuItems: () => [] });
 
   const setHosted = (id: string, panelId: string | null): void => {
     setHostedIds(prev => {
@@ -118,17 +127,20 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     if (current) detach(id, true);
     const panelId = `${ownerId}/${id}`;
     panelHost.setHostedContent(panelId, el);
-    const opened = actions.openHostedPanel(panelId, { panelId: ownerId, widgetId: id }, config.title as PanelInfo['title'], at);
+    const opened = actions.openHostedPanel(panelId, { panelId: ownerId, widgetId: id, options: capabilities(config) }, config.title as PanelInfo['title'], at);
     if (!opened) {
       panelHost.setHostedContent(panelId, null);
       return { ok: false, reason: 'owner-not-docked' };
     }
     if (config.icon !== undefined) actions.setPanelIcon(panelId, config.icon);
     // An in-page close of the hosted panel closes the widget (D17); going back is move({ to: 'panel' }).
-    const unregister = actions.registerHostedCloseHandler(panelId, () => {
+    const unregisterClose = actions.registerHostedCloseHandler(panelId, () => {
       detach(id, false);
       closeWidget.current(id);
     });
+    // The app's titleMenu items lead the hosted panel's own menus.
+    const unregisterMenu = actions.registerPanelContextMenu(panelId, () => latestRef.current.menuItems(id));
+    const unregister = (): void => { unregisterClose(); unregisterMenu(); };
     hostedRef.current.set(id, { panelId, unregister });
     setHosted(id, panelId);
     return { ok: true };
@@ -152,7 +164,21 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     if (!entry || !actions) return;
     actions.updatePanelTitle(entry.panelId, config.title as PanelInfo['title']);
     actions.setPanelIcon(entry.panelId, config.icon ?? null);
+    actions.setHostedOptions(entry.panelId, capabilities(config));
   };
+
+  const menuItems = (id: string): ContextMenuItem[] => {
+    const config = configs.current.get(id);
+    if (!config?.titleMenu) return [];
+    return config.titleMenu({
+      id,
+      location: location(id) ?? 'panel',
+      ...capabilities(config),
+      move: to => move(id, to),
+      close: () => closeWidget.current(id),
+    });
+  };
+  useEffect(() => { latestRef.current = { menuItems }; });
 
   // A hosted panel that left the workspace without this overlay asking (only loadLayout can do
   // that: it never keeps one) sends its widget back into the panel.
@@ -173,7 +199,7 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   }, []);
 
   // Fresh functions each render are fine: callers reach them through the manager context's memo.
-  return useMemo(() => ({ hostedIds, move, location, release, refresh }),
+  return useMemo(() => ({ hostedIds, move, location, release, refresh, menuItems }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [hostedIds, actions, sync, panelHost, registry, ownerId, release]);
 }

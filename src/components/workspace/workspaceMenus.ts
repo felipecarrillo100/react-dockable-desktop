@@ -33,8 +33,11 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
     const options = optionsFor(registry, panel);
 
     const items = [];
+    // A hosted panel (a widget out of its panel, 7.11.0) has no built-in Float: the widget's own
+    // titleMenu items, which lead its menu below, are what move it.
+    const hosted = !!panel.owner;
     // Floating it is a move the rules decide (7.9.0): canFloat, then the app's canDrop.
-    if (options?.canDrag !== false && isDropAllowed(id, { kind: 'float', anchor: null })) {
+    if (!hosted && options?.canDrag !== false && isDropAllowed(id, { kind: 'float', anchor: null })) {
       items.push({
         label: formatLabel(messages.floatWindow, formatMessage),
         icon: ContextMenuIcons.float,
@@ -62,7 +65,9 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
     if (items.length === 0) return;
 
     const custom = getPanelContextMenuItems(id);
-    const finalItems = custom.length > 0 ? [...items, { separator: true as const }, ...custom] : items;
+    const finalItems = custom.length === 0 ? items
+      : hosted ? [...custom, { separator: true as const }, ...items]
+        : [...items, { separator: true as const }, ...custom];
 
     showContextMenu({
       event: e,

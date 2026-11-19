@@ -5,7 +5,7 @@
  * re-exports it, so every existing import keeps working.
  */
 export type { FloatAnchor } from './WindowManagerContext';
-export type { ToolbarPosition, Stretch, PanelFloatPlacement, ManagedWidget, WidgetLocation, WidgetTarget, MoveResult } from './panelOverlay/types';
+export type { ToolbarPosition, Stretch, PanelFloatPlacement, ManagedWidget, WidgetLocation, WidgetTarget, MoveResult, WidgetMenuContext } from './panelOverlay/types';
 export { PanelOverlayRoot } from './panelOverlay/PanelOverlayRoot';
 export type { RddPanelOverlayProps } from './panelOverlay/PanelOverlayRoot';
 export { PanelToolbar, ToolbarButton, ToolbarToggle, ToolbarSeparator, ToolbarSpacer, ToolbarItem, ToolbarCenter } from './panelOverlay/PanelToolbar';

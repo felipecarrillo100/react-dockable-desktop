@@ -12,6 +12,7 @@
  *   pt=VARIANT      …and a top panel toolbar of that variant (frosted | solid | transparent)
  *   wo=1            panel p3 (needs ov=1) also opens a managed widget `wo` (useFloatingWidgets):
  *                   a counter, a text field, a WebGL canvas and a box with height: 100% (#wo-fill);
+ *                   canDock and canFloat, and a titleMenu ("Dock below" / "Back into the panel");
  *                   its manager is exposed as `window.__wo`
  *   cs=dark|light|none   colour scheme the app sets on <html> (none = app sets nothing)
  *   zb=N            zIndexBase passed to the provider
@@ -106,7 +107,13 @@ function ManagedOpener() {
   // eslint-disable-next-line react-hooks/immutability
   (window as unknown as { __wo: unknown }).__wo = widgets;
   useEffect(() => {
-    widgets.open('wo', { title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right', width: 200, height: 180 });
+    widgets.open('wo', {
+      title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right', width: 200, height: 180,
+      canDock: true, canFloat: true,
+      titleMenu: w => w.location === 'panel'
+        ? [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
+        : [{ label: 'Back into the panel', action: () => w.move({ to: 'panel' }) }],
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;

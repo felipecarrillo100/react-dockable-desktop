@@ -174,6 +174,7 @@ export type {
   WidgetLocation,
   WidgetTarget,
   MoveResult,
+  WidgetMenuContext,
 } from './components/PanelOverlay';
 
 // ─── Panel contributions: active-panel-driven toolbar and sidebar content ──────
