@@ -41,6 +41,24 @@ export const FloatingWindows = ({
       const isFocused = state.activePanelId === w.id;
 
       const options = optionsFor(registry, panel);
+      const hasMenu = getPanelContextMenuItems(w.id).length > 0;
+      // The ⋮ menu; for a hosted panel (a widget out of its panel, 7.11.0) also its title icon's.
+      const openMenu = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const customItems = getPanelContextMenuItems(w.id);
+        if (customItems.length === 0) return;
+        // A hosted panel's menu is its widget's titleMenu, then the built-in Close (7.11.0).
+        const closeItem = panel.owner && options?.canClose !== false
+          ? [{ separator: true as const }, { label: formatLabel(messages.closePanel, formatMessage), icon: ContextMenuIcons.close, action: () => handleRequestClose(w.id) }]
+          : [];
+        showContextMenu({
+          event: e,
+          items: [...customItems, ...closeItem],
+          initialFocus: initialFocusFor(e),
+        });
+      };
+      // A widget's panel opens its menu from the title icon too, as in its owner panel (7.11.0-next.1).
+      const iconOpensMenu = !!panel.owner && hasMenu;
 
       return (
         <div
@@ -113,7 +131,12 @@ export const FloatingWindows = ({
             style={{ cursor: isMaximized || options?.canDrag === false ? 'default' : 'move' }}
           >
             <span className="rdd-floating-window-title">
-              <span className="rdd-window-title-icon">{panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon)}</span>
+              <span
+                className={`rdd-window-title-icon${iconOpensMenu ? ' rdd-window-title-icon--menu' : ''}`}
+                onClick={iconOpensMenu ? openMenu : undefined}
+                onPointerDown={iconOpensMenu ? (e) => e.stopPropagation() : undefined}
+                onDoubleClick={iconOpensMenu ? (e) => e.stopPropagation() : undefined}
+              >{panel.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon)}</span>
               <span>
                 {formatLabel(panel.title, formatMessage)}
                 {panel.dirty ? ' *' : ''}
@@ -125,26 +148,13 @@ export const FloatingWindows = ({
                   {options.renderHeaderActions(w.id)}
                 </div>
               )}
-              {getPanelContextMenuItems(w.id).length > 0 && (
+              {hasMenu && (
                 <button
                   type="button"
                   className="rdd-custom-tab-btn rdd-btn-more-actions"
                   title={formatLabel(messages.moreActions, formatMessage)}
                   aria-label={formatLabel(messages.moreActions, formatMessage)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const customItems = getPanelContextMenuItems(w.id);
-                    if (customItems.length === 0) return;
-                    // A hosted panel's menu is its widget's titleMenu, then the built-in Close (7.11.0).
-                    const closeItem = panel.owner && options?.canClose !== false
-                      ? [{ separator: true as const }, { label: formatLabel(messages.closePanel, formatMessage), icon: ContextMenuIcons.close, action: () => handleRequestClose(w.id) }]
-                      : [];
-                    showContextMenu({
-                      event: e,
-                      items: [...customItems, ...closeItem],
-                      initialFocus: initialFocusFor(e),
-                    });
-                  }}
+                  onClick={openMenu}
                 >
                   <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="12" cy="5" r="2"/>

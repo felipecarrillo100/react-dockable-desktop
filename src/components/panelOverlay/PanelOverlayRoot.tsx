@@ -376,13 +376,16 @@ function WidgetScope({ id, hosting, children }: { id: string; hosting: WidgetHos
     lastKey.current = key;
     settled(id);
   }, [key, id, settled]);
+  // Its own panel's id while it is out of its panel; a widget in the panel has none.
+  const panelId = hosting.hostedIds[id] ?? null;
   const handle = useMemo<WidgetHandle>(() => ({
     id,
     ownerPanelId,
+    panelId,
     location,
     onWillMove: cb => listen(id, 'will', cb),
     onMoved: cb => listen(id, 'moved', cb),
-  }), [id, ownerPanelId, location, listen]);
+  }), [id, ownerPanelId, panelId, location, listen]);
   return <WidgetContext.Provider value={handle}>{children}</WidgetContext.Provider>;
 }
 

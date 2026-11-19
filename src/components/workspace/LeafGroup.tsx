@@ -222,7 +222,18 @@ export const LeafGroup: React.FC<LeafGroupProps> = ({ leaf, onTabRightClick, act
                     }
                     return (
                       <>
-                        <span className="rdd-workspace-tab-icon">{icon}</span>
+                        {panel.owner ? (
+                          // A widget's panel opens its menu from the icon, as in its owner panel
+                          // (7.11.0-next.1): the same menu as a right-click on the tab. Not a separate
+                          // control, like the close ×: the menu key on the tab is the keyboard's way.
+                          <span
+                            className="rdd-workspace-tab-icon rdd-workspace-tab-icon--menu"
+                            onClick={(e) => { e.stopPropagation(); onTabRightClick(id, e); }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                          >{icon}</span>
+                        ) : (
+                          <span className="rdd-workspace-tab-icon">{icon}</span>
+                        )}
                         <span>
                           {title}
                           {panel.dirty ? ' *' : ''}

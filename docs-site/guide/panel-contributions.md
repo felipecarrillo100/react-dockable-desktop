@@ -61,6 +61,8 @@ Both fields are independent — contribute only toolbar items, only sidebar sect
 
 Reads `state.activePanelId` and returns whatever that panel last published via `usePanelContribution()`, or `null` if no panel is active or it contributed nothing. This is the raw, manual-control primitive — for the common case, prefer the two hooks below.
 
+When the active panel shows a managed widget moved out of its owner panel (7.11.0), the result is the **owner's** contribution: a docked results table keeps its map's tools on screen. See [Widgets Out of the Panel →](./widgets-out-of-the-panel#things-to-know).
+
 ```tsx
 const active = useActiveContribution();
 // active?.toolbarItems, active?.sidebarSections

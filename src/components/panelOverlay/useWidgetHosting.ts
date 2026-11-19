@@ -167,13 +167,15 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
         : { kind: 'dock', dockTo: { panel: ownerId, position: to.position, ...(to.size !== undefined ? { size: to.size } : {}) } };
     fire(id, 'will');
     // Already out: the hosted panel is replaced rather than moved, so every target takes one path.
-    // Its content stays rendered here throughout; only the element moves.
+    // Its content stays rendered here throughout; only the element moves. The new panel keeps the
+    // title the old one had, which the app may have set with updatePanelTitle (7.11.0-next.1).
+    const title = (current && s?.panels[current.panelId]?.title) ?? (config.title as PanelInfo['title']);
     if (current) detach(id, true);
     const panelId = `${ownerId}/${id}`;
     panelHost.setHostedContent(panelId, el);
     // Its hosted panel's element moves the content wherever the user takes it: it keeps embeds too.
     if (config.preserveEmbeds) setPreserveEmbeds(panelHost.getOrCreateElement(panelId), true);
-    const opened = actions.openHostedPanel(panelId, { panelId: ownerId, widgetId: id, options: capabilities(config) }, config.title as PanelInfo['title'], at);
+    const opened = actions.openHostedPanel(panelId, { panelId: ownerId, widgetId: id, options: capabilities(config) }, title, at);
     if (!opened) {
       panelHost.setHostedContent(panelId, null);
       return { ok: false, reason: 'owner-not-docked' };

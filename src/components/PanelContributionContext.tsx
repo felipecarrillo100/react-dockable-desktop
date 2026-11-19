@@ -122,13 +122,19 @@ export function usePanelContribution(contribution: PanelContribution): void {
 /**
  * Returns whatever the currently active panel (`state.activePanelId`) has published
  * via `usePanelContribution()`, or `null` if no panel is active or the active panel
- * hasn't contributed anything. Intended for the app shell to merge into its own
+ * hasn't contributed anything. When the active panel shows a managed widget moved out of
+ * its owner panel (7.11.0), this is the owner's contribution. Intended for the app shell to merge into its own
  * `<RddToolbar items={...}>` / `<RddSidebar tabs={...}>` calls.
  *
  * @throws Error if used outside of a {@link DockableDesktopProvider}.
  */
 export function useActivePanelContribution(): PanelContribution | null {
-  const activePanelId = useWindowManagerState(s => s.activePanelId);
+  // A widget out of its panel (7.11.0) is shown by a panel of its own, which contributes nothing:
+  // its content's usePanel() is the owner. So that panel brings its owner's contribution.
+  const activePanelId = useWindowManagerState(s => {
+    const id = s.activePanelId;
+    return (id && s.panels[id]?.owner?.panelId) || id;
+  });
   const store = useContext(PanelContributionContext);
 
   if (!store) throw new Error('useActiveContribution must be used within <DockableDesktopProvider>');

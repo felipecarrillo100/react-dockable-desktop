@@ -10,6 +10,40 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.11.0-next.1] — 2026-11-19
+
+**Pre-release** on npm's `next` tag, from the first feedback on 7.11.0-next.0. Additions and fixes
+to widgets out of the panel only; nothing else changes.
+
+### Added
+
+- **`useWidget().panelId`:** the id of the widget's own panel while it is out of its panel, for
+  workspace calls such as `updatePanelTitle`; `null` while it is in the panel. No need to compose
+  `'<ownerId>/<widgetId>'` yourself.
+- **Out of the panel, the title icon opens the widget's menu, as it does in the panel.** Docked or a
+  tab, the tab's icon opens the same menu as a right-click on the tab; floating, the title bar's
+  icon opens the same menu as its ⋮ button (so, as that button, only with a `titleMenu`). Right-click
+  and ⋮ stay; ordinary panels' icons are unchanged. The icon gets
+  `.rdd-workspace-tab-icon--menu` / `.rdd-window-title-icon--menu`. With your own
+  `renderTabContent`, the tab's icon is yours and opens nothing.
+
+### Fixed
+
+- **A widget's panel now brings its owner's panel contribution.** While it was the active panel,
+  `useActiveContribution()` (and so `useMergedToolbarItems` / `useMergedSidebarTabs`) gave `null`, so
+  the owner's toolbar items and sidebar tabs vanished while the user worked in the widget. It now
+  gives the owner's. Ordinary panels are unchanged.
+- **A title set on a widget's panel is kept across moves out of the panel.** A move from one place out
+  of the panel to another (docked to floating, say) replaces the widget's panel, and the new one took
+  the widget's `title`, dropping one set with `updatePanelTitle`. It now keeps the title it had. A
+  re-open still applies the widget's `title`, which is the recommended place for a live title.
+
+### Docs
+
+- **Widgets Out of the Panel:** a new section, "Content with its own view" (a place keeps its camera,
+  a range keeps what is visible); where the menu opens in each place; `panelId`; the title and
+  contribution notes.
+
 ## [7.11.0-next.0] — 2026-11-19
 
 **Pre-release** on npm's `next` tag (`npm install react-dockable-desktop@next`), for feedback before
@@ -1306,7 +1340,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.1...HEAD
+[7.11.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.0...v7.11.0-next.1
 [7.11.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0-next.0
 [7.10.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.0...v7.10.1
 [7.10.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.9.0...v7.10.0

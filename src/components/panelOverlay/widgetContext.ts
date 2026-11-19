@@ -16,6 +16,11 @@ export interface WidgetHandle {
   id: string;
   /** The workspace panel that owns it, or `null` when its overlay isn't in one. */
   ownerPanelId: string | null;
+  /**
+   * The id of the widget's own panel while it is out of its owner panel, for workspace calls such
+   * as `updatePanelTitle`; `null` while it is in the panel (7.11.0-next.1).
+   */
+  panelId: string | null;
   /** Where it is shown now. A component that reads it re-renders when it changes. */
   location: WidgetLocation;
   /**
