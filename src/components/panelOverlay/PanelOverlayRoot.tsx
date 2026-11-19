@@ -9,6 +9,7 @@ import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
 import { PanelToolbarContext, PanelManagerContext, PanelOverlayContext } from './context';
 import type { PanelOverlayCtx, PanelToolbarCtx, PanelManagerCtx, ManagedPlacement } from './context';
 import { forgetPanelDom } from '../domPreservation';
+import { setPreserveEmbeds } from '../domMove';
 import { toPanelForm, fromPanelForm, parsePlacement } from '../../core/widgetPlacement';
 import type { PanelBox, PanelForm, OutTarget } from '../../core/widgetPlacement';
 import type { WidgetPlacement, WidgetTarget } from './types';
@@ -178,6 +179,8 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
     }
     const reopened = configsRef.current.has(id);
     configsRef.current.set(id, config);
+    setPreserveEmbeds(contentEls.get(id)!, config.preserveEmbeds === true);
+    if (config.preserveEmbeds) hostingRef.current.preserveOwner();
     if (reopened) refreshHosted(id, config);
     setManagedWindows(prev => {
       const next = new Map(prev);

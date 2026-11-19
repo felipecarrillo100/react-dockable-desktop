@@ -382,6 +382,8 @@ export interface WorkspaceActions {
    * Activates the given panel regardless of its current state.
    * - Floating panel: raises z-index so the window appears on top of others.
    * - Docked panel: selects the tab within its leaf group.
+   * - Minimized panel: makes it the active one but leaves it minimized. To restore it as well, call
+   *   `focusPanel(id, { restore: true })` on the workspace (`useWorkspace()`, 7.11.0).
    * @param id - Panel instance ID.
    * @example
    * ```ts
@@ -532,6 +534,18 @@ export interface WorkspaceActions {
    */
   updatePanelTitle: (id: string, title: string | MessageDescriptor | (() => string)) => void;
   /**
+   * Replaces the props an open panel was opened with (7.11.0), or derives them from the current
+   * ones. The panel re-renders with them, `serializable` is re-checked (see {@link PanelInfo.serializable}),
+   * and `layout:changed` is published. Does nothing for a panel that isn't open.
+   * @param id - Panel instance ID.
+   * @param props - The new props, or a function of the current ones.
+   * @example
+   * ```ts
+   * workspace.updatePanelProps('section-1', prev => ({ ...prev, line: newLine }));
+   * ```
+   */
+  updatePanelProps: (id: string, props: Record<string, unknown> | ((prev: Record<string, unknown> | undefined) => Record<string, unknown>)) => void;
+  /**
    * Sets the icon shown on an open panel's tab, floating title bar and taskbar button, in place
    * of its registration's `defaultOptions.icon`. `null` restores the registration's icon. The icon
    * lives only in memory: `saveLayout()` never writes it.
@@ -575,6 +589,8 @@ export interface WorkspaceActions {
  * @internal
  */
 export interface InternalWindowActions extends WorkspaceActions {
+  /** @internal `focusPanel`, with the workspace's `restore` option (7.11.0). */
+  focusPanel: (id: string, options?: { restore?: boolean }) => void;
   /** @internal */
   setActivePanel: (id: string | null) => void;
   /** @internal */

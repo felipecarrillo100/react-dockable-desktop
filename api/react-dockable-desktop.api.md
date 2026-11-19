@@ -442,6 +442,9 @@ type HostedPanelPlacement = {
 
 // @internal
 interface InternalWindowActions extends WorkspaceActions {
+    focusPanel: (id: string, options?: {
+        restore?: boolean;
+    }) => void;
     // (undocumented)
     getPanelContextMenuItems: (panelId: string) => ContextMenuItem[];
     isDropAllowed: (panelId: string, to: PanelDropTarget) => boolean;
@@ -499,6 +502,7 @@ export interface ManagedWidget {
     height?: number;
     icon?: React$1.ReactNode;
     placement?: WidgetPlacement;
+    preserveEmbeds?: boolean;
     stretch?: Stretch;
     title: PanelTitle;
     titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[];
@@ -771,6 +775,7 @@ export interface PanelRegistryEntry {
         className?: string;
         tabClassName?: string;
         keepAlive?: boolean;
+        preserveEmbeds?: boolean;
     };
 }
 
@@ -1652,6 +1657,7 @@ export interface WorkspaceActions {
     unregisterCloseGuard: (id: string) => void;
     unregisterStateProvider: (id: string) => void;
     updateFloatingPosition: (id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>) => void;
+    updatePanelProps: (id: string, props: Record<string, unknown> | ((prev: Record<string, unknown> | undefined) => Record<string, unknown>)) => void;
     updatePanelTitle: (id: string, title: string | MessageDescriptor | (() => string)) => void;
     updateSplitSizes: (path: number[], sizes: number[]) => void;
 }
@@ -1678,6 +1684,9 @@ class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
     // (undocumented)
     floatPanel(...args: Parameters<WorkspaceActions['floatPanel']>): void;
     focusPanel(id: string): void;
+    focusPanel(id: string, options: {
+        restore?: boolean;
+    }): void;
     getOpenPanelIds(): string[];
     readonly initialState: string | null;
     isOpen(id: string): boolean;
@@ -1724,6 +1733,7 @@ class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
     unregisterCloseGuard(id: string): void;
     unregisterStateProvider(id: string): void;
     updateFloatingPosition(id: string, updates: Partial<Pick<FloatingWindow, 'x' | 'y' | 'width' | 'height' | 'anchor'>>): void;
+    updatePanelProps(...args: Parameters<WorkspaceActions['updatePanelProps']>): void;
     updatePanelTitle(id: string, title: string | MessageDescriptor | (() => string)): void;
     updateSplitSizes(path: number[], sizes: number[]): void;
 }

@@ -22,6 +22,9 @@
  *   skin=NAME       skin passed to RddDesktop
  *   ba=HEX, bon=HEX --rdd-brand-accent / --rdd-brand-on-accent set on :root (hex without the #)
  *   tbx=1           toolbar also has a radio pair (group "rg": r1, r2) and a toggle that starts active
+ *   emb=1           also opens `fk` (an iframe panel with preserveEmbeds) and `fb` (the same without),
+ *                   and the `wo` widget (needs ov=1&wo=1) gets preserveEmbeds and an iframe;
+ *                   each iframe counts its loads in `window.__loads[name]`
  *   two=1           a second, independent workspace below the first (panels b1, b2), exposed as `window.__wm2`
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
@@ -109,6 +112,7 @@ function ManagedContent() {
       <span id="wo-count">{count}</span>
       <input id="wo-input" defaultValue="" />
       <canvas id="wo-canvas" ref={canvasRef} width={40} height={20} />
+      {q.get('emb') === '1' && <CountingFrame name="wo" />}
     </div>
   );
 }
@@ -118,7 +122,7 @@ function ManagedOpener() {
   const widgets = useFloatingWidgets();
   const config = {
     title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right' as const, width: 200, height: 180,
-    canDock: true, canFloat: true,
+    canDock: true, canFloat: true, preserveEmbeds: q.get('emb') === '1',
     titleMenu: (w: WidgetMenuContext) => w.location === 'panel'
       ? [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
       : [{ label: 'Back into the panel', action: () => w.move({ to: 'panel' }) }],
@@ -163,6 +167,14 @@ function TitledPanel() {
   return <button id={`rename-${panel.id}`} onClick={() => setDoc({ title: 'Renamed doc', dirty: true })}>Rename</button>;
 }
 
+/** An iframe that counts its loads (a reload is a new load) in the host page's `__loads`. */
+function CountingFrame({ name }: { name: string }) {
+  const doc = `<script>const w = parent; w.__loads = w.__loads || {}; w.__loads['${name}'] = (w.__loads['${name}'] || 0) + 1;</script>${name}`;
+  return <iframe title={name} srcDoc={doc} style={{ width: '100%', height: 60, border: 0 }} />;
+}
+const KeepFrame = () => <CountingFrame name="fk" />;
+const BareFrame = () => <CountingFrame name="fb" />;
+
 function CanvasPanel() {
   return (
     <div data-rdd-preview-unscale="" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -178,6 +190,8 @@ const workspace = createWorkspace({
     canvas: { component: CanvasPanel },
     titled: { component: TitledPanel },
     nopreview: { component: ProbePanel, defaultOptions: { disableLivePreview: true } },
+    keepFrame: { component: KeepFrame, defaultOptions: { preserveEmbeds: true } },
+    bareFrame: { component: BareFrame },
   },
 });
 
@@ -206,6 +220,10 @@ function Inner() {
         actions.dockPanelToWorkspaceEdge('p3', 'right');
         actions.openPanel('p4', 'probe', { title: 'Float Four', initialTarget: 'floating' });
         if (q.get('canvas')) actions.openPanel('cv', 'canvas', { title: 'Canvas' });
+        if (q.get('emb') === '1') {
+          actions.openPanel('fk', 'keepFrame', { title: 'Keep', dockTo: { panel: 'p1', position: 'bottom' } });
+          actions.openPanel('fb', 'bareFrame', { title: 'Bare', dockTo: { panel: 'fk', position: 'right' } });
+        }
         (window as unknown as { __ready: boolean }).__ready = true;
       }, 50);
     }, 50);

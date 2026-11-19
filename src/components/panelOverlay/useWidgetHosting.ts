@@ -18,6 +18,7 @@ import { findLeafIdOf } from '../../core/layoutTree';
 import type { HostedPanelPlacement, PanelInfo, WorkspaceState } from '../../types';
 import type { ContextMenuItem } from '../ContextMenu';
 import type { OutTarget } from '../../core/widgetPlacement';
+import { setPreserveEmbeds } from '../domMove';
 import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
 
 interface HostingDeps {
@@ -44,6 +45,12 @@ export interface WidgetHosting {
   menuItems(id: string): ContextMenuItem[];
   /** The owner panel's id, or null when the overlay isn't in a workspace panel. */
   ownerPanelId: string | null;
+  /**
+   * A widget that keeps its embeds is inside its owner panel's element, which moves whenever the
+   * grid changes around it (as it does when a hosted panel docks beside it): that element must
+   * move with moveBefore() too, so this marks it, for the rest of its life.
+   */
+  preserveOwner(): void;
   /** Where a widget out of its panel is, as a saved placement's target; null in the panel. */
   outTarget(id: string): OutTarget | null;
   /** Subscribes to a widget's `onWillMove` / `onMoved`. */
@@ -164,6 +171,8 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     if (current) detach(id, true);
     const panelId = `${ownerId}/${id}`;
     panelHost.setHostedContent(panelId, el);
+    // Its hosted panel's element moves the content wherever the user takes it: it keeps embeds too.
+    if (config.preserveEmbeds) setPreserveEmbeds(panelHost.getOrCreateElement(panelId), true);
     const opened = actions.openHostedPanel(panelId, { panelId: ownerId, widgetId: id, options: capabilities(config) }, config.title as PanelInfo['title'], at);
     if (!opened) {
       panelHost.setHostedContent(panelId, null);
@@ -245,6 +254,11 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
 
   const ownerPanelId = sync && sync.getSnapshot().panels[ownerId] ? ownerId : null;
 
+  const preserveOwner = (): void => {
+    const el = panelHost?.getElement(ownerId);
+    if (el) setPreserveEmbeds(el, true);
+  };
+
   const outTarget = (id: string): OutTarget | null => {
     const entry = hostedRef.current.get(id);
     const s = sync?.getSnapshot();
@@ -309,7 +323,7 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   }, []);
 
   // Fresh functions each render are fine: callers reach them through the manager context's memo.
-  return useMemo(() => ({ hostedIds, move, location, release, refresh, menuItems, ownerPanelId, listen, settled, outTarget }),
+  return useMemo(() => ({ hostedIds, move, location, release, refresh, menuItems, ownerPanelId, listen, settled, outTarget, preserveOwner }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [hostedIds, actions, sync, panelHost, registry, ownerId, release, ownerPanelId, listen, settled]);
 }

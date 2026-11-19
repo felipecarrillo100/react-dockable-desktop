@@ -331,3 +331,38 @@ describe('managed widget placement', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// M7: preserveEmbeds with a real iframe, in a browser that has moveBefore().
+
+describe('preserveEmbeds', () => {
+  const loads = (page: Page) => page.evaluate(() => (window as unknown as { __loads?: Record<string, number> }).__loads ?? {});
+
+  it('an iframe in a panel type with it keeps its document as the panel moves; one without reloads', async () => {
+    const { page, errors, close } = await openHarness('emb=1&anim=0');
+    expect(await page.evaluate(() => 'moveBefore' in Element.prototype)).toBe(true);
+    await settle(page, 400);
+    expect(await loads(page)).toMatchObject({ fk: 1, fb: 1 });
+    for (const [fn, ...args] of [['floatPanel', 'fk'], ['dockPanel', 'fk'], ['minimizePanel', 'fk'], ['restorePanel', 'fk'], ['floatPanel', 'fb']] as const) {
+      await actions(page, fn, ...args);
+      await settle(page, 400);
+    }
+    const l = await loads(page);
+    expect(l.fk).toBe(1);                      // never reloaded
+    expect(l.fb).toBeGreaterThan(1);           // the control: a plain move reloads
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it('an iframe in a widget with it keeps its document out of the panel and back', async () => {
+    const { page, errors, close } = await openHarness(WO + '&emb=1');
+    await settle(page, 400);
+    expect((await loads(page)).wo).toBe(1);
+    for (const to of [{ to: 'docked', position: 'bottom' }, { to: 'floating', rect: { x: 60, y: 60, width: 300, height: 220 } }, { to: 'tabbed' }, { to: 'panel' }]) {
+      expect(await move(page, to)).toEqual({ ok: true });
+      await settle(page, 400);
+      expect((await loads(page)).wo, JSON.stringify(to)).toBe(1);
+    }
+    await close();
+    expect(errors).toEqual([]);
+  });
+});
