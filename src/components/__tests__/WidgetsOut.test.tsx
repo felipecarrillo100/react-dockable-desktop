@@ -124,6 +124,21 @@ describe('WO1: docked beside the owner', () => {
 });
 
 describe('WO2: tabbed, floating and minimised', () => {
+  it('floating without a rect, from out of the panel, opens where its panel is on screen', () => {
+    const ws = mount();
+    act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });
+    const el = document.querySelector('[data-rdd-panel="map/table"]') as HTMLElement;
+    const viewport = el.closest('.rdd-workspace-viewport') as HTMLElement;
+    el.getBoundingClientRect = () => ({ left: 130, top: 90, width: 410, height: 170, right: 540, bottom: 260, x: 130, y: 90, toJSON() {} }) as DOMRect;
+    viewport.getBoundingClientRect = () => ({ left: 10, top: 20, width: 1000, height: 700, right: 1010, bottom: 720, x: 10, y: 20, toJSON() {} }) as DOMRect;
+    act(() => { api!.move('table', { to: 'floating' }); });
+    expect(state(ws).floating.find(w => w.id === 'map/table')).toMatchObject({ x: 120, y: 70, width: 410, height: 170 });
+    // Floating already, it stays where it is.
+    act(() => { api!.move('table', { to: 'floating', rect: { x: 33, y: 44, width: 300, height: 200 } }); });
+    act(() => { api!.move('table', { to: 'floating' }); });
+    expect(state(ws).floating.find(w => w.id === 'map/table')).toMatchObject({ x: 33, y: 44, width: 300, height: 200 });
+  });
+
   it('a tab in the owner\'s group', () => {
     const ws = mount();
     act(() => { api!.move('table', { to: 'tabbed' }); });
@@ -527,6 +542,22 @@ describe('WO13: useWidget()', () => {
 });
 
 describe('WO14: the order of the callbacks', () => {
+  it('floating to floating, and tabbed to tabbed, are moves too: one will, one moved', async () => {
+    mountProbe();
+    act(() => { api!.move('table', { to: 'floating', rect: { x: 0, y: 0, width: 200, height: 100 } }); });
+    await frames();
+    calls.length = 0;
+    act(() => { api!.move('table', { to: 'floating', rect: { x: 50, y: 40, width: 320, height: 200 } }); });
+    await frames();
+    expect(calls.map(c => c.split('@')[0])).toEqual(['will', 'moved']);
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    await frames();
+    calls.length = 0;
+    act(() => { api!.move('table', { to: 'tabbed' }); });
+    await frames();
+    expect(calls.map(c => c.split('@')[0])).toEqual(['will', 'moved']);
+  });
+
   it('onWillMove before the element moves, onMoved after it landed', async () => {
     mountProbe();
     act(() => { api!.move('table', { to: 'docked', position: 'bottom' }); });

@@ -53,6 +53,9 @@ function MyPanel() {
 - When the panel unmounts, its items are automatically unregistered.
 - Custom items appear after the built-in system items (Float, Minimize, Close) with a separator between them. A panel that can't be dragged, minimized or closed (the [locked pattern](./panel-registry#locked-pinned-panel-pattern)) has no tab menu, so its custom items don't appear there.
 - The **`⋮`** button in the floating window header appears only when custom items exist.
+- **A managed widget's own panel** (7.11.0) is the exception: its `titleMenu` items come first, and
+  there is no built-in Float, because those items are what move it. Its tab icon and its floating
+  title-bar icon open the same menu. See [Widgets Out of the Panel](./widgets-out-of-the-panel).
 
 For panels hosting WebGL canvases or other native surfaces where the browser's `contextmenu` event doesn't carry a meaningful cursor position, use `showContextMenu()` instead.
 

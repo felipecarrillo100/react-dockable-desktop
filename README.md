@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.11.0--next.1-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.11.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -192,7 +192,7 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `useContextMenu()` | `(options) => void` | Show the shared context menu at a pointer event or position |
 | `usePanelContextMenu(items)` | `void` | Inject dynamic context menu items into this panel's right-click menu |
 | `useFloatingWidgets()` | `FloatingWidgetsApi` | Open/close N named floating widgets inside a panel overlay at runtime; each independently anchored, dockable, and resizable. `move()` takes one out of its panel and back, `placement()` saves where it is |
-| `useWidget()` | `WidgetHandle \| null` | Inside a managed widget: its `id`, owner panel, live `location`, and `onWillMove` / `onMoved` around every move |
+| `useWidget()` | `WidgetHandle \| null` | Inside a managed widget: its `id`, owner panel, own `panelId` while out of the panel, live `location`, and `onWillMove` / `onMoved` around every move |
 | `useFormatMessage()` | `MessageFormatter` | i18n formatter matching the current provider's locale |
 | `useMessages()` | `Record<MessageKey, MessageDescriptor>` | The effective built-in message table |
 | `useHostClasses()` | `HostClasses` | The class props set on the provider (`modalClass`, `windowClass`, …) |

@@ -186,6 +186,11 @@ type and to its tab.
 .app-chart-tab { font-style: italic; }
 ```
 
+**A managed widget's own panel** (7.11.0, see [Widgets Out of the Panel](/guide/widgets-out-of-the-panel))
+has no panel type, so `className` and `tabClassName` don't reach it. Target it by id,
+`[data-rdd-tab="<ownerId>/<widgetId>"]` or `[data-rdd-window="<ownerId>/<widgetId>"]`, or its body,
+`.rdd-hosted-widget`. Inside, the widget's content sits in `.rdd-panel-float__content`, wherever it is.
+
 The library's own rules are specific, and some use `!important`, so a rule of yours may need equal
 specificity to win. Where the property comes from a CSS variable, set the variable instead. See
 [UI frameworks](/guide/ui-frameworks) for the full picture.

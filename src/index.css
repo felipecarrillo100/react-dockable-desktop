@@ -4018,7 +4018,7 @@ html.rdd-no-animations [class*="rdd-"]::after {
 }
 
 /* The same, out of the panel: a widget's panel opens its menu from its tab or title-bar icon
-   (7.11.0-next.1). */
+   (7.11.0). */
 .rdd-workspace-tab-icon--menu,
 .rdd-window-title-icon--menu {
   cursor: pointer;

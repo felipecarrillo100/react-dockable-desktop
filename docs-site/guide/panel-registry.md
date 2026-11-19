@@ -16,7 +16,7 @@ const workspace = createWorkspace({
 });
 ```
 
-Each key is the `componentKey` argument to `openPanel(id, componentKey)`. Keys must be stable — they are persisted inside `saveLayout()` JSON.
+Each key is the `componentKey` argument to `openPanel(id, componentKey)`. Keys must be stable — they are persisted inside `saveLayout()` JSON. Keys starting with `rdd:` are reserved for the library: `'rdd:widget'` is the kind of a managed widget's own panel (7.11.0), which `saveLayout()` never saves.
 
 ### PanelDefinition
 

@@ -126,13 +126,25 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     setHosted(id, null);
   }, [actions, panelHost]);
 
-  /** Where the widget's frame is on screen, in workspace pixels: where `'floating'` opens by default. */
+  /**
+   * Where the widget is on screen, in workspace pixels: where `'floating'` opens by default. In the
+   * panel, its frame; out of it, its own panel (a floating one stays where it is).
+   */
   const frameRect = (id: string, config: ManagedWidget): { x: number; y: number; width: number; height: number } => {
+    const hostedId = hostedRef.current.get(id)?.panelId;
+    if (hostedId) {
+      const win = sync?.getSnapshot().floating.find(w => w.id === hostedId);
+      if (win && typeof win.x === 'number' && typeof win.y === 'number' && typeof win.width === 'number' && typeof win.height === 'number') {
+        return { x: win.x, y: win.y, width: win.width, height: win.height };
+      }
+    }
     const root = containerRef.current;
-    const frame = root
-      ? Array.from(root.querySelectorAll<HTMLElement>('[data-rdd-widget]')).find(el => el.getAttribute('data-rdd-widget') === id)
-      : undefined;
-    const viewport = root?.closest('.rdd-workspace-viewport');
+    const frame = hostedId
+      ? Array.from(document.querySelectorAll<HTMLElement>('[data-rdd-panel]')).find(el => el.getAttribute('data-rdd-panel') === hostedId)
+      : root
+        ? Array.from(root.querySelectorAll<HTMLElement>('[data-rdd-widget]')).find(el => el.getAttribute('data-rdd-widget') === id)
+        : undefined;
+    const viewport = (frame ?? root)?.closest('.rdd-workspace-viewport');
     const f = frame?.getBoundingClientRect();
     const v = viewport?.getBoundingClientRect();
     return {
@@ -142,6 +154,27 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
       height: f && f.height > 0 ? Math.round(f.height) : (config.height ?? 240),
     };
   };
+
+  /** onMoved, once: on the element's first size in its new container, else after two frames. */
+  const settled = useCallback((id: string): void => {
+    const el = contentEls.get(id);
+    if (!el) return;
+    let done = false;
+    const finish = (): void => {
+      if (done) return;
+      done = true;
+      observer?.disconnect();
+      fire(id, 'moved');
+    };
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(entries => {
+      if (entries.some(e => e.contentRect.width > 0 && e.contentRect.height > 0)) finish();
+    });
+    observer?.observe(el);
+    const frame = typeof requestAnimationFrame === 'undefined'
+      ? (cb: () => void) => setTimeout(cb, 16)
+      : requestAnimationFrame;
+    frame(() => frame(finish));
+  }, [contentEls]);
 
   const move = (id: string, to: WidgetTarget): MoveResult => {
     const config = configs.current.get(id);
@@ -168,8 +201,9 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     fire(id, 'will');
     // Already out: the hosted panel is replaced rather than moved, so every target takes one path.
     // Its content stays rendered here throughout; only the element moves. The new panel keeps the
-    // title the old one had, which the app may have set with updatePanelTitle (7.11.0-next.1).
+    // title the old one had, which the app may have set with updatePanelTitle (7.11.0).
     const title = (current && s?.panels[current.panelId]?.title) ?? (config.title as PanelInfo['title']);
+    const wasIn = current ? lastKeyRef.current.get(id) : undefined;
     if (current) detach(id, true);
     const panelId = `${ownerId}/${id}`;
     panelHost.setHostedContent(panelId, el);
@@ -190,8 +224,12 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     const unregisterMenu = actions.registerPanelContextMenu(panelId, () => latestRef.current.menuItems(id));
     const unregister = (): void => { unregisterClose(); unregisterMenu(); };
     hostedRef.current.set(id, { panelId, unregister, target: to.to === 'floating' ? { to: 'floating', rect: at.kind === 'float' ? at.rect : undefined } : to });
-    if (sync) lastKeyRef.current.set(id, containerKey(sync.getSnapshot(), panelId, ownerId));
+    const nowIn = sync ? containerKey(sync.getSnapshot(), panelId, ownerId) : undefined;
+    if (nowIn !== undefined) lastKeyRef.current.set(id, nowIn);
     setHosted(id, panelId);
+    // Floating to floating, or a tab to a tab in the same group: the container's key doesn't change,
+    // so WidgetScope won't see the move. It is one all the same (onWillMove ran): settle it here.
+    if (wasIn !== undefined && wasIn === nowIn) settled(id);
     return { ok: true };
   };
 
@@ -233,26 +271,6 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     return () => { entry[kind].delete(cb); };
   }, []);
 
-  /** onMoved, once: on the element's first size in its new container, else after two frames. */
-  const settled = useCallback((id: string): void => {
-    const el = contentEls.get(id);
-    if (!el) return;
-    let done = false;
-    const finish = (): void => {
-      if (done) return;
-      done = true;
-      observer?.disconnect();
-      fire(id, 'moved');
-    };
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(entries => {
-      if (entries.some(e => e.contentRect.width > 0 && e.contentRect.height > 0)) finish();
-    });
-    observer?.observe(el);
-    const frame = typeof requestAnimationFrame === 'undefined'
-      ? (cb: () => void) => setTimeout(cb, 16)
-      : requestAnimationFrame;
-    frame(() => frame(finish));
-  }, [contentEls]);
 
   const ownerPanelId = sync && sync.getSnapshot().panels[ownerId] ? ownerId : null;
 

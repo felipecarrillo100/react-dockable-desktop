@@ -82,8 +82,9 @@ export interface ManagedWidget {
   /**
    * The menu on the widget's title icon (7.11.0), in the app's own words: a "Dock below the map" or
    * "Back into the map" item calls `w.move()`. With it, the title icon becomes a button that opens
-   * these items. Out of the panel, the items lead its workspace panel's tab and title-bar menus,
-   * before the built-in Minimize and Close; the built-in Float is left out, because these replace it.
+   * these items. Out of the panel, its tab's icon and its floating title-bar icon open them too: they
+   * lead the tab's menu (before the built-in Minimize and Close) and the floating window's ⋮ menu
+   * (before Close). The built-in Float is left out, because these replace it.
    * Called each time the menu opens, so items can depend on where the widget is.
    * @example
    * titleMenu: w => w.location === 'panel'
@@ -114,7 +115,8 @@ export interface ManagedWidget {
 /**
  * Where a managed widget is, as plain JSON (7.11.0): from `useFloatingWidgets().placement(id)`,
  * back to `open(id, { placement })`. Opaque: store it as it is (JSON-serialisable) and don't read
- * its fields; they may change between versions, and `v` says which. The same in vdd and ndd.
+ * its fields; they may change between versions, and `v` says which. The same in the Vue and Angular
+ * editions (vue-dockable-desktop, angular-dockable-desktop).
  */
 export type WidgetPlacement = { readonly v: 1 } & Record<string, unknown>;
 
@@ -145,8 +147,8 @@ export type WidgetLocation = 'panel' | 'docked' | 'tabbed' | 'floating' | 'minim
  * Where to move a managed widget with `useFloatingWidgets().move()` (7.11.0). Its owner panel is
  * always the reference: `'docked'` splits the owner's group on that side (`size` is the new
  * panel's share, 0.1–0.9, as in `openPanel`'s `dockTo`), `'tabbed'` adds a tab to the owner's
- * group. `'floating'` opens a floating window at `rect` (workspace pixels), or where the widget is
- * on screen. `'panel'` brings it back to where it last was inside the panel.
+ * group. `'floating'` opens a floating window at `rect` (workspace pixels), or, without one, where
+ * the widget is on screen, at its size. `'panel'` brings it back to where it last was inside the panel.
  */
 export type WidgetTarget =
   | { to: 'panel' }

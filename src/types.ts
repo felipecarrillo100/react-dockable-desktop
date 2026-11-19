@@ -536,7 +536,8 @@ export interface WorkspaceActions {
   /**
    * Replaces the props an open panel was opened with (7.11.0), or derives them from the current
    * ones. The panel re-renders with them, `serializable` is re-checked (see {@link PanelInfo.serializable}),
-   * and `layout:changed` is published. Does nothing for a panel that isn't open.
+   * and `layout:changed` is published. Does nothing for a panel that isn't open, or for a managed
+   * widget's own panel (it has no props of its own).
    * @param id - Panel instance ID.
    * @param props - The new props, or a function of the current ones.
    * @example

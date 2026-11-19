@@ -57,7 +57,7 @@ export const FloatingWindows = ({
           initialFocus: initialFocusFor(e),
         });
       };
-      // A widget's panel opens its menu from the title icon too, as in its owner panel (7.11.0-next.1).
+      // A widget's panel opens its menu from the title icon too, as in its owner panel (7.11.0).
       const iconOpensMenu = !!panel.owner && hasMenu;
 
       return (

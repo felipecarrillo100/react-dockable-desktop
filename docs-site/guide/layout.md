@@ -101,6 +101,10 @@ mid-drag still holds.
 workspace.focusPanel('my-map');
 // For floating: raises z-index so the window appears on top.
 // For docked: selects the tab within its leaf group.
+
+workspace.focusPanel('my-map', { restore: true });
+// A minimized panel is restored first, then focused (7.11.0). Without it, a minimized panel stays
+// in the taskbar.
 ```
 
 ## Querying open panels
@@ -112,6 +116,7 @@ if (!workspace.isOpen('my-map')) {
 
 const openIds = workspace.getOpenPanelIds();
 // → ['my-map', 'settings', 'log-2']
+// While a managed widget is out of its panel, its own panel is listed too: 'my-map/results'.
 ```
 
 ## Floating window operations
@@ -151,6 +156,10 @@ The snapshot JSON contains:
 - `floating` — positions and sizes of floating windows
 - `minimized` — panels in the taskbar
 - `panels` — metadata (title, component key, state) for every open panel
+
+A managed widget's own panel (`'<ownerId>/<widgetId>'`, 7.11.0) is never saved, and isn't reported
+as excluded: `loadLayout()` sends such a widget back into its panel. Restore widgets from their
+owner panel with `placement()`; see [Widgets Out of the Panel](./widgets-out-of-the-panel#saving-and-restoring-placement).
 
 ### Which panel is active after a restore
 
