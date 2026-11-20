@@ -47,6 +47,15 @@ replacement and the version that removes the old API.
   - An "Open in new window" item in the tab menu and the floating window's ⋮ menu of `canPopOut`
     types; from it, a blocked pop-up shows a toast.
   - Messages `popOutWindow`, `returnToDesktop` and `popOutBlocked`.
+- **Styles in pop-out windows.** A pop-out window looks like the page: it gets the page's
+  stylesheets (every `<link rel=stylesheet>` and `<style>` in `<head>`, in order, and
+  `document.adoptedStyleSheets` as text), `<html>`'s and `<body>`'s attributes (skin, colour
+  scheme, theme classes such as `.dark` or `data-bs-theme`, `dir`, `lang`) with their inline CSS
+  variables and `color-scheme`, and the workspace's colour scheme and skin on its frame. All of it
+  follows changes while the window is open: a sheet added or removed, a scheme or skin switch. The
+  frame stays hidden until the copied stylesheets have loaded (3 s at most), so nothing shows
+  unstyled. Not copied: rules a CSS-in-JS library inserts with `insertRule` (their `<style>` tags
+  are empty).
 
 ### Upgrading
 

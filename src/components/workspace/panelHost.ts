@@ -51,6 +51,12 @@ export interface PanelHost {
    */
   getHostedContent(id: string): HTMLElement | undefined;
   setHostedContent(id: string, el: HTMLElement | null): void;
+  /**
+   * The workspace's own element (`.rdd-workspace`), while `<RddDesktop>` is mounted (7.12.0): a
+   * pop-out's frame repeats its scope (colour scheme, skin).
+   */
+  getWorkspaceElement(): HTMLElement | null;
+  setWorkspaceElement(el: HTMLElement | null): void;
 }
 
 /**
@@ -65,6 +71,7 @@ export function createPanelHost(ownerDocument?: Document): PanelHost {
   const dimensions = new Map<string, { width: number; height: number }>();
   const lifecycle = new Map<string, PanelLifecycleRegistry>();
   const hostedContent = new Map<string, HTMLElement>();
+  let workspaceElement: HTMLElement | null = null;
 
   return {
     getOrCreateElement(id) {
@@ -104,6 +111,8 @@ export function createPanelHost(ownerDocument?: Document): PanelHost {
     deleteLifecycle: (id) => { lifecycle.delete(id); },
     getHostedContent: (id) => hostedContent.get(id),
     setHostedContent: (id, el) => { if (el) hostedContent.set(id, el); else hostedContent.delete(id); },
+    getWorkspaceElement: () => workspaceElement,
+    setWorkspaceElement: (el) => { workspaceElement = el; },
   };
 }
 

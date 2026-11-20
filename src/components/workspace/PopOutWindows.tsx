@@ -6,7 +6,7 @@
  * the child window and back without remounting. The windows themselves belong to the workspace
  * client (`core/popOutWindows.ts`); this only renders them.
  */
-import React, { useEffect, useRef, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowManagerState, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
 import { optionsFor } from '../../core/panelOptions';
@@ -14,16 +14,17 @@ import type { PopOutEntry, PopOutWindows as PopOutStore } from '../../core/popOu
 import { usePanelHost } from './panelHost';
 import { PreservedDOMWrapper } from './panelMount';
 import { DefaultGridIcon } from './icons';
+import { startPopOutStyles } from '../../core/popOutStyles';
 
 const NONE: readonly PopOutEntry[] = [];
 const noWindows = (): readonly PopOutEntry[] => NONE;
 
-// The window's essential layout, inline: the library's stylesheet is not in the child window yet
-// (S3 copies it), and without it a panel that fills its slot (height: 100%) would be 0 px tall.
-// The classes stay, for that stylesheet to style the frame once it is there.
+// The window's minimum layout, inline: the frame fills the window and the panel fills the frame's
+// body, so its content stays usable if the copied stylesheet never arrives. The rest of the
+// frame's look is in the stylesheet (26a-popout.css), which the window gets from the page (S3).
 const FRAME_STYLE: React.CSSProperties = { position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column' };
-const HEADER_STYLE: React.CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 6 };
-const TITLE_STYLE: React.CSSProperties = { flex: 'auto', minWidth: 0 };
+/** ...hidden until the copied stylesheets have loaded, rather than flash unstyled. */
+const HIDDEN_FRAME_STYLE: React.CSSProperties = { ...FRAME_STYLE, visibility: 'hidden' };
 const BODY_STYLE: React.CSSProperties = { flex: 'auto', minHeight: 0, position: 'relative' };
 /** The slot and the panel's own elements inside it fill the frame's body (their sizes are in the stylesheet). */
 const FILL = ':scope > .rdd-panel-dom-host, :scope > .rdd-panel-dom-host > .rdd-panel-dom, :scope > .rdd-panel-dom-host > .rdd-panel-dom > .rdd-panel-content';
@@ -45,10 +46,9 @@ function fillSlot(body: HTMLElement): () => void {
   return () => { for (const el of els) { el.style.removeProperty('width'); el.style.removeProperty('height'); } };
 }
 
-function setLanguage(doc: Document, lang: string, dir: string): void {
-  const html = doc.documentElement;
-  if (lang) html.lang = lang;
-  html.dir = dir;
+/** The workspace's direction on the window's `<html>` when the page's sets none (the page's own is mirrored). */
+function setDirection(doc: Document, dir: string): void {
+  if (!document.documentElement.hasAttribute('dir')) doc.documentElement.dir = dir;
 }
 
 /** One window's frame and slot, portaled into its document. */
@@ -61,10 +61,19 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   const title = panel ? formatLabel(panel.title, formatMessage) : '';
   const shown = !!panel?.poppedOut && panel.state === 'floating';
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const panelHost = usePanelHost();
+  const [styled, setStyled] = useState(false);
 
   // The window's title follows the panel's; its language and direction are the page's.
   useEffect(() => { setTitle(doc, title); }, [doc, title]);
-  useEffect(() => { setLanguage(doc, document.documentElement.lang, dir); }, [doc, dir]);
+  useEffect(() => { setDirection(doc, dir); }, [doc, dir]);
+  // The page's styles, <html>/<body> and the workspace's scope, kept in step while it is out (S3).
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!shown || !frame) return;
+    return startPopOutStyles({ child: doc, frame, scope: panelHost.getWorkspaceElement(), onReady: () => setStyled(true) });
+  }, [shown, doc, panelHost]);
   useEffect(() => { fillWindow(doc); }, [doc]);
   // After the slot's own effect has moved the panel's element in (children's effects run first).
   useEffect(() => (shown && bodyRef.current ? fillSlot(bodyRef.current) : undefined), [shown]);
@@ -73,10 +82,11 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   const options = optionsFor(registry, panel);
   const returnLabel = formatLabel(messages.returnToDesktop, formatMessage);
   return createPortal(
-    <div className="rdd-popout-frame" data-rdd-popout={id} dir={dir} style={FRAME_STYLE}>
-      <div className="rdd-popout-frame__header" style={HEADER_STYLE}>
+    // `rdd-workspace` too: what is scoped to the workspace (its colours, scrollbars) applies here.
+    <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
+      <div className="rdd-popout-frame__header">
         <span className="rdd-popout-frame__icon">{panel.icon ?? (options?.icon || DefaultGridIcon)}</span>
-        <span className="rdd-popout-frame__title" style={TITLE_STYLE}>{title}{panel.dirty ? ' *' : ''}</span>
+        <span className="rdd-popout-frame__title">{title}{panel.dirty ? ' *' : ''}</span>
         <button type="button" className="rdd-popout-frame__return" title={returnLabel} onClick={onReturn}>
           {returnLabel}
         </button>
