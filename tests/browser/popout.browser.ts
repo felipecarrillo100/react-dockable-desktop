@@ -184,3 +184,65 @@ describe('a panel in its own window', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// S3: styles in the pop-out. The window gets the page's stylesheets, <html>'s attributes and the
+// workspace's scheme and skin, so what is drawn there looks as it does in the page.
+
+/** Computed colours of the workspace (the frame's counterpart) and a panel element, in `p`. */
+const colours = (p: Page, frameSelector: string) => p.evaluate((sel) => {
+  const frame = document.querySelector(sel) as HTMLElement;
+  const panel = document.getElementById('po-fill') ?? document.querySelector('.rdd-panel-content');
+  const f = getComputedStyle(frame);
+  return {
+    background: f.backgroundColor,
+    color: f.color,
+    accent: f.getPropertyValue('--rdd-accent-color').trim(),
+    font: f.fontFamily,
+    panelColor: panel ? getComputedStyle(panel).color : null,
+    marker: panel ? getComputedStyle(panel).outlineColor : null,
+  };
+}, frameSelector);
+
+describe('styles in a pop-out window', () => {
+  for (const scheme of ['dark', 'light']) {
+    it(`under a skin, ${scheme}: the frame and the panel look as in the page; they follow a scheme and a skin switch, and a sheet added later`, async () => {
+      const { page, errors, close } = await openHarness(`${PO}&skin=nord&cs=${scheme}`);
+      const popup = await popOutByClick(page);
+      await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+      const same = async () => {
+        await settle(page, 200);
+        const main = await colours(page, '.rdd-workspace:not(.rdd-popout-frame)');
+        const out = await colours(popup, '.rdd-popout-frame');
+        expect(out.background).toBe(main.background);
+        expect(out.color).toBe(main.color);
+        expect(out.accent).toBe(main.accent);
+        expect(out.font).toBe(main.font);
+        expect(out.panelColor).toBe(main.color);       // a panel element inherits the workspace's colour
+        return { main, out };
+      };
+      const first = await same();
+
+      // A scheme switch, as the app does it: on <html>.
+      await page.evaluate((s) => document.documentElement.setAttribute('data-color-scheme', s), scheme === 'dark' ? 'light' : 'dark');
+      const switched = await same();
+      expect(switched.main.background).not.toBe(first.main.background);
+
+      // A skin switch.
+      await page.evaluate(() => (window as unknown as { __setSkin(s: string): void }).__setSkin('tokyo'));
+      const reskinned = await same();
+      expect(reskinned.main).not.toEqual(switched.main);              // the skin changed something
+      expect(await popup.getAttribute('.rdd-popout-frame', 'data-rdd-skin')).toBe('tokyo');
+
+      // A sheet added to the page after the pop-out applies there too.
+      await page.evaluate(() => {
+        const s = document.createElement('style');
+        s.textContent = '#po-fill { outline: 1px solid rgb(1, 2, 3); }';
+        document.head.appendChild(s);
+      });
+      await settle(page, 200);
+      expect((await colours(popup, '.rdd-popout-frame')).marker).toBe('rgb(1, 2, 3)');
+      await close();
+      expect(errors).toEqual([]);
+    });
+  }
+});

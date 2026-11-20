@@ -19,7 +19,7 @@
  *   grow=1          no rdd-fill-viewport on the wrapper (the workspace grows with its content)
  *   canvas=1        also opens `cv`, a panel whose canvas sits in a [data-rdd-preview-unscale] box
  *   anim=0          animations={false} on RddDesktop
- *   skin=NAME       skin passed to RddDesktop
+ *   skin=NAME       skin passed to RddDesktop (switchable at run time with `window.__setSkin(name)`)
  *   ba=HEX, bon=HEX --rdd-brand-accent / --rdd-brand-on-accent set on :root (hex without the #)
  *   tbx=1           toolbar also has a radio pair (group "rg": r1, r2) and a toggle that starts active
  *   emb=1           also opens `fk` (an iframe panel with preserveEmbeds) and `fb` (the same without),
@@ -233,6 +233,10 @@ const Icon = ({ t }: { t: string }) => <span style={{ fontSize: 12 }}>{t}</span>
 const Plain = () => <div style={{ padding: 8 }}>overlay content</div>;
 
 function Inner() {
+  // The skin, switchable from a spec (`window.__setSkin`), as an app's theme picker would.
+  const [skin, setSkin] = useState<string | undefined>(q.get('skin') ?? undefined);
+  // eslint-disable-next-line react-hooks/immutability
+  (window as unknown as { __setSkin: unknown }).__setSkin = setSkin;
   const state = useWorkspaceState();
   const actions = useWorkspace();
   const { open: openModal } = useModals();
@@ -299,7 +303,7 @@ function Inner() {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative' }}>
         {TBPOS === 'left' && <RddToolbar position="left" items={items} visible={!TBHIDDEN} />}
         <RddSidebar position={SBPOS} tabs={tabs} defaultWidth={250}>
-          <RddDesktop animations={q.get('anim') !== '0'} skin={q.get('skin') ?? undefined} />
+          <RddDesktop animations={q.get('anim') !== '0'} skin={skin} />
         </RddSidebar>
         {TBPOS === 'right' && <RddToolbar position="right" items={items} visible={!TBHIDDEN} />}
       </div>

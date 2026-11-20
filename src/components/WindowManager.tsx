@@ -403,8 +403,17 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   }, [panelHost, skin, animations]);
   useEffect(() => () => releaseDocumentMirror(panelHost, ['skin', 'noAnimations']), [panelHost]);
 
+  // A pop-out's frame repeats this element's scope (7.12.0).
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = rootRef.current;
+    panelHost.setWorkspaceElement(el);
+    return () => { if (panelHost.getWorkspaceElement() === el) panelHost.setWorkspaceElement(null); };
+  }, [panelHost]);
+
   return (
     <div
+      ref={rootRef}
       className={`rdd-workspace${animations ? '' : ' rdd-no-animations'}`}
       data-rdd-skin={skin}
       data-color-scheme={currentColorScheme}
