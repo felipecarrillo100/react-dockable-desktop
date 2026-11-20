@@ -32,6 +32,24 @@ export function finiteGeometry<T extends Record<string, unknown>>(fw: T, repairs
   return out;
 }
 
+/**
+ * The panels without a pop-out flag (7.12.0). `saveLayout()` never writes one; one in a layout came
+ * from a hand-made JSON, and no window exists for it, so the panel loads as the floating panel it is.
+ */
+function withoutPopOutFlags(panels: Record<string, PanelInfo>): Record<string, PanelInfo> {
+  if (!Object.values(panels).some(p => p && 'poppedOut' in p)) return panels;
+  const out: Record<string, PanelInfo> = {};
+  for (const [id, p] of Object.entries(panels)) {
+    if (p && 'poppedOut' in p) {
+      const { poppedOut: _flag, ...rest } = p;
+      out[id] = rest;
+    } else {
+      out[id] = p;
+    }
+  }
+  return out;
+}
+
 /** A saved window as read from storage, before repair: possibly a pre-anchor layout (`stickyRight`/`stickyBottom`). */
 type RawWindow = Record<string, unknown>;
 
@@ -55,7 +73,7 @@ export function parseLayoutPayload(input: unknown): ParsedLayoutPayload | null {
     }
     return fw;
   }) as unknown as SerializedLayout['floating'];
-  const panels = parsed.panels as Record<string, PanelInfo>;
+  const panels = withoutPopOutFlags(parsed.panels as Record<string, PanelInfo>);
   // Repair before anything reads the tree: activePanelId resolution below asks which panels
   // are visible, and a duplicated or orphaned panel would make that answer meaningless.
   const repaired = repairLayoutTree(parsed.gridRoot as LayoutNode, panels);

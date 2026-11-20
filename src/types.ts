@@ -196,7 +196,31 @@ export interface PanelInfo {
    * the owner panel saves its widgets itself. (7.11.0)
    */
   owner?: PanelOwner;
+  /**
+   * Set while the panel is shown in its own browser window (`workspace.popOutPanel`). Such a
+   * panel is `state: 'floating'` and keeps its floating window entry, which the workspace does not
+   * draw. Runtime only: `saveLayout()` writes the panel where it would come back to (docked in its
+   * place, or floating at its rect), without it, and a loaded layout never has it. (7.12.0)
+   */
+  poppedOut?: true;
 }
+
+/**
+ * What `workspace.popOutPanel(id)` did (7.12.0): `{ ok: true }` when the panel is in its own
+ * window (or already was), otherwise why not, checked in this order:
+ * - `'disabled'`: the workspace was created without `popOut: true`;
+ * - `'not-open'`: no open panel has this id;
+ * - `'not-allowed'`: the panel's type has no `canPopOut` (or it shows a widget out of its panel);
+ * - `'no-gesture'`: the call did not come from a user's click or key press, so no window may open;
+ * - `'blocked'`: the browser's pop-up blocker refused the window;
+ * - `'no-window'`: no `<DockableDesktopProvider>` is mounted to show it, or the window closed or
+ *   could not be used before the panel moved in.
+ *
+ * The panel stays where it was on every refusal.
+ */
+export type PopOutResult =
+  | { ok: true }
+  | { ok: false; reason: 'disabled' | 'not-open' | 'not-allowed' | 'no-gesture' | 'blocked' | 'no-window' };
 
 /** Who a hosted panel belongs to: see {@link PanelInfo.owner}. (7.11.0) */
 export interface PanelOwner {
@@ -353,6 +377,9 @@ export interface WorkspaceActions {
    * @param id - Panel instance ID.
    * @param rect - Optional initial position and size. Omit to use the last known position or a cascaded default.
    * @param anchor - Optional corner to pin the new floating window to. Omit (or pass `null`) for free-float.
+   *
+   * Ignored while the panel is in its own browser window (`popOutPanel`, 7.12.0): it has no window
+   * on the page to place until it returns.
    */
   floatPanel: (id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => void;
   /**
@@ -364,6 +391,8 @@ export interface WorkspaceActions {
   /**
    * Maximizes a floating window to cover the entire workspace viewport.
    * @param id - Panel instance ID.
+   *
+   * Ignored while the panel is in its own browser window (`popOutPanel`, 7.12.0).
    */
   maximizePanel: (id: string) => void;
   /**
@@ -617,6 +646,19 @@ export interface InternalWindowActions extends WorkspaceActions {
    * closes. `onDrop`, just before a `loadLayout` drops it: the widget is about to go home. (7.11.0)
    */
   registerHostedCloseHandler: (id: string, onClose: () => void, onDrop?: () => void) => () => void;
+  /**
+   * @internal Marks an open panel as shown in its own window (7.12.0): a docked or minimized panel
+   * becomes floating first, remembering its group. Returns `false`, changing nothing, when the
+   * workspace has no `popOut` or there is no such panel.
+   */
+  setPoppedOut: (id: string) => boolean;
+  /**
+   * @internal Clears a panel's pop-out flag (7.12.0). With `restorePlace`, a panel that was docked
+   * goes back where it was: its tab-mates' group, its own kept empty group, beside the panels it was
+   * next to, the grid when no panel is docked, else floating (or the first group for a type that
+   * can't float). See `WorkspaceClient.returnPanel`.
+   */
+  clearPoppedOut: (id: string, restorePlace: boolean) => void;
 }
 
 /** @internal Where a hosted panel opens. (7.11.0) */
@@ -706,6 +748,8 @@ export interface WorkspaceCoreConfig {
   defaultSplitRatio?: number;
   defaultEdgeSplitRatio?: number;
   canDrop?: (drop: PanelDrop) => boolean;
+  /** Whether panels may move into their own browser window (7.12.0). */
+  popOut?: boolean;
 }
 
 /** @internal What a workspace store exposes: its actions, and a subscribable snapshot. */

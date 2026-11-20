@@ -12,6 +12,21 @@ import { ContextMenuIcons } from './icons';
 import type { HoveredMinimized } from './Taskbar';
 import { optionsFor } from '../../core/panelOptions';
 
+/** Pop-out windows (7.12.0): whether a panel gets "Open in new window", and what the item does. */
+export interface PopOutMenu {
+  canPopOut: (id: string) => boolean;
+  popOut: (id: string) => void;
+}
+
+/** The "Open in new window" item for a panel, or none (7.12.0). */
+export function popOutMenuItems(
+  popOut: PopOutMenu | undefined, id: string,
+  messages: Record<MessageKey, MessageDescriptor>, formatMessage: MessageFormatter,
+): { label: string; icon: React.ReactElement; action: () => void }[] {
+  if (!popOut?.canPopOut(id)) return [];
+  return [{ label: formatLabel(messages.popOutWindow, formatMessage), icon: ContextMenuIcons.popOut, action: () => popOut.popOut(id) }];
+}
+
 export interface WorkspaceMenusDeps {
   state: WorkspaceState;
   registry: PanelRegistry;
@@ -20,6 +35,8 @@ export interface WorkspaceMenusDeps {
   handleRequestClose: (id: string) => unknown;
   setHoveredMinimized: (v: HoveredMinimized | null) => void;
   actions: Pick<InternalWindowActions, 'floatPanel' | 'minimizePanel' | 'restorePanel' | 'maximizePanel' | 'getPanelContextMenuItems' | 'showContextMenu' | 'isDropAllowed'>;
+  /** Present when the workspace has pop-out windows (7.12.0). */
+  popOut?: PopOutMenu;
 }
 
 export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRightClick: (id: string, e: React.MouseEvent) => void; handleMinimizedRightClick: (id: string, e: React.MouseEvent) => void } {
@@ -44,6 +61,7 @@ export function createWorkspaceMenus(deps: WorkspaceMenusDeps): { handleTabRight
         action: () => floatPanel(id)
       });
     }
+    items.push(...popOutMenuItems(deps.popOut, id, messages, formatMessage));
     if (options?.canMinimize !== false) {
       items.push({
         label: formatLabel(messages.minimizePanel, formatMessage),

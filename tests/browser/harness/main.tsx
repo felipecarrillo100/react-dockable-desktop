@@ -26,6 +26,12 @@
  *                   and the `wo` widget (needs ov=1&wo=1) gets preserveEmbeds and an iframe;
  *                   each iframe counts its loads in `window.__loads[name]`
  *   two=1           a second, independent workspace below the first (panels b1, b2), exposed as `window.__wm2`
+ *   po=1            the workspace has popOut, and opens `pp` (type `popper`, canPopOut) as a tab in p1's
+ *                   group: a counter (#po-inc, #po-count), a scroller (#po-sc) and a WebGL canvas (`window.__poGl`, lost
+ *                   contexts counted in `__poLost`); the header's #po-btn calls popOutPanel('pp') and
+ *                   keeps the result in `window.__poResult`
+ *   pourl=1         (with po=1) popoutUrl is the harness's own popout.html
+ *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
@@ -175,6 +181,30 @@ function CountingFrame({ name }: { name: string }) {
 const KeepFrame = () => <CountingFrame name="fk" />;
 const BareFrame = () => <CountingFrame name="fb" />;
 
+/** po=1: a panel that can pop out, with state, a scroll offset and a WebGL context to keep. */
+function PopPanel() {
+  const [count, setCount] = useState(0);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current!;
+    const w = window as unknown as { __poLost: number; __poGl: WebGLRenderingContext | null };
+    w.__poLost = 0;
+    canvas.addEventListener('webglcontextlost', () => { w.__poLost += 1; });
+    w.__poGl = canvas.getContext('webgl');
+  }, []);
+  return (
+    // Fills its slot (height: 100%), with a scroller taking the rest, as a map or a table would.
+    <div id="po-fill" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div>
+        <button id="po-inc" onClick={() => setCount(c => c + 1)}>+</button>
+        <span id="po-count">{count}</span>
+        <canvas id="po-canvas" ref={canvasRef} width={40} height={20} />
+      </div>
+      <div id="po-sc" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}><div style={{ height: 3000 }}>scroll</div></div>
+    </div>
+  );
+}
+
 function CanvasPanel() {
   return (
     <div data-rdd-preview-unscale="" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -183,8 +213,12 @@ function CanvasPanel() {
   );
 }
 
+const POPOUT = q.get('po') === '1';
 const workspace = createWorkspace({
+  popOut: POPOUT,
   panels: {
+    // Only with po=1: a canPopOut type on a workspace without popOut warns in development.
+    ...(POPOUT ? { popper: { component: PopPanel, defaultOptions: { canPopOut: true } } } : {}),
     probe: { component: ProbePanel },
     overlay: { component: OverlayPanel },
     canvas: { component: CanvasPanel },
@@ -220,6 +254,8 @@ function Inner() {
         actions.dockPanelToWorkspaceEdge('p3', 'right');
         actions.openPanel('p4', 'probe', { title: 'Float Four', initialTarget: 'floating' });
         if (q.get('canvas')) actions.openPanel('cv', 'canvas', { title: 'Canvas' });
+        if (POPOUT) actions.openPanel('pp', 'popper', { title: 'Pop', dockTo: { panel: 'p1', position: 'center' } });
+        if (POPOUT && q.get('po2') === '1') actions.openPanel('pq', 'popper', { title: 'Pop Q', dockTo: { panel: 'p1', position: 'center' } });
         if (q.get('emb') === '1') {
           actions.openPanel('fk', 'keepFrame', { title: 'Keep', dockTo: { panel: 'p1', position: 'bottom' } });
           actions.openPanel('fb', 'bareFrame', { title: 'Bare', dockTo: { panel: 'fk', position: 'right' } });
@@ -250,6 +286,10 @@ function Inner() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div id="hdr" style={{ height: 30, flex: '0 0 30px', display: 'flex', gap: 8 }}>
         <button id="before">before</button>
+        {POPOUT && <button id="po-btn" onClick={() => {
+          (window as unknown as { __poResult: unknown }).__poResult = actions.popOutPanel('pp');
+        }}>pop out</button>}
+        {POPOUT && <button id="po-btn-q" onClick={() => { actions.popOutPanel('pq'); }}>pop out q</button>}
         <span id="ctx" style={{ padding: '0 8px', background: '#ccc' }}
           onContextMenu={(e) => { e.preventDefault(); showCtx({ event: e, items: [
             { label: 'Item one', action: () => {} },
@@ -288,7 +328,8 @@ function SecondDesktop() {
 
 function App() {
   const app = (
-    <DockableDesktopProvider workspace={workspace} dir={DIR === 'prov' ? 'rtl' : undefined} zIndexBase={q.get('zb') ? Number(q.get('zb')) : undefined}>
+    <DockableDesktopProvider workspace={workspace} dir={DIR === 'prov' ? 'rtl' : undefined} zIndexBase={q.get('zb') ? Number(q.get('zb')) : undefined}
+      popoutUrl={q.get('pourl') === '1' ? '/popout.html' : undefined}>
       <Inner />
     </DockableDesktopProvider>
   );

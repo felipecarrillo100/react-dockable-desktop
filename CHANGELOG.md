@@ -10,6 +10,50 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+### Added
+
+- **Pop-out windows for panels**: a panel can move into its own browser window, for a second
+  monitor, and come back, without remounting: its state, scroll offsets and a canvas's WebGL
+  context go with it.
+  - `createWorkspace({ popOut: true })` enables it; the default is `false`, and then nothing of it
+    runs.
+  - `defaultOptions.canPopOut: true` opts a panel type in (off by default). A development warning
+    says when a type sets it on a workspace without `popOut`.
+  - `workspace.popOutPanel(id): PopOutResult` (new exported type): synchronous, to call inside the
+    user's click. `{ ok: true }`, or `{ ok: false, reason }` with `'disabled'`, `'not-open'`,
+    `'not-allowed'`, `'no-gesture'`, `'blocked'` (the pop-up blocker) or `'no-window'`; the panel
+    stays where it was on a refusal, and nothing is shown to the user. A second call brings the
+    window forward.
+  - `workspace.returnPanel(id): { ok: boolean }` brings it back where it was: into the group it was
+    docked in, among its tabs; when its group went with it, the group of a tab-mate back before it;
+    a panel that was alone in its group, beside the same panels on the same side at the same size,
+    or beside the nearest part of its old layout still docked when its neighbours are out too; into
+    the empty grid when nothing of its old layout is docked. Several panels out at once come back,
+    in any order, to the original layout. Otherwise floating (or into the first group, for a type
+    that can't float).
+    Closing the window and its "Return to desktop" button do the same, and so does unmounting the
+    provider. Closing the panel closes its window with it; `loadLayout()` closes every window and
+    shows the loaded layout.
+  - `maximizePanel` and `floatPanel` are ignored while a panel is in its own window; minimizing or
+    docking it from code brings it back to its place first, then applies.
+  - While out, the panel is a floating panel with `PanelInfo.poppedOut: true` (runtime only).
+    `saveLayout()` writes it where it would come back to, so the saved layout is the one it had
+    before it left (docked in its place, or floating at its rect). After a reload it is in the
+    page; "Open in new window" reopens it in one click.
+  - `<DockableDesktopProvider popoutUrl>`: the app's same-origin page for the window (an empty
+    `<body>`); a blank window without it. A page that can't be read (another origin) or doesn't
+    load within 10 s sends the panel back, after `popOutPanel` has returned. The window's title
+    follows the panel's.
+  - An "Open in new window" item in the tab menu and the floating window's ⋮ menu of `canPopOut`
+    types; from it, a blocked pop-up shows a toast.
+  - Messages `popOutWindow`, `returnToDesktop` and `popOutBlocked`.
+
+### Upgrading
+
+- **Three new message keys:** `popOutWindow`, `returnToDesktop` and `popOutBlocked`. An app that
+  types its translation table as `Record<MessageKey, string>` must add them to compile; at run
+  time a missing key falls back to the English default.
+
 ### Changed
 
 - **Internal: the library takes the document and window from the element it acts on** (groundwork

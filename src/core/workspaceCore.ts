@@ -10,7 +10,7 @@ import { isSerializable } from '../components/serializable';
 import { sameTitle, sameDirtyOptions } from '../components/sameUpdate';
 import type { PanelDropTarget, MessageDescriptor, SplitOrientation, SplitDirection, DropPosition, LayoutLeafNode, LayoutNode, FloatAnchor, FloatingWindow, PanelInfo, PanelOwner, HostedPanelPlacement, OpenPanelOptions, WorkspaceState, InternalWindowActions, SerializedLayout, WorkspaceCoreConfig, WorkspaceCore } from '../types';
 import { PanelEventBus } from './eventBus';
-import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, resolveActivePanelId, removePanelFromTree, addPanelToLeaf, isLoneOccupant, hasLeaf, findFirstLeafId, findLeafIdOf, splitLeafInTree } from './layoutTree';
+import { EMPTY_LEAF, isVisibleActiveTarget, deriveActivePanelId, resolveActivePanelId, removePanelFromTree, addPanelToLeaf, isLoneOccupant, hasLeaf, findFirstLeafId, findLeafIdOf, splitLeafInTree, placesBeside, returnBeside, insertPanelInLeaf, groupOf, type PlaceBeside } from './layoutTree';
 import { DEFAULT_FLOAT_RECT, parseLayoutPayload, parseInitialState, withoutHostedPanels } from './serialize';
 import { optionsFor, HOSTED_COMPONENT } from './panelOptions';
 
@@ -94,7 +94,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     if (isNaN(height)) height = 350;
 
     const isOverlapping = (pos: { x: number; y: number }) => {
+      // A panel in its own window (7.12.0) keeps an entry here that nothing draws: not in the way.
       return currentFloating.some(w => {
+        if (stateRef.current.panels[w.id]?.poppedOut) return false;
         const wx = typeof w.x === 'string' ? parseFloat(w.x) : w.x;
         const wy = typeof w.y === 'string' ? parseFloat(w.y) : w.y;
         return !w.maximized && Math.abs(wx - pos.x) < 20 && Math.abs(wy - pos.y) < 20;
@@ -530,6 +532,177 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     };
   };
 
+  // ── Pop-out windows (7.12.0): a panel shown in its own browser window ──
+  // A popped-out panel is a floating panel with a flag; the workspace draws no frame for it, and
+  // the window itself belongs to the workspace client (see core/popOutWindows.ts).
+
+  /**
+   * Where a popped-out panel was beside its neighbour in the grid, for a panel alone in its group:
+   * that group goes when the panel leaves, so `lastLeafId` alone can't bring it back. Runtime only.
+   */
+  const popOutOrigins = new Map<string, { places: PlaceBeside[]; mates: string[]; seq: number }>();
+  /** Counts pop-outs, so returns can be replayed last out first. */
+  let popOutSeq = 0;
+  /** Numbers the groups a return creates. */
+  let popOutLeafSeq = 0;
+
+  /**
+   * `s` with every popped-out panel at its return place, the last one out first: the layout from
+   * before they left (P1). Pure; the live state is untouched.
+   */
+  const withReturnPlaces = (s: WorkspaceState): WorkspaceState => {
+    const out = Object.values(s.panels).filter(p => p.poppedOut)
+      .sort((x, y) => (popOutOrigins.get(y.id)?.seq ?? 0) - (popOutOrigins.get(x.id)?.seq ?? 0));
+    return out.reduce((acc, p) => returnPlace(acc, p.id, false), s);
+  };
+
+  const setPoppedOut = (id: string): boolean => {
+    if (!config.popOut || !(id in stateRef.current.panels)) return false;
+    const before = stateRef.current.panels[id];
+    if (before.poppedOut && before.state === 'floating') return true;
+    setState(prev => {
+      const was = prev.panels[id];
+      if (!was) return prev;
+      // Where it is in its layout: worked out on a copy with the panels already out put back. A
+      // minimized panel is restored on that copy only, never into the live grid, whose groups may
+      // be waiting for those panels.
+      const base = withReturnPlaces(prev);
+      const whole = was.state === 'minimized' ? applyRestore(base, id, false) : base;
+      if (whole.panels[id]?.state === 'docked') {
+        // Remembered as minimizing does, so returning puts it back in its group (P3).
+        const lastLeafId = findLeafIdOf(whole.gridRoot, id) ?? undefined;
+        // Its group-mates and neighbours, and those of every panel already out, from that copy:
+        // whoever comes back first finds the others where they belong.
+        const record = (q: string, seq: number) => popOutOrigins.set(q, {
+          places: placesBeside(whole.gridRoot, q), mates: groupOf(whole.gridRoot, q)?.panels ?? [q], seq,
+        });
+        for (const q of Object.values(prev.panels)) {
+          const o = popOutOrigins.get(q.id);
+          if (q.poppedOut && q.previousState === 'docked' && o && findLeafIdOf(whole.gridRoot, q.id)) record(q.id, o.seq);
+        }
+        record(id, ++popOutSeq);
+        const options = optionsFor(registry, was);
+        const others = prev.floating.filter(w => w.id !== id);
+        maxZRef.current += 1;
+        const rect = getCascadedPosition(options?.favoritePosition || DEFAULT_FLOAT_RECT, others);
+        const floated: WorkspaceState = {
+          ...prev,
+          gridRoot: removePanelFromTree(prev.gridRoot, id) || EMPTY_LEAF,
+          minimized: prev.minimized.filter(m => m.id !== id),
+          floating: [...others, { ...rect, id, z: maxZRef.current, anchor: null }],
+          panels: { ...prev.panels, [id]: { ...was, state: 'floating', previousState: 'docked', lastLeafId, poppedOut: true } },
+        };
+        return { ...floated, activePanelId: resolveActivePanelId(floated, id) };
+      }
+      // A floating one (a minimized floating one comes back first, where it was).
+      const next = was.state === 'minimized' ? applyRestore(prev, id, true) : prev;
+      const panel = next.panels[id];
+      if (!panel) return prev;
+      popOutOrigins.set(id, { places: [], mates: [id], seq: ++popOutSeq });
+      return {
+        ...next,
+        panels: { ...next.panels, [id]: { ...panel, previousState: 'floating', lastLeafId: undefined, poppedOut: true } },
+        activePanelId: id,
+      };
+    });
+    eventBusRef.current.publish('layout:changed', {});
+    return true;
+  };
+
+  /**
+   * Where a popped-out panel goes back (P3), as a state: the flag cleared, and a panel that was
+   * docked into its tab-mates' group; else its own group while it waits empty (kept); else beside
+   * the panels it was next to, on the same side at the same share; else into the grid when no
+   * panel is docked; else floating where it is, or into the first group when its type can't float.
+   * A panel that was floating stays at its rect. Pure: the return and `saveLayout()` (P1) both use it, so a
+   * saved layout is the one the panel would come back to.
+   */
+  const leafById = (n: LayoutNode, leafId: string): LayoutLeafNode | null =>
+    n.type === 'leaf' ? (n.id === leafId ? n : null) : n.children.reduce<LayoutLeafNode | null>((f, c) => f ?? leafById(c, leafId), null);
+  const leavesOf = (n: LayoutNode): LayoutLeafNode[] => (n.type === 'leaf' ? [n] : n.children.flatMap(leavesOf));
+  const hasDockedPanel = (n: LayoutNode): boolean => (n.type === 'leaf' ? n.panels.length > 0 : n.children.some(hasDockedPanel));
+
+  const returnPlace = (s: WorkspaceState, id: string, activate: boolean): WorkspaceState => {
+    const p = s.panels[id];
+    if (!p?.poppedOut) return s;
+    const { poppedOut: _flag, ...panel } = p;
+    const cleared: WorkspaceState = { ...s, panels: { ...s.panels, [id]: panel } };
+    if (panel.state !== 'floating' || panel.previousState !== 'docked') return cleared;
+    const origin = popOutOrigins.get(id);
+    const docked = (gridRoot: LayoutNode): WorkspaceState => {
+      const next: WorkspaceState = {
+        ...cleared,
+        gridRoot,
+        floating: cleared.floating.filter(w => w.id !== id),
+        panels: { ...cleared.panels, [id]: { ...panel, state: 'docked' } },
+      };
+      return { ...next, activePanelId: resolveActivePanelId(next, activate ? id : null) };
+    };
+    const mates = origin?.mates ?? [id];
+    // Its group is where its group-mates are: the group of the nearest one docked, among their tabs.
+    const k = mates.indexOf(id);
+    const byDistance = mates.filter(m => m !== id).sort((x, y) => Math.abs(mates.indexOf(x) - k) - Math.abs(mates.indexOf(y) - k));
+    for (const mate of byDistance) {
+      const group = groupOf(cleared.gridRoot, mate);
+      if (group) return docked(insertPanelInLeaf(cleared.gridRoot, group.id, id, mates, activate));
+    }
+    // With none docked, its old group counts only while it is empty (a kept group): a group with that
+    // id holding other panels is a new one (the empty grid's id is reused, `group-default`).
+    const own = panel.lastLeafId ? leafById(cleared.gridRoot, panel.lastLeafId) : null;
+    if (own && own.panels.length === 0) return docked(insertPanelInLeaf(cleared.gridRoot, own.id, id, mates, activate));
+    // Beside the nearest part of its old layout still docked (innermost split first).
+    // Unique: several returns can run in one millisecond (a save puts every panel back on a copy).
+    const leafId = `group-popout-${Date.now()}-${++popOutLeafSeq}`;
+    // Panels still out don't count against a split's old sizes: they are on their way back. One
+    // whose own group was kept and waits empty is there, in its group's place (it stands in).
+    const outPanels = Object.values(cleared.panels).filter(q => q.poppedOut);
+    const out = new Set(outPanels.map(q => q.id));
+    const standIn = new Map<string, string>();
+    for (const q of outPanels) {
+      const kept = q.previousState === 'docked' && q.lastLeafId ? leafById(cleared.gridRoot, q.lastLeafId) : null;
+      if (kept && kept.panels.length === 0) standIn.set(q.id, kept.id);
+    }
+    for (const place of origin?.places ?? []) {
+      const gridRoot = returnBeside(cleared.gridRoot, id, place, leafId, out, standIn);
+      if (gridRoot) return docked(gridRoot);
+    }
+    // Nothing of its old layout is docked and no panel is in the grid (they are all out, or it was
+    // the whole grid; kept-empty groups may remain): into its first group that waits for no other
+    // panel. The next one back finds it.
+    const waiting = new Set(standIn.values());
+    const first = leavesOf(cleared.gridRoot).find(l => !waiting.has(l.id));
+    if (origin && first && !hasDockedPanel(cleared.gridRoot)) {
+      return docked(insertPanelInLeaf(cleared.gridRoot, first.id, id, mates, activate));
+    }
+    const options = optionsFor(registry, panel);
+    if (options?.canDrag === false || options?.canFloat === false) return applyDock(cleared, id, undefined, activate);
+    return cleared;
+  };
+
+  const clearPoppedOut = (id: string, restorePlace: boolean) => {
+    const panel = stateRef.current.panels[id];
+    if (!panel?.poppedOut) { popOutOrigins.delete(id); return; }
+    let moved = false;
+    setState(prev => {
+      const p = prev.panels[id];
+      if (!p?.poppedOut) return prev;
+      if (restorePlace) {
+        const next = returnPlace(prev, id, true);
+        moved = next.panels[id]?.state !== p.state;
+        return next;
+      }
+      const { poppedOut: _flag, ...rest } = p;
+      return { ...prev, panels: { ...prev.panels, [id]: rest } };
+    });
+    popOutOrigins.delete(id);
+    if (moved) eventBusRef.current.publish('layout:changed', {});
+  };
+
+  /** An action that moves a popped-out panel from code brings it back where it was first (7.12.0). */
+  const endPopOut = (id: string) => {
+    if (stateRef.current.panels[id]?.poppedOut) clearPoppedOut(id, true);
+  };
+
   const registerCloseGuard = (id: string, guard: () => boolean | Promise<boolean>) => {
     closeGuardsRef.current[id] = guard;
   };
@@ -626,6 +799,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   };
 
   const minimizePanel = (id: string) => {
+    // Minimized from its window: it remembers its group, not the hidden floating entry.
+    endPopOut(id);
     const wasActive = stateRef.current.panels[id]?.state !== 'minimized' && id in stateRef.current.panels;
     setState(prev => {
       const panel = prev.panels[id];
@@ -713,12 +888,15 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
 
   const floatPanel = (id: string, rect?: { x: number; y: number; width: number; height: number }, anchor?: FloatAnchor | null) => {
     const panel = stateRef.current.panels[id];
+    // A panel in its own window (7.12.0) has no window here to place: ignored until it returns.
+    if (panel?.poppedOut) return;
     const willFloat = !!panel && optionsFor(registry, panel)?.canDrag !== false;
     setState(prev => applyFloat(prev, id, { rect, anchor }));
     if (willFloat) eventBusRef.current.publish('layout:changed', {});
   };
 
   const dockPanel = (id: string, targetLeafId?: string) => {
+    endPopOut(id);
     const exists = id in stateRef.current.panels;
     setState(prev => applyDock(prev, id, targetLeafId));
     if (exists) eventBusRef.current.publish('layout:changed', {});
@@ -730,6 +908,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   };
 
   const dockPanelToGroup = (id: string, targetLeafId: string, position: DropPosition) => {
+    endPopOut(id);
     const before = stateRef.current;
     const willMove = id in before.panels
       && hasLeaf(before.gridRoot, targetLeafId)
@@ -786,6 +965,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   };
 
   const dockPanelToWorkspaceEdge = (id: string, position: SplitDirection) => {
+    endPopOut(id);
     const before = stateRef.current;
     const willMove = id in before.panels && removePanelFromTree(before.gridRoot, id) !== null;
     setState(prev => {
@@ -964,7 +1144,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
 
   const maximizePanel = (id: string) => {
     const panel = stateRef.current.panels[id];
-    if (!panel) return;
+    // Nor one to maximize (7.12.0).
+    if (!panel || panel.poppedOut) return;
 
     if (panel.state === 'minimized') {
       // "Maximize" on a minimized panel (the taskbar menu offers it) is restore + maximize.
@@ -1052,7 +1233,10 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
   };
 
   const saveLayout = () => {
-    const currentPanels = stateRef.current.panels;
+    // A panel in its own window is saved where it would come back to (P1, 7.12.0): the layout is
+    // the one it would have had, had it never left. The live state is not touched.
+    const live = withReturnPlaces(stateRef.current);
+    const currentPanels = live.panels;
     const excludedIds: string[] = [];
     // Hosted panels (7.11.0) are never saved and never reported as excluded: the owner panel
     // saves its widgets itself.
@@ -1088,9 +1272,9 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     // stateRef/setState, so the live, on-screen workspace is completely unaffected — an excluded
     // panel keeps existing and working normally on screen, it simply won't be there after the
     // *next* loadLayout().
-    let gridRoot = stateRef.current.gridRoot;
-    let floating = stateRef.current.floating;
-    let minimized = stateRef.current.minimized;
+    let gridRoot = live.gridRoot;
+    let floating = live.floating;
+    let minimized = live.minimized;
     for (const id of [...excludedIds, ...hostedIds]) {
       gridRoot = removePanelFromTree(gridRoot, id) || { type: 'leaf', id: 'group-default', panels: [], activePanelId: null };
       floating = floating.filter(w => w.id !== id);
@@ -1107,7 +1291,7 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     // excluded above, or is minimized, the field is omitted entirely rather than persisted as an id
     // this payload's own `panels` doesn't contain. A restore then derives it — see
     // `deriveActivePanelId`.
-    const liveActive = stateRef.current.activePanelId;
+    const liveActive = live.activePanelId;
     const activePanelId = liveActive !== null && isVisibleActiveTarget(liveActive, { gridRoot, floating, panels: includedPanels })
       ? liveActive
       : null;
@@ -1249,6 +1433,8 @@ export function createWorkspaceCore(config: WorkspaceCoreConfig): WorkspaceCore 
     removeHostedPanel,
     setHostedOptions,
     registerHostedCloseHandler,
+    setPoppedOut,
+    clearPoppedOut,
     setDirection,
     registerPanelContextMenu,
     getPanelContextMenuItems,

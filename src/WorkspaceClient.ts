@@ -13,6 +13,8 @@ import type {
   FloatingWindow,
 } from './components/WindowManagerContext';
 import type { ShowContextMenuOptions } from './components/ContextMenu';
+import type { PopOutResult } from './types';
+import { createPopOutWindows, type PopOutWindows } from './core/popOutWindows';
 
 /** Built-in lifecycle events always available on the workspace event bus. */
 export interface BuiltInEvents {
@@ -106,6 +108,21 @@ export interface WorkspaceClientConfig {
    * ```
    */
   canDrop?: (drop: PanelDrop) => boolean;
+  /**
+   * Lets panels move into their own browser window, for a second monitor (7.12.0): a panel type
+   * opts in with `defaultOptions.canPopOut`, and the user opens it with "Open in new window" or
+   * the app with `workspace.popOutPanel(id)`. Set once, here. With `false`, nothing of it runs: no menu item, and `popOutPanel` returns
+   * `{ ok: false, reason: 'disabled' }`. @default false
+   *
+   * @example
+   * ```ts
+   * const workspace = createWorkspace({
+   *   popOut: true,
+   *   panels: { chart: { component: ChartPanel, defaultOptions: { canPopOut: true } } },
+   * });
+   * ```
+   */
+  popOut?: boolean;
 }
 
 /**
@@ -153,6 +170,9 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
   /** @internal The workspace store. Live from construction; a provider only subscribes to it. */
   readonly _core: WorkspaceCore;
 
+  /** @internal The workspace's pop-out windows (7.12.0); the provider renders them. */
+  readonly _popOut: PopOutWindows;
+
   /** The store's actions, to which every method below forwards. */
   private get _actions(): WorkspaceActions { return this._core.actions; }
 
@@ -167,6 +187,7 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
       defaultEdgeSplitRatio: config.defaultEdgeSplitRatio,
       zIndexBase: config.zIndexBase,
     };
+    const popOut = config.popOut === true;
 
     if (config.panels) {
       for (const [id, def] of Object.entries(config.panels)) {
@@ -190,7 +211,20 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
       defaultSplitRatio: config.defaultSplitRatio,
       defaultEdgeSplitRatio: config.defaultEdgeSplitRatio,
       canDrop: config.canDrop,
+      popOut,
     });
+    this._popOut = createPopOutWindows(this._core, this.registry, popOut);
+
+    if (process.env.NODE_ENV === 'development' && !popOut && config.panels) {
+      const types = Object.entries(config.panels).filter(([, def]) => def.defaultOptions?.canPopOut).map(([key]) => key);
+      if (types.length > 0) {
+        console.warn(
+          `[react-dockable-desktop] Panel type${types.length > 1 ? 's' : ''} ${types.map(t => `"${t}"`).join(', ')} ` +
+          `set canPopOut, but this workspace was created without popOut, so no panel can open in its ` +
+          `own window. Pass createWorkspace({ popOut: true }) to enable it.`
+        );
+      }
+    }
   }
 
   private _dispatch(fn: (actions: WorkspaceActions) => void): void {
@@ -240,6 +274,47 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    */
   focusPanel(id: string, options: { restore?: boolean }): void;
   focusPanel(id: string, options?: { restore?: boolean }): void { this._core.actions.focusPanel(id, options); }
+
+  /**
+   * Moves a panel into its own browser window (7.12.0), for a second monitor. Nothing remounts:
+   * the panel's state, scroll offsets and a canvas's WebGL context go with it. A docked panel
+   * remembers its group and goes back into it on return.
+   *
+   * Call it inside the user's click or key press: browsers only open a window then. It is
+   * synchronous, and says what happened (see {@link PopOutResult}); on a refusal the panel stays
+   * where it is and nothing is shown to the user, so the app decides what to say. Calling it for a
+   * panel that is already out brings its window forward.
+   *
+   * Needs `createWorkspace({ popOut: true })` and the panel type's `defaultOptions.canPopOut`.
+   * The window opens `<DockableDesktopProvider popoutUrl>`, or a blank window. When that page can't
+   * be used after all (another origin, or it doesn't load within 10 s), the panel comes back and the
+   * window closes, after this has returned `{ ok: true }`.
+   *
+   * @example
+   * ```tsx
+   * <button onClick={() => {
+   *   const result = workspace.popOutPanel('chart-1');
+   *   if (!result.ok && result.reason === 'blocked') alert('Allow pop-ups for this site.');
+   * }}>Pop out</button>
+   * ```
+   */
+  popOutPanel(id: string): PopOutResult { return this._popOut.popOut(id); }
+
+  /**
+   * Brings a panel back from its own window (7.12.0), where it was. A panel that was floating
+   * floats at its rect. One that was docked goes, in this order:
+   * - into the group of its tab-mates, among their tabs, when one of them is docked;
+   * - into its own group, when that group was kept and waits empty;
+   * - beside the panels it was next to, on the same side at the same size (the nearest part of its
+   *   old layout still docked);
+   * - into the grid, when no panel is docked there;
+   * - otherwise floating, or into the first group for a type that can't float.
+   *
+   * Panels out at the same time come back, in any order, to the layout they left. The window
+   * closes. Closing the window, or its "Return to desktop" button, does the same. `ok` is false
+   * when the panel wasn't in a window.
+   */
+  returnPanel(id: string): { ok: boolean } { return this._popOut.returnPanel(id); }
 
   /** Returns `true` if a panel with this ID is currently open. */
   isOpen(id: string): boolean { return this._actions.isOpen(id); }

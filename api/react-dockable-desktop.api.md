@@ -331,6 +331,18 @@ export const defaultMessages: {
         readonly id: "dockable-desktop-untitledPanel";
         readonly defaultMessage: "Panel";
     };
+    readonly popOutWindow: {
+        readonly id: "dockable-desktop-popOutWindow";
+        readonly defaultMessage: "Open in new window";
+    };
+    readonly returnToDesktop: {
+        readonly id: "dockable-desktop-returnToDesktop";
+        readonly defaultMessage: "Return to desktop";
+    };
+    readonly popOutBlocked: {
+        readonly id: "dockable-desktop-popOutBlocked";
+        readonly defaultMessage: "The browser blocked the new window. Allow pop-ups for this site and try again.";
+    };
 };
 
 // @public
@@ -357,6 +369,7 @@ export interface DockableDesktopProviderProps {
     messages?: Record<string, MessageDescriptor>;
     modalBodyClass?: string;
     modalClass?: string;
+    popoutUrl?: string;
     sidePanelBodyClass?: string;
     sidePanelClass?: string;
     windowBodyClass?: string;
@@ -442,6 +455,7 @@ type HostedPanelPlacement = {
 
 // @internal
 interface InternalWindowActions extends WorkspaceActions {
+    clearPoppedOut: (id: string, restorePlace: boolean) => void;
     focusPanel: (id: string, options?: {
         restore?: boolean;
     }) => void;
@@ -459,6 +473,7 @@ interface InternalWindowActions extends WorkspaceActions {
     // (undocumented)
     setActivePanel: (id: string | null) => void;
     setHostedOptions: (id: string, options: NonNullable<PanelOwner['options']>) => void;
+    setPoppedOut: (id: string) => boolean;
 }
 
 // @public
@@ -712,6 +727,7 @@ export interface PanelInfo {
     };
     lastLeafId?: string;
     owner?: PanelOwner;
+    poppedOut?: true;
     previousState?: 'docked' | 'floating';
     props?: Record<string, unknown>;
     serializable: boolean;
@@ -776,6 +792,7 @@ export interface PanelRegistryEntry {
         tabClassName?: string;
         keepAlive?: boolean;
         preserveEmbeds?: boolean;
+        canPopOut?: boolean;
     };
 }
 
@@ -823,6 +840,54 @@ export interface PointerDragConfig<TStart> {
     startClientX: number;
     // (undocumented)
     startClientY: number;
+}
+
+// @internal
+interface PopOutEntry {
+    // (undocumented)
+    readonly doc: Document | null;
+    // (undocumented)
+    readonly id: string;
+    readonly key: string;
+    // (undocumented)
+    readonly win: Window;
+}
+
+// @internal
+interface PopOutHost {
+    park(id: string): void;
+    rectOf(id: string): {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    } | null;
+}
+
+// @public
+export type PopOutResult = {
+    ok: true;
+} | {
+    ok: false;
+    reason: 'disabled' | 'not-open' | 'not-allowed' | 'no-gesture' | 'blocked' | 'no-window';
+};
+
+// @internal
+interface PopOutWindows {
+    // Warning: (ae-forgotten-export) The symbol "PopOutHost" needs to be exported by the entry point index.d.ts
+    bindHost(host: PopOutHost): () => void;
+    canPopOut(id: string): boolean;
+    readonly enabled: boolean;
+    // Warning: (ae-forgotten-export) The symbol "PopOutEntry" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    getSnapshot(): readonly PopOutEntry[];
+    popOut(id: string): PopOutResult;
+    returnPanel(id: string): {
+        ok: boolean;
+    };
+    setUrl(url: string | undefined): void;
+    subscribe(cb: () => void): () => void;
 }
 
 // @public
@@ -1709,6 +1774,11 @@ class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
     }[]) => void): () => void;
     // (undocumented)
     openPanel(...args: Parameters<WorkspaceActions['openPanel']>): void;
+    // Warning: (ae-forgotten-export) The symbol "PopOutWindows" needs to be exported by the entry point index.d.ts
+    //
+    // @internal
+    readonly _popOut: PopOutWindows;
+    popOutPanel(id: string): PopOutResult;
     // (undocumented)
     publish<K extends keyof (TUserEvents & BuiltInEvents)>(event: K, data: (TUserEvents & BuiltInEvents)[K]): void;
     registerCloseGuard(id: string, guard: () => boolean | Promise<boolean>): void;
@@ -1720,6 +1790,9 @@ class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
     }): Promise<void>;
     // (undocumented)
     restorePanel(...args: Parameters<WorkspaceActions['restorePanel']>): void;
+    returnPanel(id: string): {
+        ok: boolean;
+    };
     // (undocumented)
     saveLayout(): string;
     // (undocumented)
@@ -1748,6 +1821,7 @@ interface WorkspaceClientConfig {
     formatMessage?: MessageFormatter;
     initialState?: string | null;
     panels?: Record<string, PanelDefinition>;
+    popOut?: boolean;
     predefinedMessages?: Record<string, MessageDescriptor>;
     zIndexBase?: number;
 }

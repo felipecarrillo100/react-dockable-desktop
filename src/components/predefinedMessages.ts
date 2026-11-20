@@ -51,6 +51,10 @@ export const defaultPredefinedMessages = {
   componentUnregistered: { id: 'dockable-desktop-componentUnregistered', defaultMessage: 'Component Unregistered' },
   componentKey: { id: 'dockable-desktop-componentKey', defaultMessage: 'Key: {key}' },
   untitledPanel: { id: 'dockable-desktop-untitledPanel', defaultMessage: 'Panel' },
+  // Pop-out windows (7.12.0).
+  popOutWindow: { id: 'dockable-desktop-popOutWindow', defaultMessage: 'Open in new window' },
+  returnToDesktop: { id: 'dockable-desktop-returnToDesktop', defaultMessage: 'Return to desktop' },
+  popOutBlocked: { id: 'dockable-desktop-popOutBlocked', defaultMessage: 'The browser blocked the new window. Allow pop-ups for this site and try again.' },
 } as const;
 
 /**

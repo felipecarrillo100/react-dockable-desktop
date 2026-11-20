@@ -13,7 +13,7 @@ export const DefaultGridIcon: React.ReactElement = (
   </svg>
 );
 
-export const ContextMenuIcons: Record<'float' | 'minimize' | 'restore' | 'maximize' | 'close', React.ReactElement> = {
+export const ContextMenuIcons: Record<'float' | 'minimize' | 'restore' | 'maximize' | 'close' | 'popOut', React.ReactElement> = {
   // Two offset equal rects — Windows "restore-down / new window" language
   float: (
     <span className="rdd-menu-icon">
@@ -52,6 +52,15 @@ export const ContextMenuIcons: Record<'float' | 'minimize' | 'restore' | 'maximi
     <span className="rdd-menu-icon">
       <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </span>
+  ),
+  // A box with an arrow leaving it — open in a new window (7.12.0)
+  popOut: (
+    <span className="rdd-menu-icon">
+      <svg className="rdd-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 3h7v7M21 3l-9 9"/>
+        <path d="M19 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/>
       </svg>
     </span>
   ),
