@@ -113,7 +113,7 @@ export type PanelState = PanelInfo['state'];
  *
  * **Identity.** `id` and the five functions (`close`, `minimize`, `setDirty`, `setTitle`,
  * `setIcon`) never change identity for the panel's lifetime. The handle object itself changes
- * when `containerType`, `isActive`, `isMinimized` or `isFloating` does. So don't list the handle
+ * when `containerType`, `isActive`, `isMinimized`, `isFloating` or `isPoppedOut` does. So don't list the handle
  * in a dependency array: depend on the function you call, or on the values you write.
  */
 export interface PanelHandle {
@@ -125,8 +125,13 @@ export interface PanelHandle {
   isActive: boolean;
   /** A workspace panel that is minimized to the taskbar. */
   isMinimized: boolean;
-  /** A workspace panel shown as a floating window. */
+  /** A workspace panel shown as a floating window. True too while it is in its own browser window. */
   isFloating: boolean;
+  /**
+   * A workspace panel shown in its own browser window (`workspace.popOutPanel`, 7.12.0). Its
+   * window and document are {@link usePanelWindow}'s.
+   */
+  isPoppedOut: boolean;
   /** Asks the container to close, honouring close guards and the dirty flag. */
   close: (options?: CloseOptions) => void;
   /** Minimizes a workspace panel. No effect in a modal or drawer. */
@@ -162,6 +167,7 @@ export function usePanel(): PanelHandle {
   // on every write to the panel (title, dirty, props), including the panel's own writes.
   const state = useOptionalWindowManagerState(s => s.panels[id]?.state, undefined);
   const isActive = useOptionalWindowManagerState(s => s.activePanelId === id, false);
+  const isPoppedOut = useOptionalWindowManagerState(s => s.panels[id]?.poppedOut === true, false);
   const containerType: ContainerType = state
     ? (state === 'floating' ? 'floating-window' : 'dockable-panel')
     : (c.containerType ?? 'standalone');
@@ -184,8 +190,9 @@ export function usePanel(): PanelHandle {
     isActive: !!state && isActive,
     isMinimized: state === 'minimized',
     isFloating: state === 'floating',
+    isPoppedOut: !!state && isPoppedOut,
     ...mutators,
-  }), [mutators, id, containerType, state, isActive]);
+  }), [mutators, id, containerType, state, isActive, isPoppedOut]);
 }
 
 /** Lifecycle callbacks for {@link usePanelEvents}. Each is called at the moment it describes. */

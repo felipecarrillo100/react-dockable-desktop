@@ -31,6 +31,9 @@
  *                   contexts counted in `__poLost`); the header's #po-btn calls popOutPanel('pp') and
  *                   keeps the result in `window.__poResult`
  *   pourl=1         (with po=1) popoutUrl is the harness's own popout.html
+ *   emo=1           (with po=1) the documented Emotion recipe: a popoutWrapper with a CacheProvider whose
+ *                   cache follows the panel's document (speedy: rules inserted with insertRule, as in
+ *                   production); `pp` shows an Emotion-styled #po-emo; `window.__poMounts` counts its mounts
  *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
@@ -46,12 +49,15 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../../src/index.css';
+import createCache, { type EmotionCache } from '@emotion/cache';
+import { CacheProvider, ClassNames } from '@emotion/react';
 import {
   createWorkspace, DockableDesktopProvider, RddDesktop, RddSidebar, RddToolbar,
   useWorkspaceState, useWorkspace, usePanel, useContextMenu,
   RddPanelOverlay, RddFloatingWidget, RddSidePanels, RddModals, RddToasts, useModals, useSidePanels, RddConfirm, toast,
   type ToolbarItem, type SidebarTab, type FloatAnchor,
   RddPanelToolbar, RddToolbarItem, useFloatingWidgets, useWidget, type WidgetMenuContext, type WidgetPlacement,
+  type PopoutWrapperProps,
 } from '../../../src/index';
 
 const q = new URLSearchParams(location.search);
@@ -182,8 +188,26 @@ const KeepFrame = () => <CountingFrame name="fk" />;
 const BareFrame = () => <CountingFrame name="fb" />;
 
 /** po=1: a panel that can pop out, with state, a scroll offset and a WebGL context to keep. */
+/** emo=1: one Emotion cache per document, inserting into that document's <head>, with insertRule. */
+const emotionCaches = new WeakMap<Document, EmotionCache>();
+const cacheFor = (doc: Document): EmotionCache => {
+  let cache = emotionCaches.get(doc);
+  if (!cache) {
+    cache = createCache({ key: 'hx', container: doc.head, speedy: true });
+    emotionCaches.set(doc, cache);
+  }
+  return cache;
+};
+const EmotionWrapper = ({ document: doc, children }: PopoutWrapperProps) => (
+  <CacheProvider value={cacheFor(doc)}>{children}</CacheProvider>
+);
+
 function PopPanel() {
   const [count, setCount] = useState(0);
+  useEffect(() => {
+    const w = window as unknown as { __poMounts?: number };
+    w.__poMounts = (w.__poMounts ?? 0) + 1;
+  }, []);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -199,6 +223,11 @@ function PopPanel() {
         <button id="po-inc" onClick={() => setCount(c => c + 1)}>+</button>
         <span id="po-count">{count}</span>
         <canvas id="po-canvas" ref={canvasRef} width={40} height={20} />
+        {q.get('emo') === '1' && (
+          <ClassNames>{({ css }) => (
+            <span id="po-emo" className={css({ color: 'rgb(10, 20, 30)', letterSpacing: '3px', borderBottom: '2px solid rgb(40, 50, 60)' })}>emotion</span>
+          )}</ClassNames>
+        )}
       </div>
       <div id="po-sc" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}><div style={{ height: 3000 }}>scroll</div></div>
     </div>
@@ -333,7 +362,8 @@ function SecondDesktop() {
 function App() {
   const app = (
     <DockableDesktopProvider workspace={workspace} dir={DIR === 'prov' ? 'rtl' : undefined} zIndexBase={q.get('zb') ? Number(q.get('zb')) : undefined}
-      popoutUrl={q.get('pourl') === '1' ? '/popout.html' : undefined}>
+      popoutUrl={q.get('pourl') === '1' ? '/popout.html' : undefined}
+      popoutWrapper={q.get('emo') === '1' ? EmotionWrapper : undefined}>
       <Inner />
     </DockableDesktopProvider>
   );

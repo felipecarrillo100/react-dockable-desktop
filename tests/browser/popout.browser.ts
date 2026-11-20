@@ -246,3 +246,39 @@ describe('styles in a pop-out window', () => {
     });
   }
 });
+
+// S4: the app's popoutWrapper. With the documented Emotion recipe (a cache per document, speedy:
+// rules inserted with insertRule, which the head copy can't carry), a styled element looks the same
+// in the pop-out and after the return, and nothing remounts.
+
+const emotionStyle = (p: Page) => p.evaluate(() => {
+  const el = document.getElementById('po-emo');
+  if (!el) return null;
+  const s = getComputedStyle(el);
+  return { color: s.color, letterSpacing: s.letterSpacing, border: s.borderBottomColor };
+});
+/** The Emotion <style> tags of a document: whether one holds its rules only through insertRule. */
+const insertedOnly = (p: Page) => p.evaluate(() => Array.from(document.querySelectorAll<HTMLStyleElement>('style[data-emotion^="hx"]'))
+  .some(s => (s.textContent ?? '') === '' && (s.sheet?.cssRules.length ?? 0) > 0));
+
+describe('popoutWrapper (Emotion, speedy)', () => {
+  it('an Emotion-styled element looks the same in the pop-out and after the return, with no remount', async () => {
+    const { page, errors, close } = await openHarness(`${PO}&emo=1`);
+    const inPage = await emotionStyle(page);
+    expect(inPage).toEqual({ color: 'rgb(10, 20, 30)', letterSpacing: '3px', border: 'rgb(40, 50, 60)' });
+    expect(await insertedOnly(page)).toBe(true);                // the production path: insertRule
+    const mounts = await page.evaluate(() => (window as unknown as { __poMounts: number }).__poMounts);
+
+    const popup = await popOutByClick(page);
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    expect(await emotionStyle(popup)).toEqual(inPage);
+    expect(await insertedOnly(popup)).toBe(true);               // inserted into the pop-out's own head
+
+    await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-popout-frame__return')]);
+    await settle(page, 300);
+    expect(await emotionStyle(page)).toEqual(inPage);
+    expect(await page.evaluate(() => (window as unknown as { __poMounts: number }).__poMounts)).toBe(mounts);
+    await close();
+    expect(errors).toEqual([]);
+  });
+});

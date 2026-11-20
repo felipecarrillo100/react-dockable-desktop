@@ -47,6 +47,19 @@ replacement and the version that removes the old API.
   - An "Open in new window" item in the tab menu and the floating window's ⋮ menu of `canPopOut`
     types; from it, a blocked pop-up shows a toast.
   - Messages `popOutWindow`, `returnToDesktop` and `popOutBlocked`.
+- **Code in a pop-out window: `popoutWrapper`, `usePanelWindow()`, `isPoppedOut`, events.**
+  - `<DockableDesktopProvider popoutWrapper>`: a component given `{ window, document, children }`,
+    rendered around every panel's content for its whole life while the workspace has `popOut`
+    (none otherwise), so nothing remounts. `window` / `document` are where the panel is: the
+    pop-out's while it is out, switched before the panel moves in. For CSS-in-JS whose rules are
+    inserted with `insertRule` (Emotion, styled-components in production): give it a cache per
+    document, and the panel is styled in the pop-out.
+  - `usePanelWindow(): PanelWindow` (`{ window, document }`): the window the panel is shown in; it
+    changes on pop-out and return.
+  - `usePanel().isPoppedOut`.
+  - Events `panel:popped-out { id, window }` (once the window's page is ready) and
+    `panel:returned { id }` (whatever brought it back; not for a panel closed while out).
+  - New exported types `PanelWindow` and `PopoutWrapperProps`.
 - **Styles in pop-out windows.** A pop-out window looks like the page: it gets the page's
   stylesheets (every `<link rel=stylesheet>` and `<style>` in `<head>`, in order, and
   `document.adoptedStyleSheets` as text), `<html>`'s and `<body>`'s attributes (skin, colour

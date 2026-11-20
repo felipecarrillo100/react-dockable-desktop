@@ -9,6 +9,7 @@ import type { ContextMenuAdapter } from './ContextMenu';
 import { WorkspaceClient } from '../WorkspaceClient';
 import { WorkspaceInstanceContext } from './WorkspaceInstanceContext';
 import type { Workspace } from '../api';
+import { PopoutWrapperContext, type PopoutWrapperProps } from './workspace/panelWindow';
 
 /** Props for `<DockableDesktopProvider>`. */
 export interface DockableDesktopProviderProps {
@@ -51,6 +52,32 @@ export interface DockableDesktopProviderProps {
    * `createWorkspace({ popOut: true })`.
    */
   popoutUrl?: string;
+  /**
+   * A component around every panel's content, given the window and document the panel is in (7.12.0):
+   * the main ones, then the pop-out's while it is in its own window. For CSS-in-JS: a cache per
+   * document, so the panel's styles are inserted where it is shown (a pop-out doesn't get rules
+   * inserted with `insertRule` from the page). Rendered for every panel, for its whole life, while
+   * the workspace has `popOut: true` (none otherwise), so nothing remounts when a panel moves. Pass
+   * a stable component (defined outside a render), not an inline function.
+   *
+   * @example
+   * ```tsx
+   * import createCache from '@emotion/cache';
+   * import { CacheProvider } from '@emotion/react';
+   *
+   * const caches = new WeakMap<Document, ReturnType<typeof createCache>>();
+   * const cacheFor = (doc: Document) => {
+   *   let c = caches.get(doc);
+   *   if (!c) { c = createCache({ key: 'app', container: doc.head }); caches.set(doc, c); }
+   *   return c;
+   * };
+   * const PopoutWrapper = ({ document, children }: PopoutWrapperProps) =>
+   *   <CacheProvider value={cacheFor(document)}>{children}</CacheProvider>;
+   *
+   * <DockableDesktopProvider workspace={workspace} popoutWrapper={PopoutWrapper}>…</DockableDesktopProvider>
+   * ```
+   */
+  popoutWrapper?: React.ComponentType<PopoutWrapperProps>;
 }
 
 /**
@@ -71,7 +98,7 @@ export interface DockableDesktopProviderProps {
  * ```
  */
 export const DockableDesktopProvider: React.FC<DockableDesktopProviderProps> = (
-  { contextMenuAdapter = DefaultContextMenuAdapter, workspace, messages, popoutUrl, children, ...props }
+  { contextMenuAdapter = DefaultContextMenuAdapter, workspace, messages, popoutUrl, popoutWrapper, children, ...props }
 ): React.ReactElement => {
   const existingCtxMenu = useContext(ContextMenuContext);
   const [ws] = useState(() => workspace ?? new WorkspaceClient<object>());
@@ -80,15 +107,17 @@ export const DockableDesktopProvider: React.FC<DockableDesktopProviderProps> = (
 
   const inner = (
     <WorkspaceInstanceContext.Provider value={ws}>
-      <ToolbarProvider>
-        <WindowManagerProvider client={ws} predefinedMessages={messages} {...props}>
-          <PanelContributionProvider>
-            <PanelProvider>
-              {children}
-            </PanelProvider>
-          </PanelContributionProvider>
-        </WindowManagerProvider>
-      </ToolbarProvider>
+      <PopoutWrapperContext.Provider value={popoutWrapper ?? null}>
+        <ToolbarProvider>
+          <WindowManagerProvider client={ws} predefinedMessages={messages} {...props}>
+            <PanelContributionProvider>
+              <PanelProvider>
+                {children}
+              </PanelProvider>
+            </PanelContributionProvider>
+          </WindowManagerProvider>
+        </ToolbarProvider>
+      </PopoutWrapperContext.Provider>
     </WorkspaceInstanceContext.Provider>
   );
 
