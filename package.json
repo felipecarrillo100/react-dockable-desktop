@@ -72,6 +72,8 @@
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
     "@eslint/js": "^10.0.1",
     "@microsoft/api-extractor": "^7.59.4",
     "@monaco-editor/react": "^4.6.0",

@@ -45,8 +45,15 @@ export interface BuiltInEvents {
         id: string;
         component: string;
     };
+    'panel:popped-out': {
+        id: string;
+        window: Window;
+    };
     // (undocumented)
     'panel:restored': {
+        id: string;
+    };
+    'panel:returned': {
         id: string;
     };
 }
@@ -370,6 +377,7 @@ export interface DockableDesktopProviderProps {
     modalBodyClass?: string;
     modalClass?: string;
     popoutUrl?: string;
+    popoutWrapper?: React$1.ComponentType<PopoutWrapperProps>;
     sidePanelBodyClass?: string;
     sidePanelClass?: string;
     windowBodyClass?: string;
@@ -704,6 +712,7 @@ export interface PanelHandle {
     isActive: boolean;
     isFloating: boolean;
     isMinimized: boolean;
+    isPoppedOut: boolean;
     minimize: () => void;
     setDirty: (dirty: boolean, options?: DirtyStateOptions) => void;
     setIcon: (icon: React$1.ReactNode) => void;
@@ -825,6 +834,14 @@ export interface PanelTitleDescriptor {
 }
 
 // @public
+export interface PanelWindow {
+    // (undocumented)
+    document: Document;
+    // (undocumented)
+    window: Window;
+}
+
+// @public
 export interface PointerDragConfig<TStart> {
     activeClasses?: Array<{
         el: HTMLElement;
@@ -888,6 +905,12 @@ interface PopOutWindows {
     };
     setUrl(url: string | undefined): void;
     subscribe(cb: () => void): () => void;
+}
+
+// @public
+export interface PopoutWrapperProps extends PanelWindow {
+    // (undocumented)
+    children: ReactNode;
 }
 
 // @public
@@ -1597,6 +1620,9 @@ export const usePanelSize: () => {
     width: number;
     height: number;
 } | null;
+
+// @public
+export function usePanelWindow(): PanelWindow;
 
 // @public
 export function useSaveState(getState: (() => unknown) | null): void;

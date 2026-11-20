@@ -23,6 +23,17 @@ export interface BuiltInEvents {
   'panel:minimized': { id: string };
   'panel:restored':  { id: string };
   /**
+   * A panel moved into its own browser window (`popOutPanel`, 7.12.0), once that window's page is
+   * ready: `window` is it, the one `usePanelWindow()` now gives the panel.
+   */
+  'panel:popped-out': { id: string; window: Window };
+  /**
+   * A panel that was in its own window is back in the page (7.12.0), whatever brought it back: the
+   * app, the frame's button, the window closing, the provider unmounting. Not sent for a panel
+   * closed while out (`panel:closed` is).
+   */
+  'panel:returned': { id: string };
+  /**
    * Fires whenever something `saveLayout()` would capture changes — open/close/minimize/restore,
    * float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and an
    * `openPanel` `dedupeKey` redirect. Coalesces those into one signal for autosave-style

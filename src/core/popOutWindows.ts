@@ -72,6 +72,8 @@ export interface PopOutWindows {
 }
 
 interface Entry {
+  /** `panel:popped-out` was sent (the page is ready and the panel out), so `panel:returned` follows. */
+  announced?: boolean;
   key: string;
   id: string;
   win: Window;
@@ -153,7 +155,15 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     if (entries.size === 0) watchMainPage(false);
     core.actions.clearPoppedOut(id, restorePlace);
     emit();
+    if (entry.announced && core.getSnapshot().panels[id]) core.actions.publish('panel:returned', { id });
     return true;
+  };
+
+  /** Sends `panel:popped-out` once the panel is out and its window's page is ready. */
+  const announce = (entry: Entry) => {
+    if (entry.announced || !entry.doc || entries.get(entry.id) !== entry || !core.getSnapshot().panels[entry.id]?.poppedOut) return;
+    entry.announced = true;
+    core.actions.publish('panel:popped-out', { id: entry.id, window: entry.win });
   };
 
   /**
@@ -203,7 +213,7 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     if (!tryAttach()) {
       const onLoad = () => {
         if (!live() || entry.doc) return;
-        if (tryAttach() && live()) { stopWaiting(); emit(); }
+        if (tryAttach() && live()) { stopWaiting(); emit(); announce(entry); }
       };
       const timer = setTimeout(() => { if (live() && !entry.doc) fail(id, `did not load within ${POPOUT_LOAD_TIMEOUT_MS / 1000} s`); }, POPOUT_LOAD_TIMEOUT_MS);
       checkReady = onLoad;
@@ -283,6 +293,7 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
       return refuse('not-open');
     }
     emit();
+    announce(entry);
     return { ok: true };
   };
 

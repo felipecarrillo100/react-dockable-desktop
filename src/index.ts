@@ -61,6 +61,8 @@ export type { RddDesktopProps, TaskbarVisibility } from './components/WindowMana
 // ─── Panel side: what a panel component uses ───────────────────────────────────
 export { usePanel, usePanelEvents, useBeforeClose, useSaveState } from './api';
 export type { PanelHandle, PanelEvents, PanelState } from './api';
+export { usePanelWindow } from './components/workspace/panelWindow';
+export type { PanelWindow, PopoutWrapperProps } from './components/workspace/panelWindow';
 export { usePanelSize } from './components/FormContainerContext';
 export type { CloseOptions, ContainerType } from './components/FormContainerContext';
 export type { DirtyStateOptions } from './components/dirtyOptions';

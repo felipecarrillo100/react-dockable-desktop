@@ -2,7 +2,7 @@
  * @file panelMount.tsx
  * @description Where panels live: the slots that place a panel's preserved DOM (in a tab, a window, a taskbar preview), its lifecycle events and form container. The DOM, sizes and lifecycle handlers themselves belong to the workspace's own panel host (`panelHost.ts`).
  */
-import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect, useContext, useMemo, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { resizeObserverFor } from '../../utils/domContext';
 import { restorePanelDom } from '../domPreservation';
@@ -17,6 +17,8 @@ import { isShownInGrid } from '../../core/layoutTree';
 import { optionsFor } from '../../core/panelOptions';
 import { moveInto, moveIntoWhenConnected, leaveSlot, setPreserveEmbeds, preservesEmbeds } from '../domMove';
 import type { PanelHost } from './panelHost';
+import { WorkspaceInstanceContext } from '../WorkspaceInstanceContext';
+import { PanelWindowContext, PopoutWrapperContext, mainWindow, type PanelWindow } from './panelWindow';
 
 /**
  * For an element that keeps its embeds (`preserveEmbeds`, 7.11.0): parks it before React removes
@@ -360,8 +362,33 @@ export const FormContainerProviderWrapper: React.FC<{ panelId: string; children:
  * a tab, a window or a preview). Memoised and given only the id: it reads its own entry and the
  * direction, so it re-renders when its panel changes, never because another panel did (7.7.2).
  */
+const noSubscribe = (): (() => void) => () => {};
+const noDocument = (): Document | null => null;
+
+/**
+ * The window panel `panelId` is in (7.12.0): its pop-out's once that window's page is ready, the
+ * main one otherwise. From the same store the pop-out's slot renders from, so in the render that
+ * shows the panel's slot in the pop-out this already gives the pop-out's document; the slot then
+ * moves the element in, after that render is committed.
+ */
+function usePanelWindowOf(panelId: string): PanelWindow {
+  const popOut = useContext(WorkspaceInstanceContext)?._popOut;
+  const enabled = !!popOut?.enabled;
+  const doc = useSyncExternalStore(
+    enabled ? popOut!.subscribe : noSubscribe,
+    enabled ? () => popOut!.getSnapshot().find(e => e.id === panelId)?.doc ?? null : noDocument,
+    noDocument,
+  );
+  return useMemo(() => (doc?.defaultView ? { window: doc.defaultView, document: doc } : mainWindow()), [doc]);
+}
+
 export const PanelMount: React.FC<{ panelId: string }> = React.memo(({ panelId }) => {
   const panelHost = usePanelHost();
+  const panelWindow = usePanelWindowOf(panelId);
+  // The app's wrapper (popoutWrapper), around every panel's content for its whole life while the
+  // workspace has pop-outs, so the tree never changes shape (a new parent would remount it).
+  const enabled = !!useContext(WorkspaceInstanceContext)?._popOut.enabled;
+  const Wrapper = useContext(PopoutWrapperContext);
   const panel = useWindowManagerState(s => s.panels[panelId]);
   const dir = useWindowManagerState(s => s.dir);
   const registry = useRegistry();
@@ -372,13 +399,22 @@ export const PanelMount: React.FC<{ panelId: string }> = React.memo(({ panelId }
   const shown = useWindowManagerState(s => keepAlive || isPanelShown(s, panelId));
   if (!panel) return null;
   const typeClass = optionsFor(registry, panel)?.className;
+  const content = (
+    <div className={`rdd-panel-content${typeClass ? ` ${typeClass}` : ''}`} data-rdd-panel={panelId} dir={dir}>
+      {shown && (panel.owner
+        ? <HostedWidgetSlot panelId={panelId} />
+        : renderPanelContent(panelId, panel, registry, messages, formatMessage))}
+    </div>
+  );
   return createPortal(
     <FormContainerProviderWrapper panelId={panelId}>
-      <div className={`rdd-panel-content${typeClass ? ` ${typeClass}` : ''}`} data-rdd-panel={panelId} dir={dir}>
-        {shown && (panel.owner
-          ? <HostedWidgetSlot panelId={panelId} />
-          : renderPanelContent(panelId, panel, registry, messages, formatMessage))}
-      </div>
+      <PanelWindowContext.Provider value={panelWindow}>
+        {enabled && Wrapper
+          // The app's component from the provider, stable across renders: not one made here.
+          // eslint-disable-next-line react-hooks/static-components
+          ? <Wrapper window={panelWindow.window} document={panelWindow.document}>{content}</Wrapper>
+          : content}
+      </PanelWindowContext.Provider>
     </FormContainerProviderWrapper>,
     panelHost.getOrCreateElement(panelId),
   );
