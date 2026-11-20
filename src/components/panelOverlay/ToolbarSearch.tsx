@@ -5,6 +5,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { formatLabel, useFormatMessage, usePredefinedMessages } from '../WindowManagerContext';
+import { docOf, winOf } from '../../utils/domContext';
 
 // ─── ToolbarSearchInput ───────────────────────────────────────────────────────
 
@@ -56,7 +57,9 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolb
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  // `body`: the body of the search box's own document, where the dropdown is portaled (a pop-out
+  // window's, for a panel shown there).
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number; body: HTMLElement } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -102,8 +105,9 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolb
             const r = el.getBoundingClientRect();
             const dropW = Math.max(r.width, 240);
             let left = r.left;
-            if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
-            setDropdownPos({ top: r.bottom + 4, left, width: dropW });
+            const viewportW = winOf(el)!.innerWidth;
+            if (left + dropW > viewportW - 8) left = viewportW - dropW - 8;
+            setDropdownPos({ top: r.bottom + 4, left, width: dropW, body: docOf(el).body });
           } else {
             setDropdownPos(null);
           }
@@ -202,7 +206,7 @@ export function ToolbarSearchInput({ placeholder, onSearch, onSelect }: RddToolb
             </React.Fragment>
           ))}
         </div>,
-        document.body,
+        dropdownPos.body,
       )}
     </div>
   );

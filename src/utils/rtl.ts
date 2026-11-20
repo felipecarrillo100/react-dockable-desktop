@@ -1,3 +1,5 @@
+import { winOf } from './domContext';
+
 export function isElementRtl(el: HTMLElement | null): boolean {
   if (!el) {
     if (typeof document !== 'undefined') {
@@ -15,10 +17,11 @@ export function isElementRtl(el: HTMLElement | null): boolean {
     return closestDirEl.getAttribute('dir')?.toLowerCase() === 'rtl';
   }
 
-  // Fallback to document rules
+  // Fallback to the rules of the element's own document (a pop-out window's, for content there)
+  const doc = el.ownerDocument;
   return (
-    document.documentElement.dir?.toLowerCase() === 'rtl' ||
-    document.body.dir?.toLowerCase() === 'rtl'
+    doc.documentElement.dir?.toLowerCase() === 'rtl' ||
+    doc.body?.dir?.toLowerCase() === 'rtl'
   );
 }
 
@@ -31,6 +34,9 @@ export function isElementRtl(el: HTMLElement | null): boolean {
  * the workspace can be RTL on an LTR page.
  */
 export function isComputedRtl(el: Element | null | undefined): boolean {
-  if (!el || typeof getComputedStyle === 'undefined') return false;
-  return getComputedStyle(el).direction === 'rtl';
+  if (!el) return false;
+  // The element's own window computes its style; a node of another window is not one of ours.
+  const win = winOf(el);
+  if (!win || typeof win.getComputedStyle !== 'function') return false;
+  return win.getComputedStyle(el).direction === 'rtl';
 }

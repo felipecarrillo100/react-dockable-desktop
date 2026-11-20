@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useIsClient } from '../utils/useIsClient';
 import { createPortal } from 'react-dom';
+import { cancelRafOf, rafOf, resizeObserverFor } from '../utils/domContext';
 import { formatLabel, useFormatMessage, usePredefinedMessages, useOptionalWindowManagerState } from './WindowManagerContext';
 import { useLatestRef } from '../utils/useLatestRef';
 
@@ -311,16 +312,21 @@ function ToastItem({
     const applyHeight = () => { el.style.maxHeight = `${el.scrollHeight}px`; };
     applyHeight();
 
-    const observer = new ResizeObserver(applyHeight);
-    observer.observe(body);
-    return () => observer.disconnect();
+    // The card's own window: element-relative, like the rest of the library's DOM work.
+    const observer = resizeObserverFor(body, applyHeight);
+    observer?.observe(body);
+    return () => observer?.disconnect();
   }, [exiting]);
 
   // Trigger entry transition on next frame
   useEffect(() => {
     if (animation === 'none') return;
-    const raf = requestAnimationFrame(() => setEntryClass('rdd-toast--visible'));
-    return () => cancelAnimationFrame(raf);
+    const el = divRef.current;
+    const request = rafOf(el);
+    if (!request) { setEntryClass('rdd-toast--visible'); return; }
+    const cancel = cancelRafOf(el);
+    const raf = request(() => setEntryClass('rdd-toast--visible'));
+    return () => cancel(raf);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-dismiss timer

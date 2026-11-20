@@ -10,6 +10,8 @@
  * slots. Everything else moves exactly as before.
  */
 
+import { rafOf } from '../utils/domContext';
+
 const preserving = new WeakSet<Element>();
 
 /** Marks an element (a panel's, or a widget's content) as keeping its embeds alive, or not. */
@@ -33,9 +35,11 @@ export function moveIntoWhenConnected(slot: Element, el: Element): () => void {
   if (!preserving.has(el) || slot.isConnected) { moveInto(slot, el); return () => {}; }
   let cancelled = false;
   let frames = 0;
-  const frame = typeof requestAnimationFrame === 'undefined'
+  // The slot's own window's frames: a pop-out's keep running while the main window is hidden.
+  const raf = rafOf(slot);
+  const frame = raf === null
     ? (cb: () => void) => { setTimeout(cb, 16); }
-    : (cb: () => void) => { requestAnimationFrame(cb); };
+    : (cb: () => void) => { raf(cb); };
   const attempt = (): void => {
     if (cancelled) return;
     // A slot that never connects (it was left detached) still gets its element, after a while.

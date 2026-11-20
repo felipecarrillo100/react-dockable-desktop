@@ -16,7 +16,8 @@ export const enabledItems = (menu: HTMLElement | null): HTMLElement[] =>
 export function moveMenuFocus(menu: HTMLElement | null, key: string): boolean {
   const items = enabledItems(menu);
   if (items.length === 0) return false;
-  const i = items.indexOf(document.activeElement as HTMLElement);
+  // The menu's own document: a menu in a pop-out window has its focus there.
+  const i = items.indexOf(menu!.ownerDocument.activeElement as HTMLElement);
   let next: HTMLElement | undefined;
   if (key === 'ArrowDown') next = items[(i + 1) % items.length];
   // With the menu itself focused (i = -1, nothing highlighted yet) ArrowUp goes to the last item.

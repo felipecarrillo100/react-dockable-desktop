@@ -17,6 +17,7 @@ import { getHoveredZone, MIN_W, MIN_H, DOCK_INSET, DOCK_GAP, SNAP_IN, SNAP_OUT }
 import { useLatestRef } from '../../utils/useLatestRef';
 import { trackPanelDom, restorePanelDom } from '../domPreservation';
 import { moveIntoWhenConnected, leaveSlot } from '../domMove';
+import { docOf } from '../../utils/domContext';
 
 // ─── PanelFloatingWindow ──────────────────────────────────────────────────────
 
@@ -396,7 +397,8 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       startClientX: e.clientX,
       startClientY: e.clientY,
       captureStart: () => startRect,
-      activeClasses: [{ el: document.body, classes: ['rdd-resizing-active'] }],
+      // The frame's own body: a widget in a pop-out window drags there.
+      activeClasses: [{ el: docOf(e.currentTarget).body, classes: ['rdd-resizing-active'] }],
       onMove: (dx, dy, start) => {
         // Re-measured every move, matching the original's live re-measurement —
         // the container can in principle change size during a drag.
@@ -469,6 +471,9 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
     });
   };
 
+  /** The body of the frame's own document (a pop-out window's, for a widget shown there). */
+  const frameBody = (): HTMLElement => docOf(windowRef.current).body;
+
   const handleWindowPointerMove = (e: React.PointerEvent): void => {
     if (dragState.current) {
       const ds = dragState.current;
@@ -490,7 +495,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
           ctx?.undockWindow(id);
           setMode('free');
         }
-        document.body.classList.add('rdd-dragging-active');
+        frameBody().classList.add('rdd-dragging-active');
         ctx?.setDraggingId(id);
       }
       const { cw, ch } = getContainerBounds();
@@ -518,7 +523,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       ctx?.setHoveredZone(null);
       ctx?.setDraggingId(null);
     }
-    document.body.classList.remove('rdd-dragging-active');
+    frameBody().classList.remove('rdd-dragging-active');
     dragState.current = null;
   };
 
@@ -527,7 +532,7 @@ function FloatingWindowBody({ id, title, icon, defaultAnchor, defaultWidth, defa
       ctx?.setHoveredZone(null);
       ctx?.setDraggingId(null);
     }
-    document.body.classList.remove('rdd-dragging-active');
+    frameBody().classList.remove('rdd-dragging-active');
     dragState.current = null;
   };
 

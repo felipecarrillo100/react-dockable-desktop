@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { listenOnDocuments } from './documentRegistry';
 
 /**
  * One Escape closes one overlay: the one on top.
@@ -14,6 +15,9 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
  * The listener is on `document` in the bubble phase, so it runs after React's own handlers
  * (which are attached to the root container). A control that handles Escape itself — the panel
  * search box, or an app's own widget — claims it with `preventDefault()`, and the overlay stays.
+ *
+ * The listener is on every document that holds panel content: the main one, and any registered
+ * with `registerDocument` (a pop-out window's), so Escape pressed there reaches the stack too.
  */
 export type EscapeLayer = 'drawer' | 'modal' | 'popup';
 
@@ -27,6 +31,7 @@ interface EscapeEntry {
 
 const entries: EscapeEntry[] = [];
 let nextOrder = 0;
+let stopListening: (() => void) | null = null;
 
 function handleKeyDown(e: KeyboardEvent): void {
   if (e.key !== 'Escape' || e.defaultPrevented || entries.length === 0) return;
@@ -47,12 +52,12 @@ function handleKeyDown(e: KeyboardEvent): void {
 export function pushEscape(layer: EscapeLayer, onEscape: () => void): () => void {
   const entry: EscapeEntry = { layer, order: nextOrder++, onEscape };
   entries.push(entry);
-  if (entries.length === 1) document.addEventListener('keydown', handleKeyDown);
+  if (entries.length === 1) stopListening = listenOnDocuments('keydown', handleKeyDown);
   return () => {
     const index = entries.indexOf(entry);
     if (index === -1) return;
     entries.splice(index, 1);
-    if (entries.length === 0) document.removeEventListener('keydown', handleKeyDown);
+    if (entries.length === 0) { stopListening?.(); stopListening = null; }
   };
 }
 

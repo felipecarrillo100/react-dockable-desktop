@@ -5,6 +5,7 @@
 import React, { useState, useRef } from 'react';
 import type { SplitDirection, DropPosition, FloatAnchor, InternalWindowActions } from '../../types';
 import { tabDropSide } from './helpers';
+import { isHTMLElement } from '../../utils/domContext';
 
 type DropZoneTarget = { leafId: string; position: DropPosition };
 type Point = { x: number; y: number };
@@ -113,7 +114,7 @@ export function useDragTargets({ setDraggedPanelId, isRtl, canInsertInto }: {
     let foundTab = false;
 
     for (const el of elements) {
-      if (!(el instanceof HTMLElement)) continue;
+      if (!isHTMLElement(el)) continue;
 
       if (!foundDropZone && el.dataset.dropZone) {
         const leafId = el.dataset.leafId;

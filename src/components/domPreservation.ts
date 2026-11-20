@@ -15,6 +15,8 @@
  * away with its element.
  */
 
+import { isElement, isHTMLElement, rafOf } from '../utils/domContext';
+
 interface PanelDomRecord {
   /** Last on-screen scroll offset of each scrolled element inside the panel. */
   scrolls: Map<Element, { top: number; left: number }>;
@@ -37,12 +39,12 @@ export function trackPanelDom(root: HTMLElement): void {
     const target = e.target;
     // Defensive: an element being hidden or detached resets its offset to 0, and some browsers
     // report that as a scroll event. Chrome doesn't, so no test exercises this guard.
-    if (!(target instanceof Element) || !isOnScreen(target)) return;
+    if (!isElement(target) || !isOnScreen(target)) return;
     record.scrolls.set(target, { top: target.scrollTop, left: target.scrollLeft });
   }, { capture: true, passive: true });
 
   root.addEventListener('focusin', (e) => {
-    if (e.target instanceof HTMLElement) record.focused = e.target;
+    if (isHTMLElement(e.target)) record.focused = e.target;
   });
 }
 
@@ -66,14 +68,16 @@ export function restorePanelDom(root: HTMLElement, { refocus }: { refocus: boole
       if (el.scrollLeft !== left) el.scrollLeft = left;
     });
     const focused = record.focused;
-    const focusWasLost = document.activeElement === null || document.activeElement === document.body;
+    // The root's own document: in a pop-out window, focus there is what was lost or kept.
+    const doc = root.ownerDocument;
+    const focusWasLost = doc.activeElement === null || doc.activeElement === doc.body;
     if (refocus && focusWasLost && focused?.isConnected && isOnScreen(focused)) {
       // The element keeps its own selection range, so focusing it puts the caret back too.
       focused.focus({ preventScroll: true });
     }
   };
   apply();
-  if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(apply);
+  rafOf(root)?.(apply);
 }
 
 /** Drops a closed panel's records. */

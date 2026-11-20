@@ -13,6 +13,7 @@ import type React from 'react';
 import { FormContainerContext } from '../FormContainerContext';
 import { WindowStoreSyncContext, useOptionalWindowManagerActionsInternal, useOptionalWindowManagerState, useRegistry } from '../WindowManagerContext';
 import { useOptionalPanelHost } from '../workspace/panelHost';
+import { docOf, rafOf, resizeObserverFor } from '../../utils/domContext';
 import { optionsFor } from '../../core/panelOptions';
 import { findLeafIdOf } from '../../core/layoutTree';
 import type { HostedPanelPlacement, PanelInfo, WorkspaceState } from '../../types';
@@ -139,8 +140,11 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
       }
     }
     const root = containerRef.current;
+    // The hosted panel's frame is inside its own cached element, wherever that is shown (another
+    // document, for a pop-out); the overlay's document when the workspace has no such element.
+    const scope: ParentNode = (hostedId && panelHost?.getElement(hostedId)) || docOf(root);
     const frame = hostedId
-      ? Array.from(document.querySelectorAll<HTMLElement>('[data-rdd-panel]')).find(el => el.getAttribute('data-rdd-panel') === hostedId)
+      ? Array.from(scope.querySelectorAll<HTMLElement>('[data-rdd-panel]')).find(el => el.getAttribute('data-rdd-panel') === hostedId)
       : root
         ? Array.from(root.querySelectorAll<HTMLElement>('[data-rdd-widget]')).find(el => el.getAttribute('data-rdd-widget') === id)
         : undefined;
@@ -166,13 +170,13 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
       observer?.disconnect();
       fire(id, 'moved');
     };
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(entries => {
+    // The content element's own window: its new container may be in a pop-out's document.
+    const observer = resizeObserverFor(el, entries => {
       if (entries.some(e => e.contentRect.width > 0 && e.contentRect.height > 0)) finish();
     });
     observer?.observe(el);
-    const frame = typeof requestAnimationFrame === 'undefined'
-      ? (cb: () => void) => setTimeout(cb, 16)
-      : requestAnimationFrame;
+    const raf = rafOf(el);
+    const frame = raf ?? ((cb: () => void) => setTimeout(cb, 16));
     frame(() => frame(finish));
   }, [contentEls]);
 

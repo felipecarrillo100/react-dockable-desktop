@@ -9,6 +9,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import { useEscapeLayer } from '../utils/escapeStack';
 import { isComputedRtl } from '../utils/rtl';
+import { docOf, isElement, isHTMLElement, isNode, winOf } from '../utils/domContext';
 import { enabledItems, moveMenuFocus } from '../utils/menuKeyboard';
 import type { ContextMenuLabel, MessageFormatter, MenuItemAction } from './contextMenuTypes';
 
@@ -116,7 +117,7 @@ function getCoords(
   const mouse = event as MouseEvent;
   // The ContextMenu key and Shift+F10 fire `contextmenu` with no pointer position (0, 0): open
   // the menu at the focused element instead of the top-left corner of the page.
-  if (mouse.clientX === 0 && mouse.clientY === 0 && mouse.target instanceof Element) {
+  if (mouse.clientX === 0 && mouse.clientY === 0 && isElement(mouse.target)) {
     const r = mouse.target.getBoundingClientRect();
     if (r.width || r.height) return { x: r.left, y: r.bottom };
   }
@@ -159,6 +160,8 @@ interface SubMenuPanelProps {
   theme: string;
   /** The parent menu's direction: the submenu is portaled too, so it can't inherit it. */
   dir: 'ltr' | 'rtl';
+  /** Where the parent menu is portaled: the submenu goes beside it, in the same document. */
+  container: HTMLElement;
   fmt?: MessageFormatter;
   onClose: () => void;
   onMouseEnter: () => void;
@@ -166,7 +169,7 @@ interface SubMenuPanelProps {
 }
 
 const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
-  ({ items, getAnchor, autoFocus, onBack, theme, dir, fmt, onClose, onMouseEnter, onMouseLeave }, ref) => {
+  ({ items, getAnchor, autoFocus, onBack, theme, dir, container, fmt, onClose, onMouseEnter, onMouseLeave }, ref) => {
     // Placed after layout, once the panel's own width is known. It hangs off the parent menu's
     // reading-end edge (right in LTR, left in RTL) and flips to the other edge when that side
     // has no room — clamping it into the viewport instead is what laid it over the parent menu.
@@ -180,15 +183,17 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
       // scaled measurement placed a left-hanging submenu over its parent.
       const width = el.offsetWidth;
       const height = el.offsetHeight;
+      // The window the menu is shown in (a pop-out's, for a menu opened there).
+      const win = winOf(el)!;
       const toRight = anchor.menuRight + GAP;
       const toLeft = anchor.menuLeft - GAP - width;
-      const fitsRight = toRight + width <= window.innerWidth - PAD;
+      const fitsRight = toRight + width <= win.innerWidth - PAD;
       const fitsLeft = toLeft >= PAD;
       let left: number;
       if (anchor.rtl) left = fitsLeft || !fitsRight ? toLeft : toRight;
       else left = fitsRight || !fitsLeft ? toRight : toLeft;
-      left = Math.max(PAD, Math.min(left, window.innerWidth - width - PAD));
-      const top = Math.max(PAD, Math.min(anchor.top, window.innerHeight - height - PAD));
+      left = Math.max(PAD, Math.min(left, win.innerWidth - width - PAD));
+      const top = Math.max(PAD, Math.min(anchor.top, win.innerHeight - height - PAD));
       el.style.left = `${left}px`;
       el.style.top = `${top}px`;
     });
@@ -259,7 +264,7 @@ const SubMenuPanel = forwardRef<HTMLDivElement, SubMenuPanelProps>(
           );
         })}
       </div>,
-      document.body,
+      container,
     );
   },
 );
@@ -275,9 +280,14 @@ interface MenuState {
   items: ContextMenuItem[];
   dir: 'ltr' | 'rtl';
   initialFocus: 'menu' | 'first-item';
+  /**
+   * The body the menu is portaled into: that of the document the menu was opened from (its event's
+   * target), so a menu opened in a pop-out window shows there. The main body otherwise.
+   */
+  container: HTMLElement | null;
 }
 
-const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [], dir: 'ltr', initialFocus: 'menu' };
+const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [], dir: 'ltr', initialFocus: 'menu', container: null };
 
 /**
  * The menu is portaled to <body>, so it takes its direction from where it was opened: the event's
@@ -285,7 +295,7 @@ const CLOSED: MenuState = { visible: false, x: 0, y: 0, items: [], dir: 'ltr', i
  */
 function menuDirection(event: ShowContextMenuOptions['event'], dir: ShowContextMenuOptions['dir']): 'ltr' | 'rtl' {
   const target = event?.target;
-  if (target instanceof Element) return isComputedRtl(target) ? 'rtl' : 'ltr';
+  if (isElement(target)) return isComputedRtl(target) ? 'rtl' : 'ltr';
   if (dir) return dir;
   return isComputedRtl(document.documentElement) ? 'rtl' : 'ltr';
 }
@@ -310,7 +320,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     const close = React.useCallback(() => {
       // Hand focus back to the opener only if it was inside the menu when it closed — an item's
       // action may itself have moved focus (opened a modal, say), and that must win.
-      const active = document.activeElement;
+      const active = (menuRef.current?.ownerDocument ?? document).activeElement;
       restoreFocusRef.current = !!active && (
         !!menuRef.current?.contains(active) || !!submenuPanelRef.current?.contains(active)
       );
@@ -327,13 +337,15 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     useImperativeHandle(ref, () => ({
       show({ event, x, y, items, dir, initialFocus }) {
         const coords = event ? getCoords(event) : { x: x ?? 0, y: y ?? 0 };
-        openerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
-          ? document.activeElement
-          : null;
+        // The document the menu is opened from: its event's target's, else the main one.
+        const doc = docOf(isNode(event?.target) ? event.target : null);
+        const focused = doc.activeElement;
+        openerRef.current = isHTMLElement(focused) && focused !== doc.body ? focused : null;
         itemRefs.current.clear();
         setMenuState({
           visible: true, x: coords.x, y: coords.y, items, dir: menuDirection(event, dir),
           initialFocus: initialFocus ?? (isKeyboardMenuEvent(event) ? 'first-item' : 'menu'),
+          container: doc.body,
         });
         setSubmenuIndex(null);
         setSubmenuFocus(false);
@@ -355,8 +367,9 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       if (!restoreFocusRef.current) return;
       restoreFocusRef.current = false;
       const opener = openerRef.current;
-      const active = document.activeElement;
-      if (opener?.isConnected && (!active || active === document.body)) opener.focus();
+      const doc = opener?.ownerDocument ?? document;
+      const active = doc.activeElement;
+      if (opener?.isConnected && (!active || active === doc.body)) opener.focus();
     }, [menuState.visible, menuState.items, menuState.initialFocus]);
 
     // Click-outside dismiss
@@ -369,18 +382,24 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       const dismiss = (e: Event) => {
         // A click dispatched on `window` itself has no Node target, and `contains()` throws
         // for one. It is outside the menu by definition.
-        if (!(e.target instanceof Node)) { close(); return; }
+        if (!isNode(e.target)) { close(); return; }
         if (menuRef.current?.contains(e.target as Node)) return;
         if (submenuPanelRef.current?.contains(e.target as Node)) return;
         close();
       };
-      document.addEventListener('pointerdown', dismiss, { capture: true });
-      window.addEventListener('click', dismiss);
+      // The main document, and the menu's own when it is opened in another (a pop-out window): a
+      // click in either is outside the menu.
+      const docs = [document];
+      const menuDoc = menuState.container?.ownerDocument;
+      if (menuDoc && menuDoc !== document) docs.push(menuDoc);
+      const wins = docs.map(d => d.defaultView ?? window);
+      docs.forEach(d => d.addEventListener('pointerdown', dismiss, { capture: true }));
+      wins.forEach(w => w.addEventListener('click', dismiss));
       return () => {
-        document.removeEventListener('pointerdown', dismiss, { capture: true });
-        window.removeEventListener('click', dismiss);
+        docs.forEach(d => d.removeEventListener('pointerdown', dismiss, { capture: true }));
+        wins.forEach(w => w.removeEventListener('click', dismiss));
       };
-    }, [menuState.visible, close]);
+    }, [menuState.visible, menuState.container, close]);
 
     // Escape dismiss — a popup, so above any modal or drawer on the shared Escape stack.
     useEscapeLayer(menuState.visible, 'popup', close);
@@ -391,11 +410,13 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       const el = menuRef.current;
       const r = el.getBoundingClientRect();
       const PAD = 8;
-      if (r.right > window.innerWidth - PAD) {
-        el.style.left = `${Math.max(PAD, window.innerWidth - r.width - PAD)}px`;
+      // The window the menu is shown in (a pop-out's, for a menu opened there).
+      const win = winOf(el)!;
+      if (r.right > win.innerWidth - PAD) {
+        el.style.left = `${Math.max(PAD, win.innerWidth - r.width - PAD)}px`;
       }
-      if (r.bottom > window.innerHeight - PAD) {
-        el.style.top = `${Math.max(PAD, window.innerHeight - r.height - PAD)}px`;
+      if (r.bottom > win.innerHeight - PAD) {
+        el.style.top = `${Math.max(PAD, win.innerHeight - r.height - PAD)}px`;
       }
       if (r.left < PAD) el.style.left = `${PAD}px`;
       if (r.top < PAD) el.style.top = `${PAD}px`;
@@ -404,6 +425,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     if (!menuState.visible) return null;
 
     const fmt = formatMessageProvider;
+    const container = menuState.container ?? document.body;
 
     // Where the open sub-menu hangs from. The old computation took a distance from the right
     // edge under RTL and then used it as `left`, so the sub-menu landed far from its menu.
@@ -468,7 +490,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       if (e.key === 'Tab') { e.preventDefault(); close(); return; }
       const openKey = isComputedRtl(e.currentTarget) ? 'ArrowLeft' : 'ArrowRight';
       if (e.key === openKey) {
-        const index = Number((document.activeElement as HTMLElement | null)?.dataset.menuIndex);
+        const index = Number((e.currentTarget.ownerDocument.activeElement as HTMLElement | null)?.dataset.menuIndex);
         const item = menuState.items[index];
         if (item && isSubMenu(item) && item.items?.length) { e.preventDefault(); openSubmenuFromKeyboard(index); }
         return;
@@ -592,6 +614,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
               onBack={backToParentItem}
               theme={theme}
               dir={menuState.dir}
+              container={container}
               fmt={fmt}
               onClose={close}
               onMouseEnter={() => cancelCloseTimer()}
@@ -602,7 +625,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
           );
         })()}
       </>,
-      document.body,
+      container,
     );
   },
 );

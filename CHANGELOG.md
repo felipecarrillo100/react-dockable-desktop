@@ -10,6 +10,15 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+### Changed
+
+- **Internal: the library takes the document and window from the element it acts on** (groundwork
+  for pop-out windows; no change in behaviour, no API change). The context menu, the toolbar flyout
+  and the panel search dropdown portal into the body of the document they were opened from and fit
+  that window; focus, Escape, outside clicks, a managed widget's drag classes, focus restore, frames
+  and `ResizeObserver`s on panel content follow the element's own document and window, and DOM
+  checks no longer use `instanceof`, which fails for nodes of another window.
+
 ## [7.11.0] — 2026-11-19
 
 **Widgets that can leave their panel.** A managed floating widget (`useFloatingWidgets()`) can be

@@ -4,6 +4,7 @@
  */
 import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { resizeObserverFor } from '../../utils/domContext';
 import { restorePanelDom } from '../domPreservation';
 import { useWindowManagerState, useWindowManagerActions, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
 import type { PanelInfo, MessageDescriptor, MessageFormatter, WorkspaceState } from '../../types';
@@ -121,7 +122,8 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
     moveInto(host, cachedEl);
     restorePanelDom(cachedEl, { refocus: isActiveRef.current });
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    // From the slot's own window: a pop-out's slot is in its document.
+    const resizeObserver = resizeObserverFor(host, (entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
@@ -133,10 +135,10 @@ export const PreservedDOMWrapper: React.FC<{ panelId: string }> = ({ panelId }) 
         }
       }
     });
-    resizeObserver.observe(host);
+    resizeObserver?.observe(host);
 
     return () => {
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
       panelHost.park(cachedEl);
     };
   }, [panelId, panelHost, preserve]);
