@@ -5,6 +5,7 @@
 import React, { useContext, useRef, useLayoutEffect } from 'react';
 import type { ToolbarPosition } from './types';
 import { PanelToolbarContext } from './context';
+import { resizeObserverFor } from '../../utils/domContext';
 
 // ─── PanelToolbar ─────────────────────────────────────────────────────────────
 
@@ -59,10 +60,11 @@ export function PanelToolbar({ position, variant = 'transparent', buttonVariant 
     // this exact instant — without re-measuring, a wrong size (often 0) is baked in permanently,
     // and every docked float ends up positioned at the toolbar's own y/x, covering it. This also
     // catches any later size change (button wrapping, a buttonSize/variant change, content change).
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    // From the toolbar's own window: it may be in a pop-out's document.
+    const ro = resizeObserverFor(el, measure);
+    ro?.observe(el);
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
       cleanupRef.current?.();
       cleanupRef.current = null;
     };

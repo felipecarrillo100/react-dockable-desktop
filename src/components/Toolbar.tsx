@@ -8,6 +8,7 @@
 
 import React, { forwardRef, useImperativeHandle, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { docOf, winOf } from '../utils/domContext';
 import { useToolbar } from './ToolbarContext';
 import { useEscapeLayer } from '../utils/escapeStack';
 import { isComputedRtl } from '../utils/rtl';
@@ -179,26 +180,28 @@ function flyoutPosition(
   position: 'left' | 'right' | 'top' | 'bottom',
   isRtl = false,
   gap = 8,
+  // The button's window (a pop-out's, for a toolbar shown there).
+  win: Window = window,
 ): React.CSSProperties {
   switch (position) {
     case 'left':
       // RTL: flex-row reverses, so 'left' toolbar sits on the right → open leftward
       return isRtl
-        ? { right: window.innerWidth - rect.left + gap, top: rect.top }
+        ? { right: win.innerWidth - rect.left + gap, top: rect.top }
         : { left: rect.right + gap, top: rect.top };
     case 'right':
       // RTL: 'right' toolbar sits on the left → open rightward
       return isRtl
         ? { left: rect.right + gap, top: rect.top }
-        : { right: window.innerWidth - rect.left + gap, top: rect.top };
+        : { right: win.innerWidth - rect.left + gap, top: rect.top };
     case 'top':
       return isRtl
-        ? { top: rect.bottom + gap, right: window.innerWidth - rect.right }
+        ? { top: rect.bottom + gap, right: win.innerWidth - rect.right }
         : { top: rect.bottom + gap, left: rect.left };
     case 'bottom':
       return isRtl
-        ? { bottom: window.innerHeight - rect.top + gap, right: window.innerWidth - rect.right }
-        : { bottom: window.innerHeight - rect.top + gap, left: rect.left };
+        ? { bottom: win.innerHeight - rect.top + gap, right: win.innerWidth - rect.right }
+        : { bottom: win.innerHeight - rect.top + gap, left: rect.left };
   }
 }
 
@@ -206,6 +209,8 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
   const [isOpen, setIsOpen] = useState(false);
   const [btnRect, setBtnRect] = useState<DOMRect | null>(null);
   const [btnRtl, setBtnRtl] = useState(false);
+  // The button's document, where the flyout is portaled (a pop-out window's, for a toolbar there).
+  const [btnDoc, setBtnDoc] = useState<Document | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const flyoutRef = useRef<HTMLDivElement>(null);
 
@@ -225,6 +230,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
       // The strip's own computed direction decides which side it sits on — RTL may be set on
       // <body> or a wrapper, not just <html>, and an LTR strip can sit on an RTL page.
       setBtnRtl(isComputedRtl(btnRef.current));
+      setBtnDoc(btnRef.current.ownerDocument);
     }
     setIsOpen(prev => !prev);
   };
@@ -235,16 +241,17 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
     const el = flyoutRef.current;
     const r = el.getBoundingClientRect();
     const PAD = 8;
-    if (r.right > window.innerWidth - PAD) {
-      el.style.left = `${Math.max(PAD, window.innerWidth - r.width - PAD)}px`;
+    const win = winOf(el)!;
+    if (r.right > win.innerWidth - PAD) {
+      el.style.left = `${Math.max(PAD, win.innerWidth - r.width - PAD)}px`;
       el.style.right = 'auto';
     }
     if (r.left < PAD) {
       el.style.left = `${PAD}px`;
       el.style.right = 'auto';
     }
-    if (r.bottom > window.innerHeight - PAD) {
-      el.style.top = `${Math.max(PAD, window.innerHeight - r.height - PAD)}px`;
+    if (r.bottom > win.innerHeight - PAD) {
+      el.style.top = `${Math.max(PAD, win.innerHeight - r.height - PAD)}px`;
       el.style.bottom = 'auto';
     }
     if (r.top < PAD) {
@@ -262,14 +269,17 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
       if (flyoutRef.current?.contains(target)) return;
       setIsOpen(false);
     };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
+    // The button's own document: a click elsewhere in a pop-out window closes a flyout there.
+    const doc = docOf(btnRef.current);
+    doc.addEventListener('mousedown', onMouseDown);
+    return () => doc.removeEventListener('mousedown', onMouseDown);
   }, [isOpen]);
 
   // Closing from inside the flyout (Escape, Tab, choosing an item) hands focus back to the
   // trigger, as the context menu does; a click elsewhere leaves focus where the click put it.
   const closeFlyout = () => {
-    if (flyoutRef.current?.contains(document.activeElement)) btnRef.current?.focus();
+    const flyout = flyoutRef.current;
+    if (flyout?.contains(flyout.ownerDocument.activeElement)) btnRef.current?.focus();
     setIsOpen(false);
   };
 
@@ -308,7 +318,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
         <div
           ref={flyoutRef}
           className={`rdd-toolbar-group-flyout rdd-${position}`}
-          style={flyoutPosition(btnRect, position, btnRtl)}
+          style={flyoutPosition(btnRect, position, btnRtl, 8, btnDoc?.defaultView ?? window)}
           role="menu"
           // Portaled to <body>: carry the strip's direction, which it can't inherit there.
           dir={btnRtl ? 'rtl' : 'ltr'}
@@ -348,7 +358,7 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
             );
           })}
         </div>,
-        document.body,
+        (btnDoc ?? document).body,
       )}
     </>
   );

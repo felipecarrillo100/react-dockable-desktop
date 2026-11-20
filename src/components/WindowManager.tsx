@@ -28,6 +28,7 @@ import { createTabDrag } from './workspace/tabDrag';
 import { createWorkspaceMenus } from './workspace/workspaceMenus';
 import { useWorkspaceSize } from './workspace/useWorkspaceSize';
 import { createFloatingWindowDrag } from './workspace/floatingWindowDrag';
+import { listenOnDocuments } from '../utils/documentRegistry';
 
 
 
@@ -320,10 +321,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       }
     };
 
-    document.addEventListener('pointerdown', handlePointerDownGlobal);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDownGlobal);
-    };
+    // On every document that holds panel content (the main one, and a pop-out's once registered).
+    return listenOnDocuments('pointerdown', handlePointerDownGlobal);
   }, [focusPanel, setActivePanel]);
 
   const { startDrag, startResize } = createFloatingWindowDrag({

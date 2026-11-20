@@ -4,6 +4,7 @@
  */
 import React, { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
+import { resizeObserverFor } from '../../utils/domContext';
 import type { FloatAnchor } from '../WindowManagerContext';
 import type { ManagedWidget, Stretch, ToolbarPosition } from './types';
 import { PanelToolbarContext, PanelManagerContext, PanelOverlayContext } from './context';
@@ -273,8 +274,9 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
     };
     apply();
     const el = containerRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(apply);
+    // From the container's own window: it may be in a pop-out's document.
+    const ro = el ? resizeObserverFor(el, apply) : null;
+    if (!el || !ro) return;
     ro.observe(el);
     return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
