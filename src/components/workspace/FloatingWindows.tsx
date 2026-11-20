@@ -12,6 +12,7 @@ import { initialFocusFor } from './helpers';
 import { DefaultGridIcon, ContextMenuIcons } from './icons';
 import { PreservedDOMWrapper } from './panelMount';
 import { optionsFor } from '../../core/panelOptions';
+import { popOutMenuItems, type PopOutMenu } from './workspaceMenus';
 
 export interface FloatingWindowsProps extends Pick<InternalWindowActions, 'setActivePanel' | 'focusPanel' | 'maximizePanel' | 'minimizePanel' | 'getPanelContextMenuItems' | 'showContextMenu'> {
   state: WorkspaceState;
@@ -24,36 +25,42 @@ export interface FloatingWindowsProps extends Pick<InternalWindowActions, 'setAc
   handleRequestClose: (id: string) => unknown;
   startDrag: (id: string, e: React.PointerEvent) => void;
   startResize: (id: string, dir: ResizeDir, e: React.PointerEvent) => void;
+  /** Present when the workspace has pop-out windows (7.12.0). */
+  popOut?: PopOutMenu;
 }
 
 export const FloatingWindows = ({
   state, registry, windowClass, windowBodyClass, defaultPanelIcon, messages, formatMessage,
   setActivePanel, focusPanel, maximizePanel, minimizePanel, getPanelContextMenuItems, showContextMenu,
-  handleRequestClose, startDrag, startResize,
+  handleRequestClose, startDrag, startResize, popOut,
 }: FloatingWindowsProps): React.ReactElement => (
   <>
     {state.floating.map(w => {
       const panel = state.panels[w.id];
-      if (!panel) return null;
+      // A panel in its own browser window (7.12.0) keeps its entry here, but no frame: it is there.
+      if (!panel || panel.poppedOut) return null;
 
       const isMaximized = w.maximized;
       const isDragged = state.draggedPanelId === w.id;
       const isFocused = state.activePanelId === w.id;
 
       const options = optionsFor(registry, panel);
-      const hasMenu = getPanelContextMenuItems(w.id).length > 0;
+      const popOutItems = popOutMenuItems(popOut, w.id, messages, formatMessage);
+      const hasMenu = getPanelContextMenuItems(w.id).length > 0 || popOutItems.length > 0;
       // The ⋮ menu; for a hosted panel (a widget out of its panel, 7.11.0) also its title icon's.
       const openMenu = (e: React.MouseEvent) => {
         e.stopPropagation();
         const customItems = getPanelContextMenuItems(w.id);
-        if (customItems.length === 0) return;
+        // "Open in new window" (7.12.0) leads the menu, before the panel's own items.
+        const builtIn = popOutMenuItems(popOut, w.id, messages, formatMessage);
+        if (customItems.length === 0 && builtIn.length === 0) return;
         // A hosted panel's menu is its widget's titleMenu, then the built-in Close (7.11.0).
         const closeItem = panel.owner && options?.canClose !== false
           ? [{ separator: true as const }, { label: formatLabel(messages.closePanel, formatMessage), icon: ContextMenuIcons.close, action: () => handleRequestClose(w.id) }]
           : [];
         showContextMenu({
           event: e,
-          items: [...customItems, ...closeItem],
+          items: [...builtIn, ...(builtIn.length > 0 && customItems.length > 0 ? [{ separator: true as const }] : []), ...customItems, ...closeItem],
           initialFocus: initialFocusFor(e),
         });
       };
@@ -83,7 +90,7 @@ export const FloatingWindows = ({
               return { position: 'absolute' as const, left: 0, top: 0, width: '100%', height: '100%', zIndex: w.z, pointerEvents: isDragged ? 'none' as const : 'auto' as const };
             }
             if (w.anchor) {
-              const stack = state.floating.filter(fw => fw.anchor === w.anchor && !fw.maximized);
+              const stack = state.floating.filter(fw => fw.anchor === w.anchor && !fw.maximized && !state.panels[fw.id]?.poppedOut);
               const idx = stack.findIndex(fw => fw.id === w.id);
               let stackOffset = CORNER_INSET;
               for (let i = 0; i < idx; i++) {

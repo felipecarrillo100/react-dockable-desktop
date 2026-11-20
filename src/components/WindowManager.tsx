@@ -29,6 +29,9 @@ import { createWorkspaceMenus } from './workspace/workspaceMenus';
 import { useWorkspaceSize } from './workspace/useWorkspaceSize';
 import { createFloatingWindowDrag } from './workspace/floatingWindowDrag';
 import { listenOnDocuments } from '../utils/documentRegistry';
+import { WorkspaceInstanceContext } from './WorkspaceInstanceContext';
+import { toast } from './Toast';
+import type { PopOutMenu } from './workspace/workspaceMenus';
 
 
 
@@ -197,9 +200,21 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
   const targets = useDragTargets({ setDraggedPanelId, isRtl: state.isRtl, canInsertInto });
   const { activeDropZone, setActiveDropZone, dragPos, activeEdgeDrop, setActiveEdgeDrop, activeCornerAnchor, setActiveCornerAnchor, hoveredTab, setHoveredTab, handleTabHover, handleHoverDropZone } = targets;
 
+  // Pop-out windows (7.12.0): "Open in new window" in the tab and window menus. From the menu, a
+  // blocked pop-up is the user's to know about; a call from app code shows nothing.
+  const workspace = useContext(WorkspaceInstanceContext);
+  const popOut: PopOutMenu | undefined = workspace?._popOut.enabled ? {
+    canPopOut: workspace._popOut.canPopOut,
+    popOut: (id) => {
+      const result = workspace.popOutPanel(id);
+      if (!result.ok && result.reason === 'blocked') toast.warning(formatLabel(messages.popOutBlocked, formatMessage));
+    },
+  } : undefined;
+
   const { handleTabRightClick, handleMinimizedRightClick } = createWorkspaceMenus({
     state, registry, messages, formatMessage, handleRequestClose, setHoveredMinimized,
     actions: { floatPanel, minimizePanel, restorePanel, maximizePanel, getPanelContextMenuItems, showContextMenu, isDropAllowed },
+    popOut,
   });
 
   const { handleTabDragStart } = createTabDrag({
@@ -243,6 +258,8 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
     const viewH = workspaceSize.height;
 
     state.floating.forEach(w => {
+      // A panel in its own window (7.12.0) isn't on this page: nothing to keep on screen.
+      if (state.panels[w.id]?.poppedOut) return;
       const winW = typeof w.width === 'string' ? parseFloat(w.width) : w.width;
       const winH = typeof w.height === 'string' ? parseFloat(w.height) : w.height;
       const winX = typeof w.x === 'string' ? parseFloat(w.x) : w.x;
@@ -289,7 +306,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         });
       }
     });
-  }, [workspaceSize, state.floating, updateFloatingPosition]);
+  }, [workspaceSize, state.floating, state.panels, updateFloatingPosition]);
 
   // Global Window Focus Event Delegation (Left-click/touch anywhere inside a window or grid panel focuses it)
   useEffect(() => {
@@ -444,6 +461,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
           handleRequestClose={handleRequestClose}
           startDrag={startDrag}
           startResize={startResize}
+          popOut={popOut}
         />
       </div>
 

@@ -12,6 +12,7 @@ import type { MessageDescriptor, MessageFormatter, WorkspaceState, WorkspaceActi
 import { defaultFormatMessage } from '../core/messages';
 import { createWorkspaceCore } from '../core/workspaceCore';
 import { useLatestRef } from '../utils/useLatestRef';
+import { PopOutWindows } from './workspace/PopOutWindows';
 export type { MessageKey } from './predefinedMessages';
 export { defaultPredefinedMessages } from './predefinedMessages';
 export type { DirtyStateOptions };
@@ -157,6 +158,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
               <WindowPredefinedMessagesContext.Provider value={mergedMessages}>
                 <PanelHostContext.Provider value={panelHost}>
                   {children}
+                  {/* Pop-out windows (7.12.0): nothing at all unless the workspace enables them. */}
+                  {client?._popOut.enabled && <PopOutWindows windows={client._popOut} />}
                 </PanelHostContext.Provider>
               </WindowPredefinedMessagesContext.Provider>
             </WindowI18nContext.Provider>

@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { WindowManagerProvider } from './WindowManagerContext';
 import type { MessageFormatter, MessageDescriptor } from './WindowManagerContext';
 import { PanelProvider } from './PanelProviderContext';
@@ -43,6 +43,14 @@ export interface DockableDesktopProviderProps {
   zIndexBase?: number;
   /** Context menu implementation. Defaults to the built-in menu. */
   contextMenuAdapter?: ContextMenuAdapter;
+  /**
+   * The page a pop-out window opens (7.12.0): a same-origin page of the app, such as
+   * `/popout.html`, with an empty `<body>`. The library waits for it to load, then moves the panel
+   * in. Without it, the window opens blank. A page that can't be read (another origin, or a redirect
+   * off this one) or doesn't load within 10 s sends the panel back. Only used with
+   * `createWorkspace({ popOut: true })`.
+   */
+  popoutUrl?: string;
 }
 
 /**
@@ -63,10 +71,12 @@ export interface DockableDesktopProviderProps {
  * ```
  */
 export const DockableDesktopProvider: React.FC<DockableDesktopProviderProps> = (
-  { contextMenuAdapter = DefaultContextMenuAdapter, workspace, messages, children, ...props }
+  { contextMenuAdapter = DefaultContextMenuAdapter, workspace, messages, popoutUrl, children, ...props }
 ): React.ReactElement => {
   const existingCtxMenu = useContext(ContextMenuContext);
   const [ws] = useState(() => workspace ?? new WorkspaceClient<object>());
+  // Read when a window opens, inside the user's click, so it is handed over ahead of time.
+  useEffect(() => { ws._popOut.setUrl(popoutUrl); }, [ws, popoutUrl]);
 
   const inner = (
     <WorkspaceInstanceContext.Provider value={ws}>

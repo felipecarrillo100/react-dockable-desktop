@@ -4221,6 +4221,41 @@ html.rdd-no-animations [class*="rdd-"]::after {
 .rdd-toast__progress:dir(rtl) { transform-origin: right; }
 
 /* ==========================================================================
+   POP-OUT WINDOWS (7.12.0)
+   A panel in its own browser window: the library's frame fills the child window's <body>, with a
+   header (icon, title, "Return to desktop") over the panel's slot. Layout only; these rules apply
+   once the stylesheet is in the child window, and its colours follow the skin from then on.
+   ========================================================================== */
+.rdd-popout-frame {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rdd-popout-frame__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.rdd-popout-frame__icon { display: inline-flex; }
+.rdd-popout-frame__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rdd-popout-frame__return { font: inherit; }
+.rdd-popout-frame__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+.rdd-popout-frame__body > .rdd-panel-dom-host { position: absolute; inset: 0; }
+/* ==========================================================================
    KEYBOARD FOCUS
    A visible ring on every library control reached from the keyboard (WCAG 2.4.7). Only
    :focus-visible, so pointer clicks don't show it; only elements with an rdd- class, so the
