@@ -93,6 +93,7 @@ workspace.registry.register('luciadMap', LeafletMapPanel, {
   icon: '🌍',
   initialTarget: 'docked',  // Can be spawned as a floating window dynamically
   disableLivePreview: true, // Live thumbnail preview disabled for interactive map
+  canPopOut: true,          // Can open in its own browser window (createWorkspace({ popOut: true }))
   // Note: Inherits default behavior (canClose: true, canMinimize: true, canDrag: true)
   renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="luciadMap" />
 });`,
@@ -1182,7 +1183,7 @@ const CamerasTable: React.FC<{ onPick: (coords: [number, number]) => void }> = (
   const [selected, setSelected] = useState<string | null>(null);
   return (
     <div style={{ padding: 6, fontSize: 12 }}>
-      <div style={{ opacity: 0.7, marginBottom: 4 }}>Shown: {widget?.location ?? '—'}</div>
+      <div style={{ opacity: 0.7, marginBottom: 4 }}>Shown: {widget?.location ?? '—'}{widget?.isPoppedOut ? ' (own window)' : ''}</div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <tbody>
           {CAMERAS.map(cam => (
@@ -1375,18 +1376,24 @@ const MainMapInner: React.FC = () => {
       <rect x="1.5" y="2.5" width="13" height="11" rx="1" /><line x1="1.5" y1="6" x2="14.5" y2="6" /><line x1="1.5" y1="9.5" x2="14.5" y2="9.5" /><line x1="6" y1="6" x2="6" y2="13.5" />
     </svg>
   );
-  // The cameras table can leave the map: the user docks, tabs or floats it from its title menu.
+  // The cameras table can leave the map: the user docks, tabs or floats it from its title menu,
+  // or opens it in its own browser window (7.12.0; there is no built-in item for a widget).
   const camerasTable: ManagedWidget = {
     title: 'Cameras', icon: TableIcon, anchor: 'bottom-left', width: 300, height: 190,
     content: <CamerasTable onPick={coords => mapRef.current?.setView([coords[1], coords[0]], 15)} />,
-    canDock: true, canFloat: true,
-    titleMenu: w => w.location === 'panel'
-      ? [
-          { label: 'Dock below the map', action: () => w.move({ to: 'docked', position: 'bottom', size: 0.3 }) },
-          { label: 'Open as a tab', action: () => w.move({ to: 'tabbed' }) },
-          { label: 'Float', action: () => w.move({ to: 'floating' }) },
-        ]
-      : [{ label: 'Back into the map', action: () => w.move({ to: 'panel' }) }],
+    canDock: true, canFloat: true, canPopOut: true,
+    titleMenu: w => [
+      ...(w.location === 'panel'
+        ? [
+            { label: 'Dock below the map', action: () => w.move({ to: 'docked', position: 'bottom', size: 0.3 }) },
+            { label: 'Open as a tab', action: () => w.move({ to: 'tabbed' }) },
+            { label: 'Float', action: () => w.move({ to: 'floating' }) },
+          ]
+        : [{ label: 'Back into the map', action: () => w.move({ to: 'panel' }) }]),
+      ...(w.canPopOut && !w.isPoppedOut
+        ? [{ label: 'Open in new window', action: () => { w.popOut(); } }]
+        : []),
+    ],
   };
 
   return (
@@ -1824,6 +1831,7 @@ export function registerDemoPanels() {
         icon: '🌍',
         initialTarget: 'docked',
         disableLivePreview: true,
+        canPopOut: true,      // "Open in new window" in its tab and ⋮ menus (7.12.0)
         renderHeaderActions: (id) => <CodeSnippetButton panelId={id} type="luciadMap" />
     });
     workspace.registry.register('layertree', LayerTree, {

@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.11.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.12.0--next.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -28,6 +28,7 @@ serialised layout format**, so a layout saved by either library loads in the oth
 - **Docking Rules** — keep a panel type in the grid (`canFloat: false`) or floating (`canDock: false`), and veto any move with one `canDrop` function; forbidden targets simply aren't offered
 - **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
 - **Panel Overlay** — per-panel overlay layer with anchored toolbars (`RddPanelToolbar`, `RddToolbarButton`, `RddToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; an axis can span the panel instead of carrying a fixed size, so a strip or column tracks the panel as it resizes — set declaratively or by dragging an edge out until it snaps; `useFloatingWidgets()` opens N named windows dynamically from data or event handlers, and can move one out of its panel (docked beside it, a tab, or floating) and back without remounting it
+- **Pop-out Windows** — a panel, or a managed widget out of its panel, moves into its own browser window for a second monitor and comes back where it was, without remounting: state, scroll and a WebGL context go with it. The window gets the page's styles and theme; opt-in with `createWorkspace({ popOut: true })` and `canPopOut` per type ([guide →](https://felipecarrillo100.github.io/react-dockable-desktop/guide/popout-windows))
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
 - **Zero-Unmount DOM Persistence** — panel DOM nodes are moved, never destroyed, across docking, floating, and tab-switching alike, all by default; WebGL, maps, terminals, and forms retain full state with zero integration work (a heavy, rarely shown panel type can opt out with `keepAlive: false`; an `<iframe>` can be kept from reloading on moves with `preserveEmbeds: true`, where the browser has `moveBefore()`)
 - **i18n & RTL** — full Right-to-Left layout support; `dir="rtl"` flips every control, tab order, and drop zone automatically
@@ -191,8 +192,9 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `useSidebarTab()` | `SidebarTabContext` | Self-control for content inside a sidebar tab |
 | `useContextMenu()` | `(options) => void` | Show the shared context menu at a pointer event or position |
 | `usePanelContextMenu(items)` | `void` | Inject dynamic context menu items into this panel's right-click menu |
-| `useFloatingWidgets()` | `FloatingWidgetsApi` | Open/close N named floating widgets inside a panel overlay at runtime; each independently anchored, dockable, and resizable. `move()` takes one out of its panel and back, `placement()` saves where it is |
-| `useWidget()` | `WidgetHandle \| null` | Inside a managed widget: its `id`, owner panel, own `panelId` while out of the panel, live `location`, and `onWillMove` / `onMoved` around every move |
+| `useFloatingWidgets()` | `FloatingWidgetsApi` | Open/close N named floating widgets inside a panel overlay at runtime; each independently anchored, dockable, and resizable. `move()` takes one out of its panel and back, `placement()` saves where it is, `popOut()` puts it in its own window |
+| `useWidget()` | `WidgetHandle \| null` | Inside a managed widget: its `id`, owner panel, own `panelId` while out of the panel, live `location`, `isPoppedOut`, and `onWillMove` / `onMoved` around every move |
+| `usePanelWindow()` | `PanelWindow` | Inside a panel: `{ window, document }` of the window it is shown in, the pop-out's while it is in its own window |
 | `useFormatMessage()` | `MessageFormatter` | i18n formatter matching the current provider's locale |
 | `useMessages()` | `Record<MessageKey, MessageDescriptor>` | The effective built-in message table |
 | `useHostClasses()` | `HostClasses` | The class props set on the provider (`modalClass`, `windowClass`, …) |
@@ -217,7 +219,7 @@ const panelCount = useWorkspaceState(s => Object.keys(s.panels).length);
 ```ts
 const workspace = createWorkspace({
   panels, initialState?, formatMessage?, messages?, dir?,
-  defaultSplitRatio?, defaultEdgeSplitRatio?, zIndexBase?,
+  defaultSplitRatio?, defaultEdgeSplitRatio?, zIndexBase?, canDrop?, popOut?,
 });
 
 // Panel lifecycle
@@ -243,6 +245,11 @@ workspace.updatePanelTitle(id, title)
 workspace.setPanelIcon(id, icon)               // null restores the registration's icon; never saved
 workspace.setPanelDirty(id, dirty, options?)
 workspace.updatePanelProps(id, props | prev => next)  // new props; re-checks whether the panel can be saved
+
+// Pop-out windows (createWorkspace({ popOut: true }) and defaultOptions.canPopOut)
+workspace.popOutPanel(id)                      // → PopOutResult; into its own browser window, inside the user's click
+workspace.returnPanel(id)                      // → { ok }; back where it was
+workspace.focusPanelWindow(id)                 // → { ok }; bring the window that holds it forward, best effort
 
 // Synchronous state queries (no hook needed)
 workspace.isOpen(id)                           // → boolean
@@ -282,6 +289,7 @@ Lower-level methods (close guards, state providers, split and floating-window ge
 | `containerType` | `ContainerType` | Where it is rendered; updates live (a docked panel that is floated re-renders as `'floating-window'`) |
 | `isActive` | `boolean` | The globally active panel. Always `false` in a modal or drawer |
 | `isMinimized` / `isFloating` | `boolean` | Current state of a workspace panel |
+| `isPoppedOut` | `boolean` | In its own browser window (`isFloating` is true too) |
 | `close(options?)` | `(options?: CloseOptions) => void` | Request the container to close; respects dirty state and close guards (`{ force: true }` skips them) |
 | `minimize()` | `() => void` | Minimize this panel to the taskbar; no effect in a modal or drawer |
 | `setDirty(dirty, options?)` | `(dirty: boolean, options?: DirtyStateOptions) => void` | Mark unsaved changes; triggers confirmation dialog on close |
@@ -468,6 +476,7 @@ Complete guides, API reference, and interactive demo at:
 | [Best Practices](https://felipecarrillo100.github.io/react-dockable-desktop/guide/best-practices) | Patterns for production-ready implementations |
 | [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `RddPanelOverlay`, panel toolbars, `RddFloatingWidget`, `useFloatingWidgets` |
 | [Widgets Out of the Panel](https://felipecarrillo100.github.io/react-dockable-desktop/guide/widgets-out-of-the-panel) | Dock, tab or float a managed widget beside its panel; `useWidget`, `placement`, `preserveEmbeds` |
+| [Pop-out Windows](https://felipecarrillo100.github.io/react-dockable-desktop/guide/popout-windows) | A panel or widget in its own browser window; `popOutPanel`, `popoutUrl`, `popoutWrapper` for CSS-in-JS, `usePanelWindow` |
 | [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<RddToasts>`, queue behaviour, theming, `ToastAdapter` |
 | [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrading across major versions |
 | [UI Frameworks](https://felipecarrillo100.github.io/react-dockable-desktop/guide/ui-frameworks) | Using it with MUI, Bootstrap or Tailwind: dark mode, z-index, overrides |

@@ -9,6 +9,9 @@ Typical uses: a results table that started as a small widget over a map, docked 
 more rows; a chart pulled out of a dashboard panel to sit next to another one; a legend floated
 out of the way.
 
+From 7.12.0 it can also go into its own browser window: see
+[Widgets in their own window](./popout-windows#widgets-in-their-own-window).
+
 ## In one example
 
 ```tsx
@@ -127,6 +130,7 @@ function ResultsTable() {
 | `id`, `ownerPanelId` | The widget's id, and its owner panel's (`null` when the overlay isn't in a workspace panel) |
 | `panelId` | Its own panel's id while it is out of its panel, for workspace calls such as `updatePanelTitle`; `null` in the panel |
 | `location` | Where it is now. A component that calls `useWidget()` re-renders when it changes |
+| `isPoppedOut` | It is in its own browser window (`location` is then `'floating'`). See [Pop-out Windows](./popout-windows#widgets-in-their-own-window) (7.12.0) |
 | `onWillMove(cb)` | Just before the element moves to another container: in or out of the panel, between docked, tabbed and floating, minimised or restored, by your code, the user, or a layout load |
 | `onMoved(cb)` | Once it is in its new container and has its new size (when it has none, as when minimised, on the next frames) |
 
@@ -239,10 +243,12 @@ without the option. A widget with it also moves its owner panel's element this w
 | `useFloatingWidgets().location(id)` | `WidgetLocation \| null` |
 | `useFloatingWidgets().placement(id)` | `WidgetPlacement \| null` |
 | `ManagedWidget.canDock`, `.canFloat` | The user's rules out of the panel. Default `false` |
-| `ManagedWidget.titleMenu(w)` | `(w: WidgetMenuContext) => ContextMenuItem[]`; `w` is `{ id, location, canDock, canFloat, move, close }` |
+| `ManagedWidget.titleMenu(w)` | `(w: WidgetMenuContext) => ContextMenuItem[]`; `w` is `{ id, location, canDock, canFloat, move, close }`, plus `canPopOut`, `isPoppedOut` and `popOut()` (7.12.0) |
+| `ManagedWidget.canPopOut` | It may go into its own browser window (7.12.0). Default `false` |
+| `useFloatingWidgets().popOut(id)` | → `PopOutResult` (7.12.0); see [Pop-out Windows](./popout-windows#widgets-in-their-own-window) |
 | `ManagedWidget.placement` | Open at a saved `WidgetPlacement` |
 | `ManagedWidget.preserveEmbeds` | Keep iframes alive across moves |
-| `useWidget()` | `WidgetHandle \| null`: `{ id, ownerPanelId, panelId, location, onWillMove, onMoved }` |
+| `useWidget()` | `WidgetHandle \| null`: `{ id, ownerPanelId, panelId, location, isPoppedOut, onWillMove, onMoved }` |
 
-See also: [Panel Overlay](./panel-overlay), [Workspace](./workspace-client) (`focusPanel(id, { restore })`,
+See also: [Pop-out Windows](./popout-windows), [Panel Overlay](./panel-overlay), [Workspace](./workspace-client) (`focusPanel(id, { restore })`,
 `updatePanelProps`), [Layout System](./layout).

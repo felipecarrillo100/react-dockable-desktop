@@ -5,8 +5,8 @@ stylesheet styles only its own elements: every class it renders starts with `rdd
 variable with `--rdd-`, so nothing collides with a framework's own `.active`, `.btn` or utility
 classes. It never styles `<html>`, `<body>` or your own markup.
 
-This page covers the four places where a framework and the desktop meet: colours, dark mode,
-stacking, and overriding styles.
+This page covers the places where a framework and the desktop meet: colours, dark mode,
+stacking, overriding styles, and pop-out windows.
 
 ## Colours and fonts
 
@@ -116,3 +116,19 @@ In order of preference:
 
 A version of the stylesheet in a CSS cascade layer (`@layer`), which would let any of your rules
 win without specificity, is planned for a later release.
+
+## Pop-out windows
+
+A panel in its own browser window ([Pop-out Windows](/guide/popout-windows), 7.12.0) gets the page's
+stylesheets and `<html>` / `<body>` attributes, so Bootstrap, Tailwind and plain CSS work there as in
+the page, `data-bs-theme` and `.dark` included.
+
+MUI (Emotion) and styled-components need one more step. In production they insert their rules with
+`insertRule`, which leaves their `<style>` tags empty, so the window gets none of them: it looks right
+in development and unstyled in production. Give the provider a `popoutWrapper` that points their
+style target at the panel's document (an Emotion `CacheProvider` with a cache per document, or a
+`StyleSheetManager` with `target`). The recipes are in
+[CSS-in-JS needs `popoutWrapper`](/guide/popout-windows#css-in-js-needs-popoutwrapper).
+
+The same goes for your framework's menus, tooltips and dialogs inside such a panel: they portal to
+the page's `document.body` by default. Give them `usePanelWindow().document.body` as their container.

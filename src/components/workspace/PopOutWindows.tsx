@@ -89,6 +89,8 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   const returnLabel = formatLabel(hosted ? messages.backIntoPanel : messages.returnToDesktop, formatMessage);
   const icon = panel.icon ?? (options?.icon || DefaultGridIcon);
   const openWidgetMenu = (e: React.MouseEvent) => {
+    // The menu closes on its window's click: without this, the click that opens it closes it.
+    e.stopPropagation();
     const items = actions.getPanelContextMenuItems(id);
     if (items.length > 0) actions.showContextMenu({ event: e, items, initialFocus: initialFocusFor(e) });
   };

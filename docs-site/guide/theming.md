@@ -826,7 +826,22 @@ Study the built-in skins in the library source (`src/index.css`) for examples �
 
 The chrome's fixed layout values — tab-bar height, close-button size, title widths, the sidebar strip's width — are in the stylesheet, not inline styles (since 7.1.2), so a rule of your own overrides them without `!important`. Import the library's stylesheet before your own; a rule with a class and a descendant (`.my-app .rdd-close-tab-x`) wins whatever the order. Only values that change as you use the workspace (sizes, positions, split ratios) are set inline.
 
+## Styles in a pop-out window
+
+A panel in its own browser window ([Pop-out Windows](./popout-windows), 7.12.0) looks as it does in
+the page, with nothing to set up. The window gets the page's stylesheets (every `<link>` and
+`<style>` of `<head>`, and `adoptedStyleSheets`), and `<html>`'s and `<body>`'s attributes, classes
+and inline variables: the skin, the colour scheme, `--rdd-brand-*`, `--rdd-radius-scale`, a `.dark`
+class. All of it follows a change while the window is open, so a skin or scheme switch reaches it.
+The frame is `.rdd-workspace` and carries the workspace's `data-rdd-skin` and `data-color-scheme`,
+so rules scoped to the workspace apply inside it.
+
+Its header, `.rdd-popout-frame__header`, uses `--rdd-window-header-bg` and `--rdd-window-border`,
+like a floating window's title bar. Rules a CSS-in-JS library inserts with `insertRule` (in
+production) aren't copied: see [CSS-in-JS needs `popoutWrapper`](./popout-windows#css-in-js-needs-popoutwrapper).
+
 ## See also
 
+- [Pop-out Windows →](./popout-windows) — a panel in its own browser window, and its styles
 - [Workspace →](./workspace-client#rdddesktop-props) — `skin` and `defaultPanelIcon` props on `RddDesktop`
 - [Advanced Topics →](./advanced) — multiple providers / workspaces on one page

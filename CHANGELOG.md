@@ -10,6 +10,16 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.12.0-next.0] — 2026-11-21
+
+**Pre-release** on npm's `next` tag (`npm install react-dockable-desktop@next`), for feedback before
+7.12.0. Pop-out windows: a panel, or a managed widget that left its panel, can move into its own
+browser window, for a second monitor, and come back where it was, without its content remounting.
+The window gets the page's styles and theme; `popoutWrapper` points CSS-in-JS at it, and
+`usePanelWindow()` gives panel code its window. See the new guide, [Pop-out Windows](https://felipecarrillo100.github.io/react-dockable-desktop/guide/popout-windows).
+Additions only and off by default (`createWorkspace({ popOut: true })`): an app that doesn't turn it
+on sees no change. Read **Upgrading** below for five new message keys.
+
 ### Added
 
 - **Pop-out windows for panels**: a panel can move into its own browser window, for a second
@@ -1492,7 +1502,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.0...HEAD
+[7.12.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0-next.0
 [7.11.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0
 [7.11.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.0...v7.11.0-next.1
 [7.11.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0-next.0

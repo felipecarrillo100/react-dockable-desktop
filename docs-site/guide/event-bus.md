@@ -139,7 +139,9 @@ workspace.subscribe('layout:panels-excluded', data => {
 | `'panel:closed'` | `{ id: string }` | A panel was closed. |
 | `'panel:minimized'` | `{ id: string }` | A panel was sent to the taskbar. |
 | `'panel:restored'` | `{ id: string }` | A minimized panel was restored. |
-| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, a dedupe redirect, `updatePanelProps()` and a managed widget moving out of its panel or back (7.11.0) into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), split-ratio drags, floating-window moves and resizes, or toggling a floating window's maximized state. |
+| `'panel:popped-out'` | `{ id: string; window: Window }` | A panel moved into its own browser window, once that window's page is ready. `window` is the one `usePanelWindow()` now gives the panel. Sent for a managed widget's panel too. See [Pop-out Windows](./popout-windows). (7.12.0) |
+| `'panel:returned'` | `{ id: string }` | A panel that was in its own window is back in the page, whatever brought it back. Not sent for a panel closed while out (`panel:closed` is). (7.12.0) |
+| `'layout:changed'` | `{}` | Coalesces open/close/minimize/restore, float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, a dedupe redirect, `updatePanelProps()` and a managed widget moving out of its panel or back (7.11.0), and a panel moving into its own window or back into the grid (7.12.0) into one signal for autosave-style consumers. Does **not** cover a `useSaveState` return value changing on its own (a pull, unobservable without the panel notifying separately), split-ratio drags, floating-window moves and resizes, or toggling a floating window's maximized state. |
 | `'layout:panels-excluded'` | `{ panels: { id: string; component: string }[] }` | Fires from inside `saveLayout()` itself, only when that specific call excluded at least one panel whose current `props` (static or from `useSaveState`) failed `isSerializable()`. Deliberately just a signal, not a UI opinion — decide for yourself whether it becomes a toast, a console warning, or nothing. |
 
 Built-in events are available on typed workspaces too — they are intersected in automatically via `BuiltInEvents`.
@@ -221,7 +223,7 @@ workspace.subscribe('panel:opened', data => {
 | `useWorkspace().publish/subscribe` | Inside a panel component | Easiest for panel-to-panel communication |
 | `workspace.publish/subscribe` | Outside React (module level, event handlers) | Use the generic for type safety |
 | `workspace.onPanelOpen/Close/Minimize/Restore` | Module level, analytics, routing | Convenience wrappers; return unsubscribe |
-| `BuiltInEvents` | TypeScript event maps | Types the six built-in events: `panel:opened`, `panel:closed`, `panel:minimized`, `panel:restored`, `layout:changed`, `layout:panels-excluded` |
+| `BuiltInEvents` | TypeScript event maps | Types the eight built-in events: `panel:opened`, `panel:closed`, `panel:minimized`, `panel:restored`, `panel:popped-out`, `panel:returned` (7.12.0), `layout:changed`, `layout:panels-excluded` |
 
 ## See also
 

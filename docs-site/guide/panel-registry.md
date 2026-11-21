@@ -51,6 +51,7 @@ The type is `PanelRegistryEntry['defaultOptions']` (`PanelRegistryEntry` is expo
 | `tabClassName` | `string` | — | Class added to the tab of each panel of this type. (7.8.0) |
 | `keepAlive` | `boolean` | `true` | `false` unmounts the panel's component while it is hidden and mounts it afresh when shown — see [Freeing a hidden panel](#freeing-a-hidden-panel-keepalive-false) below. (7.8.0) |
 | `preserveEmbeds` | `boolean` | `false` | An `<iframe>` (or other embedded document or media) in the panel doesn't reload when the panel moves: docked, floated, minimised, restored, or the grid changing around it. Uses `moveBefore()` in Chrome and Edge 133+ and Firefox 144+; in Safari it reloads as before. (7.11.0) |
+| `canPopOut` | `boolean` | `false` | The user may move a panel of this type into its own browser window ("Open in new window" in its tab and ⋮ menus), and `workspace.popOutPanel(id)` may. Needs `createWorkspace({ popOut: true })`. It gates the menu item and new calls only: a window already open stays open when it changes. `preserveEmbeds` doesn't reach into a window: an iframe reloads there. See [Pop-out Windows](./popout-windows). (7.12.0) |
 
 #### Freeing a hidden panel (`keepAlive: false`)
 

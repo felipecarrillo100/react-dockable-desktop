@@ -15,7 +15,7 @@ function MyPanel() {
 }
 ```
 
-The returned `PanelHandle` carries the panel's `id`, its live `containerType`, the flags `isActive`, `isMinimized` and `isFloating`, and the actions `close`, `minimize`, `setDirty`, `setTitle` and `setIcon`. The component re-renders when one of those values changes.
+The returned `PanelHandle` carries the panel's `id`, its live `containerType`, the flags `isActive`, `isMinimized`, `isFloating` and `isPoppedOut` ([in its own window](./popout-windows), 7.12.0), and the actions `close`, `minimize`, `setDirty`, `setTitle` and `setIcon`. The component re-renders when one of those values changes.
 
 **Identity.** Since 7.0.1, the five actions never change identity for the panel's lifetime. The handle object itself does change, whenever one of the four live values changes. So never list the handle in a dependency array; depend on the action you call, and on the values you write.
 
@@ -321,7 +321,8 @@ interface PanelHandle {
   containerType: ContainerType;         // updates live
   isActive:      boolean;               // the globally active panel; always false in a modal or drawer
   isMinimized:   boolean;
-  isFloating:    boolean;
+  isFloating:    boolean;               // also true while it is in its own window
+  isPoppedOut:   boolean;               // in its own browser window (7.12.0; see Pop-out Windows)
 
   // ── Actions ───────────────────────────────────────────────────────────────
   close:    (options?: CloseOptions) => void;  // { force?: boolean }

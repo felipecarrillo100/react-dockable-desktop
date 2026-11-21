@@ -25,6 +25,7 @@ const workspace = createWorkspace(config?: WorkspaceConfig)  // → Workspace
 | `defaultEdgeSplitRatio` | `number` | Fraction (0.1–0.9) the new panel takes when dropped on the workspace's outer edge. Default: `0.2`. |
 | `zIndexBase` | `number` | Starting z-index for floating windows and the library's own chrome overlays (context menu, toolbar flyout, modal stack, toast, workspace edge zones) — all shift together via `--rdd-z-base`. Set this above/below a host app's own modal z-index range to control stacking against it. Default: `1000`. |
 | `canDrop` | `(drop: PanelDrop) => boolean` | Veto where users can move panels: return `false` and that target isn't offered while dragging, and the move doesn't happen. Runs after the panel type's `canFloat` / `canDock`, and only for what the user does. See [Controlling where users can move panels](/guide/layout#controlling-where-users-can-move-panels). (7.9.0) |
+| `popOut` | `boolean` | Lets panels move into their own browser window, for a second monitor. A panel type opts in with `defaultOptions.canPopOut`. Set once, here. Default: `false`. See [Pop-out Windows](./popout-windows). (7.12.0) |
 
 **Workspace config wins over provider props.** `dir`, `zIndexBase`, `messages` and `formatMessage` can be given here or as [`DockableDesktopProvider` props](#dockabledesktopprovider-props); when both are given, the value here is used and the provider prop is ignored — including later changes to it. One exception: message-descriptor labels in **your own** context-menu items are formatted only with the provider's `formatMessage` (the built-in items — Float, Minimize, Close… — use the workspace's), so pass `formatMessage` to the provider too if your custom items use descriptors. For a direction that changes at runtime, either leave `dir` out of `createWorkspace()` and drive the provider's `dir` prop, or call `workspace.setDirection()`.
 
@@ -51,6 +52,20 @@ workspace.restorePanel(id, { focus? })            // restore from taskbar (focus
 workspace.focusPanel(id)                          // bring to front / select tab; a minimized one stays minimized
 workspace.focusPanel(id, { restore: true })       // ...and restore a minimized one first (7.11.0)
 ```
+
+### Pop-out windows (7.12.0)
+
+With `createWorkspace({ popOut: true })` and a type with `defaultOptions.canPopOut`:
+
+```ts
+workspace.popOutPanel(id)       // → PopOutResult: into its own browser window; call it inside the user's click
+workspace.returnPanel(id)       // → { ok: boolean }: back where it was
+workspace.focusPanelWindow(id)  // → { ok: boolean }: bring the window that holds it forward, best effort
+```
+
+`focusPanel(id)` on a panel in its own window brings that window forward too. `maximizePanel` and
+`floatPanel` are ignored while it is out; `minimizePanel` and the dock calls bring it back first. See
+[Pop-out Windows](./popout-windows).
 
 ### `openPanel` options
 
@@ -179,6 +194,8 @@ const json = workspace.saveLayout();              // → JSON string
 workspace.loadLayout(json);                       // restore from JSON string
 ```
 
+A panel in its own window (7.12.0) is saved at the place it would come back to, so the saved layout is the one from before it left; no window reopens after a load. `loadLayout()` closes every pop-out window.
+
 ### Query methods
 
 ```ts
@@ -193,6 +210,8 @@ workspace.findPanelId(componentKey, dedupeKey) // → string | null — see Inst
 workspace.publish('my-event', { value: 42 });
 const unsubscribe = workspace.subscribe('my-event', (data) => console.log(data));
 ```
+
+The built-in events (`panel:opened`, `layout:changed`, …) are listed in [Event Bus & Communication](./event-bus#built-in-event-payloads); 7.12.0 adds `panel:popped-out` and `panel:returned` for pop-out windows.
 
 ### Typed event bus
 
@@ -341,6 +360,8 @@ place, a right-click on the tab and the menu key still do.
 | `dir` | `'ltr' \| 'rtl'` | `'ltr'` | Layout direction. |
 | `zIndexBase` | `number` | `1000` | Starting z-index for floating windows and the chrome overlays (see `WorkspaceConfig.zIndexBase`). |
 | `contextMenuAdapter` | `ContextMenuAdapter` | the built-in menu | Replaces the context menu component — see [Context Menus →](/guide/context-menus). |
+| `popoutUrl` | `string` | a blank window | The app's own same-origin page (an empty `<body>`) that a pop-out window opens. See [Pop-out Windows](./popout-windows#the-page-the-window-opens-popouturl). (7.12.0) |
+| `popoutWrapper` | `ComponentType<PopoutWrapperProps>` | — | Rendered around every panel's content while the workspace has `popOut`, given `{ window, document, children }` of the panel's window: for CSS-in-JS in a pop-out. See [CSS-in-JS needs `popoutWrapper`](./popout-windows#css-in-js-needs-popoutwrapper). (7.12.0) |
 | class props | `string` | — | See below. |
 
 `messages`, `formatMessage`, `dir` and `zIndexBase` given to `createWorkspace()` win over these props — see [WorkspaceConfig](#workspaceconfig) — except that message-descriptor labels in your own context-menu items always use this `formatMessage` prop.

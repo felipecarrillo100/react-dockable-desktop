@@ -517,6 +517,7 @@ function SurveillanceMapInner() {
 | `move(id, to)` | `(id: string, to: WidgetTarget) => MoveResult` | Moves the widget out of its panel (docked, tabbed, floating) or back (7.11.0). See [Widgets Out of the Panel](./widgets-out-of-the-panel). |
 | `location(id)` | `(id: string) => WidgetLocation \| null` | Where it is: `'panel'`, `'docked'`, `'tabbed'`, `'floating'` or `'minimized'` (7.11.0). |
 | `placement(id)` | `(id: string) => WidgetPlacement \| null` | Where it is, as JSON to save and give back to `open(id, { placement })` (7.11.0). |
+| `popOut(id)` | `(id: string) => PopOutResult` | Moves the widget into its own browser window, inside the user's click (7.12.0). Needs `canPopOut` and a workspace with `popOut`. See [Pop-out Windows](./popout-windows#widgets-in-their-own-window). |
 
 ### `ManagedWidget`
 
@@ -535,6 +536,8 @@ interface ManagedWidget {
   titleMenu?: (w: WidgetMenuContext) => ContextMenuItem[]; // the title icon's menu, in your own words
   placement?: WidgetPlacement;  // open where it was saved (first open of an id only)
   preserveEmbeds?: boolean; // an iframe inside doesn't reload when it moves; default: false
+  // 7.12.0, see Pop-out Windows:
+  canPopOut?: boolean;      // it may go into its own browser window; default: false
 }
 ```
 
@@ -776,7 +779,7 @@ All exported from `'react-dockable-desktop'`:
 | `Stretch` | Type | `'width' \| 'height' \| 'both'` — which axes span the panel |
 | `PanelFloatPlacement` | Interface | `{ anchor, stretch }` — reported by `onPlacementChange` |
 | `ManagedWidget` | Interface | Config for `manager.open(id, config)` |
-| `useWidget` | Hook | Inside a managed widget: `{ id, ownerPanelId, panelId, location, onWillMove, onMoved }` (7.11.0) |
+| `useWidget` | Hook | Inside a managed widget: `{ id, ownerPanelId, panelId, location, isPoppedOut, onWillMove, onMoved }` (7.11.0; `isPoppedOut` 7.12.0) |
 | `WidgetHandle` | Interface | What `useWidget()` returns (7.11.0) |
 | `WidgetTarget`, `WidgetLocation`, `MoveResult` | Types | `move()`'s target, `location()`'s value, `move()`'s result (7.11.0) |
 | `WidgetMenuContext` | Interface | What `titleMenu(w)` is given (7.11.0) |
@@ -790,6 +793,7 @@ All exported from `'react-dockable-desktop'`:
 ## See also
 
 - [Widgets Out of the Panel →](./widgets-out-of-the-panel) — dock, tab or float a managed widget beside its panel, without remounting it
+- [Pop-out Windows →](./popout-windows) — a panel or a managed widget in its own browser window (7.12.0)
 - [Toolbar →](./toolbar) — workspace-level tool strip with radio, toggle, and group items
 - [Panel Contributions →](./panel-contributions) — the other direction: publish content *out* to the workspace Toolbar/Sidebar
 - [Context Menus →](./context-menus) — `usePanelContextMenu`, right-click menus
