@@ -49,11 +49,17 @@ export interface BuiltInEvents {
         id: string;
         window: Window;
     };
+    'panel:popping-out': {
+        id: string;
+    };
     // (undocumented)
     'panel:restored': {
         id: string;
     };
     'panel:returned': {
+        id: string;
+    };
+    'panel:returning': {
         id: string;
     };
 }

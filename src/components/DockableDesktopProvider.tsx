@@ -49,7 +49,8 @@ export interface DockableDesktopProviderProps {
    * `/popout.html`, with an empty `<body>`. The library waits for it to load, then moves the panel
    * in. Without it, the window opens blank. A page that can't be read (another origin, or a redirect
    * off this one) or doesn't load within 10 s sends the panel back. Only used with
-   * `createWorkspace({ popOut: true })`.
+   * `createWorkspace({ popOut: true })`. Set it when a third-party embed refuses a blank window: a
+   * YouTube player, for one, shows error 153 there.
    */
   popoutUrl?: string;
   /**
@@ -58,7 +59,9 @@ export interface DockableDesktopProviderProps {
    * document, so the panel's styles are inserted where it is shown (a pop-out doesn't get rules
    * inserted with `insertRule` from the page). Rendered for every panel, for its whole life, while
    * the workspace has `popOut: true` (none otherwise), so nothing remounts when a panel moves. Pass
-   * a stable component (defined outside a render), not an inline function.
+   * a stable component (defined outside a render), not an inline function. In a pop-out it is also
+   * rendered around the window's frame (the icon and title you give the panel), a context menu and
+   * the toasts shown there, with that window: keep one cache per document, not per wrapper.
    *
    * @example
    * ```tsx
@@ -107,29 +110,31 @@ export const DockableDesktopProvider: React.FC<DockableDesktopProviderProps> = (
 
   const inner = (
     <WorkspaceInstanceContext.Provider value={ws}>
-      <PopoutWrapperContext.Provider value={popoutWrapper ?? null}>
-        <ToolbarProvider>
-          <WindowManagerProvider client={ws} predefinedMessages={messages} {...props}>
-            <PanelContributionProvider>
-              <PanelProvider>
-                {children}
-              </PanelProvider>
-            </PanelContributionProvider>
-          </WindowManagerProvider>
-        </ToolbarProvider>
-      </PopoutWrapperContext.Provider>
+      <ToolbarProvider>
+        <WindowManagerProvider client={ws} predefinedMessages={messages} {...props}>
+          <PanelContributionProvider>
+            <PanelProvider>
+              {children}
+            </PanelProvider>
+          </PanelContributionProvider>
+        </WindowManagerProvider>
+      </ToolbarProvider>
     </WorkspaceInstanceContext.Provider>
   );
 
-  if (existingCtxMenu !== null) return inner;
-
+  // The app's popoutWrapper is outside the menu's provider too (7.12.0): a menu shown in a pop-out
+  // is wrapped there (an app's own <RddContextMenu> above this provider is outside it).
   return (
-    <ContextMenuProvider
-      adapter={contextMenuAdapter}
-      formatMessageProvider={props.formatMessage}
-    >
-      {inner}
-    </ContextMenuProvider>
+    <PopoutWrapperContext.Provider value={popoutWrapper ?? null}>
+      {existingCtxMenu !== null ? inner : (
+        <ContextMenuProvider
+          adapter={contextMenuAdapter}
+          formatMessageProvider={props.formatMessage}
+        >
+          {inner}
+        </ContextMenuProvider>
+      )}
+    </PopoutWrapperContext.Provider>
   );
 };
 

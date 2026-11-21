@@ -186,6 +186,19 @@ toast.info('Second');
 toast.info('Third');   // queued until First or Second exits
 ```
 
+## Pop-out windows
+
+With [pop-out windows](./popout-windows), a toast shows in the window the user is in (7.12.0). One
+raised while a pop-out has focus, from a click in it say, shows in that window, at the same
+position; otherwise it shows in the main window, as before. Nothing to set up.
+
+- A toast stays in the window it was shown in. An update with the same `id` updates it there.
+- When its window closes, the toast goes with it (its `onClose` runs).
+- `maxVisible` and the queue count the toasts of every window together.
+- In a pop-out, the provider's `popoutWrapper` is rendered around the toasts, so CSS-in-JS content
+  is styled there. Place `<RddToasts>` inside `<DockableDesktopProvider>` for that.
+- With an `adapter`, the other library decides where its toasts go: nothing changes.
+
 ## Custom adapter
 
 If your project already has its own notification system (e.g. Ant Design's `notification`, MUI's `Snackbar`, or Sonner), you can redirect all `toast.*` calls to it via a `ToastAdapter`:
@@ -216,6 +229,7 @@ When `adapter` is provided:
 - The built-in queue, timer, and card rendering are bypassed
 - If `adapter.Container` is `null`, nothing is rendered by `<RddToasts>` (the adapter owns its own DOM)
 - If `adapter.Container` is a component, it is portal-rendered by `<RddToasts>` with a `position` prop
+- With pop-out windows, toasts go where the adapter's library puts them (usually the main window)
 
 ## TypeScript types
 

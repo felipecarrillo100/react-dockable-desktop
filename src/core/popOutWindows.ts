@@ -179,8 +179,10 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     if (!entry) return false;
     // A widget's panel coming back (not moved from code): its widget is told first (S5).
     const widget = restorePlace ? hostedRouters.get(id) : undefined;
-    widget?.returning();
     entries.delete(id);
+    // Before the element leaves the window (next.1): sent only when panel:returned will follow.
+    if (entry.announced && core.getSnapshot().panels[id]) core.actions.publish('panel:returning', { id });
+    widget?.returning();
     try { host()?.park(id); } catch { /* the slot will park it when it unmounts */ }
     entry.stop();
     try { if (!entry.win.closed) entry.win.close(); } catch { /* already gone */ }
@@ -193,9 +195,18 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     return true;
   };
 
-  /** Sends `panel:popped-out` once the panel is out and its window's page is ready. */
-  const announce = (entry: Entry) => {
-    if (entry.announced || !entry.doc || entries.get(entry.id) !== entry || !core.getSnapshot().panels[entry.id]?.poppedOut) return;
+  /** Whether the panel is out and its window's page is ready, and `panel:popped-out` is still to be sent. */
+  const ready = (entry: Entry) => !entry.announced && !!entry.doc && entries.get(entry.id) === entry && !!core.getSnapshot().panels[entry.id]?.poppedOut;
+
+  /**
+   * Shows the window's content (the provider renders the open windows, `emit`): `panel:popping-out`
+   * first, while the panel's element is still in the page (next.1), then, once it is out,
+   * `panel:popped-out`.
+   */
+  const show = (entry: Entry) => {
+    if (ready(entry)) core.actions.publish('panel:popping-out', { id: entry.id });
+    emit();
+    if (!ready(entry)) return;
     entry.announced = true;
     core.actions.publish('panel:popped-out', { id: entry.id, window: entry.win });
   };
@@ -247,7 +258,7 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     if (!tryAttach()) {
       const onLoad = () => {
         if (!live() || entry.doc) return;
-        if (tryAttach() && live()) { stopWaiting(); emit(); announce(entry); }
+        if (tryAttach() && live()) { stopWaiting(); show(entry); }
       };
       const timer = setTimeout(() => { if (live() && !entry.doc) fail(id, `did not load within ${POPOUT_LOAD_TIMEOUT_MS / 1000} s`); }, POPOUT_LOAD_TIMEOUT_MS);
       checkReady = onLoad;
@@ -334,8 +345,7 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
       back(id, false);
       return refuse('not-open');
     }
-    emit();
-    announce(entry);
+    show(entry);
     return { ok: true };
   };
 

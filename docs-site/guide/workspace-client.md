@@ -211,7 +211,7 @@ workspace.publish('my-event', { value: 42 });
 const unsubscribe = workspace.subscribe('my-event', (data) => console.log(data));
 ```
 
-The built-in events (`panel:opened`, `layout:changed`, …) are listed in [Event Bus & Communication](./event-bus#built-in-event-payloads); 7.12.0 adds `panel:popped-out` and `panel:returned` for pop-out windows.
+The built-in events (`panel:opened`, `layout:changed`, …) are listed in [Event Bus & Communication](./event-bus#built-in-event-payloads); 7.12.0 adds `panel:popping-out`, `panel:popped-out`, `panel:returning` and `panel:returned` for pop-out windows.
 
 ### Typed event bus
 
@@ -360,8 +360,8 @@ place, a right-click on the tab and the menu key still do.
 | `dir` | `'ltr' \| 'rtl'` | `'ltr'` | Layout direction. |
 | `zIndexBase` | `number` | `1000` | Starting z-index for floating windows and the chrome overlays (see `WorkspaceConfig.zIndexBase`). |
 | `contextMenuAdapter` | `ContextMenuAdapter` | the built-in menu | Replaces the context menu component — see [Context Menus →](/guide/context-menus). |
-| `popoutUrl` | `string` | a blank window | The app's own same-origin page (an empty `<body>`) that a pop-out window opens. See [Pop-out Windows](./popout-windows#the-page-the-window-opens-popouturl). (7.12.0) |
-| `popoutWrapper` | `ComponentType<PopoutWrapperProps>` | — | Rendered around every panel's content while the workspace has `popOut`, given `{ window, document, children }` of the panel's window: for CSS-in-JS in a pop-out. See [CSS-in-JS needs `popoutWrapper`](./popout-windows#css-in-js-needs-popoutwrapper). (7.12.0) |
+| `popoutUrl` | `string` | a blank window | The app's own same-origin page (an empty `<body>`) that a pop-out window opens. Set it when a third-party embed refuses a blank window (a YouTube player shows error 153). See [Pop-out Windows](./popout-windows#the-page-the-window-opens-popouturl). (7.12.0) |
+| `popoutWrapper` | `ComponentType<PopoutWrapperProps>` | — | Rendered around every panel's content while the workspace has `popOut`, given `{ window, document, children }` of the panel's window: for CSS-in-JS in a pop-out. In a pop-out also around the window's frame, a menu and the toasts shown there. See [CSS-in-JS needs `popoutWrapper`](./popout-windows#css-in-js-needs-popoutwrapper). (7.12.0) |
 | class props | `string` | — | See below. |
 
 `messages`, `formatMessage`, `dir` and `zIndexBase` given to `createWorkspace()` win over these props — see [WorkspaceConfig](#workspaceconfig) — except that message-descriptor labels in your own context-menu items always use this `formatMessage` prop.

@@ -4235,8 +4235,8 @@ html.rdd-no-animations [class*="rdd-"]::after {
 /* ==========================================================================
    POP-OUT WINDOWS (7.12.0)
    A panel in its own browser window: the library's frame fills the child window's <body>, with a
-   header (icon, title, "Return to desktop") over the panel's slot. The window gets this sheet
-   from the page (S3); the frame is also .rdd-workspace and repeats the workspace's colour scheme
+   header (icon, title, a "Return to desktop" button) over the panel's slot. The window gets this
+   sheet from the page (S3); the frame is also .rdd-workspace and repeats the workspace's colour scheme
    and skin, so its colours are the workspace's. Its minimum layout is inline as well, so content
    stays usable without the sheet.
    ========================================================================== */
@@ -4272,7 +4272,9 @@ html.rdd-no-animations [class*="rdd-"]::after {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rdd-popout-frame__return { font: inherit; }
+/* The way back: a title-bar button in the skin (.rdd-custom-tab-btn), as a floating window's; its
+   label is the tooltip and the accessible name. The styling hook is this class. */
+.rdd-popout-frame__return { flex: 0 0 auto; }
 .rdd-popout-frame__body {
   flex: 1 1 auto;
   min-height: 0;

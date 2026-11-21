@@ -322,7 +322,7 @@ describe('a managed widget in its own window', () => {
     const out = await widgetSnapshot(popup);
     expect(out).toMatchObject(kept);
     expect(await page.$('.rdd-panel-float__content')).toBeNull();           // nothing left in the page
-    expect(await popup.textContent('.rdd-popout-frame__return')).toBe('Back into the panel');
+    expect(await popup.getAttribute('.rdd-popout-frame__return', 'aria-label')).toBe('Back into the panel');
     // One move: onWillMove, then onMoved at its size in the window.
     let moves = (await woMoves(page)).slice(before);
     expect(moves.length).toBe(2);
@@ -432,4 +432,101 @@ describe('focus across windows', () => {
     await close();
     expect(errors).toEqual([]);
   });
+});
+
+// next.1: what the app hands the library (icons) and what the library renders in a pop-out besides
+// the panel (the frame, menus, toasts) are inside the app's popoutWrapper there. Emotion with
+// speedy (the production path): without the wrapper, these icons measure 0 x 0 in the window.
+
+/** Size and colour of the Emotion-styled icon `name` in `p`, or null when it isn't there. */
+const emoIcon = (p: Page, name: string, within = '') => p.evaluate(([n, w]) => {
+  const el = document.querySelector(`${w} [data-emo-icon="${n}"]`.trim()) as HTMLElement | null;
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { w: Math.round(r.width), h: Math.round(r.height), bg: getComputedStyle(el).backgroundColor };
+}, [name, within]);
+const EMO_LOOK = { w: 16, h: 16, bg: 'rgb(200, 30, 40)' };
+
+describe('popoutWrapper around the frame, menus and toasts (Emotion, speedy)', () => {
+  it("the frame's icon and a menu item's icon look as in the page; a toast raised in the window shows there", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&emo=1`);
+    // In the page: the tab's icon and a menu's item icon.
+    expect(await emoIcon(page, 'frame', '[data-tab-id="pp"]')).toEqual(EMO_LOOK);
+    await page.click('#po-menu');
+    await page.waitForSelector('.rdd-context-menu');
+    expect(await emoIcon(page, 'menu', '.rdd-context-menu')).toEqual(EMO_LOOK);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.rdd-context-menu', { state: 'detached' });
+
+    const popup = await popOutByClick(page);
+    popup.setDefaultTimeout(5000);
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    expect(await emoIcon(popup, 'frame', '.rdd-popout-frame__icon')).toEqual(EMO_LOOK);
+
+    // A menu opened from inside the window: there, its item's icon styled, and it can be clicked.
+    await popup.click('#po-menu');
+    await popup.waitForSelector('.rdd-context-menu');
+    expect(await page.$('.rdd-context-menu')).toBeNull();
+    expect(await emoIcon(popup, 'menu', '.rdd-context-menu')).toEqual(EMO_LOOK);
+    await popup.click('.rdd-context-menu__item:has-text("Emo item")');
+    await popup.waitForSelector('.rdd-context-menu', { state: 'detached' });
+
+    // A toast raised by a click in the window shows in the window, its icon styled; not in the page.
+    await popup.click('#po-toast');
+    await popup.waitForSelector('.rdd-toast:has-text("from pp")');
+    expect(await page.$('.rdd-toast:has-text("from pp")')).toBeNull();
+    expect(await emoIcon(popup, 'toast', '.rdd-toast')).toEqual(EMO_LOOK);
+    // (Raised from the page, it shows in the page: Playwright emulates focus in every page, so both
+    // report hasFocus(), and headless Chrome has no real focus to fall back on. That half is in the
+    // unit tests, PopOutChrome.test.tsx PC2, and was checked by hand in headed Chrome.)
+
+    // Its window closing takes it away.
+    await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-popout-frame__return')]);
+    await settle(page, 300);
+    expect(await page.$('.rdd-toast:has-text("from pp")')).toBeNull();
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it("a widget's frame icon is styled and clickable in the window; its titleMenu's icons too", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&ov=1&wo=1&emo=1`);
+    const [popup] = await Promise.all([page.waitForEvent('popup'), page.click('#wo-po-btn')]);
+    await popup.waitForSelector('.rdd-panel-float__content');
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    expect(await emoIcon(popup, 'wo', '.rdd-popout-frame__icon--menu')).toEqual(EMO_LOOK);
+    await popup.click('.rdd-popout-frame__icon--menu');
+    await popup.waitForSelector('.rdd-context-menu');
+    expect(await emoIcon(popup, 'wo-menu', '.rdd-context-menu')).toEqual(EMO_LOOK);
+    await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-context-menu >> text=Back into the panel')]);
+    await page.waitForSelector('[data-rdd-widget="wo"]');
+    await close();
+    expect(errors).toEqual([]);
+  });
+});
+
+// next.1: the frame's way back is a title-bar button in the skin, as a floating window's.
+
+/** The look of a button in `p`. */
+const buttonLook = (p: Page, sel: string) => p.evaluate((s) => {
+  const el = document.querySelector(s) as HTMLElement;
+  const c = getComputedStyle(el);
+  const r = el.getBoundingClientRect();
+  return { w: Math.round(r.width), h: Math.round(r.height), bg: c.backgroundColor, border: c.borderTopColor, color: c.color, radius: c.borderTopLeftRadius };
+}, sel);
+
+describe("the frame's return button", () => {
+  for (const [skin, scheme] of [['', 'dark'], ['', 'light'], ['nord', 'dark'], ['nord', 'light']] as const) {
+    it(`looks like a floating window's title-bar button (${skin || 'default skin'}, ${scheme}); its label is the tooltip and the name`, async () => {
+      const { page, errors, close } = await openHarness(`${PO}&cs=${scheme}${skin ? `&skin=${skin}` : ''}`);
+      const inPage = await buttonLook(page, '[data-rdd-window="p4"] .rdd-btn-minimize-tab');
+      const popup = await popOutByClick(page);
+      await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+      const back = '.rdd-popout-frame__return';
+      expect(await buttonLook(popup, back)).toEqual(inPage);
+      expect(await popup.getAttribute(back, 'title')).toBe('Return to desktop');
+      expect(await popup.getAttribute(back, 'aria-label')).toBe('Return to desktop');
+      await close();
+      expect(errors).toEqual([]);
+    });
+  }
 });

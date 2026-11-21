@@ -6,7 +6,7 @@
  * the child window and back without remounting. The windows themselves belong to the workspace
  * client (`core/popOutWindows.ts`); this only renders them.
  */
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowManagerState, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
 import { initialFocusFor } from './helpers';
@@ -16,6 +16,7 @@ import { usePanelHost } from './panelHost';
 import { PreservedDOMWrapper } from './panelMount';
 import { DefaultGridIcon } from './icons';
 import { startPopOutStyles } from '../../core/popOutStyles';
+import { PopoutWrapperContext } from './panelWindow';
 
 const NONE: readonly PopOutEntry[] = [];
 const noWindows = (): readonly PopOutEntry[] => NONE;
@@ -68,6 +69,10 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   const [styled, setStyled] = useState(false);
   // The active panel's frame says so, as a floating window's does (7.12.0, S6).
   const isFocused = useWindowManagerState(s => s.activePanelId === id);
+  // The app's popoutWrapper (7.12.0), around the whole frame with this window: what the app hands
+  // the frame (the icon) gets its CSS-in-JS rules here. The slot inside only moves DOM, so the
+  // panel's content (wrapped by its own PanelMount) doesn't remount.
+  const Wrapper = useContext(PopoutWrapperContext);
 
   // The window's title follows the panel's; its language and direction are the page's.
   useEffect(() => { setTitle(doc, title); }, [doc, title]);
@@ -94,7 +99,7 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
     const items = actions.getPanelContextMenuItems(id);
     if (items.length > 0) actions.showContextMenu({ event: e, items, initialFocus: initialFocusFor(e) });
   };
-  return createPortal(
+  const frame = (
     // `rdd-workspace` too: what is scoped to the workspace (its colours, scrollbars) applies here.
     <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} data-rdd-focused={isFocused ? '' : undefined} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
       <div className="rdd-popout-frame__header">
@@ -102,14 +107,27 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
           ? <button type="button" className="rdd-popout-frame__icon rdd-popout-frame__icon--menu" aria-haspopup="menu" aria-label={title} onClick={openWidgetMenu}>{icon}</button>
           : <span className="rdd-popout-frame__icon">{icon}</span>}
         <span className="rdd-popout-frame__title">{title}{panel.dirty ? ' *' : ''}</span>
-        <button type="button" className="rdd-popout-frame__return" title={returnLabel} onClick={onReturn}>
-          {returnLabel}
+        {/* A title-bar button in the skin, as a floating window's (7.12.0): its label is the tooltip and the name. */}
+        <button type="button" className="rdd-custom-tab-btn rdd-popout-frame__return" title={returnLabel} aria-label={returnLabel} onClick={onReturn}>
+          <svg className="rdd-svg-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 4L9 15"/>
+            <path d="M9 8v7h7"/>
+            <path d="M4 20h16"/>
+          </svg>
         </button>
       </div>
       <div className="rdd-popout-frame__body" style={BODY_STYLE} ref={bodyRef}>
         <PreservedDOMWrapper panelId={id} />
       </div>
-    </div>,
+    </div>
+  );
+  const view = doc.defaultView;
+  return createPortal(
+    Wrapper && view
+      // The app's component from the provider, stable across renders: not one made here.
+      // eslint-disable-next-line react-hooks/static-components
+      ? <Wrapper window={view} document={doc}>{frame}</Wrapper>
+      : frame,
     doc.body,
   );
 };

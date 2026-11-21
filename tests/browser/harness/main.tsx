@@ -33,7 +33,10 @@
  *   pourl=1         (with po=1) popoutUrl is the harness's own popout.html
  *   emo=1           (with po=1) the documented Emotion recipe: a popoutWrapper with a CacheProvider whose
  *                   cache follows the panel's document (speedy: rules inserted with insertRule, as in
- *                   production); `pp` shows an Emotion-styled #po-emo; `window.__poMounts` counts its mounts
+ *                   production); `pp` shows an Emotion-styled #po-emo; `window.__poMounts` counts its mounts;
+ *                   `popper`'s icon, #po-menu's item icon, #po-toast's toast icon and the `wo` widget's icon and
+ *                   titleMenu item icons are Emotion-styled boxes ([data-emo-icon], 16 x 16, rgb(200, 30, 40))
+ *   (po=1: #po-menu in `pp` opens a context menu from there; #po-toast raises a toast "from pp")
  *   (po=1 with ov=1&wo=1: the `wo` widget has canPopOut, and the header's #wo-po-btn pops it out)
  *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out
  *
@@ -138,9 +141,10 @@ function ManagedOpener() {
     canDock: true, canFloat: true, preserveEmbeds: q.get('emb') === '1',
     // po=1: it can open in its own window too (7.12.0); #wo-po-btn pops it out.
     canPopOut: q.get('po') === '1',
+    ...(EMO ? { icon: <EmoIcon name="wo" /> } : {}),
     titleMenu: (w: WidgetMenuContext) => w.location === 'panel'
-      ? [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
-      : [{ label: 'Back into the panel', action: () => w.move({ to: 'panel' }) }],
+      ? [{ label: 'Dock below', icon: EMO ? <EmoIcon name="wo-menu" /> : undefined, action: () => w.move({ to: 'docked', position: 'bottom' }) }]
+      : [{ label: 'Back into the panel', icon: EMO ? <EmoIcon name="wo-menu" /> : undefined, action: () => w.move({ to: 'panel' }) }],
   };
   // eslint-disable-next-line react-hooks/immutability
   (window as unknown as { __wo: unknown }).__wo = widgets;
@@ -204,9 +208,18 @@ const cacheFor = (doc: Document): EmotionCache => {
 const EmotionWrapper = ({ document: doc, children }: PopoutWrapperProps) => (
   <CacheProvider value={cacheFor(doc)}>{children}</CacheProvider>
 );
+const EMO = q.get('emo') === '1';
+/** emo=1: an icon whose size and colour come only from Emotion (as an MUI SvgIcon's do). */
+const EmoIcon = ({ name }: { name: string }) => (
+  <ClassNames>{({ css }) => (
+    // A rule of its own per name (the custom property), so one icon's rule can't style another's.
+    <span data-emo-icon={name} className={css({ display: 'inline-block', width: 16, height: 16, backgroundColor: 'rgb(200, 30, 40)', '--emo-icon': name })} />
+  )}</ClassNames>
+);
 
 function PopPanel() {
   const [count, setCount] = useState(0);
+  const showMenu = useContextMenu();
   useEffect(() => {
     const w = window as unknown as { __poMounts?: number };
     w.__poMounts = (w.__poMounts ?? 0) + 1;
@@ -226,6 +239,11 @@ function PopPanel() {
         <button id="po-inc" onClick={() => setCount(c => c + 1)}>+</button>
         <span id="po-count">{count}</span>
         <canvas id="po-canvas" ref={canvasRef} width={40} height={20} />
+        {/* The menu closes on its window's click: without stopPropagation, the click that opens it closes it. */}
+        <button id="po-menu" onClick={(e) => { e.stopPropagation(); showMenu({ event: e, items: [
+          { label: 'Emo item', icon: EMO ? <EmoIcon name="menu" /> : undefined, action: () => {} },
+        ] }); }}>menu</button>
+        <button id="po-toast" onClick={() => { toast('from pp', { icon: EMO ? <EmoIcon name="toast" /> : undefined }); }}>toast</button>
         {q.get('emo') === '1' && (
           <ClassNames>{({ css }) => (
             <span id="po-emo" className={css({ color: 'rgb(10, 20, 30)', letterSpacing: '3px', borderBottom: '2px solid rgb(40, 50, 60)' })}>emotion</span>
@@ -250,7 +268,7 @@ const workspace = createWorkspace({
   popOut: POPOUT,
   panels: {
     // Only with po=1: a canPopOut type on a workspace without popOut warns in development.
-    ...(POPOUT ? { popper: { component: PopPanel, defaultOptions: { canPopOut: true } } } : {}),
+    ...(POPOUT ? { popper: { component: PopPanel, defaultOptions: { canPopOut: true, ...(EMO ? { icon: <EmoIcon name="frame" /> } : {}) } } } : {}),
     probe: { component: ProbePanel },
     overlay: { component: OverlayPanel },
     canvas: { component: CanvasPanel },
@@ -374,7 +392,10 @@ function App() {
       <Inner />
     </DockableDesktopProvider>
   );
-  const wrapped = DIR === 'wrap' ? <div dir="rtl" style={{ height: '100%' }}>{app}</div> : app;
+  // emo=1: the page's own cache is speedy as well, as Emotion's default one is in production; so
+  // what isn't inside the popoutWrapper in a pop-out gets no rules there.
+  const styled = EMO ? <CacheProvider value={cacheFor(document)}>{app}</CacheProvider> : app;
+  const wrapped = DIR === 'wrap' ? <div dir="rtl" style={{ height: '100%' }}>{styled}</div> : styled;
   if (CARD) {
     return (
       <div id="longpage" style={{ height: 3000, padding: 20, boxSizing: 'border-box' }}>

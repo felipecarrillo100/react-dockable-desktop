@@ -289,7 +289,7 @@ describe('WG5: closing the window sends it back into its panel (D17)', () => {
       act(() => { (el.querySelector('.wg-count') as HTMLElement).click(); });
       const before = (container!.querySelector('[data-rdd-widget="table"]') as HTMLElement).getAttribute('style');
       popOut();
-      if (name.includes('Back')) expect(p.doc.querySelector('.rdd-popout-frame__return')!.textContent).toBe('Back into the panel');
+      if (name.includes('Back')) expect(p.doc.querySelector('.rdd-popout-frame__return')!.getAttribute('aria-label')).toBe('Back into the panel');
       act(() => { close(ws, p); });
       expect(api!.location('table')).toBe('panel');
       expect(state(ws).panels[HOSTED]).toBeUndefined();

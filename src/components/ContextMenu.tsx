@@ -5,8 +5,10 @@ import React, {
   useRef,
   useEffect,
   useLayoutEffect,
+  useContext,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { PopoutWrapperContext } from './workspace/panelWindow';
 import { useEscapeLayer } from '../utils/escapeStack';
 import { isComputedRtl } from '../utils/rtl';
 import { docOf, isElement, isHTMLElement, isNode, winOf } from '../utils/domContext';
@@ -303,6 +305,9 @@ function menuDirection(event: ShowContextMenuOptions['event'], dir: ShowContextM
 export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & React.RefAttributes<ContextMenuHandle>> = forwardRef<ContextMenuHandle, ContextMenuProps>(
   ({ theme = 'dark', formatMessageProvider, onShow, onHide, onOpenChange, className, style }, ref) => {
     const [menuState, setMenuState] = useState<MenuState>(CLOSED);
+    // The app's popoutWrapper (7.12.0), around a menu shown in a pop-out: its items' icons get the
+    // app's CSS-in-JS rules there too. Not in the main window, where nothing changes.
+    const Wrapper = useContext(PopoutWrapperContext);
     const [submenuIndex, setSubmenuIndex] = useState<number | null>(null);
     // A submenu opened from the keyboard takes focus; one opened by hovering does not.
     const [submenuFocus, setSubmenuFocus] = useState(false);
@@ -510,8 +515,15 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
       }
     }
 
+    const menuDoc = container.ownerDocument;
+    const menuWin = menuDoc.defaultView;
+    const wrap = (content: React.ReactElement): React.ReactElement => (Wrapper && menuDoc !== document && menuWin
+      // The app's component from the provider, stable across renders: not one made here.
+      ? <Wrapper window={menuWin} document={menuDoc}>{content}</Wrapper>
+      : content);
+
     return createPortal(
-      <>
+      wrap(<>
         <div
           ref={menuRef}
           className={`rdd-context-menu rdd-context-menu--${theme}${className ? ` ${className}` : ''}`}
@@ -625,7 +637,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
             />
           );
         })()}
-      </>,
+      </>),
       container,
     );
   },

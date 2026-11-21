@@ -19,6 +19,9 @@ interface Subscription {
 /** Registered documents other than the main one, with their registration counts. */
 const counts = new Map<Document, number>();
 const subscriptions = new Set<Subscription>();
+/** Told when a document joins (first registration) or leaves (last one undone). */
+const changeListeners = new Set<() => void>();
+const changed = () => changeListeners.forEach(l => l());
 
 const mainDocument = (): Document | null => (typeof document === 'undefined' ? null : document);
 
@@ -42,7 +45,7 @@ export function registerDocument(doc: Document): () => void {
   if (!isMain) {
     const n = counts.get(doc) ?? 0;
     counts.set(doc, n + 1);
-    if (n === 0) subscriptions.forEach(s => attach(doc, s));
+    if (n === 0) { subscriptions.forEach(s => attach(doc, s)); changed(); }
   }
   let done = false;
   return () => {
@@ -52,6 +55,7 @@ export function registerDocument(doc: Document): () => void {
     if (n <= 1) {
       counts.delete(doc);
       subscriptions.forEach(s => detach(doc, s));
+      changed();
     } else {
       counts.set(doc, n - 1);
     }
@@ -74,4 +78,31 @@ export function listenOnDocuments<K extends keyof DocumentEventMap>(
     if (!subscriptions.delete(s)) return;
     documents().forEach(d => detach(d, s));
   };
+}
+
+/** Whether `doc` is the main document or a registered one (a pop-out's, while it is open). (7.12.0) */
+export function isRegistered(doc: Document): boolean {
+  return doc === mainDocument() || counts.has(doc);
+}
+
+/**
+ * Calls `cb` whenever a document joins or leaves (a pop-out window opening or closing). Returns
+ * the function that stops it. (7.12.0)
+ */
+export function onDocumentsChange(cb: () => void): () => void {
+  changeListeners.add(cb);
+  return () => { changeListeners.delete(cb); };
+}
+
+/**
+ * The document the user is in (7.12.0): a registered pop-out's whose `hasFocus()` is true, else the
+ * main one (null on the server).
+ */
+export function focusedDocument(): Document | null {
+  const main = mainDocument();
+  for (const doc of counts.keys()) {
+    if (doc === main) continue;
+    try { if (doc.hasFocus()) return doc; } catch { /* a closed window's document */ }
+  }
+  return main;
 }

@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useIsClient } from '../utils/useIsClient';
 import { createPortal } from 'react-dom';
 import { cancelRafOf, rafOf, resizeObserverFor } from '../utils/domContext';
 import { formatLabel, useFormatMessage, usePredefinedMessages, useOptionalWindowManagerState } from './WindowManagerContext';
 import { useLatestRef } from '../utils/useLatestRef';
+import { focusedDocument, isRegistered, onDocumentsChange } from '../utils/documentRegistry';
+import { PopoutWrapperContext } from './workspace/panelWindow';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -122,7 +124,30 @@ interface ActiveToast {
   message: React.ReactNode;
   options: ResolvedToastOptions;
   exiting: boolean;
+  /** The window it is shown in (7.12.0): the one the user was in when it was raised. */
+  doc:     Document;
 }
+
+/** A toast waiting for a free place, with the window it was raised in. */
+interface QueuedToast {
+  id:      string;
+  message: React.ReactNode;
+  rawOpts: ToastOptions & { id: string };
+  doc:     Document;
+}
+
+/** Where a toast raised now shows: the window the user is in (a pop-out's, 7.12.0), else the page. */
+const raisedIn = (): Document => focusedDocument() ?? document;
+/** A queued toast's window, unless it has closed since: then the page. */
+const stillOpen = (doc: Document): Document => (isRegistered(doc) ? doc : document);
+/** A stable key per window's container, so one window's emptying doesn't remount another's. */
+const containerKeys = new WeakMap<Document, string>();
+let containerCount = 0;
+const keyOf = (doc: Document): string => {
+  let key = containerKeys.get(doc);
+  if (!key) { key = `rdd-toasts-${++containerCount}`; containerKeys.set(doc, key); }
+  return key;
+};
 
 // ─── ToastEmitter ─────────────────────────────────────────────────────────────
 
@@ -472,7 +497,9 @@ export function ToastContainer({
   // and the hydrating render then agree — both empty — so there is nothing to reconcile.
   const mounted = useIsClient();
   const closeLabel = formatLabel(messages.closeNotification, formatMessage);
-  const queueRef  = useRef<Array<{ id: string; message: React.ReactNode; rawOpts: ToastOptions & { id: string } }>>([]);
+  const queueRef  = useRef<QueuedToast[]>([]);
+  // The app's popoutWrapper (7.12.0), around a pop-out's toasts: its CSS-in-JS rules go there too.
+  const Wrapper = useContext(PopoutWrapperContext);
   const toastsRef = useLatestRef<ActiveToast[]>(toasts);
 
   const handleDismiss = useCallback((id: string) => {
@@ -487,7 +514,7 @@ export function ToastContainer({
       const filtered = prev.filter(t => t.id !== id);
       if (!promoted) return filtered;
       const options = resolveOpts(promoted.rawOpts, defaultDuration, defaultClosable);
-      return [...filtered, { id: promoted.id, message: promoted.message, options, exiting: false }];
+      return [...filtered, { id: promoted.id, message: promoted.message, options, exiting: false, doc: stillOpen(promoted.doc) }];
     });
   }, [defaultDuration, defaultClosable]);
 
@@ -499,8 +526,9 @@ export function ToastContainer({
       if (e.kind === 'show') {
         // Resolve options once outside the updater so the updater stays pure
         const options = resolveOpts(e.rawOpts, defaultDuration, defaultClosable);
-        const newEntry: ActiveToast = { id: e.id, message: e.message, options, exiting: false };
-        const rawEntry = { id: e.id, message: e.message, rawOpts: e.rawOpts };
+        const doc = raisedIn();
+        const newEntry: ActiveToast = { id: e.id, message: e.message, options, exiting: false, doc };
+        const rawEntry: QueuedToast = { id: e.id, message: e.message, rawOpts: e.rawOpts, doc };
 
         setToasts(prev => {
           // Dedup check against actual prev (not stale ref) so batched calls are safe
@@ -548,6 +576,17 @@ export function ToastContainer({
     return () => emitter.unsubscribe(handle);
   }, [adapter, maxVisible, defaultDuration, defaultClosable, handleDismiss, toastsRef]);
 
+  // A pop-out window closing takes its toasts with it (7.12.0).
+  useEffect(() => {
+    if (adapter) return;
+    return onDocumentsChange(() => {
+      const gone = toastsRef.current.filter(t => !isRegistered(t.doc));
+      if (gone.length === 0) return;
+      setToasts(prev => prev.filter(t => isRegistered(t.doc)));
+      gone.forEach(t => { if (!t.exiting) t.options.onClose?.(); });
+    });
+  }, [adapter, toastsRef]);
+
   // Subscribe to emitter (adapter path)
   useEffect(() => {
     if (!adapter) return;
@@ -581,11 +620,15 @@ export function ToastContainer({
   const cls = ['rdd-toast-container', `rdd-toast-container--${position}`, dirMod]
     .filter(Boolean).join(' ');
 
-  return createPortal(
+  // One container per window with toasts (7.12.0): the page's always, a pop-out's while it has some.
+  const docs: Document[] = [document];
+  for (const t of toasts) if (!docs.includes(t.doc)) docs.push(t.doc);
+
+  const containerFor = (doc: Document) => (
     // A named landmark. Each toast is its own role="status" live region, so the container is not
     // one as well — nested live regions get announced twice.
     <div className={cls} style={{ width }} role="region" aria-label={regionLabel} dir={workspaceDir === 'rtl' ? 'rtl' : undefined}>
-      {toasts.map(t => (
+      {toasts.filter(t => t.doc === doc).map(t => (
         <ToastItem
           key={t.id}
           id={t.id}
@@ -601,7 +644,23 @@ export function ToastContainer({
           onExited={handleExited}
         />
       ))}
-    </div>,
-    document.body
+    </div>
+  );
+
+  return (
+    <>
+      {docs.map(doc => {
+        const view = doc.defaultView;
+        const inPopOut = doc !== document && Wrapper && view;
+        return createPortal(
+          inPopOut
+            // The app's component from the provider, stable across renders: not one made here.
+            ? <Wrapper window={view} document={doc}>{containerFor(doc)}</Wrapper>
+            : containerFor(doc),
+          doc.body,
+          keyOf(doc),
+        );
+      })}
+    </>
   );
 }

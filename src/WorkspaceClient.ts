@@ -36,6 +36,18 @@ export interface BuiltInEvents {
    */
   'panel:returned': { id: string };
   /**
+   * A panel is about to move into its own window (7.12.0): sent just before its element leaves the
+   * page, once that window's page is ready. `panel:popped-out` follows. Not sent for a refused
+   * pop-out, nor for docking or floating.
+   */
+  'panel:popping-out': { id: string };
+  /**
+   * A panel in its own window is about to come back (7.12.0): sent just before its element leaves
+   * that window, whatever brings it back. `panel:returned` follows. Not sent for a panel closed while
+   * out.
+   */
+  'panel:returning': { id: string };
+  /**
    * Fires whenever something `saveLayout()` would capture changes — open/close/minimize/restore,
    * float/dock/re-order/dock-to-edge, closing a group, maximizing a minimized panel, and an
    * `openPanel` `dedupeKey` redirect. Coalesces those into one signal for autosave-style

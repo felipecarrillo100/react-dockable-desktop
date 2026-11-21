@@ -10,6 +10,52 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.12.0-next.1] — 2026-11-21
+
+**Pre-release** on npm's `next` tag, from the first feedback on 7.12.0-next.0. A fix for CSS-in-JS in
+production builds, and small additions to pop-out windows only; nothing else changes. Additions
+only.
+
+### Fixed
+
+- **What the app hands the library is styled in a pop-out in production.** The app's
+  `popoutWrapper` was only around the panel's content. The window's frame (the panel's or widget's
+  `icon`, the title) and a context menu shown in the window were outside it, so with CSS-in-JS in a
+  production build (rules inserted with `insertRule`) their icons got no styles there: an MUI
+  `SvgIcon` measured 0 × 0 and couldn't be clicked, and menu icons were the browser's default
+  black. In a pop-out, the wrapper is now also rendered around the frame, a menu shown there and the
+  toasts shown there, with that window's `{ window, document }`. The main window is unchanged. The
+  wrapper is now rendered more than once per window, so keep one cache per document (the guide's
+  `WeakMap` recipe already does).
+
+### Added
+
+- **Events `panel:popping-out { id }` and `panel:returning { id }`**, sent just before the panel's
+  element leaves the page (once the window's page is ready), and just before it leaves the window,
+  whatever brings it back. `panel:popped-out` and `panel:returned` follow. Not sent for a refused
+  pop-out, a panel closed while out, or for docking and floating.
+- **Toasts show in the window the user is in.** A toast raised while a pop-out window has focus
+  shows in that window; otherwise in the main window, as before. It stays in the window it was shown
+  in, and goes when that window closes (its `onClose` runs). No new API. With a `ToastAdapter`, the
+  other library decides, as before.
+
+### Changed
+
+- **The window's "Return to desktop" button is an icon button in the skin**, the same look as a
+  floating window's title-bar buttons (it is also `.rdd-custom-tab-btn`). Its label
+  (`returnToDesktop`, or `backIntoPanel` for a widget) is now its tooltip and accessible name, not
+  its text: a test that finds it by its text should use its role and name. The class
+  `.rdd-popout-frame__return` stays, as the styling hook.
+
+### Docs
+
+- **Pop-out Windows:** the production warning also covers icons handed to the frame and menus; the
+  wrapper in a pop-out; the new events; testing pop-outs with Playwright; why `popoutUrl` (embeds
+  that refuse a blank window, such as a YouTube player); where `inOwnWindow` appears, for
+  translators; LuciadRIA's keyboard navigation beside Leaflet's drag; toasts in the focused window;
+  the return button. **Toast Notifications:** pop-out windows. **Event Bus** and **Workspace:** the
+  new events and `popoutUrl`.
+
 ## [7.12.0-next.0] — 2026-11-21
 
 **Pre-release** on npm's `next` tag (`npm install react-dockable-desktop@next`), for feedback before
@@ -1502,7 +1548,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.1...HEAD
+[7.12.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.0...v7.12.0-next.1
 [7.12.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0-next.0
 [7.11.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0
 [7.11.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0-next.0...v7.11.0-next.1
