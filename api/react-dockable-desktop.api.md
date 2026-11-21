@@ -346,6 +346,10 @@ export const defaultMessages: {
         readonly id: "dockable-desktop-returnToDesktop";
         readonly defaultMessage: "Return to desktop";
     };
+    readonly inOwnWindow: {
+        readonly id: "dockable-desktop-inOwnWindow";
+        readonly defaultMessage: "in its own window";
+    };
     readonly backIntoPanel: {
         readonly id: "dockable-desktop-backIntoPanel";
         readonly defaultMessage: "Back into the panel";
@@ -919,6 +923,7 @@ interface PopOutWindows {
     bindHost(host: PopOutHost): () => void;
     canPopOut(id: string): boolean;
     readonly enabled: boolean;
+    focusWindow(id: string): boolean;
     // Warning: (ae-forgotten-export) The symbol "PopOutEntry" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -1810,6 +1815,9 @@ class WorkspaceClient<TUserEvents extends object = Record<string, unknown>> {
     focusPanel(id: string, options: {
         restore?: boolean;
     }): void;
+    focusPanelWindow(id: string): {
+        ok: boolean;
+    };
     getOpenPanelIds(): string[];
     readonly initialState: string | null;
     isOpen(id: string): boolean;

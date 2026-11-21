@@ -402,7 +402,8 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuProps & Rea
     }, [menuState.visible, menuState.container, close]);
 
     // Escape dismiss — a popup, so above any modal or drawer on the shared Escape stack.
-    useEscapeLayer(menuState.visible, 'popup', close);
+    // Its own document's stack: in a pop-out, Escape there closes it, and Escape in the page doesn't.
+    useEscapeLayer(menuState.visible, 'popup', close, menuState.container?.ownerDocument ?? null);
 
     // Viewport clamping for main menu
     useLayoutEffect(() => {

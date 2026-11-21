@@ -735,6 +735,18 @@ body.rdd-resizing-col-active * {
   box-shadow: 0 6px 16px color-mix(in srgb, var(--rdd-accent-color) 15%, transparent);
 }
 
+/* A panel in its own window (7.12.0): the same item, with a small marker in its corner. */
+.rdd-taskbar-item--popout { overflow: visible; }
+.rdd-taskbar-item-popout-marker {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  display: inline-flex;
+  color: var(--rdd-accent-color);
+  pointer-events: none;
+}
+.rdd-taskbar-item-popout-marker .rdd-svg-icon { width: 10px; height: 10px; }
+
 /* Minimalist Taskbar Icon-Only & Premium Tooltip Rules */
 .rdd-taskbar-item-icon {
   font-size: 22px !important;

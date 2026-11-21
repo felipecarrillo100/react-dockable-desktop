@@ -344,3 +344,65 @@ describe('a managed widget in its own window', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// S6: focus across windows. Headless Chromium can't show which OS window is in front, so the
+// window coming forward is checked by the call it makes (the child window's focus() is counted),
+// and activation by the page's active panel.
+
+describe('focus across windows', () => {
+  it('a click in the pop-out activates its panel; Escape there closes its menu only; the taskbar entry brings its window forward', async () => {
+    const { page, errors, close } = await openHarness(PO);
+    const popup = await popOutByClick(page);
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+
+    // Activation: another panel active in the page, then a click inside the pop-out.
+    await page.click('[data-tab-id="p1"]');
+    await settle(page, 200);
+    expect(await wmState(page, 'activePanelId')).toBe('p1');
+    // A click on something that takes no focus: the pointerdown activates it.
+    await popup.click('#po-count');
+    await settle(page, 200);
+    expect(await wmState(page, 'activePanelId')).toBe('pp');
+    expect(await popup.getAttribute('.rdd-popout-frame', 'data-rdd-focused')).toBe('');
+    // Focus moving in (no pointer) activates it too.
+    await page.click('[data-tab-id="p1"]');
+    await settle(page, 200);
+    await popup.focus('#po-inc');
+    await settle(page, 200);
+    expect(await wmState(page, 'activePanelId')).toBe('pp');
+
+    // A menu opened in the pop-out renders there; Escape in the page leaves it, Escape there closes it.
+    await popup.evaluate(() => {
+      const main = window.opener as unknown as { __wm: { actions: { showContextMenu(o: unknown): void } } };
+      main.__wm.actions.showContextMenu({ event: { target: document.body, clientX: 20, clientY: 20 }, items: [{ label: 'Item', action: () => {} }] });
+    });
+    await popup.waitForSelector('.rdd-context-menu');
+    expect(await page.$('.rdd-context-menu')).toBeNull();
+    await page.keyboard.press('Escape');
+    await settle(page, 150);
+    expect(await popup.$('.rdd-context-menu')).not.toBeNull();
+    await popup.keyboard.press('Escape');
+    await popup.waitForSelector('.rdd-context-menu', { state: 'detached' });
+
+    // The taskbar lists it while out; a click brings its window forward and activates it.
+    await page.click('[data-tab-id="p1"]');
+    await popup.evaluate(() => {
+      const w = window as unknown as { __focusCalls: number };
+      w.__focusCalls = 0;
+      const original = window.focus.bind(window);
+      window.focus = () => { w.__focusCalls += 1; original(); };
+    });
+    const entry = '[data-rdd-taskbar-popout="pp"]';
+    expect(await page.$(entry)).not.toBeNull();
+    await page.evaluate((sel) => (document.querySelector(sel) as HTMLElement).click(), entry);
+    await settle(page, 200);
+    expect(await popup.evaluate(() => (window as unknown as { __focusCalls: number }).__focusCalls)).toBe(1);
+    expect(await wmState(page, 'activePanelId')).toBe('pp');
+
+    await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-popout-frame__return')]);
+    await settle(page, 200);
+    expect(await page.$(entry)).toBeNull();
+    await close();
+    expect(errors).toEqual([]);
+  });
+});

@@ -35,6 +35,12 @@ import type { PopOutMenu } from './workspace/workspaceMenus';
 
 
 
+/** The panel whose pop-out frame holds `target`, or null (7.12.0). */
+const popOutPanelOf = (target: HTMLElement | null): string | null => {
+  if (!target || typeof target.closest !== 'function') return null;
+  return target.closest('[data-rdd-popout]')?.getAttribute('data-rdd-popout') ?? null;
+};
+
 // ==========================================
 // 5. WindowManager (Main Render Component)
 // ==========================================
@@ -317,6 +323,10 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       const target = e.target as HTMLElement | null;
       if (!target || typeof target.closest !== 'function') return;
 
+      // 0. Inside a pop-out window's frame (7.12.0): that panel becomes the active one.
+      const popOutId = popOutPanelOf(target);
+      if (popOutId) { setActivePanel(popOutId); return; }
+
       // 1. Check if click is inside a floating window
       const windowEl = target.closest('.rdd-floating-window') as HTMLElement | null;
       if (windowEl) {
@@ -338,8 +348,17 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
       }
     };
 
+    // Focus moving into a pop-out (a Tab, a click on a field, the window coming forward on its
+    // element) activates its panel too. Only there: in the page, focus alone never did (7.12.0).
+    const handleFocusIn = (e: FocusEvent) => {
+      const id = popOutPanelOf(e.target as HTMLElement | null);
+      if (id) setActivePanel(id);
+    };
+
     // On every document that holds panel content (the main one, and a pop-out's once registered).
-    return listenOnDocuments('pointerdown', handlePointerDownGlobal);
+    const offPointer = listenOnDocuments('pointerdown', handlePointerDownGlobal);
+    const offFocus = listenOnDocuments('focusin', handleFocusIn);
+    return () => { offPointer(); offFocus(); };
   }, [focusPanel, setActivePanel]);
 
   const { startDrag, startResize } = createFloatingWindowDrag({
@@ -496,6 +515,7 @@ export const WindowManager: React.FC<RddDesktopProps> = ({ skin = 'vscode', defa
         handleMinimizedRightClick={handleMinimizedRightClick}
         handleRequestClose={handleRequestClose}
         restorePanel={restorePanel}
+        focusPanelWindow={workspace?._popOut.enabled ? (id) => { workspace.focusPanelWindow(id); } : undefined}
       />
 
       {/* 3. Persistence Port: Portals rendering panels into off-screen elements. Client only:

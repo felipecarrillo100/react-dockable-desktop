@@ -18,6 +18,9 @@ import { listenOnDocuments } from './documentRegistry';
  *
  * The listener is on every document that holds panel content: the main one, and any registered
  * with `registerDocument` (a pop-out window's), so Escape pressed there reaches the stack too.
+ * Each window has its own stack (7.12.0): an overlay belongs to the document it is shown in, and
+ * Escape in a document closes the topmost overlay of that document only. A menu in a pop-out stays
+ * open through an Escape in the page, and the page's modal through an Escape in the pop-out.
  */
 export type EscapeLayer = 'drawer' | 'modal' | 'popup';
 
@@ -25,18 +28,25 @@ const LAYER_RANK: Record<EscapeLayer, number> = { drawer: 1, modal: 2, popup: 3 
 
 interface EscapeEntry {
   layer: EscapeLayer;
+  /** The document it is shown in. */
+  doc: Document | null;
   order: number;
   onEscape: () => void;
 }
 
 const entries: EscapeEntry[] = [];
+const mainDocument = (): Document | null => (typeof document === 'undefined' ? null : document);
 let nextOrder = 0;
 let stopListening: (() => void) | null = null;
 
 function handleKeyDown(e: KeyboardEvent): void {
   if (e.key !== 'Escape' || e.defaultPrevented || entries.length === 0) return;
-  let top = entries[0];
-  for (const entry of entries) {
+  // The document the key was pressed in: the listener's own (it is on each document).
+  const doc = (e.currentTarget as Document | null) ?? mainDocument();
+  const here = entries.filter(entry => (entry.doc ?? mainDocument()) === doc);
+  if (here.length === 0) return;
+  let top = here[0];
+  for (const entry of here) {
     const higher = LAYER_RANK[entry.layer] - LAYER_RANK[top.layer];
     if (higher > 0 || (higher === 0 && entry.order > top.order)) top = entry;
   }
@@ -49,8 +59,8 @@ function handleKeyDown(e: KeyboardEvent): void {
  * `onEscape` may do nothing (a modal that can't be closed) — the key is still consumed, so it
  * doesn't fall through to whatever is underneath.
  */
-export function pushEscape(layer: EscapeLayer, onEscape: () => void): () => void {
-  const entry: EscapeEntry = { layer, order: nextOrder++, onEscape };
+export function pushEscape(layer: EscapeLayer, onEscape: () => void, doc: Document | null = null): () => void {
+  const entry: EscapeEntry = { layer, doc, order: nextOrder++, onEscape };
   entries.push(entry);
   if (entries.length === 1) stopListening = listenOnDocuments('keydown', handleKeyDown);
   return () => {
@@ -67,13 +77,13 @@ export function pushEscape(layer: EscapeLayer, onEscape: () => void): () => void
  * The overlay's place in the stack is fixed when it becomes active; `onEscape` is read through a
  * ref, so a new callback identity on re-render does not move it to the top.
  */
-export function useEscapeLayer(active: boolean, layer: EscapeLayer, onEscape: () => void): void {
+export function useEscapeLayer(active: boolean, layer: EscapeLayer, onEscape: () => void, doc: Document | null = null): void {
   const onEscapeRef = useRef(onEscape);
   useLayoutEffect(() => {
     onEscapeRef.current = onEscape;
   });
   useEffect(() => {
     if (!active) return;
-    return pushEscape(layer, () => onEscapeRef.current());
-  }, [active, layer]);
+    return pushEscape(layer, () => onEscapeRef.current(), doc);
+  }, [active, layer, doc]);
 }

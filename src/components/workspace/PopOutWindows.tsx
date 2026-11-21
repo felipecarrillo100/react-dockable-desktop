@@ -66,6 +66,8 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   const panelHost = usePanelHost();
   const actions = useWindowManagerActionsInternal();
   const [styled, setStyled] = useState(false);
+  // The active panel's frame says so, as a floating window's does (7.12.0, S6).
+  const isFocused = useWindowManagerState(s => s.activePanelId === id);
 
   // The window's title follows the panel's; its language and direction are the page's.
   useEffect(() => { setTitle(doc, title); }, [doc, title]);
@@ -92,7 +94,7 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   };
   return createPortal(
     // `rdd-workspace` too: what is scoped to the workspace (its colours, scrollbars) applies here.
-    <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
+    <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} data-rdd-focused={isFocused ? '' : undefined} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
       <div className="rdd-popout-frame__header">
         {hosted && actions.getPanelContextMenuItems(id).length > 0
           ? <button type="button" className="rdd-popout-frame__icon rdd-popout-frame__icon--menu" aria-haspopup="menu" aria-label={title} onClick={openWidgetMenu}>{icon}</button>
