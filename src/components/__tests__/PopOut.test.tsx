@@ -448,7 +448,10 @@ describe('PO7: return paths', () => {
     stubOpen(p);
     popOut(ws, 'a');
     const button = p.doc.querySelector<HTMLButtonElement>('.rdd-popout-frame__return')!;
-    expect(button.textContent).toBe('Return to desktop');
+    // A title-bar button in the skin (next.1): its label is the tooltip and the accessible name.
+    expect(button.classList.contains('rdd-custom-tab-btn')).toBe(true);
+    expect(button.getAttribute('aria-label')).toBe('Return to desktop');
+    expect(button.title).toBe('Return to desktop');
     act(() => { button.click(); });
     expect(state(ws).panels.a.state).toBe('docked');
     expect(p.close).toHaveBeenCalled();

@@ -55,14 +55,19 @@ const Probe: React.FC<{ panelId: string }> = ({ panelId }) => {
   return <button className="pw-count" data-id={panelId} onClick={() => setN(x => x + 1)}>{n}</button>;
 };
 
-/** A wrapper as an app's CSS-in-JS one: records its mounts, the document it gets, and where the panel element is at commit. */
+/**
+ * A wrapper as an app's CSS-in-JS one: records its mounts, the document it gets, and where the panel
+ * element is at commit. Only the one around a panel's content records (next.1 also renders it around
+ * a pop-out's frame, menus and toasts).
+ */
 const Wrapper: React.FC<PopoutWrapperProps> = ({ document: doc, children }) => {
   const ref = useRef<HTMLDivElement>(null);
   wrapperDoc = doc;
-  useEffect(() => { wrapperMounts(); }, []);
+  useEffect(() => { if (ref.current?.closest('.rdd-panel-dom')) wrapperMounts(); }, []);
   useLayoutEffect(() => {
     // At commit, before the slot's passive effect moves it: the panel element is still where it was.
     const el = ref.current?.closest('.rdd-panel-dom');
+    if (!el) return;
     log.push(`commit ${doc === document ? 'main' : 'child'} element-in ${el?.ownerDocument === document ? 'main' : 'child'}`);
   }, [doc]);
   return <div className="pw-wrapper" ref={ref}>{children}</div>;
