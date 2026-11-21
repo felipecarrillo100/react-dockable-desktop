@@ -736,7 +736,8 @@ describe('PO12: popoutUrl', () => {
     Object.defineProperty(p.doc, 'readyState', { get: () => readyState, configurable: true });
     const el = panelEl('a')!;
     expect(popOut(ws, 'a')).toEqual({ ok: true });
-    expect(open).toHaveBeenCalledWith('/popout.html', expect.stringMatching(/^rdd-popout-a-/), expect.any(String));
+    // Resolved against the main page (7.12.1): the same page whichever window opens it.
+    expect(open).toHaveBeenCalledWith(new URL('/popout.html', document.baseURI).href, expect.stringMatching(/^rdd-popout-a-/), expect.any(String));
     expect(state(ws).panels.a.poppedOut).toBe(true);
     expect(p.doc.querySelector('.rdd-popout-frame')).toBeNull();     // still the initial blank document
     act(() => { p.win.dispatchEvent(new p.win.Event('load')); });    // a load of the blank one: not yet

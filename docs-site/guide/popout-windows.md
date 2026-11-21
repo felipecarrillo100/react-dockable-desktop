@@ -61,7 +61,9 @@ press): browsers only open a window then. The browser tells: a call made inside 
 event-bus handler of an event published in it, works; one made long after it (a slow promise, a
 timer) or not triggered by the user gives `'no-gesture'`. In a browser that can't tell, the call is
 tried, and the pop-up blocker may answer `'blocked'`. When your code decides later (an assistant that
-suggests moving the map), show a button and pop out from its click.
+suggests moving the map), show a button and pop out from its click. A click in any of the app's
+windows counts, a pop-out's included: a button in a popped-out panel can pop out another panel, and
+the window the user clicked opens the new one (7.12.1).
 
 It returns a `PopOutResult`: `{ ok: true }`, or `{ ok: false, reason }`. The checks run in this order:
 
@@ -373,6 +375,8 @@ const cameras: ManagedWidget = {
 - **Back:** closing the window, or its **"Back into the panel"** button, puts the widget back into its
   panel where it was. `move()` to any place brings it back and moves it, as one move.
 - **In the window,** the frame's title icon opens your `titleMenu`.
+- **From its owner's window:** a widget can pop out while its panel is in a window of its own (7.12.1).
+  Its window opens over it, on that window's screen; closing it puts the widget back into its panel there.
 - **`placement()`** while out gives a placement that reopens it floating at its rect from before the
   window.
 - **The owner closing** closes the window and the widget. The widget's panel id doesn't change.
@@ -448,6 +452,10 @@ await popup.getByRole('button', { name: 'Return to desktop' }).click();
   JavaScript property set on it isn't visible from the other page's `evaluate`.
 - `panel:popped-out` and `panel:returned` arrive a frame after the move. Wait for them (with
   `waitForFunction` or `expect.poll`), not for the click.
+- Playwright's `evaluate` and its waits count as a user activation in that page for about 5
+  seconds. A test of a click inside a pop-out can then pass even if only the main page was
+  activated. To be sure the click in the pop-out is what counts, leave the main page untouched for
+  about 5 seconds before that click.
 
 ### Which window a toast goes to
 

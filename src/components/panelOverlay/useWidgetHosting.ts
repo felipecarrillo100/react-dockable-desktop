@@ -280,12 +280,14 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
       || optionsFor(registry, owner)?.keepAlive === false) return { ok: false, reason: 'not-allowed' };
     const current = hostedRef.current.get(id);
     if (current) return popOuts.popOut(current.panelId, { prepare: () => true });
-    // Still in the panel: the window opens over where the widget is.
+    // Still in the panel: the window opens over where the widget is, on its owner's window's screen.
     const root = containerRef.current;
     const frame = root ? Array.from(root.querySelectorAll<HTMLElement>('[data-rdd-widget]')).find(f => f.getAttribute('data-rdd-widget') === id) : undefined;
     const r = frame?.getBoundingClientRect();
     return popOuts.popOut(`${ownerId}/${id}`, {
       rect: r && r.width > 0 ? { left: r.left, top: r.top, width: r.width, height: r.height } : null,
+      // Measured in its owner's window, which may be a pop-out of its own (7.12.1).
+      view: frame?.ownerDocument.defaultView ?? undefined,
       prepare: () => {
         if (!move(id, { to: 'floating' }).ok) return false;
         // Out of the panel and into the window are one move: one onWillMove (fired), one onMoved.

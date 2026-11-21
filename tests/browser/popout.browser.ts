@@ -599,3 +599,88 @@ describe('testing toasts across windows (the guide\'s recipe)', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// 7.12.1: a pop-out from a click inside a pop-out window. The click activates that window, not the
+// main page, so the new window must be opened from there (the main page's window.open is blocked).
+// Harness opo=1: p3 (the widget's owner) can pop out (#ov-po-btn), and #wo-po-in inside p3 pops the
+// widget out; po2=1: #po-pop-q inside pp pops pq out.
+
+/** Waits for the context to hold `n` pages, and returns the newest. */
+async function nthPage(page: Page, n: number): Promise<Page> {
+  await expect.poll(() => page.context().pages().length).toBe(n);
+  const next = page.context().pages()[n - 1];
+  await next.waitForLoadState();
+  return next;
+}
+/**
+ * Playwright runs page.evaluate (and its waits) as a user gesture, so the main page holds a
+ * transient activation for a while after any call into it (5 s in Chrome): wait that out, without
+ * touching the main page, so the click inside the pop-out is the only activation, as for a user.
+ */
+const mainActivationExpired = () => new Promise(r => setTimeout(r, 5500));
+/** The widget's WebGL context, held in the main page's globals, is still alive. */
+const woGlAlive = (page: Page) => page.evaluate(() => {
+  const w = window as unknown as { __woLost: number; __woGl: WebGLRenderingContext | null };
+  return !!w.__woGl && !w.__woGl.isContextLost() && w.__woLost === 0;
+});
+const woFillMarked = (p: Page) => p.evaluate(() => {
+  const fill = document.getElementById('wo-fill') as (HTMLElement & { __mark?: string }) | null;
+  return { here: !!fill, same: fill?.__mark === 'original', count: document.getElementById('wo-count')?.textContent ?? null };
+});
+
+describe('a pop-out from a click inside a pop-out window (7.12.1)', () => {
+  it("a widget, from its owner's window: a second window with the widget; closing it puts the widget back into its panel there", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&ov=1&wo=1&opo=1`);
+    await page.evaluate(() => { (document.getElementById('wo-fill') as HTMLElement & { __mark?: string }).__mark = 'original'; });
+    await page.click('#wo-inc');
+
+    // The owner panel into its window, from the page's own button.
+    const [owner] = await Promise.all([page.waitForEvent('popup'), page.click('#ov-po-btn')]);
+    await owner.waitForLoadState();
+    await owner.waitForSelector('[data-rdd-widget="wo"] #wo-fill');
+    await owner.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    await settle(owner, 300);
+    await mainActivationExpired();
+
+    // A click inside the owner's window pops the widget out.
+    await owner.click('#wo-po-in');
+    expect(await page.evaluate(() => (window as unknown as { __woPopResult: unknown }).__woPopResult)).toEqual({ ok: true });
+    const widgetWin = await nthPage(page, 3);
+    await widgetWin.waitForSelector('#wo-fill');
+    await widgetWin.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    await settle(widgetWin, 300);
+    expect(await woFillMarked(widgetWin)).toEqual({ here: true, same: true, count: '1' });
+    // Opened by the owner's window, the one the user clicked.
+    expect(await widgetWin.evaluate(() => window.opener?.name)).toMatch(/^rdd-popout-p3-/);
+    expect(await owner.$('#wo-fill')).toBeNull();
+    expect(await page.$('#wo-fill')).toBeNull();
+    expect(await wmState(page, 'panels.p3.poppedOut')).toBe(true);
+    expect(await woGlAlive(page)).toBe(true);
+
+    // Closing it: back into its panel, inside the owner's window.
+    await widgetWin.close();
+    await owner.waitForSelector('[data-rdd-widget="wo"] #wo-fill');
+    await settle(owner, 300);
+    expect(await woFillMarked(owner)).toEqual({ here: true, same: true, count: '1' });
+    expect(await page.$('#wo-fill')).toBeNull();
+    expect(await woGlAlive(page)).toBe(true);
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it("a panel, from a button in another panel's window: its window opens", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&po2=1`);
+    const pp = await popOutByClick(page);
+    await pp.waitForSelector('#po-pop-q');
+    await mainActivationExpired();
+    await pp.click('#po-pop-q');
+    expect(await page.evaluate(() => (window as unknown as { __poqResult: unknown }).__poqResult)).toEqual({ ok: true });
+    const pq = await nthPage(page, 3);
+    await pq.waitForSelector('[data-rdd-panel="pq"]');
+    expect(await pq.evaluate(() => window.opener?.name)).toMatch(/^rdd-popout-pp-/);
+    expect(await wmState(page, 'panels.pq.poppedOut')).toBe(true);
+    expect(await page.$('[data-rdd-panel="pq"]')).toBeNull();
+    await close();
+    expect(errors).toEqual([]);
+  });
+});

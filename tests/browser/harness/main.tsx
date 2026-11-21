@@ -38,7 +38,12 @@
  *                   titleMenu item icons are Emotion-styled boxes ([data-emo-icon], 16 x 16, rgb(200, 30, 40))
  *   (po=1: #po-menu in `pp` opens a context menu from there; #po-toast raises a toast "from pp")
  *   (po=1 with ov=1&wo=1: the `wo` widget has canPopOut, and the header's #wo-po-btn pops it out)
- *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out
+ *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out;
+ *                   inside `pp`, #po-pop-q pops `pq` out (a click in pp's window, once pp is out: 7.12.1),
+ *                   the result in `window.__poqResult`
+ *   opo=1           (with po=1&ov=1) the `overlay` type (p3) has canPopOut, and the header's #ov-po-btn pops p3
+ *                   out; with wo=1, #wo-po-in inside p3 pops the `wo` widget out (a click in p3's window, once
+ *                   p3 is out: 7.12.1), the result in `window.__woPopResult`
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
  * initial layout (p1, p2 in one group; p3 docked to the right edge; p4 floating) is in place.
@@ -157,11 +162,21 @@ function ManagedOpener() {
   }, []);
   return null;
 }
+/** opo=1&wo=1: a button inside the widget's own panel that pops the widget out (7.12.1). */
+function WidgetPopButton() {
+  const widgets = useFloatingWidgets();
+  return (
+    <button id="wo-po-in" style={{ position: 'absolute', top: 40, right: 4, zIndex: 5 }} onClick={() => {
+      (window as unknown as { __woPopResult: unknown }).__woPopResult = widgets.popOut('wo');
+    }}>pop widget</button>
+  );
+}
 function OverlayPanel() {
   const [open, setOpen] = useState(true);
   return (
     <RddPanelOverlay>
       {q.get('wo') === '1' && <ManagedOpener />}
+      {q.get('wo') === '1' && q.get('opo') === '1' && <WidgetPopButton />}
       <div style={{ width: '100%', height: '100%', background: '#224' }} id="ovbg" />
       {q.get('pt') && (
         <RddPanelToolbar position="top" variant={q.get('pt') as 'frosted'}>
@@ -218,6 +233,8 @@ const EmoIcon = ({ name }: { name: string }) => (
 );
 
 function PopPanel() {
+  const { id } = usePanel();
+  const actions = useWorkspace();
   const [count, setCount] = useState(0);
   const showMenu = useContextMenu();
   useEffect(() => {
@@ -243,6 +260,9 @@ function PopPanel() {
         <button id="po-menu" onClick={(e) => { e.stopPropagation(); showMenu({ event: e, items: [
           { label: 'Emo item', icon: EMO ? <EmoIcon name="menu" /> : undefined, action: () => {} },
         ] }); }}>menu</button>
+        {id === 'pp' && q.get('po2') === '1' && <button id="po-pop-q" onClick={() => {
+          (window as unknown as { __poqResult: unknown }).__poqResult = actions.popOutPanel('pq');
+        }}>pop q</button>}
         <button id="po-toast" onClick={() => { toast('from pp', { icon: EMO ? <EmoIcon name="toast" /> : undefined }); }}>toast</button>
         {q.get('emo') === '1' && (
           <ClassNames>{({ css }) => (
@@ -270,7 +290,7 @@ const workspace = createWorkspace({
     // Only with po=1: a canPopOut type on a workspace without popOut warns in development.
     ...(POPOUT ? { popper: { component: PopPanel, defaultOptions: { canPopOut: true, ...(EMO ? { icon: <EmoIcon name="frame" /> } : {}) } } } : {}),
     probe: { component: ProbePanel },
-    overlay: { component: OverlayPanel },
+    overlay: { component: OverlayPanel, ...(POPOUT && q.get('opo') === '1' ? { defaultOptions: { canPopOut: true } } : {}) },
     canvas: { component: CanvasPanel },
     titled: { component: TitledPanel },
     nopreview: { component: ProbePanel, defaultOptions: { disableLivePreview: true } },
@@ -343,6 +363,7 @@ function Inner() {
         {POPOUT && <button id="po-btn" onClick={() => {
           (window as unknown as { __poResult: unknown }).__poResult = actions.popOutPanel('pp');
         }}>pop out</button>}
+        {POPOUT && q.get('opo') === '1' && <button id="ov-po-btn" onClick={() => { actions.popOutPanel('p3'); }}>pop out p3</button>}
         {POPOUT && <button id="po-btn-q" onClick={() => { actions.popOutPanel('pq'); }}>pop out q</button>}
         {POPOUT && <button id="wo-po-btn" onClick={() => {
           const w = window as unknown as { __wo?: { popOut(id: string): unknown }; __woPopResult: unknown };

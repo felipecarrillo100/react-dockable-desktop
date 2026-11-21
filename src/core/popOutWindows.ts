@@ -80,8 +80,10 @@ export interface HostedPopOut {
 export interface HostedPopOutOptions {
   /** Called once the window is open, before the panel moves in: takes the widget out of its panel if needed. */
   prepare: () => boolean;
-  /** Where the widget is on the main page (client pixels), for the window's place and size. */
+  /** Where the widget is (client pixels of `view`, else of the main page), for the window's place and size. */
   rect?: { left: number; top: number; width: number; height: number } | null;
+  /** The window `rect` was measured in, when not the main page's (7.12.1): its owner panel's pop-out. */
+  view?: Window;
 }
 
 /** @internal A workspace's pop-out windows: what `WorkspaceClient` and the provider use. */
@@ -140,11 +142,22 @@ function loadedDocument(win: Window, blank: boolean): Document | null {
   return doc.URL !== BLANK && doc.readyState === 'complete' ? doc : null;
 }
 
-/** The user is in a click or key press, as far as the browser can tell (no API: assume so). */
-function hasGesture(): boolean {
-  if (typeof navigator === 'undefined') return true;
-  const activation = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
-  return activation?.isActive !== false;
+const activationOf = (win: Window) => (win.navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+
+/**
+ * The window the user is clicking in (7.12.1), which must be the one to open the new window: the
+ * main page, or one of its pop-outs (a click there activates that window, not the page). The main
+ * page in a browser that can't tell (no API: assume so); null when no window is in a click or key
+ * press; undefined when there is no window at all (a server).
+ */
+function activeWindow(popOuts: Iterable<Window>): Window | null | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const main = activationOf(window);
+  if (!main || main.isActive) return window;
+  for (const win of popOuts) {
+    try { if (!win.closed && activationOf(win)?.isActive === true) return win; } catch { /* closed or unreadable */ }
+  }
+  return null;
 }
 
 export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry, enabled: boolean): PopOutWindows {
@@ -345,10 +358,14 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     }
   };
 
-  /** The window's place and size: over the panel where it is now, in screen coordinates. */
-  const featuresFor = (id: string, at?: { left: number; top: number; width: number; height: number } | null): string => {
+  /**
+   * The window's place and size: over the panel where it is now, in screen coordinates. `view` is
+   * the window `at` was measured in (a widget's owner in its own window); else the main page,
+   * where a panel's own rect is measured.
+   */
+  const featuresFor = (id: string, at?: { left: number; top: number; width: number; height: number } | null, view?: Window): string => {
     const r = at ?? host()?.rectOf(id) ?? null;
-    const w = window;
+    const w = (at && view) || window;
     const width = Math.max(320, Math.round(r?.width || 640));
     const height = Math.max(240, Math.round(r?.height || 480));
     const chromeTop = Math.max(0, (w.outerHeight || 0) - (w.innerHeight || 0));
@@ -381,19 +398,23 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
       try { open.win.focus(); } catch { /* best effort */ }
       return { ok: true };
     }
-    if (!hasGesture()) return refuse('no-gesture');
+    // The window the user clicked opens it: a browser blocks a window opened from another one.
+    const opener = activeWindow(Array.from(entries.values(), e => e.win));
+    if (opener === null) return refuse('no-gesture');
     // No provider mounted (yet, or any more): nothing would show the panel there.
-    if (!currentHost) return refuse('no-window');
+    if (!currentHost || !opener) return refuse('no-window');
 
-    // No page of the app's: an empty URL, so the window keeps its initial document (an
-    // `about:blank` URL may replace it with a new one after this returns, in Firefox).
-    const target = url ?? '';
     const name = `rdd-popout-${id}-${pageKey}-${++windowCount}`;
+    let target = '';
     let win: Window | null;
     try {
+      // No page of the app's: an empty URL, so the window keeps its initial document (an
+      // `about:blank` URL may replace it with a new one after this returns, in Firefox). The app's
+      // page is resolved against the main page's, whichever window opens it.
+      if (url) target = new URL(url, document.baseURI).href;
       // A name of its own per window: another workspace's panel, or a window left by a reload of
       // this page, may have the same id.
-      win = window.open(target, name, featuresFor(id, hosted?.rect));
+      win = opener.open(target, name, featuresFor(id, hosted?.rect, hosted?.view));
     } catch {
       win = null;
     }
