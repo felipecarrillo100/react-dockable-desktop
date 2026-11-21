@@ -10,6 +10,29 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.12.1] — 2026-11-21
+
+A fix to pop-out windows. No API change.
+
+### Fixed
+
+- **A pop-out from a click inside a pop-out window works.** `workspace.popOutPanel()` or a widget's
+  `popOut()` called from a click in one of the app's pop-out windows (a widget's "Open in new
+  window" item while its panel is in a window of its own, or a button in a popped-out panel that pops
+  out another panel) was refused with `'no-gesture'`: only the main page's click was looked for, and
+  the main page opened the window, which a browser blocks when the user clicked another window. Now
+  a click in any of the app's windows counts, and that window opens the new one. A relative
+  `popoutUrl` still means the main page's address. A widget's window also opens where it was, on its
+  owner's window's screen: it would have been placed from the main window's position.
+- A widget can now pop out while its panel is in a window: it goes into its own window, and closing
+  that window puts it back into its panel there.
+
+### Docs
+
+- **Pop-out Windows guide:** a click in any of the app's windows counts as the user's gesture. The
+  testing section adds that Playwright's `evaluate` and its waits count as a user activation for
+  about 5 seconds, which can hide a missing gesture in a test.
+
 ## [7.12.0] — 2026-11-21
 
 **Pop-out windows.** A panel, or a managed widget that left its panel, can move into its own browser
@@ -1621,7 +1644,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.1...HEAD
+[7.12.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0...v7.12.1
 [7.12.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0
 [7.12.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.0...v7.12.0-next.1
 [7.12.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0-next.0

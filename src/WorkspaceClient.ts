@@ -335,10 +335,11 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    * the panel's state, scroll offsets and a canvas's WebGL context go with it. A docked panel
    * remembers its group and goes back into it on return.
    *
-   * Call it inside the user's click or key press: browsers only open a window then. It is
-   * synchronous, and says what happened (see {@link PopOutResult}); on a refusal the panel stays
-   * where it is and nothing is shown to the user, so the app decides what to say. Calling it for a
-   * panel that is already out brings its window forward.
+   * Call it inside the user's click or key press: browsers only open a window then. A click in
+   * one of the app's pop-out windows counts too (7.12.1). It is synchronous, and says what
+   * happened (see {@link PopOutResult}); on a refusal the panel stays where it is and nothing is
+   * shown to the user, so the app decides what to say. Calling it for a panel that is already out
+   * brings its window forward.
    *
    * Needs `createWorkspace({ popOut: true })` and the panel type's `defaultOptions.canPopOut`.
    * The window opens `<DockableDesktopProvider popoutUrl>`, or a blank window. When that page can't

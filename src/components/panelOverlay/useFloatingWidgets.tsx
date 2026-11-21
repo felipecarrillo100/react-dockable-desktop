@@ -80,11 +80,12 @@ export interface FloatingWidgetsApi {
   placement(id: string): WidgetPlacement | null;
   /**
    * Moves a widget into its own browser window (7.12.0), for a second monitor, without remounting
-   * its content. Synchronous: call it inside the user's click. From inside its panel it leaves the
-   * panel and goes into the window as one move; from docked, tabbed, floating or minimised, its
-   * panel moves. The same result and reasons as `workspace.popOutPanel` (`'not-allowed'` without
-   * {@link ManagedWidget.canPopOut}, or when its owner panel can't hold it out); a refusal changes
-   * nothing. While out, `location()` is `'floating'` and `useWidget().isPoppedOut` is true.
+   * its content. Synchronous: call it inside the user's click, in the page or in a pop-out window
+   * (its owner's, say: 7.12.1). From inside its panel it leaves the panel and goes into the window
+   * as one move; from docked, tabbed, floating or minimised, its panel moves. The same result and
+   * reasons as `workspace.popOutPanel` (`'not-allowed'` without {@link ManagedWidget.canPopOut}, or
+   * when its owner panel can't hold it out); a refusal changes nothing. While out, `location()` is
+   * `'floating'` and `useWidget().isPoppedOut` is true.
    *
    * Back: `move()` to any place returns it first, as one move; closing the window, or its "Back into
    * the panel" button, puts it back into its panel where it was (D17). `onWillMove` / `onMoved` run

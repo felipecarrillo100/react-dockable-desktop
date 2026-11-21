@@ -492,6 +492,7 @@ interface HostedPopOutOptions {
         width: number;
         height: number;
     } | null;
+    view?: Window;
 }
 
 // @internal
