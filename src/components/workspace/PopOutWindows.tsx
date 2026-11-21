@@ -8,7 +8,8 @@
  */
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { useWindowManagerState, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
+import { useWindowManagerState, useWindowManagerActionsInternal, useFormatMessage, formatLabel, usePredefinedMessages, useRegistry } from '../WindowManagerContext';
+import { initialFocusFor } from './helpers';
 import { optionsFor } from '../../core/panelOptions';
 import type { PopOutEntry, PopOutWindows as PopOutStore } from '../../core/popOutWindows';
 import { usePanelHost } from './panelHost';
@@ -63,6 +64,7 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const panelHost = usePanelHost();
+  const actions = useWindowManagerActionsInternal();
   const [styled, setStyled] = useState(false);
 
   // The window's title follows the panel's; its language and direction are the page's.
@@ -80,12 +82,21 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
 
   if (!shown) return null;
   const options = optionsFor(registry, panel);
-  const returnLabel = formatLabel(messages.returnToDesktop, formatMessage);
+  // A managed widget's panel (S5): back into its panel, and its title icon opens its own titleMenu.
+  const hosted = !!panel.owner;
+  const returnLabel = formatLabel(hosted ? messages.backIntoPanel : messages.returnToDesktop, formatMessage);
+  const icon = panel.icon ?? (options?.icon || DefaultGridIcon);
+  const openWidgetMenu = (e: React.MouseEvent) => {
+    const items = actions.getPanelContextMenuItems(id);
+    if (items.length > 0) actions.showContextMenu({ event: e, items, initialFocus: initialFocusFor(e) });
+  };
   return createPortal(
     // `rdd-workspace` too: what is scoped to the workspace (its colours, scrollbars) applies here.
     <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
       <div className="rdd-popout-frame__header">
-        <span className="rdd-popout-frame__icon">{panel.icon ?? (options?.icon || DefaultGridIcon)}</span>
+        {hosted && actions.getPanelContextMenuItems(id).length > 0
+          ? <button type="button" className="rdd-popout-frame__icon rdd-popout-frame__icon--menu" aria-haspopup="menu" aria-label={title} onClick={openWidgetMenu}>{icon}</button>
+          : <span className="rdd-popout-frame__icon">{icon}</span>}
         <span className="rdd-popout-frame__title">{title}{panel.dirty ? ' *' : ''}</span>
         <button type="button" className="rdd-popout-frame__return" title={returnLabel} onClick={onReturn}>
           {returnLabel}

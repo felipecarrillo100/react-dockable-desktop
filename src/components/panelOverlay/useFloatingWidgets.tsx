@@ -4,6 +4,7 @@
  */
 import { useState, useContext, useCallback, useMemo } from 'react';
 import type { ManagedWidget, MoveResult, WidgetLocation, WidgetPlacement, WidgetTarget } from './types';
+import type { PopOutResult } from '../../types';
 import { PanelManagerContext } from './context';
 
 // ─── usePanelFloatingWindow ───────────────────────────────────────────────────
@@ -77,6 +78,21 @@ export interface FloatingWidgetsApi {
    * widgets.open('table', { ...config, placement: saved ?? undefined });  // later: it opens where it was
    */
   placement(id: string): WidgetPlacement | null;
+  /**
+   * Moves a widget into its own browser window (7.12.0), for a second monitor, without remounting
+   * its content. Synchronous: call it inside the user's click. From inside its panel it leaves the
+   * panel and goes into the window as one move; from docked, tabbed, floating or minimised, its
+   * panel moves. The same result and reasons as `workspace.popOutPanel` (`'not-allowed'` without
+   * {@link ManagedWidget.canPopOut}, or when its owner panel can't hold it out); a refusal changes
+   * nothing. While out, `location()` is `'floating'` and `useWidget().isPoppedOut` is true.
+   *
+   * Back: `move()` to any place returns it first, as one move; closing the window, or its "Back into
+   * the panel" button, puts it back into its panel where it was (D17). `onWillMove` / `onMoved` run
+   * around each, and the `panel:popped-out` / `panel:returned` events are sent for its panel.
+   * @example
+   * <button onClick={() => widgets.popOut('table')}>Open in new window</button>
+   */
+  popOut(id: string): PopOutResult;
 }
 
 /**
@@ -107,5 +123,6 @@ export function usePanelFloatingWindowManager(): FloatingWidgetsApi {
     move: (id: string, to: WidgetTarget): MoveResult => ctx ? ctx.moveManaged(id, to) : { ok: false, reason: 'not-open' },
     location: (id: string): WidgetLocation | null => ctx ? ctx.locationOf(id) : null,
     placement: (id: string): WidgetPlacement | null => ctx ? ctx.placementOf(id) : null,
+    popOut: (id: string): PopOutResult => ctx ? ctx.popOutManaged(id) : { ok: false, reason: 'not-open' },
   }), [ctx, ids]);
 }

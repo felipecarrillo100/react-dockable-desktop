@@ -34,6 +34,7 @@
  *   emo=1           (with po=1) the documented Emotion recipe: a popoutWrapper with a CacheProvider whose
  *                   cache follows the panel's document (speedy: rules inserted with insertRule, as in
  *                   production); `pp` shows an Emotion-styled #po-emo; `window.__poMounts` counts its mounts
+ *   (po=1 with ov=1&wo=1: the `wo` widget has canPopOut, and the header's #wo-po-btn pops it out)
  *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out
  *
  * Exposes `window.__wm = { state, actions }` and sets `window.__ready = true` once the
@@ -135,6 +136,8 @@ function ManagedOpener() {
   const config = {
     title: 'Managed', content: <ManagedContent />, anchor: 'bottom-right' as const, width: 200, height: 180,
     canDock: true, canFloat: true, preserveEmbeds: q.get('emb') === '1',
+    // po=1: it can open in its own window too (7.12.0); #wo-po-btn pops it out.
+    canPopOut: q.get('po') === '1',
     titleMenu: (w: WidgetMenuContext) => w.location === 'panel'
       ? [{ label: 'Dock below', action: () => w.move({ to: 'docked', position: 'bottom' }) }]
       : [{ label: 'Back into the panel', action: () => w.move({ to: 'panel' }) }],
@@ -323,6 +326,10 @@ function Inner() {
           (window as unknown as { __poResult: unknown }).__poResult = actions.popOutPanel('pp');
         }}>pop out</button>}
         {POPOUT && <button id="po-btn-q" onClick={() => { actions.popOutPanel('pq'); }}>pop out q</button>}
+        {POPOUT && <button id="wo-po-btn" onClick={() => {
+          const w = window as unknown as { __wo?: { popOut(id: string): unknown }; __woPopResult: unknown };
+          w.__woPopResult = w.__wo?.popOut('wo');
+        }}>pop out widget</button>}
         <span id="ctx" style={{ padding: '0 8px', background: '#ccc' }}
           onContextMenu={(e) => { e.preventDefault(); showCtx({ event: e, items: [
             { label: 'Item one', action: () => {} },

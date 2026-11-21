@@ -8,6 +8,7 @@ import type { FloatAnchor } from '../../types';
 // Type-only, so this stays a one-way dependency: PanelProviderContext imports nothing from here.
 import type { PanelTitle } from '../PanelProviderContext';
 import type { ContextMenuItem } from '../ContextMenu';
+import type { PopOutResult } from '../../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,13 @@ export interface ManagedWidget {
    * an iframe reloads as before. As `preserveEmbeds` on a panel type's `defaultOptions`. @default false
    */
   preserveEmbeds?: boolean;
+  /**
+   * It may move into its own browser window (7.12.0): `useFloatingWidgets().popOut(id)`, or an item
+   * the app offers in its {@link ManagedWidget.titleMenu} (`w.popOut()`). Needs a workspace created
+   * with `popOut: true`. Changeable while open: call `open()` again; a window already open stays
+   * open. @default false
+   */
+  canPopOut?: boolean;
 }
 
 /**
@@ -130,6 +138,12 @@ export interface WidgetMenuContext {
   canDock: boolean;
   /** Its config's `canFloat`. */
   canFloat: boolean;
+  /** Its config's `canPopOut`, on a workspace with `popOut` (7.12.0). */
+  canPopOut: boolean;
+  /** It is in its own browser window now (`location` is then `'floating'`). (7.12.0) */
+  isPoppedOut: boolean;
+  /** `useFloatingWidgets().popOut()` for this widget (7.12.0). */
+  popOut(): PopOutResult;
   /** `useFloatingWidgets().move()` for this widget. */
   move(to: WidgetTarget): MoveResult;
   /** Closes the widget, wherever it is. */

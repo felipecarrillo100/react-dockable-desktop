@@ -346,6 +346,10 @@ export const defaultMessages: {
         readonly id: "dockable-desktop-returnToDesktop";
         readonly defaultMessage: "Return to desktop";
     };
+    readonly backIntoPanel: {
+        readonly id: "dockable-desktop-backIntoPanel";
+        readonly defaultMessage: "Back into the panel";
+    };
     readonly popOutBlocked: {
         readonly id: "dockable-desktop-popOutBlocked";
         readonly defaultMessage: "The browser blocked the new window. Allow pop-ups for this site and try again.";
@@ -410,6 +414,7 @@ export interface FloatingWidgetsApi {
     open(id: string, config: ManagedWidget): void;
     openIds: string[];
     placement(id: string): WidgetPlacement | null;
+    popOut(id: string): PopOutResult;
 }
 
 // @public
@@ -460,6 +465,24 @@ type HostedPanelPlacement = {
         height: number;
     };
 };
+
+// @internal
+interface HostedPopOut {
+    popOut(): PopOutResult;
+    returned(): void;
+    returning(): void;
+}
+
+// @internal
+interface HostedPopOutOptions {
+    prepare: () => boolean;
+    rect?: {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    } | null;
+}
 
 // @internal
 interface InternalWindowActions extends WorkspaceActions {
@@ -521,6 +544,7 @@ export interface ManagedWidget {
     anchor?: FloatAnchor;
     canDock?: boolean;
     canFloat?: boolean;
+    canPopOut?: boolean;
     content: React$1.ReactNode;
     height?: number;
     icon?: React$1.ReactNode;
@@ -899,7 +923,10 @@ interface PopOutWindows {
     //
     // (undocumented)
     getSnapshot(): readonly PopOutEntry[];
-    popOut(id: string): PopOutResult;
+    // Warning: (ae-forgotten-export) The symbol "HostedPopOutOptions" needs to be exported by the entry point index.d.ts
+    popOut(id: string, hosted?: HostedPopOutOptions): PopOutResult;
+    // Warning: (ae-forgotten-export) The symbol "HostedPopOut" needs to be exported by the entry point index.d.ts
+    registerHosted(panelId: string, hosted: HostedPopOut): () => void;
     returnPanel(id: string): {
         ok: boolean;
     };
@@ -1654,6 +1681,7 @@ export function useWorkspaceState<T>(selector: (state: WorkspaceState) => T): T;
 // @public
 export interface WidgetHandle {
     id: string;
+    isPoppedOut: boolean;
     location: WidgetLocation;
     onMoved(cb: () => void): () => void;
     onWillMove(cb: () => void): () => void;
@@ -1668,10 +1696,13 @@ export type WidgetLocation = 'panel' | 'docked' | 'tabbed' | 'floating' | 'minim
 export interface WidgetMenuContext {
     canDock: boolean;
     canFloat: boolean;
+    canPopOut: boolean;
     close(): void;
     id: string;
+    isPoppedOut: boolean;
     location: WidgetLocation;
     move(to: WidgetTarget): MoveResult;
+    popOut(): PopOutResult;
 }
 
 // @public

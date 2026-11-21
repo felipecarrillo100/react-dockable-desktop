@@ -24,13 +24,15 @@ export interface BuiltInEvents {
   'panel:restored':  { id: string };
   /**
    * A panel moved into its own browser window (`popOutPanel`, 7.12.0), once that window's page is
-   * ready: `window` is it, the one `usePanelWindow()` now gives the panel.
+   * ready: `window` is it, the one `usePanelWindow()` now gives the panel. Sent for a managed
+   * widget's own panel too (`useFloatingWidgets().popOut`), with that panel's id.
    */
   'panel:popped-out': { id: string; window: Window };
   /**
    * A panel that was in its own window is back in the page (7.12.0), whatever brought it back: the
    * app, the frame's button, the window closing, the provider unmounting. Not sent for a panel
-   * closed while out (`panel:closed` is).
+   * closed while out (`panel:closed` is). Sent for a managed widget's own panel too, as it goes back
+   * into its owner panel.
    */
   'panel:returned': { id: string };
   /**

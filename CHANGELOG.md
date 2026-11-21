@@ -47,6 +47,23 @@ replacement and the version that removes the old API.
   - An "Open in new window" item in the tab menu and the floating window's ⋮ menu of `canPopOut`
     types; from it, a blocked pop-up shows a toast.
   - Messages `popOutWindow`, `returnToDesktop` and `popOutBlocked`.
+- **Managed widgets in their own window** (widgets out of the panel, 7.11.0):
+  - `useFloatingWidgets().popOut(id): PopOutResult`, with the same reasons as `popOutPanel`.
+    Synchronous, inside the user's click. From inside its panel the widget leaves the panel and goes
+    into the window as one move; from docked, tabbed, floating or minimised, its panel moves. A
+    refusal changes nothing.
+  - `ManagedWidget.canPopOut` opts it in (off by default; a development warning when the workspace
+    has no `popOut`). `useWidget().isPoppedOut`; `WidgetMenuContext.canPopOut`, `isPoppedOut` and
+    `popOut()`, for the app's `titleMenu`.
+  - While out, `location()` is `'floating'`. `move()` to any place brings it back and moves it, as one
+    move. Closing the window, or its "Back into the panel" button, puts it back into its panel where it
+    was. `onWillMove` / `onMoved` run around each move, with the new size. `placement()` while out
+    reopens it floating at its rect before the window. The owner closing closes the window and the
+    widget.
+  - `workspace.popOutPanel(id)` / `returnPanel(id)` on the widget's panel id do the same, with the
+    widget's rules; `panel:popped-out` / `panel:returned` are sent for that panel.
+  - Its content gets its own window from `usePanelWindow()`, and the `popoutWrapper` is around it too.
+  - In the window, the frame's title icon opens the widget's `titleMenu`.
 - **Code in a pop-out window: `popoutWrapper`, `usePanelWindow()`, `isPoppedOut`, events.**
   - `<DockableDesktopProvider popoutWrapper>`: a component given `{ window, document, children }`,
     rendered around every panel's content for its whole life while the workspace has `popOut`
@@ -72,7 +89,7 @@ replacement and the version that removes the old API.
 
 ### Upgrading
 
-- **Three new message keys:** `popOutWindow`, `returnToDesktop` and `popOutBlocked`. An app that
+- **Four new message keys:** `popOutWindow`, `returnToDesktop`, `backIntoPanel` and `popOutBlocked`. An app that
   types its translation table as `Record<MessageKey, string>` must add them to compile; at run
   time a missing key falls back to the English default.
 
