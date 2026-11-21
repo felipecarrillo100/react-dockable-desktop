@@ -47,6 +47,17 @@ replacement and the version that removes the old API.
   - An "Open in new window" item in the tab menu and the floating window's ⋮ menu of `canPopOut`
     types; from it, a blocked pop-up shows a toast.
   - Messages `popOutWindow`, `returnToDesktop` and `popOutBlocked`.
+- **Focus across windows** (pop-out windows):
+  - `workspace.focusPanelWindow(id): { ok: boolean }` brings forward the window that holds a panel
+    (its pop-out, a widget's too, or the main window) and makes it the active panel. Best effort; `ok`
+    is false for an id that isn't open. From a widget in its own window, it brings its owner forward.
+  - `focusPanel(id)` on a panel in its own window brings that window forward too.
+  - A click or focus inside a pop-out makes its panel the active one, so the page's sidebar shows its
+    contributions; the frame carries `data-rdd-focused` as a floating window does.
+  - Escape is per window: it closes the topmost menu or flyout of the window it was pressed in, so a
+    menu in a pop-out stays open through an Escape in the page, and the other way round.
+  - While `popOut` is on, the taskbar lists the panels in their own window, with a small marker; a
+    click brings the window forward.
 - **Managed widgets in their own window** (widgets out of the panel, 7.11.0):
   - `useFloatingWidgets().popOut(id): PopOutResult`, with the same reasons as `popOutPanel`.
     Synchronous, inside the user's click. From inside its panel the widget leaves the panel and goes
@@ -89,7 +100,8 @@ replacement and the version that removes the old API.
 
 ### Upgrading
 
-- **Four new message keys:** `popOutWindow`, `returnToDesktop`, `backIntoPanel` and `popOutBlocked`. An app that
+- **Five new message keys:** `popOutWindow`, `returnToDesktop`, `backIntoPanel`, `popOutBlocked` and
+  `inOwnWindow`. An app that
   types its translation table as `Record<MessageKey, string>` must add them to compile; at run
   time a missing key falls back to the English default.
 

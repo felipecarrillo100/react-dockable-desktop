@@ -296,7 +296,8 @@ function ToolbarGroupButton({ item, position, toolbar }: ToolbarGroupButtonProps
   };
 
   // Close flyout on Escape — a popup, so above any modal or drawer on the shared Escape stack.
-  useEscapeLayer(isOpen, 'popup', closeFlyout);
+  // Its own document's stack: Escape where the toolbar is closes it, Escape in another window doesn't.
+  useEscapeLayer(isOpen, 'popup', closeFlyout, btnDoc);
 
   return (
     <>

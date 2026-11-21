@@ -78,6 +78,8 @@ export interface HostedPopOutOptions {
 export interface PopOutWindows {
   /** See `WorkspaceClient.popOutPanel`. With `hosted`, a managed widget's own pop-out (S5). */
   popOut(id: string, hosted?: HostedPopOutOptions): PopOutResult;
+  /** Brings a panel's window forward, best effort (7.12.0, S6); false when it has none. */
+  focusWindow(id: string): boolean;
   /** Lends a hosted panel's widget rules; returns the function that takes them back. */
   registerHosted(panelId: string, hosted: HostedPopOut): () => void;
   /** See `WorkspaceClient.returnPanel`. */
@@ -352,6 +354,12 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     enabled,
     popOut,
     returnPanel: (id) => ({ ok: back(id, true) }),
+    focusWindow(id) {
+      const entry = entries.get(id);
+      if (!entry) return false;
+      try { entry.win.focus(); } catch { /* best effort: a browser may refuse */ }
+      return true;
+    },
     registerHosted(panelId, hostedPopOut) {
       hostedRouters.set(panelId, hostedPopOut);
       return () => { if (hostedRouters.get(panelId) === hostedPopOut) hostedRouters.delete(panelId); };

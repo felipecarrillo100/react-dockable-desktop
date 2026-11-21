@@ -275,6 +275,7 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    * For floating panels: raises z-index so the window appears on top.
    * For docked panels: selects the tab within its leaf group.
    * For minimized panels: makes it the active one, but leaves it minimized.
+   * For a panel in its own window (7.12.0): also brings that window forward, best effort.
    */
   focusPanel(id: string): void;
   /**
@@ -286,7 +287,32 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    * ```
    */
   focusPanel(id: string, options: { restore?: boolean }): void;
-  focusPanel(id: string, options?: { restore?: boolean }): void { this._core.actions.focusPanel(id, options); }
+  focusPanel(id: string, options?: { restore?: boolean }): void {
+    this._core.actions.focusPanel(id, options);
+    // In its own window (7.12.0): that window comes forward too, best effort.
+    if (this._core.getSnapshot().panels[id]?.poppedOut) this._popOut.focusWindow(id);
+  }
+
+  /**
+   * Brings forward the window that holds a panel, and makes it the active panel (7.12.0): its
+   * pop-out for a panel in its own window (a widget's panel too), the main window for one in the
+   * page. Best effort: a browser may keep another window in front. `ok` is false for an id that
+   * isn't open.
+   * @example
+   * ```tsx
+   * // From a widget in its own window: bring its owner panel's window forward.
+   * workspace.focusPanelWindow(useWidget()!.ownerPanelId!);
+   * ```
+   */
+  focusPanelWindow(id: string): { ok: boolean } {
+    const panel = this._core.getSnapshot().panels[id];
+    if (!panel) return { ok: false };
+    this._core.actions.focusPanel(id);
+    if (!(panel.poppedOut && this._popOut.focusWindow(id)) && typeof window !== 'undefined') {
+      try { window.focus(); } catch { /* best effort */ }
+    }
+    return { ok: true };
+  }
 
   /**
    * Moves a panel into its own browser window (7.12.0), for a second monitor. Nothing remounts:

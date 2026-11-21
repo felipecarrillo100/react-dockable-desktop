@@ -38,15 +38,21 @@ export interface TaskbarProps extends Pick<InternalWindowActions, 'restorePanel'
   isContextMenuOpen: boolean;
   handleMinimizedRightClick: (id: string, e: React.MouseEvent) => void;
   handleRequestClose: (id: string) => unknown;
+  /**
+   * Pop-out windows (7.12.0): with it, panels in their own window are listed too, with a marker,
+   * and a click brings their window forward. Absent with `popOut` off.
+   */
+  focusPanelWindow?: (id: string) => void;
 }
 
 export const Taskbar = ({
   state, registry, taskbarVisibility, taskbarExpanded, expandTaskbar, leaveTaskbar, scrollTaskbar,
   taskbarRef, tooltipRef, defaultPanelIcon, messages, formatMessage, lastTaskbarPointerTypeRef, hoveredMinimized,
   setHoveredMinimized, minimizedTooltipTimeoutRef, isContextMenuOpen, handleMinimizedRightClick,
-  handleRequestClose, restorePanel,
+  handleRequestClose, restorePanel, focusPanelWindow,
 }: TaskbarProps): React.ReactElement | null => {
-  if (!((taskbarVisibility === 'always' || state.minimized.length > 0))) return null;
+  const poppedOut = focusPanelWindow ? Object.values(state.panels).filter(p => p.poppedOut) : [];
+  if (!((taskbarVisibility === 'always' || state.minimized.length > 0 || poppedOut.length > 0))) return null;
   return (
     <div
       className={[
@@ -63,7 +69,7 @@ export const Taskbar = ({
         onClick={() => scrollTaskbar('left')}
         className="rdd-taskbar-nav-btn"
         aria-label={formatLabel(messages.scrollTaskbarLeft, formatMessage)}
-        style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
+        style={{ display: state.minimized.length + poppedOut.length > 4 ? 'block' : 'none' }}
       >
         ◀
       </button>
@@ -172,6 +178,30 @@ export const Taskbar = ({
             </button>
           );
         })}
+        {/* Panels in their own window (7.12.0): a click brings the window forward. */}
+        {poppedOut.map(p => {
+          const options = optionsFor(registry, p);
+          const icon = p.icon ?? (options?.icon || defaultPanelIcon || DefaultGridIcon);
+          const label = `${formatLabel(p.title, formatMessage)}: ${formatLabel(messages.inOwnWindow, formatMessage)}`;
+          return (
+            <button
+              type="button"
+              key={`popout:${p.id}`}
+              aria-label={label}
+              title={label}
+              onClick={() => focusPanelWindow!(p.id)}
+              className="rdd-taskbar-glassmorphic-item rdd-taskbar-item--popout"
+              data-rdd-taskbar-popout={p.id}
+            >
+              <span className="rdd-taskbar-item-icon" aria-hidden="true">{icon}</span>
+              <span className="rdd-taskbar-item-popout-marker" aria-hidden="true">
+                <svg className="rdd-svg-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 3h7v7M21 3l-9 9"/>
+                </svg>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {hoveredMinimized && createPortal(
@@ -266,7 +296,7 @@ export const Taskbar = ({
         onClick={() => scrollTaskbar('right')}
         className="rdd-taskbar-nav-btn"
         aria-label={formatLabel(messages.scrollTaskbarRight, formatMessage)}
-        style={{ display: state.minimized.length > 4 ? 'block' : 'none' }}
+        style={{ display: state.minimized.length + poppedOut.length > 4 ? 'block' : 'none' }}
       >
         ▶
       </button>
