@@ -23,28 +23,32 @@ export interface BuiltInEvents {
   'panel:minimized': { id: string };
   'panel:restored':  { id: string };
   /**
-   * A panel moved into its own browser window (`popOutPanel`, 7.12.0), once that window's page is
-   * ready: `window` is it, the one `usePanelWindow()` now gives the panel. Sent for a managed
-   * widget's own panel too (`useFloatingWidgets().popOut`), with that panel's id.
+   * A panel moved into its own browser window (`popOutPanel`, 7.12.0), sent once it is laid out
+   * there (in the window's frame, and a frame later), so a `resize()` sees the window's size:
+   * `window` is it, the one `usePanelWindow()` now gives the panel. Sent for a managed widget's own
+   * panel too (`useFloatingWidgets().popOut`), with that panel's id.
    */
   'panel:popped-out': { id: string; window: Window };
   /**
    * A panel that was in its own window is back in the page (7.12.0), whatever brought it back: the
    * app, the frame's button, the window closing, the provider unmounting. Not sent for a panel
-   * closed while out (`panel:closed` is). Sent for a managed widget's own panel too, as it goes back
-   * into its owner panel.
+   * closed while out (`panel:closed` is). Sent once it is laid out in its place (a frame later); a
+   * panel back as a tab that isn't selected is 0 x 0 then. Also sent, without `panel:popped-out`,
+   * when the window fails before the panel got there. Sent for a managed widget's own panel too, as
+   * it goes back into its owner panel.
    */
   'panel:returned': { id: string };
   /**
-   * A panel is about to move into its own window (7.12.0): sent just before its element leaves the
-   * page, once that window's page is ready. `panel:popped-out` follows. Not sent for a refused
-   * pop-out, nor for docking or floating.
+   * A panel is about to move into its own window (7.12.0): sent in the user's click, while its
+   * element is still in the page at its size. `panel:popped-out` follows, or `panel:returned` when
+   * the window fails before the panel got there. Not sent for a refused pop-out, nor for docking or
+   * floating.
    */
   'panel:popping-out': { id: string };
   /**
    * A panel in its own window is about to come back (7.12.0): sent just before its element leaves
-   * that window, whatever brings it back. `panel:returned` follows. Not sent for a panel closed while
-   * out.
+   * that window, whatever brings it back, while it is still there at its size. `panel:returned`
+   * follows. Not sent for a panel closed while out.
    */
   'panel:returning': { id: string };
   /**
@@ -340,6 +344,10 @@ export class WorkspaceClient<TUserEvents extends object = Record<string, unknown
    * The window opens `<DockableDesktopProvider popoutUrl>`, or a blank window. When that page can't
    * be used after all (another origin, or it doesn't load within 10 s), the panel comes back and the
    * window closes, after this has returned `{ ok: true }`.
+   *
+   * On `{ ok: true }`, `panel:popping-out` was sent during the call, with the panel still in the
+   * page; `panel:popped-out` follows once it is laid out in the window, or `panel:returned` when the
+   * window fails first.
    *
    * @example
    * ```tsx

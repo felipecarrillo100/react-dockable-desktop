@@ -12,7 +12,8 @@
  * PW5: usePanelWindow() and usePanel().isPoppedOut through the cycle; the main window outside a
  *      panel and with popOut off
  * PW6: panel:popped-out and panel:returned, once each with their payload, on every way back; no
- *      panel:returned for a panel closed while out
+ *      panel:returned for a panel closed while out. Both are sent once the panel is in its new
+ *      place and a frame has passed (7.12.0), so each test waits for the layout.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -97,6 +98,9 @@ function mount(opts: { popOut?: boolean; wrapper?: boolean } = {}): Workspace {
   act(() => { ws.openPanel('a', 'probe'); });
   return ws;
 }
+
+/** A few animation frames: panel:popped-out / panel:returned wait for the layout (7.12.0). */
+const afterLayout = () => act(async () => { await new Promise(r => setTimeout(r, 100)); });
 
 const counter = (doc: Document = document) => doc.querySelector<HTMLButtonElement>('.pw-count[data-id="a"]');
 
@@ -209,7 +213,7 @@ describe('PW6: the events', () => {
     ['a layout load that keeps it', ws => { ws.loadLayout(JSON.stringify({ gridRoot: { type: 'leaf', id: 'g', panels: ['a'], activePanelId: 'a' }, floating: [], minimized: [], panels: { a: { id: 'a', title: 'a', component: 'probe', state: 'docked', serializable: true } } })); }],
   ];
   for (const [name, back] of paths) {
-    it(`popped-out once with its window; returned once, by ${name}`, () => {
+    it(`popped-out once with its window; returned once, by ${name}`, async () => {
       const ws = mount();
       const p = popup();
       vi.spyOn(window, 'open').mockImplementation(() => p.win);
@@ -218,17 +222,19 @@ describe('PW6: the events', () => {
       ws.subscribe('panel:popped-out', out);
       ws.subscribe('panel:returned', returned);
       act(() => { ws.popOutPanel('a'); });
+      await afterLayout();
       expect(out).toHaveBeenCalledTimes(1);
       expect(out).toHaveBeenCalledWith({ id: 'a', window: p.win });
       expect(returned).not.toHaveBeenCalled();
       act(() => { back(ws, p); });
+      await afterLayout();
       expect(returned).toHaveBeenCalledTimes(1);
       expect(returned).toHaveBeenCalledWith({ id: 'a' });
       expect(out).toHaveBeenCalledTimes(1);
     });
   }
 
-  it('returned once by the closed poll, and by unmounting the provider', () => {
+  it('returned once by the closed poll, and by unmounting the provider', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     for (const how of ['poll', 'unmount'] as const) {
       const ws = mount();
@@ -237,8 +243,10 @@ describe('PW6: the events', () => {
       const returned = vi.fn();
       ws.subscribe('panel:returned', returned);
       act(() => { ws.popOutPanel('a'); });
+      await afterLayout();
       if (how === 'poll') { p.closeByUser(true); act(() => { vi.advanceTimersByTime(600); }); }
       else { act(() => root!.unmount()); root = null; }
+      await afterLayout();
       expect(returned, how).toHaveBeenCalledTimes(1);
       act(() => root?.unmount());
       container?.remove();
@@ -246,7 +254,7 @@ describe('PW6: the events', () => {
     }
   });
 
-  it('no panel:returned for a panel closed while out (panel:closed is sent)', () => {
+  it('no panel:returned for a panel closed while out (panel:closed is sent)', async () => {
     const ws = mount();
     const p = popup();
     vi.spyOn(window, 'open').mockImplementation(() => p.win);
@@ -255,12 +263,14 @@ describe('PW6: the events', () => {
     ws.subscribe('panel:returned', returned);
     ws.subscribe('panel:closed', closed);
     act(() => { ws.popOutPanel('a'); });
+    await afterLayout();
     act(() => { ws.closePanel('a'); });
+    await afterLayout();
     expect(closed).toHaveBeenCalledTimes(1);
     expect(returned).not.toHaveBeenCalled();
   });
 
-  it('with popoutUrl, popped-out is sent once the page is ready, not before', () => {
+  it('with popoutUrl, popped-out is sent once the page is ready, not before', async () => {
     const ws = createWorkspace({ popOut: true, panels: { probe: { component: Probe, defaultOptions: { canPopOut: true } } } });
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -275,10 +285,12 @@ describe('PW6: the events', () => {
     const out = vi.fn();
     ws.subscribe('panel:popped-out', out);
     act(() => { ws.popOutPanel('a'); });
+    await afterLayout();
     expect(out).not.toHaveBeenCalled();
     expect(wrapperDoc).toBe(document);
     url = 'http://localhost/popout.html';
     act(() => { p.win.dispatchEvent(new p.win.Event('load')); });
+    await afterLayout();
     expect(out).toHaveBeenCalledTimes(1);
     expect(wrapperDoc).toBe(p.doc);
   });

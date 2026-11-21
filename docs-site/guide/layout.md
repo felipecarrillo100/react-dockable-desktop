@@ -95,6 +95,9 @@ mid-drag still holds.
 - If it throws, the move is allowed and the error is logged.
 - `canDrop` runs after the panel type's own `canFloat` / `canDock`; it can't allow what those forbid.
 
+`defaultOptions.canPopOut` (7.12.0) is the same kind of switch for the "Open in new window" menu
+item, on a workspace created with `popOut: true`; see [Pop-out Windows](./popout-windows).
+
 ## Activating / focusing panels
 
 ```ts
@@ -106,6 +109,9 @@ workspace.focusPanel('my-map', { restore: true });
 // A minimized panel is restored first, then focused (7.11.0). Without it, a minimized panel stays
 // in the taskbar.
 ```
+
+A panel in its own browser window (7.12.0) comes forward with its window, best effort;
+`workspace.focusPanelWindow(id)` does the same for any panel. See [Pop-out Windows](./popout-windows#focus-and-activation).
 
 ## Querying open panels
 
@@ -129,6 +135,19 @@ workspace.maximizePanel('my-map');               // toggle: fill the workspace, 
 workspace.dockPanel('my-map');                   // return to grid
 workspace.dockPanel('my-map', 'left-leaf');      // dock to specific group
 ```
+
+### Its own browser window (7.12.0)
+
+With `createWorkspace({ popOut: true })` and a type with `defaultOptions.canPopOut`, a panel can
+move into a browser window of its own, for a second monitor:
+
+```ts
+workspace.popOutPanel('my-map');   // inside the user's click → PopOutResult
+workspace.returnPanel('my-map');   // back where it was
+```
+
+While out, `maximizePanel` and `floatPanel` are ignored, and `minimizePanel` or `dockPanel` bring it
+back first. See [Pop-out Windows](./popout-windows).
 
 ## Minimizing
 
@@ -160,6 +179,10 @@ The snapshot JSON contains:
 A managed widget's own panel (`'<ownerId>/<widgetId>'`, 7.11.0) is never saved, and isn't reported
 as excluded: `loadLayout()` sends such a widget back into its panel. Restore widgets from their
 owner panel with `placement()`; see [Widgets Out of the Panel](./widgets-out-of-the-panel#saving-and-restoring-placement).
+
+A panel in its own browser window (7.12.0) is saved at the place it would come back to, so the
+saved layout is the one from before it left. No window reopens after a load, and `loadLayout()`
+closes every pop-out window. See [Pop-out Windows](./popout-windows#saving-the-layout).
 
 ### Which panel is active after a restore
 

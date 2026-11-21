@@ -20,6 +20,9 @@ import type { PopOutResult, WorkspaceCore } from '../types';
 import type { PanelRegistry } from '../components/PanelRegistry';
 import { optionsFor } from './panelOptions';
 import { registerDocument } from '../utils/documentRegistry';
+import { isShownInGrid } from './layoutTree';
+import { isParked } from '../components/domMove';
+import { POPOUT_STYLES_TIMEOUT_MS } from './popOutStyles';
 
 /** The initial document's URL, which a window shows until the app's page replaces it. */
 const BLANK = 'about:blank';
@@ -30,6 +33,11 @@ const CLOSED_POLL_MS = 500;
  * (another origin, or a redirect off this one), the panel comes back and the window closes.
  */
 export const POPOUT_LOAD_TIMEOUT_MS = 10_000;
+/**
+ * How long `panel:popped-out` / `panel:returned` wait for the panel to be in its new place (7.12.0):
+ * past it they are sent anyway. Longer than a pop-out's styles may take, which hide its frame.
+ */
+export const POPOUT_PLACED_TIMEOUT_MS: number = POPOUT_STYLES_TIMEOUT_MS + 1000;
 
 /** Distinguishes the windows of one page: two workspaces can have the same panel id. */
 let windowCount = 0;
@@ -41,6 +49,8 @@ export interface PopOutHost {
   park(id: string): void;
   /** The panel's box on the main page, or null when it isn't shown. */
   rectOf(id: string): { left: number; top: number; width: number; height: number } | null;
+  /** The panel's element, or null when it has none (7.12.0): where it is decides when the events are sent. */
+  element(id: string): Element | null;
 }
 
 /** @internal One open window, as the provider renders it. `doc` is null until its page has loaded. */
@@ -98,7 +108,9 @@ export interface PopOutWindows {
 }
 
 interface Entry {
-  /** `panel:popped-out` was sent (the page is ready and the panel out), so `panel:returned` follows. */
+  /** `panel:popping-out` was sent, so `panel:returned` follows when it comes back (or the window fails). */
+  leaving?: boolean;
+  /** `panel:popped-out` was sent (the panel is laid out in the window), so `panel:returning` comes first on the way back. */
   announced?: boolean;
   key: string;
   id: string;
@@ -148,6 +160,60 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
   /** Hosted panels' widgets, by panel id (S5). */
   const hostedRouters = new Map<string, HostedPopOut>();
 
+  /** Per panel, bumped by each pop-out and each return: an event waiting for an older one is dropped. */
+  const epochs = new Map<string, number>();
+  const bump = (id: string) => { epochs.set(id, (epochs.get(id) ?? 0) + 1); };
+
+  /** Whether the panel's state shows it on the page (floating, or the selected tab of its group). */
+  const shownOnPage = (id: string): boolean => {
+    const { panels, gridRoot } = core.getSnapshot();
+    const p = panels[id];
+    if (!p || p.poppedOut) return false;
+    return p.state === 'floating' || (p.state === 'docked' && isShownInGrid(gridRoot, id));
+  };
+
+  /**
+   * Whether the panel's element is in its new place in `doc`: in the window's frame, shown (its
+   * styles are ready), for a pop-out; in a slot of the page, not parked, for a return (a panel that
+   * comes back hidden, a tab not selected or minimized, is in its place parked). No element (no
+   * provider any more, or a widget's panel gone with its widget back in its panel): nothing to wait for.
+   */
+  const placed = (id: string, doc: Document, out: boolean): boolean => {
+    const el = host()?.element(id);
+    if (!el) return true;
+    if (!el.isConnected || el.ownerDocument !== doc) return false;
+    if (out) {
+      const frame = el.closest('.rdd-popout-frame') as HTMLElement | null;
+      return !!frame && frame.style.visibility !== 'hidden';
+    }
+    return !shownOnPage(id) || !isParked(el);
+  };
+
+  /**
+   * Calls `cb` once the panel's element is in its new place in `doc` and one more frame of that
+   * window has passed, so its layout (and a `resize()` there) sees the new size (7.12.0). Sent
+   * anyway after {@link POPOUT_PLACED_TIMEOUT_MS}; dropped when the panel pops out or returns again
+   * meanwhile. Size is not required: a panel back as a hidden tab is 0 x 0.
+   */
+  const whenPlaced = (id: string, doc: Document, out: boolean, cb: () => void) => {
+    const mine = epochs.get(id);
+    const view = doc.defaultView;
+    const frame = view && typeof view.requestAnimationFrame === 'function'
+      ? (f: () => void) => { view.requestAnimationFrame(f); }
+      : (f: () => void) => { setTimeout(f, 16); };
+    let done = false;
+    const stop = () => { done = true; clearTimeout(limit); };
+    const finish = () => { if (done) return; stop(); if (epochs.get(id) === mine) cb(); };
+    const limit = setTimeout(finish, POPOUT_PLACED_TIMEOUT_MS);
+    const tick = () => {
+      if (done) return;
+      if (epochs.get(id) !== mine) { stop(); return; }
+      if (placed(id, doc, out)) frame(finish);
+      else frame(tick);
+    };
+    try { frame(tick); } catch { /* the window is gone: the limit sends it */ }
+  };
+
   const emit = () => {
     snapshot = Array.from(entries.values(), ({ key, id, win, doc }) => ({ key, id, win, doc }));
     listeners.forEach(l => l());
@@ -180,8 +246,11 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     // A widget's panel coming back (not moved from code): its widget is told first (S5).
     const widget = restorePlace ? hostedRouters.get(id) : undefined;
     entries.delete(id);
-    // Before the element leaves the window (next.1): sent only when panel:returned will follow.
-    if (entry.announced && core.getSnapshot().panels[id]) core.actions.publish('panel:returning', { id });
+    bump(id);
+    // Not for a panel closed while out: panel:closed says so.
+    const stillOpen = !!core.getSnapshot().panels[id];
+    // Before the element leaves the window: only once panel:popped-out was sent.
+    if (entry.announced && stillOpen) core.actions.publish('panel:returning', { id });
     widget?.returning();
     try { host()?.park(id); } catch { /* the slot will park it when it unmounts */ }
     entry.stop();
@@ -189,7 +258,9 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     if (entries.size === 0) watchMainPage(false);
     core.actions.clearPoppedOut(id, restorePlace);
     emit();
-    if (entry.announced && core.getSnapshot().panels[id]) core.actions.publish('panel:returned', { id });
+    // Once it is back in its place and laid out (the provider moves it on its next commit). After a
+    // panel:popping-out, also for a window that failed before panel:popped-out.
+    if (entry.leaving && stillOpen) whenPlaced(id, document, false, () => core.actions.publish('panel:returned', { id }));
     // ...and it goes back into its panel (D17).
     widget?.returned();
     return true;
@@ -199,16 +270,17 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
   const ready = (entry: Entry) => !entry.announced && !!entry.doc && entries.get(entry.id) === entry && !!core.getSnapshot().panels[entry.id]?.poppedOut;
 
   /**
-   * Shows the window's content (the provider renders the open windows, `emit`): `panel:popping-out`
-   * first, while the panel's element is still in the page (next.1), then, once it is out,
-   * `panel:popped-out`.
+   * Shows the window's content (the provider renders the open windows, `emit`), then, once the
+   * panel's element is laid out in the window, `panel:popped-out`.
    */
   const show = (entry: Entry) => {
-    if (ready(entry)) core.actions.publish('panel:popping-out', { id: entry.id });
     emit();
     if (!ready(entry)) return;
-    entry.announced = true;
-    core.actions.publish('panel:popped-out', { id: entry.id, window: entry.win });
+    whenPlaced(entry.id, entry.doc!, true, () => {
+      if (!ready(entry)) return;
+      entry.announced = true;
+      core.actions.publish('panel:popped-out', { id: entry.id, window: entry.win });
+    });
   };
 
   /**
@@ -338,9 +410,14 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
 
     const entry: Entry = { key: name, id, win, doc: null, stop: () => {} };
     entries.set(id, entry);
+    bump(id);
     if (entries.size === 1) watchMainPage(true);
     watch(entry, target === '');
     if (!entries.has(id)) return refuse('no-window');   // its page failed at once
+    // Still in the user's click, before the provider renders: the element is in the page, at its
+    // size. From here, panel:popped-out or (the window failing) panel:returned follows.
+    entry.leaving = true;
+    core.actions.publish('panel:popping-out', { id });
     if (!core.actions.setPoppedOut(id)) {
       back(id, false);
       return refuse('not-open');

@@ -65,6 +65,8 @@ The workspace root always carries its own `dir` — the provider's `dir` prop, o
 
 What sits outside the workspace — `RddSidebar`, `RddSecondarySidebar` and the toasts — follows the workspace into RTL: when the workspace is right-to-left, so are they. The `dir` goes on the sidebar's own element, which wraps your content, so everything you place inside the sidebar (an `RddToolbar`, your own chrome) follows with it; a toolbar outside any sidebar follows the page. While the workspace is left-to-right they follow the page's direction, as before 7.4.0: the sidebars take it from wherever you set it (`<html>`, `<body>` or a wrapper around them), and toasts — rendered into `<body>` — from `<html>` or `<body>`. Where the library measures (the split divider, the sidebar resizer, the submenu's side, the arrow keys), it reads the direction the browser actually computes for the element involved, so each of those follows the same rule.
 
+A [pop-out window](./popout-windows) (7.12.0) follows the same rule: its frame carries the workspace's `dir`, and the page's `<html>` attributes (`dir`, `lang`) are mirrored onto the window's. When the page's `<html>` has no `dir`, the window's `<html>` gets the workspace's direction.
+
 ## Locale vs direction
 
 Direction is completely independent of locale. You can use an Arabic locale for translated strings while keeping LTR layout, or switch to RTL without changing the locale. Manage them as two separate pieces of state:

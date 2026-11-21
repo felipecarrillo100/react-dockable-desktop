@@ -84,7 +84,7 @@ The stylesheet styles nothing outside the library's own elements, so the browser
 Both work: the workspace is live before the provider mounts, so a top-level `workspace.openPanel(...)` applies immediately. The `useEffect` form makes React StrictMode behaviour explicit (the effect runs once in production). If you have a saved layout in `initialState`, you can skip `openPanel` entirely — the layout is restored automatically.
 :::
 
-**What you'll see:** A dark VS Code–style workspace with two side-by-side tabs labelled "Map" and "Editor". Each shows its panel ID. You can drag tabs to create splits, pop them out as floating windows, and minimize them to the taskbar at the bottom.
+**What you'll see:** A dark VS Code–style workspace with two side-by-side tabs labelled "Map" and "Editor". Each shows its panel ID. You can drag tabs to create splits, float them as windows, and minimize them to the taskbar at the bottom.
 
 ## Step 3 — Write panel components
 
@@ -219,4 +219,5 @@ Right-click context menus (on tabs and taskbar chips; a floating window gets a �
 - [The workspace in depth →](./workspace-client)
 - [Layout serialization →](./layout)
 - [Advanced topics →](./advanced)
+- [Pop-out windows, for a second monitor →](./popout-windows)
 - [API Reference →](/api/)

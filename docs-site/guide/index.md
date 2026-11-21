@@ -5,9 +5,10 @@
 ## What it does
 
 - **Dockable splits and tabs** — drag panels to any edge of a group to split the view, or to the center to tab them together.
-- **Floating windows** — pop any panel out as a resizable, draggable window. Supports maximize, corner anchoring (drag to a workspace corner to snap/stack there), and z-index stacking.
+- **Floating windows** — float any panel as a resizable, draggable window. Supports maximize, corner anchoring (drag to a workspace corner to snap/stack there), and z-index stacking.
 - **Zero-unmount DOM preservation** — by default, across docking, floating, and tab-switching alike, the layout engine moves DOM nodes (WebGL contexts, Leaflet maps, CodeMirror editors) without destroying them, with no configuration required.
 - **Widgets out of the panel** — a panel's own floating widgets (`useFloatingWidgets()`) can dock beside it, become a tab in its group or float on their own, and come back, without remounting and still bound to their panel. See [Widgets Out of the Panel](./widgets-out-of-the-panel).
+- **Pop-out windows** — a panel, or a widget out of its panel, can move into its own browser window for a second monitor, and come back, without remounting. Off by default. See [Pop-out Windows](./popout-windows).
 - **Layout serialization** — `saveLayout()` / `loadLayout()` round-trip your entire workspace to/from JSON. Persist to `localStorage`, IndexedDB, or a server.
 - **i18n and RTL** — all built-in strings are translatable. RTL layout (Arabic, Hebrew, Persian) is fully supported; direction is set by the app via the `dir` prop on the provider.
 - **Pub/sub event bus** — panels publish and subscribe to events without prop drilling.

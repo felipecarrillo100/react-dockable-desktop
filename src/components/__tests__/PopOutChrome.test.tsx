@@ -8,11 +8,15 @@
  *      around a menu in the page; none without a wrapper
  * PC2: a toast raised while the pop-out has focus shows there (inside the wrapper); otherwise in
  *      the page; the same id updates in place, in its window; the window closing removes it
- * PC3: panel:popping-out before panel:popped-out, with the element still in the page;
- *      panel:returning before panel:returned, with it still in the window; none for a refused
- *      pop-out, none with popOut off; with popoutUrl, popping-out waits for the page too
+ * PC3: when the four events arrive (7.12.0): panel:popping-out in the click, with the element
+ *      still in the page (with popoutUrl too, before the page loads); panel:popped-out once it
+ *      is in the window and a frame has passed; panel:returning with it still in the window,
+ *      panel:returned once it is back in the page and laid out; a window that fails sends
+ *      popping-out then returned; none for a refused pop-out or with popOut off; an event for
+ *      a replaced pop-out or return is dropped; sent anyway after the limit
  * PC4: a toolbar flyout opened in a popped-out panel is in the panel's own tree: the wrapper's
  *      context (the pop-out's document) reaches its items' icons, with nothing added for it
+ * PC5: data-rdd-popout-kind="panel" on a panel's frame (a widget's: PopOutWidgets WG14)
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React from 'react';
@@ -21,6 +25,7 @@ import { act } from 'react';
 import { createWorkspace, DockableDesktopProvider, RddDesktop, RddToasts, toast, type Workspace, type PopoutWrapperProps } from '../../index';
 import { ToolbarProvider } from '../ToolbarContext';
 import { Toolbar, type ToolbarItem } from '../Toolbar';
+import { POPOUT_PLACED_TIMEOUT_MS } from '../../core/popOutWindows';
 
 type AnyWindow = Window & typeof globalThis;
 const frames: HTMLIFrameElement[] = [];
@@ -95,6 +100,8 @@ const popOutA = (ws: Workspace) => {
 const showMenuIn = (ws: Workspace, doc: Document) => act(() => {
   ws.showContextMenu({ event: { target: doc.body, clientX: 5, clientY: 5 } as unknown as MouseEvent, items: [{ label: 'One', action: () => {} }] });
 });
+/** A few animation frames: panel:popped-out / panel:returned wait for the layout (7.12.0). */
+const afterLayout = () => act(async () => { await new Promise(r => setTimeout(r, 100)); });
 const toastsIn = (doc: Document) => Array.from(doc.querySelectorAll('.rdd-toast')).map(t => t.textContent);
 
 afterEach(() => {
@@ -196,7 +203,7 @@ describe('PC2: toasts in the window the user is in', () => {
   });
 });
 
-describe('PC3: panel:popping-out and panel:returning', () => {
+describe('PC3: when the four events arrive (7.12.0)', () => {
   /**
    * Records the events in order, with the document the panel's element is in when each arrives
    * (the very node, kept from the start: a tab not shown is out of the DOM, but still the page's).
@@ -211,28 +218,34 @@ describe('PC3: panel:popping-out and panel:returning', () => {
     return log;
   }
 
-  it('popping-out then popped-out; returning then returned; each before the element moves', () => {
+  it('popping-out in the click, in the page; popped-out once it is in the window and a frame has passed; the same on the way back', async () => {
     const ws = mount();
     const log = record(ws);
     const p = popOutA(ws);
-    expect(log[0]).toBe('panel:popping-out a page');
-    expect(log.map(l => l.split(' ')[0])).toEqual(['panel:popping-out', 'panel:popped-out']);
-    expect(p.doc.querySelector('[data-rdd-panel="a"]')).not.toBeNull();   // ...and then it moved
+    // In the click: popping-out only, the element still in the page.
+    expect(log).toEqual(['panel:popping-out a page']);
+    await afterLayout();
+    expect(log).toEqual(['panel:popping-out a page', 'panel:popped-out a window']);
+    expect(p.doc.querySelector('[data-rdd-panel="a"]')).not.toBeNull();
     log.length = 0;
     act(() => { ws.returnPanel('a'); });
+    expect(log).toEqual(['panel:returning a window']);
+    await afterLayout();
     expect(log).toEqual(['panel:returning a window', 'panel:returned a page']);
   });
 
-  it('returning on every way back: the frame\'s button, the window closing', () => {
+  it('returning, then returned once laid out, on every way back: the frame\'s button, the window closing', async () => {
     for (const how of ['button', 'pagehide'] as const) {
       const ws = mount();
       const log = record(ws);
       const p = popOutA(ws);
+      await afterLayout();
       log.length = 0;
       act(() => {
         if (how === 'button') p.doc.querySelector<HTMLButtonElement>('.rdd-popout-frame__return')!.click();
         else p.win.dispatchEvent(new p.win.Event('pagehide'));
       });
+      await afterLayout();
       expect(log, how).toEqual(['panel:returning a window', 'panel:returned a page']);
       act(() => root?.unmount());
       container?.remove();
@@ -240,18 +253,21 @@ describe('PC3: panel:popping-out and panel:returning', () => {
     }
   });
 
-  it('none for a refused pop-out, a panel closed while out, or with popOut off', () => {
+  it('none for a refused pop-out, a panel closed while out, or with popOut off', async () => {
     const ws = mount();
     const log = record(ws);
     expect(ws.popOutPanel('b')).toEqual({ ok: false, reason: 'not-allowed' });   // no canPopOut
     expect(ws.popOutPanel('nope').ok).toBe(false);
     vi.spyOn(window, 'open').mockImplementation(() => null);                   // a blocked pop-up
     expect(ws.popOutPanel('a')).toEqual({ ok: false, reason: 'blocked' });
+    await afterLayout();
     expect(log).toEqual([]);
     vi.restoreAllMocks();
     popOutA(ws);
+    await afterLayout();
     log.length = 0;
     act(() => { ws.closePanel('a'); });
+    await afterLayout();
     expect(log).toEqual([]);
     act(() => root?.unmount());
     container?.remove();
@@ -259,23 +275,107 @@ describe('PC3: panel:popping-out and panel:returning', () => {
     const off = mount({ popOut: false });
     const offLog = record(off);
     expect(off.popOutPanel('a')).toEqual({ ok: false, reason: 'disabled' });
+    await afterLayout();
     expect(offLog).toEqual([]);
   });
 
-  it('with popoutUrl, popping-out waits for the page, then comes just before popped-out', () => {
-    const ws = mount({ popoutUrl: '/popout.html' });
-    const log = record(ws);
+  /** A pop-out window whose app page (popoutUrl) has not loaded yet; `load()` makes it ready. */
+  function pagePopup() {
     const p = popup();
     let url = 'about:blank';
     Object.defineProperty(p.doc, 'URL', { get: () => url, configurable: true });
     Object.defineProperty(p.doc, 'readyState', { get: () => 'complete', configurable: true });
     vi.spyOn(window, 'open').mockImplementation(() => p.win);
+    return { ...p, load() { url = 'http://localhost/popout.html'; act(() => { p.win.dispatchEvent(new p.win.Event('load')); }); } };
+  }
+
+  it('with popoutUrl, popping-out comes in the click, before the page loads; popped-out once it is laid out there', async () => {
+    const ws = mount({ popoutUrl: '/popout.html' });
+    const log = record(ws);
+    const p = pagePopup();
     act(() => { ws.popOutPanel('a'); });
-    expect(log).toEqual([]);
-    url = 'http://localhost/popout.html';
-    act(() => { p.win.dispatchEvent(new p.win.Event('load')); });
-    expect(log[0]).toBe('panel:popping-out a page');
-    expect(log.map(l => l.split(' ')[0])).toEqual(['panel:popping-out', 'panel:popped-out']);
+    expect(log).toEqual(['panel:popping-out a page']);
+    await afterLayout();
+    expect(log).toEqual(['panel:popping-out a page']);
+    p.load();
+    await afterLayout();
+    expect(log).toEqual(['panel:popping-out a page', 'panel:popped-out a window']);
+  });
+
+  it('a window that fails before its page loads (closed early): popping-out, then returned; no popped-out, no returning', async () => {
+    const ws = mount({ popoutUrl: '/popout.html' });
+    const log = record(ws);
+    const p = pagePopup();
+    act(() => { ws.popOutPanel('a'); });
+    act(() => { p.win.close(); });
+    // The closed poll (every 500 ms) brings it back.
+    await act(async () => { await new Promise(r => setTimeout(r, 700)); });
+    expect(log).toEqual(['panel:popping-out a page', 'panel:returned a page']);
+  });
+
+  it('a pop-out replaced before it was laid out: its popped-out is dropped; returned follows', async () => {
+    const ws = mount();
+    const log = record(ws);
+    popOutA(ws);
+    act(() => { ws.returnPanel('a'); });
+    await afterLayout();
+    expect(log).toEqual(['panel:popping-out a page', 'panel:returned a page']);
+    // ...and a return replaced by a new pop-out: its returned is dropped.
+    log.length = 0;
+    popOutA(ws);
+    await afterLayout();
+    act(() => { ws.returnPanel('a'); });
+    popOutA(ws);
+    await afterLayout();
+    expect(log.map(l => l.split(' ')[0])).toEqual([
+      'panel:popping-out', 'panel:popped-out', 'panel:returning', 'panel:popping-out', 'panel:popped-out',
+    ]);
+  });
+
+  it('sent anyway after the limit when the panel never shows in its window', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const ws = mount();
+      const log = record(ws);
+      const p = popOutA(ws);
+      // Its frame stays hidden, as while its styles load.
+      p.doc.querySelector<HTMLElement>('.rdd-popout-frame')!.style.visibility = 'hidden';
+      // Real frames pass (the window's animation frames are not faked).
+      await act(async () => { for (let i = 0; i < 5; i++) await new Promise(r => p.win.requestAnimationFrame(() => r(null))); });
+      expect(log).toEqual(['panel:popping-out a page']);
+      act(() => { vi.advanceTimersByTime(POPOUT_PLACED_TIMEOUT_MS - 10); });
+      expect(log).toEqual(['panel:popping-out a page']);
+      act(() => { vi.advanceTimersByTime(20); });
+      expect(log).toEqual(['panel:popping-out a page', 'panel:popped-out a window']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('a return replaced by a new pop-out: its returned is not sent, not even at the limit', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const ws = mount();
+      const log = record(ws);
+      let p = popOutA(ws);
+      await act(async () => { for (let i = 0; i < 5; i++) await new Promise(r => p.win.requestAnimationFrame(() => r(null))); });
+      act(() => { ws.returnPanel('a'); });
+      p = popOutA(ws);
+      await act(async () => { for (let i = 0; i < 5; i++) await new Promise(r => p.win.requestAnimationFrame(() => r(null))); });
+      act(() => { vi.advanceTimersByTime(POPOUT_PLACED_TIMEOUT_MS + 100); });
+      expect(log.map(l => l.split(' ')[0])).toEqual([
+        'panel:popping-out', 'panel:popped-out', 'panel:returning', 'panel:popping-out', 'panel:popped-out',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('PC5: the window\'s kind on its frame (7.12.0)', () => {
+  it('data-rdd-popout-kind="panel" on a panel\'s frame', () => {
+    const ws = mount();
+    const p = popOutA(ws);
+    expect(p.doc.querySelector('.rdd-popout-frame')!.getAttribute('data-rdd-popout-kind')).toBe('panel');
   });
 });
 

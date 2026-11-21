@@ -206,15 +206,20 @@ export interface PanelInfo {
 }
 
 /**
- * What `workspace.popOutPanel(id)` did (7.12.0): `{ ok: true }` when the panel is in its own
- * window (or already was), otherwise why not, checked in this order:
+ * What `workspace.popOutPanel(id)` did (7.12.0): `{ ok: true }` when its window opened (or was
+ * already open; the panel moves in at once, or once `popoutUrl` has loaded), otherwise why not,
+ * checked in this order:
  * - `'disabled'`: the workspace was created without `popOut: true`;
  * - `'not-open'`: no open panel has this id;
- * - `'not-allowed'`: the panel's type has no `canPopOut` (or it shows a widget out of its panel);
- * - `'no-gesture'`: the call did not come from a user's click or key press, so no window may open;
+ * - `'not-allowed'`: the panel's type has no `canPopOut` (for a widget's panel, the widget's rules
+ *   decide);
+ * - (a panel already out stops here: its window comes forward, `{ ok: true }`);
+ * - `'no-gesture'`: the call did not come from a user's activation (a click or key press, or soon
+ *   after one), so no window may open;
+ * - `'no-window'`: no `<DockableDesktopProvider>` is mounted to show it;
  * - `'blocked'`: the browser's pop-up blocker refused the window;
- * - `'no-window'`: no `<DockableDesktopProvider>` is mounted to show it, or the window closed or
- *   could not be used before the panel moved in.
+ * - `'no-window'`: the window closed or could not be used before the panel moved in;
+ * - `'not-allowed'`: a widget that could not leave its panel after all (its window closes again).
  *
  * The panel stays where it was on every refusal.
  */

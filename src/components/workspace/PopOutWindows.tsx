@@ -101,7 +101,7 @@ const PopOutWindow: React.FC<{ id: string; doc: Document; onReturn: () => void }
   };
   const frame = (
     // `rdd-workspace` too: what is scoped to the workspace (its colours, scrollbars) applies here.
-    <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} data-rdd-focused={isFocused ? '' : undefined} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
+    <div ref={frameRef} className="rdd-workspace rdd-popout-frame" data-rdd-popout={id} data-rdd-popout-kind={hosted ? 'widget' : 'panel'} data-rdd-focused={isFocused ? '' : undefined} dir={dir} style={styled ? FRAME_STYLE : HIDDEN_FRAME_STYLE}>
       <div className="rdd-popout-frame__header">
         {hosted && actions.getPanelContextMenuItems(id).length > 0
           ? <button type="button" className="rdd-popout-frame__icon rdd-popout-frame__icon--menu" aria-haspopup="menu" aria-label={title} onClick={openWidgetMenu}>{icon}</button>
@@ -147,6 +147,7 @@ export const PopOutWindows: React.FC<{ windows: PopOutStore }> = ({ windows }) =
       const r = panelHost.getElement(id)?.getBoundingClientRect();
       return r && r.width > 0 && r.height > 0 ? r : null;
     },
+    element: (id) => panelHost.getElement(id) ?? null,
   }), [windows, panelHost]);
 
   return (

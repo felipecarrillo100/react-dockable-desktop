@@ -57,6 +57,8 @@ This is automatic and unconditional — by default, across all three transitions
 
 Browser state moves with the DOM too (since 6.4.0). A hidden subtree normally loses its scroll offsets and its focus; the library records both while the panel is on screen and puts them back when it reappears. So a list scrolled halfway down is still there after a tab switch, a float, a dock or a minimize/restore, and the field you were typing in gets focus back — only when its panel is the active one and focus hasn't gone somewhere else meanwhile, so a panel restored in the background never takes focus.
 
+The same holds when a panel moves into its own browser window, with `createWorkspace({ popOut: true })` (7.12.0): its element moves into the other window and back, so a canvas keeps its WebGL context. An `<iframe>` reloads on that move, though. See [Pop-out Windows](./popout-windows).
+
 If you need to react to visibility, use the lifecycle hooks:
 
 ```ts
@@ -180,6 +182,7 @@ The chrome follows the WAI-ARIA Authoring Practices patterns (since 6.4.0):
 | Context menus | Focus moves into the menu on open, with no item highlighted (opened from the keyboard, it starts on the first item). ↑/↓ move (skipping disabled items, wrapping); Home/End; → (← under RTL), Enter or Space opens a sub-menu; ← goes back; Tab or Esc closes and returns focus to where it was. |
 | Taskbar | Minimized panels are buttons: Tab reaches them, Enter restores, ContextMenu / Shift+F10 opens their menu. |
 | Toolbar, sidebar, taskbar | Buttons show a focus ring when reached from the keyboard (`:focus-visible`); restyle it with `--rdd-focus-ring`. |
+| Pop-out windows | Esc closes the topmost menu or flyout of the window it was pressed in (7.12.0). The window's return button is a button named "Return to desktop" ("Back into the panel" for a widget's window). |
 
 ## Server rendering (Next.js, Remix)
 
@@ -200,11 +203,16 @@ Every part of the desktop carries a `data-rdd-*` attribute that names what it is
 | `data-rdd-taskbar-item` | a minimised panel's taskbar button | the panel id |
 | `data-rdd-widget` | an in-panel floating widget | the widget id |
 | `data-rdd-sidebar-tab` | a sidebar rail tab | the tab id |
+| `data-rdd-popout` | a pop-out window's frame (`.rdd-popout-frame`, in that window) | the panel id |
+| `data-rdd-popout-kind` | the same frame | `"panel"` or `"widget"` (7.12.0) |
+| `data-rdd-taskbar-popout` | a taskbar entry for a panel in its own window | the panel id |
 
 ```ts
 await page.click('[data-rdd-tab="layers"]');
 await expect(page.locator('[data-rdd-window="layers"] [data-rdd-titlebar]')).toBeVisible();
 ```
+
+A pop-out window is a page of its own in a test: see [Testing pop-outs with Playwright](./popout-windows#testing-pop-outs-with-playwright).
 
 The older unprefixed attributes (`data-tab-id`, `data-leaf-id`, `data-window-id`, `data-active-panel-id`, `data-cy-action`) still render; they are superseded by these and will be removed in 8.0.0.
 

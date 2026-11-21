@@ -65,6 +65,7 @@ import type { InternalWindowActions, WorkspaceState } from '../../types';
 import { findLeafIdOf, placesBeside, returnBeside, removePanelFromTree } from '../../core/layoutTree';
 import type { LayoutNode } from '../../types';
 import { listenOnDocuments } from '../../utils/documentRegistry';
+import { POPOUT_PLACED_TIMEOUT_MS } from '../../core/popOutWindows';
 
 type AnyWindow = Window & typeof globalThis;
 
@@ -768,6 +769,8 @@ describe('PO12: popoutUrl', () => {
       expect(p.close).toHaveBeenCalled();
       expect(counter('a')).not.toBeNull();
       expect(warn.mock.calls.some(c => String(c[0]).includes('did not load'))).toBe(true);
+      // Its panel:returned waits for the layout (7.12.0): at most this long, then nothing is left.
+      act(() => { vi.advanceTimersByTime(POPOUT_PLACED_TIMEOUT_MS); });
       expect(vi.getTimerCount()).toBe(0);
     } finally {
       process.env.NODE_ENV = env;

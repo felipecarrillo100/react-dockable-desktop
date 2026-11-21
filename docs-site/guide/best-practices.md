@@ -65,6 +65,12 @@ window.addEventListener('beforeunload', () => {
 });
 ```
 
+A layout saved while a panel is in its own browser window has that panel at the place it would come back to (7.12.0).
+
+## Use the panel's own window, not the globals
+
+A panel whose type has `canPopOut` (7.12.0) may be shown in another browser window. Take `window` and `document` from `usePanelWindow()` for listeners, `requestAnimationFrame`, `matchMedia` and portals, not from the globals, and check your map or chart library in a pop-out before you turn `canPopOut` on. See [Code in a pop-out window](./popout-windows#code-in-a-pop-out-window).
+
 ## Keep panel component keys stable
 
 Component keys are stored inside `saveLayout()` JSON. Renaming a key breaks all saved layouts. If you must rename a key, add a migration step in `loadLayout` before passing the JSON to the workspace.
@@ -104,7 +110,7 @@ function MyPanel({ panelId }: { panelId: string }) {
 
   return (
     <button onClick={() => workspace.floatPanel(panelId)}>
-      Pop out
+      Float
     </button>
   );
 }

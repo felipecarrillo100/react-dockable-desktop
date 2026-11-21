@@ -782,7 +782,7 @@ All exported from `'react-dockable-desktop'`:
 | `useWidget` | Hook | Inside a managed widget: `{ id, ownerPanelId, panelId, location, isPoppedOut, onWillMove, onMoved }` (7.11.0; `isPoppedOut` 7.12.0) |
 | `WidgetHandle` | Interface | What `useWidget()` returns (7.11.0) |
 | `WidgetTarget`, `WidgetLocation`, `MoveResult` | Types | `move()`'s target, `location()`'s value, `move()`'s result (7.11.0) |
-| `WidgetMenuContext` | Interface | What `titleMenu(w)` is given (7.11.0) |
+| `WidgetMenuContext` | Interface | What `titleMenu(w)` is given (7.11.0; `canPopOut`, `isPoppedOut`, `popOut()` 7.12.0) |
 | `WidgetPlacement` | Type | Opaque, versioned JSON from `placement()` (7.11.0) |
 | `FloatingWidgetsApi` | Interface | Return type of `useFloatingWidgets` |
 | `ToolbarVariant` | Type | `'transparent' \| 'frosted' \| 'solid'` |

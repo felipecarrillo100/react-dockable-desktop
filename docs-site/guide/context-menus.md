@@ -23,6 +23,8 @@ Context menus in `react-dockable-desktop` work at two levels: the workspace auto
 | Minimized taskbar chip | Right-click the chip |
 | Floating window header **`⋮`** button | Appears automatically when a panel has custom items |
 
+With [pop-out windows](./popout-windows) on, the tab menu and the ⋮ menu of a `canPopOut` panel also have **"Open in new window"** (7.12.0).
+
 ## `usePanelContextMenu` hook
 
 Inject dynamic custom items into a panel's right-click menu from inside the panel component:
@@ -94,6 +96,8 @@ function MapPanel() {
 `showContextMenu` delegates to whichever context menu is provided above it — by default the one `<DockableDesktopProvider>` sets up automatically. This means a single menu instance is shared across the entire workspace, regardless of how many map panels are open.
 
 > **Which hook?** Use `useContextMenu()` when the context menu is the only thing you need. Use `useWorkspace()` when you are already calling it in the same component for panel management (`openPanel`, `focusPanel`, etc.).
+>
+> **Pop-out windows.** The menu is rendered into the `<body>` of the document it was opened from (the event's target), so a menu opened inside a [pop-out window](./popout-windows) shows in that window, inside the provider's `popoutWrapper`. Esc closes the menu of the window it was pressed in.
 >
 > **Direction.** The menu is rendered into `<body>`, so it takes its direction from where it was opened: the event's target when you pass `event`. `workspace.showContextMenu()` also passes the workspace's own direction, which a menu opened with only `x`/`y` then uses. `useContextMenu()` passes nothing extra, so a menu it opens with only `x`/`y` follows `<html dir>` — pass `dir: 'rtl'` (or an `event`) for an RTL workspace inside an LTR page.
 
@@ -200,7 +204,7 @@ const myAdapter: ContextMenuAdapter = { Component: MyMenu };
 <RddContextMenu adapter={myAdapter}>...</RddContextMenu>
 ```
 
-The adapter receives `items: ContextMenuItem[]` via `show()` and is responsible for rendering them. It also receives `dir` when the caller knows the direction (a workspace always passes its own): use the event target's direction when there is an event, else `dir`, because a menu portaled to `<body>` can't inherit the workspace's direction. The built-in menu is used when no adapter is provided.
+The adapter receives `items: ContextMenuItem[]` via `show()` and is responsible for rendering them. It also receives `dir` when the caller knows the direction (a workspace always passes its own): use the event target's direction when there is an event, else `dir`, because a menu portaled to `<body>` can't inherit the workspace's direction. With [pop-out windows](./popout-windows), portal into the event target's own document (`event.target.ownerDocument.body`), so a menu opened in a pop-out shows there. The built-in menu is used when no adapter is provided.
 
 ## Item type reference
 

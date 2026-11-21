@@ -10,6 +10,79 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.12.0] — 2026-11-21
+
+**Pop-out windows.** A panel, or a managed widget that left its panel, can move into its own browser
+window, for a second monitor, and come back where it was, without its content remounting: its
+state, scroll offsets and a canvas's WebGL context go with it. The window gets the page's styles and
+theme; `popoutWrapper` points CSS-in-JS at it, `usePanelWindow()` gives panel code its window, and
+toasts and menus show in the window the user is in. Off by default (`createWorkspace({ popOut: true })`
+and `defaultOptions.canPopOut` per type): an app that doesn't turn it on sees no change. Guide:
+[Pop-out Windows](https://felipecarrillo100.github.io/react-dockable-desktop/guide/popout-windows).
+
+This release is the two pre-releases below, tried by a client in production code, plus a fix to the
+timing of the pop-out events, a marker for the window's kind and a corrected testing tip. Coming
+from 7.11.x, read both sections below: **7.12.0-next.0** for the feature and its **Upgrading** point
+(five new message keys), and **7.12.0-next.1** for the fixes and additions that followed (its
+**Changed** point: the return button has no text, only a tooltip and a name). The **Fixed** entry
+below supersedes what those two sections say about when the pop-out events arrive.
+
+In short, new:
+- `createWorkspace({ popOut })`, and `canPopOut` on panel types' `defaultOptions`;
+- on the workspace: `popOutPanel()`, `returnPanel()` and `focusPanelWindow()`; `focusPanel()` brings
+  a pop-out forward;
+- on `<DockableDesktopProvider>`: `popoutUrl` and `popoutWrapper`;
+- `usePanelWindow()` and `usePanel().isPoppedOut`; `PanelInfo.poppedOut`;
+- for managed widgets: `useFloatingWidgets().popOut()`, `ManagedWidget.canPopOut`,
+  `useWidget().isPoppedOut`, and `canPopOut`, `isPoppedOut` and `popOut()` on `WidgetMenuContext`;
+- events `panel:popping-out`, `panel:popped-out`, `panel:returning` and `panel:returned`;
+- types `PopOutResult`, `PanelWindow` and `PopoutWrapperProps`;
+- messages `popOutWindow`, `returnToDesktop`, `backIntoPanel`, `popOutBlocked` and `inOwnWindow`;
+- CSS: `.rdd-popout-frame` (with `__header`, `__icon`, `__icon--menu`, `__title`, `__return`,
+  `__body`), `.rdd-taskbar-item--popout`, `.rdd-taskbar-item-popout-marker`, and the attributes
+  `data-rdd-popout`, `data-rdd-popout-kind` and `data-rdd-taskbar-popout`;
+- the "Open in new window" menu item, toasts in the focused window, Escape per window, and pop-outs
+  in the taskbar.
+
+### Fixed
+
+- **The pop-out events now come at the right moment for layout.** `panel:popping-out` is sent in the
+  user's click, while the panel is still in the page at its size. In next.1 it came after the panel
+  had left (0 × 0), and with `popoutUrl` only once the window's page had loaded. `panel:popped-out`
+  is now sent once the panel is in the window and laid out (a frame has passed), and
+  `panel:returned` once it is back in its place in the page and laid out, so a `resize()` there sees
+  the new size. In next.1 both came while the panel was still in its old place. `panel:returning`
+  is unchanged. If the window's frame never shows, they are sent anyway after about 4 seconds.
+
+### Changed
+
+- **A window that fails after `panel:popping-out` sends `panel:returned`** (its page can't be read
+  or doesn't load in time, or the window is closed before the panel got there), so every
+  `panel:popping-out` is followed by `panel:popped-out` or `panel:returned`. There is no
+  `panel:returning` then. In next.1 such a window sent no event.
+
+### Added
+
+- **`data-rdd-popout-kind="panel"` or `"widget"`** on the window's frame (`.rdd-popout-frame`), to
+  style a panel's window and a widget's apart, or find a widget's window in a test without relying
+  on its panel id.
+
+### Docs
+
+- **Pop-out Windows, testing with Playwright, corrected:** turning Chrome's focus emulation off
+  doesn't decide which window a toast goes to (headless, nothing changes; headed, it depends on the
+  order of clicks and raises). The guide now stubs `document.hasFocus` in the page that should not
+  have focus, tests that `focusPanelWindow` is asked for, and leaves real focus to a check by hand.
+- **Pop-out Windows:** when each event arrives, the window's kind, every public name in the API
+  summary.
+- **Reviewed for the whole feature:** every guide page that touches pop-outs now says so or links
+  to the guide (Introduction, Quick Start, Layout, Panel Lifecycle & Forms, Modals & Side Panels,
+  Context Menus, Toolbar, Panel Contributions, Widgets Out of the Panel, Toast, Event Bus,
+  Workspace, Advanced, RTL, Theming, Best Practices); Migration has the full 7.11 → 7.12 section,
+  with what changed since the pre-releases; the home page, the README and the API comments
+  (`popOutPanel`, `PopOutResult`, the four events) describe the final behaviour. "Pop out" no
+  longer names floating a panel.
+
 ## [7.12.0-next.1] — 2026-11-21
 
 **Pre-release** on npm's `next` tag, from the first feedback on 7.12.0-next.0. A fix for CSS-in-JS in
@@ -1548,7 +1621,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0...HEAD
+[7.12.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0
 [7.12.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.0...v7.12.0-next.1
 [7.12.0-next.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0-next.0
 [7.11.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.10.1...v7.11.0

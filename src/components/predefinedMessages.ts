@@ -54,9 +54,9 @@ export const defaultPredefinedMessages = {
   // Pop-out windows (7.12.0).
   popOutWindow: { id: 'dockable-desktop-popOutWindow', defaultMessage: 'Open in new window' },
   returnToDesktop: { id: 'dockable-desktop-returnToDesktop', defaultMessage: 'Return to desktop' },
-  // A managed widget in its own window (7.12.0): its frame's button back into its panel.
   // The taskbar's marker on a panel in its own window (7.12.0).
   inOwnWindow: { id: 'dockable-desktop-inOwnWindow', defaultMessage: 'in its own window' },
+  // A managed widget in its own window (7.12.0): its frame's button back into its panel.
   backIntoPanel: { id: 'dockable-desktop-backIntoPanel', defaultMessage: 'Back into the panel' },
   popOutBlocked: { id: 'dockable-desktop-popOutBlocked', defaultMessage: 'The browser blocked the new window. Allow pop-ups for this site and try again.' },
 } as const;

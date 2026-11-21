@@ -476,9 +476,8 @@ describe('popoutWrapper around the frame, menus and toasts (Emotion, speedy)', (
     await popup.waitForSelector('.rdd-toast:has-text("from pp")');
     expect(await page.$('.rdd-toast:has-text("from pp")')).toBeNull();
     expect(await emoIcon(popup, 'toast', '.rdd-toast')).toEqual(EMO_LOOK);
-    // (Raised from the page, it shows in the page: Playwright emulates focus in every page, so both
-    // report hasFocus(), and headless Chrome has no real focus to fall back on. That half is in the
-    // unit tests, PopOutChrome.test.tsx PC2, and was checked by hand in headed Chrome.)
+    // (Raised from the page, it shows in the page: Playwright reports hasFocus() true in every page,
+    // so that half stubs the pop-out's; see "testing toasts across windows" below, and PC2.)
 
     // Its window closing takes it away.
     await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-popout-frame__return')]);
@@ -529,4 +528,74 @@ describe("the frame's return button", () => {
       expect(errors).toEqual([]);
     });
   }
+});
+
+// 7.12.0: when the four events arrive. popping-out and returning while the panel is still in its
+// old place at its size; popped-out and returned once it is laid out in its new place, so a resize()
+// there sees the new size. At each event, where the panel's element is and its size.
+
+type Seen = { type: string; where: string; w: number; h: number };
+
+/** Records, at each of the four events, the panel element's document and size (in `window.__poSeen`). */
+const recordEvents = (page: Page) => page.evaluate(() => {
+  const w = window as unknown as { __poSeen: Seen[]; __wm: { actions: { subscribe(t: string, cb: () => void): () => void } } };
+  w.__poSeen = [];
+  const el = document.querySelector('[data-rdd-panel="pp"]')!.closest('.rdd-panel-dom') as HTMLElement;
+  for (const type of ['panel:popping-out', 'panel:popped-out', 'panel:returning', 'panel:returned']) {
+    w.__wm.actions.subscribe(type, () => {
+      w.__poSeen.push({ type, where: el.ownerDocument === document ? 'page' : 'window', w: el.offsetWidth, h: el.offsetHeight });
+    });
+  }
+  return { w: el.offsetWidth, h: el.offsetHeight };
+});
+const seenEvents = (page: Page) => page.evaluate(() => (window as unknown as { __poSeen: Seen[] }).__poSeen);
+/** The size of the pop-out's slot, which the panel fills. */
+const slotSize = (p: Page) => p.evaluate(() => {
+  const slot = document.querySelector('.rdd-popout-frame__body') as HTMLElement;
+  return { w: slot.offsetWidth, h: slot.offsetHeight };
+});
+
+describe('the pop-out events, against the layout', () => {
+  for (const [name, query] of [['a blank window', PO], ['popoutUrl', `${PO}&pourl=1`]] as const) {
+    it(`${name}: popping-out and returning at the old place and size, popped-out and returned laid out in the new one`, async () => {
+      const { page, errors, close } = await openHarness(query);
+      const inPage = await recordEvents(page);
+      expect(inPage.w).toBeGreaterThan(100);
+      expect(inPage.h).toBeGreaterThan(100);
+
+      const popup = await popOutByClick(page);
+      await page.waitForFunction(() => (window as unknown as { __poSeen: Seen[] }).__poSeen.length >= 2);
+      await settle(popup, 300);
+      const inWindow = await slotSize(popup);
+      expect(inWindow.w).toBeGreaterThan(100);
+      expect(await seenEvents(page)).toEqual([
+        { type: 'panel:popping-out', where: 'page', ...inPage },
+        { type: 'panel:popped-out', where: 'window', ...inWindow },
+      ]);
+
+      await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-popout-frame__return')]);
+      await page.waitForFunction(() => (window as unknown as { __poSeen: Seen[] }).__poSeen.length >= 4);
+      expect((await seenEvents(page)).slice(2)).toEqual([
+        { type: 'panel:returning', where: 'window', ...inWindow },
+        { type: 'panel:returned', where: 'page', ...inPage },
+      ]);
+      await close();
+      expect(errors).toEqual([]);
+    });
+  }
+});
+
+// The guide's recipe for testing which window a toast goes to: Playwright reports document.hasFocus()
+// true in every page (focus emulation), so the page that should not have focus says so with a stub.
+describe('testing toasts across windows (the guide\'s recipe)', () => {
+  it('with the pop-out\'s hasFocus stubbed false, a toast raised from the page shows in the page', async () => {
+    const { page, errors, close } = await openHarness(PO);
+    const popup = await popOutByClick(page);
+    await popup.evaluate(() => { document.hasFocus = () => false; });
+    await page.evaluate(() => { (window as unknown as { __wm: { toast(m: string): void } }).__wm.toast('from the page'); });
+    await page.waitForSelector('.rdd-toast:has-text("from the page")');
+    expect(await popup.$('.rdd-toast:has-text("from the page")')).toBeNull();
+    await close();
+    expect(errors).toEqual([]);
+  });
 });

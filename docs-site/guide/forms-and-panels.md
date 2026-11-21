@@ -244,6 +244,8 @@ The active panel is determined by `openPanel()`, `focusPanel()` and the user's t
 
 The handler receives the new `ContainerType` value: `'dockable-panel'` or `'floating-window'`.
 
+A panel in its own browser window ([pop-out](./popout-windows), 7.12.0) is a floating panel, so a docked one that pops out gets `'floating-window'`, and `'dockable-panel'` when it comes back into the grid. To act once it is laid out in the window or back in the page, use the `panel:popped-out` and `panel:returned` events, or `onResize`, which follows the panel into the window.
+
 ```tsx
 usePanelEvents({
   onContainerTypeChange: (type) => {

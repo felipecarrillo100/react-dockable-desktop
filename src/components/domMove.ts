@@ -85,6 +85,11 @@ export function park(el: Element, doc: Document): void {
   moveInto(store, el);
 }
 
+/** Whether `el` waits in its document's hidden store (no slot shows it). */
+export function isParked(el: Element): boolean {
+  return el.parentElement?.id === HIDDEN_ID;
+}
+
 /**
  * Takes an element out of `slot` when a slot unmounts, unless it already moved elsewhere. One that
  * keeps its embeds is parked instead of detached, so its next move can still keep them.
