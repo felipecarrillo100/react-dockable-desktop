@@ -190,10 +190,12 @@ toast.info('Third');   // queued until First or Second exits
 
 With [pop-out windows](./popout-windows), a toast shows in the window the user is in (7.12.0). One
 raised while a pop-out has focus, from a click in it say, shows in that window, at the same
-position; otherwise it shows in the main window, as before. Nothing to set up.
+position; otherwise it shows in the main window, as before. Nothing to set up. To test which
+window a toast goes to, see [Which window a toast goes to](./popout-windows#which-window-a-toast-goes-to).
 
 - A toast stays in the window it was shown in. An update with the same `id` updates it there.
-- When its window closes, the toast goes with it (its `onClose` runs).
+- When its window closes, the toast goes with it (its `onClose` runs). A toast still queued for
+  a window that closed before its turn shows in the main window.
 - `maxVisible` and the queue count the toasts of every window together.
 - In a pop-out, the provider's `popoutWrapper` is rendered around the toasts, so CSS-in-JS content
   is styled there. Place `<RddToasts>` inside `<DockableDesktopProvider>` for that.

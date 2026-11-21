@@ -27,13 +27,16 @@ const workspace = createWorkspace({
 - **`createWorkspace({ popOut: true })`** is set once, at creation. With `popOut: false` nothing of
   it runs: no menu item, no listeners, no style copying, and `popOutPanel()` returns
   `{ ok: false, reason: 'disabled' }` (with a one-time warning in development).
-- **`defaultOptions.canPopOut: true`** opts a panel type in. It restricts the user only, and only new
-  calls: see [Things to know](#things-to-know).
+- **`defaultOptions.canPopOut: true`** opts a panel type in. It gates the menu item and
+  `popOutPanel()`, for new calls only: see [Things to know](#things-to-know).
 - In development, a type in `panels` that sets `canPopOut` on a workspace without `popOut` gets a
   console warning. So does a managed widget with `canPopOut`.
 
 The user then gets **"Open in new window"** in the tab's menu and in the floating window's ⋮ menu of
-those panels. The window opens over the panel, at its size.
+those panels. The window opens over the panel, at its size (at least 320 × 240). A panel with no box on
+screen (a tab that isn't selected, a minimised panel) can pop out too; its window opens at 640 × 480,
+100 px from the main window's corner. The position isn't clamped, so a monitor left of or above the
+main one works.
 
 ## From code: `popOutPanel()` and `returnPanel()`
 
@@ -53,10 +56,12 @@ function PopOutButton({ id }: { id: string }) {
 workspace.returnPanel(id);   // → { ok: boolean }: back where it was; false when it wasn't in a window
 ```
 
-`popOutPanel(id)` is **synchronous**, and must run **inside the user's click or key press**: browsers
-only open a window then. A call from a timer, a promise or an event-bus handler gives `'no-gesture'`.
-When your code decides later (an assistant that suggests moving the map), show a button and pop out
-from its click.
+`popOutPanel(id)` is **synchronous**, and must come **from a user's activation** (a click or a key
+press): browsers only open a window then. The browser tells: a call made inside the click, or in an
+event-bus handler of an event published in it, works; one made long after it (a slow promise, a
+timer) or not triggered by the user gives `'no-gesture'`. In a browser that can't tell, the call is
+tried, and the pop-up blocker may answer `'blocked'`. When your code decides later (an assistant that
+suggests moving the map), show a button and pop out from its click.
 
 It returns a `PopOutResult`: `{ ok: true }`, or `{ ok: false, reason }`. The checks run in this order:
 
@@ -64,19 +69,21 @@ It returns a `PopOutResult`: `{ ok: true }`, or `{ ok: false, reason }`. The che
 |---|---|
 | `disabled` | The workspace was created without `popOut: true` |
 | `not-open` | No open panel has this id |
-| `not-allowed` | The panel's type has no `canPopOut` (for a widget's panel: the widget's rules, below) |
-| `no-gesture` | The call didn't come from a user's click or key press, so nothing was opened |
+| `not-allowed` | The panel's type has no `canPopOut` (for a widget's panel, the widget's rules decide, below) |
+| `no-gesture` | The call didn't come from a user's activation, so nothing was opened |
+| `no-window` | No `<DockableDesktopProvider>` is mounted to show it |
 | `blocked` | The browser's pop-up blocker refused the window |
-| `no-window` | No `<DockableDesktopProvider>` is mounted to show it, or the window closed or couldn't be used before the panel moved in |
+| `no-window` | The window closed, or couldn't be used, before the panel moved in |
+| `not-allowed` | A widget that couldn't leave its panel after all (its window closes again) |
 
-On a refusal the panel stays where it was, and **nothing is shown to the user**: your code decides
-what to say. Only the built-in "Open in new window" item shows a toast, on `blocked`. A second call
-for a panel that is already out brings its window forward and returns `{ ok: true }`.
+A panel that is already out stops after the first `not-allowed` check: its window comes forward and the call returns
+`{ ok: true }`. On a refusal the panel stays where it was, and **nothing is shown to the user**: your
+code decides what to say. Only the built-in "Open in new window" item shows a toast, on `blocked`.
 
 ## The page the window opens: `popoutUrl`
 
-Without it, the window opens blank, which works. For a window with your own title and favicon, give
-the provider a page of your app, on the same origin:
+Without it, the window opens blank, which works. For a window with your own favicon, give the
+provider a page of your app, on the same origin:
 
 ```tsx
 <DockableDesktopProvider workspace={workspace} popoutUrl="/popout.html">
@@ -96,10 +103,11 @@ The page needs nothing but a body. The library waits for it to load, adds its ow
 </html>
 ```
 
-The window's title then follows the panel's. A page that can't be read (another origin, or a
+The window's title follows the panel's, with or without it: your page's `<title>` shows only until
+the panel's replaces it. A page that can't be read (another origin, or a
 redirect off this one), or that doesn't load within 10 seconds, sends the panel back and closes the
-window. That happens after `popOutPanel()` has returned `{ ok: true }`, so listen for
-`panel:returned` if you need to know.
+window. That happens after `popOutPanel()` has returned `{ ok: true }` and `panel:popping-out` was
+sent, so listen for `panel:returned` if you need to know.
 
 With a base path (Vite's `base`), include it: `popoutUrl={`${import.meta.env.BASE_URL}popout.html`}`.
 
@@ -116,7 +124,8 @@ A panel comes back when:
   tooltip);
 - your code calls `returnPanel(id)`;
 - your code moves it: `minimizePanel`, `dockPanel`, `dockPanelToGroup` and `dockPanelToWorkspaceEdge`
-  bring it back to its place first, then apply;
+  bring it back to its place first, then apply. `movePanelOrder(id, leafId, index)` is different: it
+  takes the panel straight into that group, not through its old place;
 - the main page unloads, or the provider unmounts (a route change).
 
 `closePanel(id)` closes its window with it, and `loadLayout()` closes every window and shows the
@@ -152,7 +161,10 @@ again in one click. (`PanelInfo.poppedOut` is runtime only.)
 A pop-out looks like the page, with nothing to set up for plain CSS:
 
 - every `<link rel="stylesheet">` and `<style>` of the page's `<head>` is copied, in order, and so are
-  `document.adoptedStyleSheets` (as text). Sheets added, removed or edited later follow;
+  `document.adoptedStyleSheets` (as text). `<link>` and `<style>` tags added, removed or edited later
+  follow. Adopted sheets are read again only when the page's `<head>` or `<html>`'s attributes change
+  (they are not polled), so a sheet adopted or edited with no such change reaches the window at the
+  next one;
 - `<html>`'s and `<body>`'s attributes and classes (`dir`, `lang`, `.dark`, `data-bs-theme`, the
   skin, the colour scheme), their inline CSS variables (`--rdd-brand-*` included) and
   `color-scheme` are mirrored, and follow a change;
@@ -352,8 +364,10 @@ const cameras: ManagedWidget = {
   panel the widget leaves the panel and goes into the window as one move (one `onWillMove` /
   `onMoved` pair); from docked, tabbed, floating or minimised, its panel moves. The window opens over
   the widget, at its size. A refusal changes nothing.
-- **`'not-allowed'`** without `canPopOut`, outside a workspace panel, or when its owner panel's type
-  has `keepAlive: false` (the owner unmounts while hidden, and would take the widget with it).
+- **`'not-allowed'`** without `canPopOut`, outside a workspace panel, in an overlay inside a
+  widget's own panel, or when its owner panel's type has `keepAlive: false` (the owner unmounts
+  while hidden, and would take the widget with it). **`'disabled'`** outside a
+  `<DockableDesktopProvider>`, as on a workspace without `popOut`.
 - **While out, `location` stays `'floating'`**, and `useWidget().isPoppedOut` is true. There is no
   `'window'` location.
 - **Back:** closing the window, or its **"Back into the panel"** button, puts the widget back into its
@@ -384,17 +398,32 @@ const cameras: ManagedWidget = {
 ## Events
 
 ```ts
-workspace.subscribe('panel:popping-out', ({ id }) => saveView(id));      // still in the page
-workspace.subscribe('panel:popped-out',  ({ id, window }) => console.log(id, 'is in', window));
-workspace.subscribe('panel:returning',   ({ id }) => saveView(id));      // still in the window
-workspace.subscribe('panel:returned',    ({ id }) => console.log(id, 'is back'));
+workspace.subscribe('panel:popping-out', ({ id }) => saveView(id));            // still in the page
+workspace.subscribe('panel:popped-out',  ({ id, window }) => maps.get(id)?.resize());   // laid out in the window
+workspace.subscribe('panel:returning',   ({ id }) => saveView(id));            // still in the window
+workspace.subscribe('panel:returned',    ({ id }) => maps.get(id)?.resize());   // laid out in the page
 ```
 
-`panel:popping-out` is sent just before the panel's element leaves the page, once the window's page
-is ready; `panel:popped-out` follows, and its `window` is the one `usePanelWindow()` now gives the
-panel. `panel:returning` is sent just before the element leaves the window, whatever brings it
-back; `panel:returned` follows, once. Use the first of each pair to save what a move might lose,
-such as a map's view.
+- **`panel:popping-out`** is sent in the user's click, just before the panel leaves the page. The
+  panel is still in its place, at its size.
+- **`panel:popped-out`** follows once the panel is in the window and laid out (a frame has passed),
+  so a `resize()` or a measure there sees the window's size. Its `window` is the one
+  `usePanelWindow()` now gives the panel.
+- **`panel:returning`** is sent just before the panel leaves the window, whatever brings it back. It
+  is still in the window, at its size.
+- **`panel:returned`** follows once the panel is back in its place in the page and laid out. A panel
+  that comes back as a tab that isn't selected, or minimised, is 0 × 0 then: nothing shows it.
+
+Use the first of each pair to save what a move might lose, such as a map's view, and the second to
+restore it or resize.
+
+Every `panel:popping-out` is followed by `panel:popped-out`, or by `panel:returned` when the panel
+comes back before it got there: its page can't be read or doesn't load in time, or the window
+closes, `returnPanel()`, the return button or the provider unmounting brings it back first. Then
+there is no `panel:returning`. The exceptions: a panel closed meanwhile gets `panel:closed` only,
+and one popped out or brought back again within that wait gets the events of the newer move only.
+If the window's frame doesn't show (its styles still loading), the event is sent anyway after about
+4 seconds.
 
 None of them is sent for a refused pop-out. A panel closed while out sends `panel:closed`, not
 `panel:returning` or `panel:returned`. All four are sent for a widget's panel too. Docking and
@@ -417,10 +446,33 @@ await popup.getByRole('button', { name: 'Return to desktop' }).click();
 - Query the window's elements on `popup`, not on `page`.
 - To check that an element is the same one after the move, mark it with a `data-` attribute. A
   JavaScript property set on it isn't visible from the other page's `evaluate`.
-- Playwright emulates focus in every page, so both windows report `document.hasFocus()`. While a
-  pop-out is open, a toast then shows in it, even one raised from the main page. In headed Chrome,
-  turn the emulation off on both pages to test where toasts go:
-  `(await context.newCDPSession(p)).send('Emulation.setFocusEmulationEnabled', { enabled: false })`.
+- `panel:popped-out` and `panel:returned` arrive a frame after the move. Wait for them (with
+  `waitForFunction` or `expect.poll`), not for the click.
+
+### Which window a toast goes to
+
+Playwright reports `document.hasFocus()` as true in every page, so while a pop-out is open a toast
+shows in it, even one raised from the main page. Turning Chrome's focus emulation off
+(`Emulation.setFocusEmulationEnabled`) doesn't fix that: headless, nothing changes; headed, the
+result depends on the order of clicks and window raises.
+
+Instead, make the page that should not have focus say so, before you raise the toast:
+
+```ts
+// The user is in the main page: the pop-out doesn't have focus.
+await popup.evaluate(() => { document.hasFocus = () => false; });
+await page.getByRole('button', { name: 'Save' }).click();   // raises a toast
+await expect(page.locator('.rdd-toast')).toBeVisible();
+await expect(popup.locator('.rdd-toast')).toHaveCount(0);
+```
+
+Without the stub, a toast raised while the pop-out is open shows in the pop-out.
+
+### Which window is in front
+
+The operating system decides which window is in front, and Playwright can't see it. Test that your
+code asks for it: spy on `workspace.focusPanelWindow`, or count calls to the pop-out's
+`window.focus`. Check real focus by hand, with two windows on screen.
 
 ## Things to know
 
@@ -453,10 +505,23 @@ await popup.getByRole('button', { name: 'Return to desktop' }).click();
   window", so translate it as the end of that phrase. An app that types its table as `Record<MessageKey, string>` must add them; see
   [Migration](./migration#v7-11-x-→-v7-12-0).
 - **CSS:** the frame is `.rdd-popout-frame` (with `data-rdd-popout="<panel id>"`), its parts
-  `__header`, `__icon`, `__title`, `__return` and `__body`. The return button is also
+  `__header`, `__icon`, `__title`, `__return` and `__body`; a widget's title icon that opens its
+  `titleMenu` is also `.rdd-popout-frame__icon--menu`. The return button is also
   `.rdd-custom-tab-btn`, so it takes the skin's title-bar button look; style it with
-  `.rdd-popout-frame__return`. The taskbar marker is
+  `.rdd-popout-frame__return`. In the taskbar, a panel in its own window is
+  `.rdd-taskbar-item--popout` (with `data-rdd-taskbar-popout="<panel id>"`), and its marker
   `.rdd-taskbar-item-popout-marker`.
+- **A panel's window or a widget's:** the frame carries `data-rdd-popout-kind="panel"` or
+  `"widget"`. Use it to style the two apart, or to find a widget's window in a test, rather than the
+  panel id: a widget's panel id format is not part of the API.
+
+  ```css
+  .rdd-popout-frame[data-rdd-popout-kind="widget"] .rdd-popout-frame__return { color: var(--my-accent); }
+  ```
+
+- **These classes and attributes are styling hooks.** As [Stability](./stability) says of every
+  `.rdd-*` class and `data-rdd-*` attribute, they may change in a minor release, with a CHANGELOG
+  note.
 
 ## API summary
 
@@ -475,9 +540,13 @@ await popup.getByRole('button', { name: 'Return to desktop' }).click();
 | `ManagedWidget.canPopOut` | A widget may go into a window. Default `false` |
 | `useWidget().isPoppedOut` | The widget is in its own window |
 | `WidgetMenuContext.canPopOut`, `.isPoppedOut`, `.popOut()` | For your `titleMenu` item |
-| `panel:popped-out`, `panel:returned` | Events: `{ id, window }`, `{ id }` |
 | `panel:popping-out`, `panel:returning` | Events, just before the move: `{ id }` |
+| `panel:popped-out`, `panel:returned` | Events, once laid out in the new place: `{ id, window }`, `{ id }` |
 | `PanelInfo.poppedOut` | `true` while out; runtime only |
+| `PopOutResult`, `PanelWindow`, `PopoutWrapperProps` | The types above |
+| `.rdd-popout-frame`, `data-rdd-popout`, `data-rdd-popout-kind` | The window's frame, its panel id, `"panel"` or `"widget"`; its parts `__header`, `__icon` (`__icon--menu`), `__title`, `__return`, `__body` |
+| `.rdd-taskbar-item--popout`, `data-rdd-taskbar-popout`, `.rdd-taskbar-item-popout-marker` | A panel in its own window, in the taskbar; its marker. Styling hooks: see [Things to know](#things-to-know) |
+| Messages `popOutWindow`, `returnToDesktop`, `backIntoPanel`, `popOutBlocked`, `inOwnWindow` | See [Things to know](#things-to-know) |
 
 See also: [Widgets Out of the Panel](./widgets-out-of-the-panel), [Workspace](./workspace-client),
 [Custom Theming](./theming), [UI Frameworks](./ui-frameworks).

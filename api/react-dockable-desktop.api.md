@@ -906,6 +906,7 @@ interface PopOutEntry {
 
 // @internal
 interface PopOutHost {
+    element(id: string): Element | null;
     park(id: string): void;
     rectOf(id: string): {
         left: number;

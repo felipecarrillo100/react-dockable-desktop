@@ -12,6 +12,8 @@ Panel Contributions let any panel publish toolbar items and sidebar sections tha
 - A document/editor panel contributing a live "Table of Contents" sidebar section, extracted from its own content.
 - Any panel-specific action (formatting buttons, view toggles, search) that belongs in the app's shared chrome only while that panel has focus, instead of cluttering it permanently.
 
+A panel in its own browser window ([pop-out](./popout-windows), 7.12.0) becomes the active one on a click or focus inside its window, so the page's sidebar and toolbar show its contributions.
+
 ---
 
 ## `usePanelContribution(contribution)`

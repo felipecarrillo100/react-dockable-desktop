@@ -71,7 +71,7 @@ export interface DockableDesktopProviderProps {
    * const caches = new WeakMap<Document, ReturnType<typeof createCache>>();
    * const cacheFor = (doc: Document) => {
    *   let c = caches.get(doc);
-   *   if (!c) { c = createCache({ key: 'app', container: doc.head }); caches.set(doc, c); }
+   *   if (!c) { c = createCache({ key: 'pop', container: doc.head }); caches.set(doc, c); }
    *   return c;
    * };
    * const PopoutWrapper = ({ document, children }: PopoutWrapperProps) =>

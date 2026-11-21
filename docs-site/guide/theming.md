@@ -163,7 +163,7 @@ Two hooks let your CSS target the desktop without depending on the library's int
 | Attribute | On | Present while |
 |-----------|----|---------------|
 | `data-rdd-selected` | tab | it is the tab shown in its group |
-| `data-rdd-focused` | tab, floating window | it is the workspace's active panel |
+| `data-rdd-focused` | tab, floating window, pop-out frame (7.12.0) | it is the workspace's active panel |
 | `data-rdd-dirty` | tab | the panel has unsaved changes |
 | `data-rdd-maximized` | floating window | it is maximized |
 
@@ -839,6 +839,10 @@ so rules scoped to the workspace apply inside it.
 Its header, `.rdd-popout-frame__header`, uses `--rdd-window-header-bg` and `--rdd-window-border`,
 like a floating window's title bar. Rules a CSS-in-JS library inserts with `insertRule` (in
 production) aren't copied: see [CSS-in-JS needs `popoutWrapper`](./popout-windows#css-in-js-needs-popoutwrapper).
+
+Its return button, `.rdd-popout-frame__return`, is also `.rdd-custom-tab-btn`, so it takes the
+skin's title-bar button look. To style a panel's window and a widget's apart, use the frame's
+`data-rdd-popout-kind="panel"` or `"widget"`.
 
 ## See also
 

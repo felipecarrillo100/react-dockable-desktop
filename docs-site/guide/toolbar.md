@@ -95,6 +95,8 @@ const toolbarItems: ToolbarItem[] = [
 ];
 ```
 
+A toolbar inside a panel that is in its own browser window ([pop-out](./popout-windows), 7.12.0) opens its flyout in that window, and Esc there closes it.
+
 ### `ToolbarGroupItem` props
 
 | Prop | Type | Required | Description |

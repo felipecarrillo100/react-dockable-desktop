@@ -22,6 +22,7 @@
  * WG11: panel:popped-out / panel:returned for its panel
  * WG12: a widget's content gets its window from usePanelWindow(), and the app's popoutWrapper
  * WG13: canPopOut on a workspace without popOut warns in development
+ * WG14: data-rdd-popout-kind="widget" on its window's frame (7.12.0)
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useEffect, useState } from 'react';
@@ -455,7 +456,7 @@ describe('WG10: the menu', () => {
 });
 
 describe('WG11: events for its panel', () => {
-  it('panel:popped-out and panel:returned, once each', () => {
+  it('panel:popped-out and panel:returned, once each, once laid out (7.12.0)', async () => {
     const ws = mount();
     const p = popup();
     stubOpen(p);
@@ -464,9 +465,11 @@ describe('WG11: events for its panel', () => {
     ws.subscribe('panel:popped-out', out);
     ws.subscribe('panel:returned', back);
     popOut();
+    await act(async () => { await new Promise(r => setTimeout(r, 100)); });
     expect(out).toHaveBeenCalledTimes(1);
     expect(out).toHaveBeenCalledWith({ id: HOSTED, window: p.win });
     act(() => { p.closeByUser(); });
+    await act(async () => { await new Promise(r => setTimeout(r, 100)); });
     expect(back).toHaveBeenCalledTimes(1);
     expect(back).toHaveBeenCalledWith({ id: HOSTED });
   });
@@ -498,5 +501,15 @@ describe('WG13: canPopOut without popOut', () => {
       const mine = warn.mock.calls.filter(c => String(c[0]).includes('Widget "table" sets canPopOut'));
       expect(mine).toHaveLength(1);
     } finally { process.env.NODE_ENV = env; }
+  });
+});
+
+describe('WG14: the window\'s kind', () => {
+  it('data-rdd-popout-kind="widget" on its frame', () => {
+    mount();
+    const p = popup();
+    stubOpen(p);
+    popOut();
+    expect(p.doc.querySelector('.rdd-popout-frame')!.getAttribute('data-rdd-popout-kind')).toBe('widget');
   });
 });

@@ -56,6 +56,8 @@ const id = modals.open(Component, props, options?);
 
 `open` pushes a new modal onto the stack and returns the instance ID. The modal appears on top of the workspace.
 
+Modals and side drawers always show in the main window, also when opened from a panel that is in its own browser window ([pop-out](./popout-windows), 7.12.0).
+
 ```tsx
 function LaunchButton() {
   const modals = useModals();

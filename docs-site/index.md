@@ -4,7 +4,7 @@ layout: home
 hero:
   name: react-dockable-desktop
   text: Premium dockable layout engine for React
-  tagline: Zero-unmount DOM preservation · Floating windows · i18n & RTL · Pub/sub event bus
+  tagline: Zero-unmount DOM preservation · Floating windows · Pop-out windows · i18n & RTL · Pub/sub event bus
   image:
     src: /hero-preview.svg
     alt: react-dockable-desktop preview
@@ -30,11 +30,15 @@ features:
     details: WebGL maps, terminal consoles, and stateful forms keep their DOM nodes intact when hidden. No remount, no state loss.
   - icon: 🪐
     title: Floating Windows
-    details: Pop panels out into resizable floating windows with maximize, minimize, z-index management, and corner anchoring — drag to a workspace corner and it snaps and stacks there.
+    details: Float panels as resizable windows with maximize, minimize, z-index management, and corner anchoring — drag to a workspace corner and it snaps and stacks there.
   - icon: 🧩
     title: Widgets That Leave Their Panel
     details: A panel's floating widget (a results table over a map, a chart, a video) can dock beside it, become a tab or float as a window of its own, and come back. It never remounts and stays bound to its panel.
     link: /guide/widgets-out-of-the-panel
+  - icon: 🖥️
+    title: Pop-out Windows
+    details: Move a panel or a widget into its own browser window, for a second monitor, and back where it was. It never remounts, and the window gets the page's styles and theme.
+    link: /guide/popout-windows
   - icon: 🌍
     title: i18n & RTL Support
     details: Full Right-to-Left layout support (Arabic, Hebrew, Persian). Set dir="rtl" on the provider — every control, tab, drop zone and menu of the workspace flips automatically; the sidebar and toasts follow the page's dir.

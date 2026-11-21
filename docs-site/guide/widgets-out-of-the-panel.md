@@ -170,6 +170,8 @@ useEffect(() => {
 }, []);
 ```
 
+`onWillMove` and `onMoved` also run around a move into its own browser window and back (7.12.0).
+
 Prefer a camera computed from the range over a "fit to bounds": a fit usually adds a margin, so the
 range would widen a little on every move.
 
@@ -212,7 +214,9 @@ widgets.open('preview', { title: 'Preview', content: <iframe src={url} />, prese
 ```
 
 `moveBefore()` is in Chrome and Edge 133+ and Firefox 144+. In Safari the iframe reloads, as it does
-without the option. A widget with it also moves its owner panel's element this way.
+without the option. A widget with it also moves its owner panel's element this way. Into or out of
+its own browser window (7.12.0), an iframe reloads even with it: `moveBefore()` can't move between
+documents.
 
 ## Things to know
 

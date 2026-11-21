@@ -2,7 +2,8 @@
 
 ## v7.11.x → v7.12.0
 
-Additions only (pop-out windows, off by default). One thing may need a change:
+Additions only. Pop-out windows are off by default: an app that doesn't turn them on sees no
+change. One thing may need a change:
 
 - **Five new message keys:** `popOutWindow`, `returnToDesktop`, `backIntoPanel`, `popOutBlocked` and
   `inOwnWindow`. An app that types its translation table as `Record<MessageKey, string>` must add
@@ -19,7 +20,29 @@ const messages: Record<MessageKey, string> = {
 };
 ```
 
+**To turn pop-out windows on:**
+
+1. `createWorkspace({ popOut: true })`, and `defaultOptions: { canPopOut: true }` on the panel types
+   that may go (or `canPopOut: true` on a managed widget).
+2. With CSS-in-JS (MUI, Emotion, styled-components), give the provider a `popoutWrapper` with a
+   cache per document, and test a production build.
+3. In those panels, take `window` and `document` from `usePanelWindow()`, not the globals.
+4. Optional: `popoutUrl`, a same-origin page of your app for the window.
+
 See [Pop-out Windows](./popout-windows).
+
+**Coming from 7.12.0-next.0 or next.1:**
+
+- **The window's return button has no text.** It is an icon button; "Return to desktop" (or "Back
+  into the panel") is its tooltip and accessible name. Find it in a test by its role and name.
+- **The events come at new moments.** `panel:popping-out` is sent in the user's click, with the
+  panel still in the page at its size (with `popoutUrl` too, before the page loads).
+  `panel:popped-out` and `panel:returned` are sent once the panel is laid out in its new place, a
+  frame after the move, so a test must wait for them. A window that fails after
+  `panel:popping-out` now sends `panel:returned`.
+- **Testing toasts across windows:** the focus-emulation tip of next.1 didn't work. See
+  [Which window a toast goes to](./popout-windows#which-window-a-toast-goes-to).
+- **New:** `data-rdd-popout-kind="panel"` or `"widget"` on the window's frame.
 
 ## v6.x → v7.0.0
 

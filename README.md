@@ -1,6 +1,6 @@
 # React Dockable Desktop
 
-[![npm version](https://img.shields.io/badge/npm-v7.12.0--next.1-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
+[![npm version](https://img.shields.io/badge/npm-v7.12.0-blue.svg)](https://www.npmjs.com/package/react-dockable-desktop)
 [![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6.svg)](https://www.typescriptlang.org/)
 [![Touch Ready](https://img.shields.io/badge/touch-iPad%20%7C%20Android-success.svg)](#touch--mobile)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
@@ -26,7 +26,7 @@ serialised layout format**, so a layout saved by either library loads in the oth
 - **Split-Docking Grid** — drag panels to split any zone into rows/columns or group into tabbed containers
 - **Workspace Edge Docking** — drag to the outer edges to dock a panel as a full-width or full-height strip
 - **Docking Rules** — keep a panel type in the grid (`canFloat: false`) or floating (`canDock: false`), and veto any move with one `canDrop` function; forbidden targets simply aren't offered
-- **Floating Windows** — pop panels into freely resizable floating windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
+- **Floating Windows** — float panels as freely resizable windows; 8-direction resize handles (N/NE/E/SE/S/SW/W/NW), maximize, minimize; drag to a workspace corner to anchor it there — anchored windows stack with 8 px gaps and reposition when the viewport resizes
 - **Panel Overlay** — per-panel overlay layer with anchored toolbars (`RddPanelToolbar`, `RddToolbarButton`, `RddToolbarToggle`, async search) and corner-anchored floating windows that stack, drag, and dock; an axis can span the panel instead of carrying a fixed size, so a strip or column tracks the panel as it resizes — set declaratively or by dragging an edge out until it snaps; `useFloatingWidgets()` opens N named windows dynamically from data or event handlers, and can move one out of its panel (docked beside it, a tab, or floating) and back without remounting it
 - **Pop-out Windows** — a panel, or a managed widget out of its panel, moves into its own browser window for a second monitor and comes back where it was, without remounting: state, scroll and a WebGL context go with it. The window gets the page's styles and theme; opt-in with `createWorkspace({ popOut: true })` and `canPopOut` per type ([guide →](https://felipecarrillo100.github.io/react-dockable-desktop/guide/popout-windows))
 - **Touch & Mobile Ready** — full iPad and Android support: long-press to drag tabs, touch resize, 44px coarse-pointer targets throughout
@@ -182,7 +182,7 @@ Call these inside any component within the `DockableDesktopProvider` tree:
 | `useWorkspaceState(selector?)` | `WorkspaceState` or selected slice | Read layout, floating windows, active panel ID |
 | `useModals()` | `ModalsApi` | Open, close and track modal overlays |
 | `useSidePanels()` | `SidePanelsApi` | Open, close and track the left/right side drawers |
-| `usePanel()` | `PanelHandle` | Inside a panel: its `id`, live `containerType`, `isActive`, dirty state, dynamic title/icon, `close()`, `minimize()` |
+| `usePanel()` | `PanelHandle` | Inside a panel: its `id`, live `containerType`, `isActive`, `isPoppedOut`, dirty state, dynamic title/icon, `close()`, `minimize()` |
 | `usePanelEvents(events)` | `void` | Inside a panel: activate, deactivate, minimize, restore, close, resize, container-type change |
 | `useBeforeClose(guard)` | `void` | Inside a panel: a close guard; resolve `false` to keep it open |
 | `useSaveState(getState)` | `void` | Inside a panel: state pulled fresh by every `saveLayout()` |
@@ -250,6 +250,7 @@ workspace.updatePanelProps(id, props | prev => next)  // new props; re-checks wh
 workspace.popOutPanel(id)                      // → PopOutResult; into its own browser window, inside the user's click
 workspace.returnPanel(id)                      // → { ok }; back where it was
 workspace.focusPanelWindow(id)                 // → { ok }; bring the window that holds it forward, best effort
+// Provider props: popoutUrl (the window's same-origin page), popoutWrapper (CSS-in-JS in the window)
 
 // Synchronous state queries (no hook needed)
 workspace.isOpen(id)                           // → boolean
@@ -269,6 +270,8 @@ workspace.onPanelMinimize(cb)
 workspace.onPanelRestore(cb)
 workspace.onLayoutChanged(cb)
 workspace.onPanelsExcluded(cb)                 // saveLayout() left out non-serializable panels
+// Pop-out events: 'panel:popping-out' / 'panel:returning' just before a move,
+// 'panel:popped-out' / 'panel:returned' once laid out in the new place
 
 // Direction and menus
 workspace.setDirection('ltr' | 'rtl')
@@ -326,6 +329,8 @@ createWorkspace({
   initialState: localStorage.getItem('workspace-layout'),
 });
 ```
+
+A panel in its own browser window is saved at the place it would come back to; no window reopens after a reload.
 
 ---
 
@@ -477,8 +482,8 @@ Complete guides, API reference, and interactive demo at:
 | [Panel Overlay](https://felipecarrillo100.github.io/react-dockable-desktop/guide/panel-overlay) | `RddPanelOverlay`, panel toolbars, `RddFloatingWidget`, `useFloatingWidgets` |
 | [Widgets Out of the Panel](https://felipecarrillo100.github.io/react-dockable-desktop/guide/widgets-out-of-the-panel) | Dock, tab or float a managed widget beside its panel; `useWidget`, `placement`, `preserveEmbeds` |
 | [Pop-out Windows](https://felipecarrillo100.github.io/react-dockable-desktop/guide/popout-windows) | A panel or widget in its own browser window; `popOutPanel`, `popoutUrl`, `popoutWrapper` for CSS-in-JS, `usePanelWindow` |
-| [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<RddToasts>`, queue behaviour, theming, `ToastAdapter` |
-| [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrading across major versions |
+| [Toast Notifications](https://felipecarrillo100.github.io/react-dockable-desktop/guide/toast) | `toast` singleton, `<RddToasts>`, queue behaviour, theming, `ToastAdapter`, toasts in pop-out windows |
+| [Migration Guide](https://felipecarrillo100.github.io/react-dockable-desktop/guide/migration) | Upgrading across major versions, and 7.11 → 7.12 (pop-out windows) |
 | [UI Frameworks](https://felipecarrillo100.github.io/react-dockable-desktop/guide/ui-frameworks) | Using it with MUI, Bootstrap or Tailwind: dark mode, z-index, overrides |
 | [Stability & Versioning](https://felipecarrillo100.github.io/react-dockable-desktop/guide/stability) | What the public API is, deprecation and support periods |
 | [API Reference](https://felipecarrillo100.github.io/react-dockable-desktop/api/) | Full type-level reference for all exports |

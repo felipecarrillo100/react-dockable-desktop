@@ -57,8 +57,8 @@ export interface RddDesktopProps {
   /**
    * Controls taskbar visibility.
    * - `'always'` — permanent bar at the bottom
-   * - `'compact'` — only visible when minimized panels exist
-   * - `'autohide'` — overlay bar with 8 px peek strip (default)
+   * - `'compact'` — only visible when minimized panels exist, or a panel is in its own window (7.12.0)
+   * - `'autohide'` — overlay bar with 8 px peek strip (default), shown under the same condition as `'compact'`
    * @default 'autohide'
    */
   taskbarVisibility?: TaskbarVisibility;

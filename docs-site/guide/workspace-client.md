@@ -64,8 +64,9 @@ workspace.focusPanelWindow(id)  // → { ok: boolean }: bring the window that ho
 ```
 
 `focusPanel(id)` on a panel in its own window brings that window forward too. `maximizePanel` and
-`floatPanel` are ignored while it is out; `minimizePanel` and the dock calls bring it back first. See
-[Pop-out Windows](./popout-windows).
+`floatPanel` are ignored while it is out; `minimizePanel` and the dock calls bring it back first. The
+events `panel:popping-out` and `panel:returning` come just before a move, `panel:popped-out` and
+`panel:returned` once the panel is laid out in its new place. See [Pop-out Windows](./popout-windows).
 
 ### `openPanel` options
 
@@ -296,7 +297,7 @@ import type { RddDesktopProps, TaskbarVisibility } from 'react-dockable-desktop'
 |------|------|---------|-------------|
 | `skin` | `string` | `'vscode'` | Built-in visual theme or any custom skin name. Built-ins: `vscode`, `macos`, `chrome`, `slate`, `nord`, `obsidian`, `tokyo`. See [Custom Theming →](/guide/theming). |
 | `defaultPanelIcon` | `ReactNode` | — | Fallback icon used when a panel definition has no `icon`. |
-| `taskbarVisibility` | `TaskbarVisibility` | `'autohide'` | When the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows it only while at least one panel is minimized. `'autohide'` shows it only while at least one panel is minimized, collapsed to an 8px peek strip (12px on touch screens) at the bottom of the workspace: it expands when the pointer reaches it, collapses 400ms after the pointer leaves — never while the pointer is on it — and opens for 2s when a panel is minimized. |
+| `taskbarVisibility` | `TaskbarVisibility` | `'autohide'` | When the minimized-panels taskbar is shown. `'always'` keeps a permanent strip at the bottom. `'compact'` shows it only while at least one panel is minimized, or in its own window (7.12.0). `'autohide'` shows it only then too, collapsed to an 8px peek strip (12px on touch screens) at the bottom of the workspace: it expands when the pointer reaches it, collapses 400ms after the pointer leaves — never while the pointer is on it — and opens for 2s when a panel is minimized. |
 | `animations` | `boolean` | `true` | Enables the library's own transitions/animations (tab hover, dock preview, etc.). Set to `false` to disable them — scoped to only the library's own elements, never the host page's. |
 | `emptyWorkspace` | `ReactNode` | the built-in "Empty Workspace Section" message | What the workspace shows while no panel is docked: a welcome screen, a logo, "Open a file" buttons. It fills the empty group; floating windows still show over it, and a window can still be dropped onto it to dock. Other empty groups in a split keep the built-in message. (7.8.0) |
 | `renderTabContent` | `(tab: TabContentProps) => ReactNode` | the built-in icon, title and dirty marker | Your own content for each tab in the grid. See [Your own tab content](#your-own-tab-content). (7.10.0) |
