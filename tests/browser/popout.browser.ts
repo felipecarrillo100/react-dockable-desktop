@@ -282,3 +282,65 @@ describe('popoutWrapper (Emotion, speedy)', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// S5: a managed widget in its own window. Out of its panel into a real window, and back into its
+// panel by closing that window (D17): the same element, its state and WebGL context, and onMoved
+// at the new size each time.
+
+const widgetSnapshot = (p: Page) => p.evaluate(() => {
+  const el = document.querySelector('.rdd-panel-float__content') as (HTMLElement & { __mark?: string }) | null;
+  const main = (window.opener ?? window) as unknown as { __woLost: number; __woGl: WebGLRenderingContext | null };
+  const fill = document.getElementById('wo-fill');
+  return {
+    here: !!el,
+    same: el?.__mark === 'original',
+    count: document.getElementById('wo-count')?.textContent,
+    input: (document.getElementById('wo-input') as HTMLInputElement | null)?.value,
+    glAlive: !!main.__woGl && !main.__woGl.isContextLost() && main.__woLost === 0,
+    size: fill ? `${fill.offsetWidth}x${fill.offsetHeight}` : null,
+    inPanelFrame: !!document.querySelector('[data-rdd-widget="wo"]'),
+  };
+});
+const woMoves = (page: Page) => page.evaluate(() => [...((window as unknown as { __woMoves?: string[] }).__woMoves ?? [])]);
+
+describe('a managed widget in its own window', () => {
+  it('out of its panel into a window and back into the panel by closing it: the same element, state, and onMoved at the new size', async () => {
+    const { page, errors, close } = await openHarness(`${PO}&ov=1&wo=1`);
+    await page.evaluate(() => { (document.querySelector('.rdd-panel-float__content') as HTMLElement & { __mark?: string }).__mark = 'original'; });
+    await page.click('#wo-inc');
+    await page.fill('#wo-input', 'typed');
+    const kept = { here: true, same: true, count: '1', input: 'typed', glAlive: true };
+    const inPanel = await widgetSnapshot(page);
+    expect(inPanel).toMatchObject({ ...kept, inPanelFrame: true });
+    const before = (await woMoves(page)).length;
+
+    const [popup] = await Promise.all([page.waitForEvent('popup'), page.click('#wo-po-btn')]);
+    await popup.waitForSelector('.rdd-panel-float__content');
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    await settle(page, 300);
+    expect(await page.evaluate(() => (window as unknown as { __woPopResult: unknown }).__woPopResult)).toEqual({ ok: true });
+    const out = await widgetSnapshot(popup);
+    expect(out).toMatchObject(kept);
+    expect(await page.$('.rdd-panel-float__content')).toBeNull();           // nothing left in the page
+    expect(await popup.textContent('.rdd-popout-frame__return')).toBe('Back into the panel');
+    // One move: onWillMove, then onMoved at its size in the window.
+    let moves = (await woMoves(page)).slice(before);
+    expect(moves.length).toBe(2);
+    expect(moves[0]).toMatch(/^will /);
+    expect(moves[1]).toBe(`moved ${out.size}`);
+    expect(out.size).not.toBe(inPanel.size);
+
+    // Closing the window: back into its panel (D17), with the same element and state.
+    const mid = (await woMoves(page)).length;
+    await popup.close();
+    await page.waitForSelector('[data-rdd-widget="wo"]');
+    await settle(page, 300);
+    const back = await widgetSnapshot(page);
+    expect(back).toMatchObject({ ...kept, inPanelFrame: true, size: inPanel.size });
+    moves = (await woMoves(page)).slice(mid);
+    expect(moves.length).toBe(2);
+    expect(moves[1]).toBe(`moved ${inPanel.size}`);
+    await close();
+    expect(errors).toEqual([]);
+  });
+});

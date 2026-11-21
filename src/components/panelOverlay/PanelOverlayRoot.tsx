@@ -23,6 +23,9 @@ import { WidgetContext } from './widgetContext';
 import type { WidgetHandle } from './widgetContext';
 import { ContextMenuContext } from '../ContextMenu';
 import { initialFocusFor } from '../workspace/helpers';
+import { WorkspaceInstanceContext } from '../WorkspaceInstanceContext';
+import { PanelWindowContext, PopoutWrapperContext, usePanelWindow } from '../workspace/panelWindow';
+import { usePanelWindowOf } from '../workspace/panelMount';
 
 /** Where a managed widget starts: its config's corner, stretch and size, docked. */
 const seedPlacement = (config: ManagedWidget): ManagedPlacement => ({
@@ -118,6 +121,11 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
   };
   // The context menu the title icon opens; none outside a provider, and then the icon stays decorative.
   const contextMenu = useContext(ContextMenuContext);
+  // For the development warning on a widget's canPopOut (7.12.0).
+  const popOuts = useContext(WorkspaceInstanceContext)?._popOut ?? null;
+  const popOutsRef = useRef(popOuts);
+  useEffect(() => { popOutsRef.current = popOuts; });
+  const warnedRef = useRef(new Set<string>());
 
   const registerToolbar = useCallback((pos: ToolbarPosition, size: number): (() => void) => {
     setToolbarSizes(prev => ({ ...prev, [pos]: size }));
@@ -177,6 +185,13 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
       // bring the widget to the front natively, as a pointerdown anywhere in the frame does.
       el.addEventListener('pointerdown', () => focusWindow(id));
       contentEls.set(id, el);
+    }
+    if (config.canPopOut && popOutsRef.current && !popOutsRef.current.enabled && process.env.NODE_ENV === 'development' && !warnedRef.current.has(id)) {
+      warnedRef.current.add(id);
+      console.warn(
+        `[react-dockable-desktop] Widget "${id}" sets canPopOut, but this workspace was created without ` +
+        `popOut, so it can't open in its own window. Pass createWorkspace({ popOut: true }) to enable it.`
+      );
     }
     const reopened = configsRef.current.has(id);
     configsRef.current.set(id, config);
@@ -296,9 +311,10 @@ export function PanelOverlayRoot({ children, className, style }: RddPanelOverlay
     closeManaged,
     closeAllManaged,
     moveManaged: hosting.move,
+    popOutManaged: hosting.popOut,
     locationOf: hosting.location,
     placementOf,
-  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged, hosting.move, hosting.location, placementOf]);
+  }), [managedWindowIds, openManaged, closeManaged, closeAllManaged, hosting.move, hosting.popOut, hosting.location, placementOf]);
 
   const coreCtxValue = useMemo<PanelOverlayCtx>(() => ({
     topId,
@@ -380,15 +396,35 @@ function WidgetScope({ id, hosting, children }: { id: string; hosting: WidgetHos
   }, [key, id, settled]);
   // Its own panel's id while it is out of its panel; a widget in the panel has none.
   const panelId = hosting.hostedIds[id] ?? null;
+  const isPoppedOut = key === 'floating|out';
   const handle = useMemo<WidgetHandle>(() => ({
     id,
     ownerPanelId,
     panelId,
     location,
+    isPoppedOut,
     onWillMove: cb => listen(id, 'will', cb),
     onMoved: cb => listen(id, 'moved', cb),
-  }), [id, ownerPanelId, panelId, location, listen]);
-  return <WidgetContext.Provider value={handle}>{children}</WidgetContext.Provider>;
+  }), [id, ownerPanelId, panelId, location, isPoppedOut, listen]);
+  // The window its content is in (7.12.0): its own panel's when out of its owner panel (in the page,
+  // or in a pop-out), else its owner's. With pop-outs on, the app's popoutWrapper is around it too,
+  // for its whole life, so a CSS-in-JS cache follows the widget into its window.
+  const ownerWindow = usePanelWindow();
+  const ownWindow = usePanelWindowOf(panelId ?? '');
+  const panelWindow = panelId ? ownWindow : ownerWindow;
+  const enabled = !!useContext(WorkspaceInstanceContext)?._popOut.enabled;
+  const Wrapper = useContext(PopoutWrapperContext);
+  return (
+    <WidgetContext.Provider value={handle}>
+      <PanelWindowContext.Provider value={panelWindow}>
+        {enabled && Wrapper
+          // The app's component from the provider, stable across renders: not one made here.
+          // eslint-disable-next-line react-hooks/static-components
+          ? <Wrapper window={panelWindow.window} document={panelWindow.document}>{children}</Wrapper>
+          : children}
+      </PanelWindowContext.Provider>
+    </WidgetContext.Provider>
+  );
 }
 
 // ─── Internal: DropZoneOverlay ────────────────────────────────────────────────

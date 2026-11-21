@@ -24,6 +24,11 @@ export interface WidgetHandle {
   /** Where it is shown now. A component that calls `useWidget()` re-renders when it changes. */
   location: WidgetLocation;
   /**
+   * It is in its own browser window (`useFloatingWidgets().popOut`, 7.12.0); `location` is then
+   * `'floating'`. Its content's `usePanelWindow()` gives that window.
+   */
+  isPoppedOut: boolean;
+  /**
    * Called just before the widget's content element moves to another container: into or out of
    * its panel, between docked, tabbed and floating, minimised or restored. Save what a move would
    * disturb here, such as a map's view. Returns the unsubscribe function.

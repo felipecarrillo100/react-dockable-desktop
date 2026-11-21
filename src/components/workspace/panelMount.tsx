@@ -371,7 +371,7 @@ const noDocument = (): Document | null => null;
  * shows the panel's slot in the pop-out this already gives the pop-out's document; the slot then
  * moves the element in, after that render is committed.
  */
-function usePanelWindowOf(panelId: string): PanelWindow {
+export function usePanelWindowOf(panelId: string): PanelWindow {
   const popOut = useContext(WorkspaceInstanceContext)?._popOut;
   const enabled = !!popOut?.enabled;
   const doc = useSyncExternalStore(

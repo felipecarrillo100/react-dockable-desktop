@@ -4245,6 +4245,14 @@ html.rdd-no-animations [class*="rdd-"]::after {
   border-bottom: 1px solid var(--rdd-window-border);
 }
 .rdd-popout-frame__icon { display: inline-flex; }
+/* A managed widget's frame: its title icon is a button that opens the widget's own menu. */
+.rdd-popout-frame__icon--menu {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
 .rdd-popout-frame__title {
   flex: 1 1 auto;
   min-width: 0;

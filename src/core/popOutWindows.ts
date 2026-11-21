@@ -52,10 +52,34 @@ export interface PopOutEntry {
   readonly doc: Document | null;
 }
 
+/**
+ * @internal What a managed widget's overlay lends for its hosted panel (7.12.0, S5): the panel is
+ * popped out through the widget (it may have to leave its panel first), and comes back into the
+ * panel when its window closes (D17).
+ */
+export interface HostedPopOut {
+  /** `popOutPanel(hostedId)`: the widget's own `popOut()`. */
+  popOut(): PopOutResult;
+  /** Its window is closing to bring it back (not a move from code): before the element moves. */
+  returning(): void;
+  /** ...and it is out of the window: the widget goes back into its panel. */
+  returned(): void;
+}
+
+/** @internal How a hosted panel is popped out: the widget has checked its own rules. */
+export interface HostedPopOutOptions {
+  /** Called once the window is open, before the panel moves in: takes the widget out of its panel if needed. */
+  prepare: () => boolean;
+  /** Where the widget is on the main page (client pixels), for the window's place and size. */
+  rect?: { left: number; top: number; width: number; height: number } | null;
+}
+
 /** @internal A workspace's pop-out windows: what `WorkspaceClient` and the provider use. */
 export interface PopOutWindows {
-  /** See `WorkspaceClient.popOutPanel`. */
-  popOut(id: string): PopOutResult;
+  /** See `WorkspaceClient.popOutPanel`. With `hosted`, a managed widget's own pop-out (S5). */
+  popOut(id: string, hosted?: HostedPopOutOptions): PopOutResult;
+  /** Lends a hosted panel's widget rules; returns the function that takes them back. */
+  registerHosted(panelId: string, hosted: HostedPopOut): () => void;
   /** See `WorkspaceClient.returnPanel`. */
   returnPanel(id: string): { ok: boolean };
   /** Whether the user may pop this panel out now (the menu item's rule). */
@@ -119,6 +143,9 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
   const host = (): PopOutHost | null => currentHost;
   let warnedDisabled = false;
 
+  /** Hosted panels' widgets, by panel id (S5). */
+  const hostedRouters = new Map<string, HostedPopOut>();
+
   const emit = () => {
     snapshot = Array.from(entries.values(), ({ key, id, win, doc }) => ({ key, id, win, doc }));
     listeners.forEach(l => l());
@@ -148,6 +175,9 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
   const back = (id: string, restorePlace: boolean): boolean => {
     const entry = entries.get(id);
     if (!entry) return false;
+    // A widget's panel coming back (not moved from code): its widget is told first (S5).
+    const widget = restorePlace ? hostedRouters.get(id) : undefined;
+    widget?.returning();
     entries.delete(id);
     try { host()?.park(id); } catch { /* the slot will park it when it unmounts */ }
     entry.stop();
@@ -156,6 +186,8 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     core.actions.clearPoppedOut(id, restorePlace);
     emit();
     if (entry.announced && core.getSnapshot().panels[id]) core.actions.publish('panel:returned', { id });
+    // ...and it goes back into its panel (D17).
+    widget?.returned();
     return true;
   };
 
@@ -229,8 +261,8 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
   };
 
   /** The window's place and size: over the panel where it is now, in screen coordinates. */
-  const featuresFor = (id: string): string => {
-    const r = host()?.rectOf(id) ?? null;
+  const featuresFor = (id: string, at?: { left: number; top: number; width: number; height: number } | null): string => {
+    const r = at ?? host()?.rectOf(id) ?? null;
     const w = window;
     const width = Math.max(320, Math.round(r?.width || 640));
     const height = Math.max(240, Math.round(r?.height || 480));
@@ -241,7 +273,7 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     return `popup=yes,left=${left},top=${top},width=${width},height=${height}`;
   };
 
-  const popOut = (id: string): PopOutResult => {
+  const popOut = (id: string, hosted?: HostedPopOutOptions): PopOutResult => {
     if (!enabled) {
       if (process.env.NODE_ENV === 'development' && !warnedDisabled) {
         warnedDisabled = true;
@@ -253,11 +285,14 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
       return refuse('disabled');
     }
     const panel = panelOf(id);
-    if (!panel) return refuse('not-open');
-    // A widget's panel (7.11.0) goes through the widget's own move, in a later release.
-    if (panel.owner || optionsFor(registry, panel)?.canPopOut !== true) return refuse('not-allowed');
+    if (!hosted) {
+      if (!panel) return refuse('not-open');
+      // A widget's panel (7.11.0) pops out through the widget, whose rules apply (S5).
+      if (panel.owner) return hostedRouters.get(id)?.popOut() ?? refuse('not-allowed');
+      if (optionsFor(registry, panel)?.canPopOut !== true) return refuse('not-allowed');
+    }
     const open = entries.get(id);
-    if (open && panel.poppedOut) {
+    if (open && panel?.poppedOut) {
       try { open.win.focus(); } catch { /* best effort */ }
       return { ok: true };
     }
@@ -273,7 +308,7 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     try {
       // A name of its own per window: another workspace's panel, or a window left by a reload of
       // this page, may have the same id.
-      win = window.open(target, name, featuresFor(id));
+      win = window.open(target, name, featuresFor(id, hosted?.rect));
     } catch {
       win = null;
     }
@@ -281,6 +316,11 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     if (win.closed || !readable(win)) {
       try { win.close(); } catch { /* gone */ }
       return refuse('no-window');
+    }
+    // A widget still in its panel leaves it now, into its hosted panel; nothing changed before.
+    if (hosted && !hosted.prepare()) {
+      try { win.close(); } catch { /* gone */ }
+      return refuse('not-allowed');
     }
 
     const entry: Entry = { key: name, id, win, doc: null, stop: () => {} };
@@ -312,6 +352,10 @@ export function createPopOutWindows(core: WorkspaceCore, registry: PanelRegistry
     enabled,
     popOut,
     returnPanel: (id) => ({ ok: back(id, true) }),
+    registerHosted(panelId, hostedPopOut) {
+      hostedRouters.set(panelId, hostedPopOut);
+      return () => { if (hostedRouters.get(panelId) === hostedPopOut) hostedRouters.delete(panelId); };
+    },
     canPopOut,
     setUrl: (next) => { url = next || undefined; },
     bindHost(next) {

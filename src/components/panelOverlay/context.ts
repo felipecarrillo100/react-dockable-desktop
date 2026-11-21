@@ -7,6 +7,7 @@ import type React from 'react';
 import { createContext } from 'react';
 import type { FloatAnchor } from '../../types';
 import type { ManagedWidget, MoveResult, PanelFloatPlacement, Stretch, ToolbarPosition, WidgetLocation, WidgetPlacement, WidgetTarget } from './types';
+import type { PopOutResult } from '../../types';
 
 // ─── Internal types ───────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ export interface PanelManagerCtx {
   closeManaged(id: string): void;
   closeAllManaged(): void;
   moveManaged(id: string, to: WidgetTarget): MoveResult;
+  popOutManaged(id: string): PopOutResult;
   locationOf(id: string): WidgetLocation | null;
   placementOf(id: string): WidgetPlacement | null;
 }

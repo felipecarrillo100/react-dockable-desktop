@@ -21,6 +21,8 @@ import type { ContextMenuItem } from '../ContextMenu';
 import type { OutTarget } from '../../core/widgetPlacement';
 import { setPreserveEmbeds } from '../domMove';
 import type { ManagedWidget, MoveResult, WidgetLocation, WidgetTarget } from './types';
+import type { PopOutResult } from '../../types';
+import { WorkspaceInstanceContext } from '../WorkspaceInstanceContext';
 
 interface HostingDeps {
   /** Each open widget's content element. */
@@ -38,6 +40,10 @@ export interface WidgetHosting {
   hostedIds: Record<string, string>;
   move(id: string, to: WidgetTarget): MoveResult;
   location(id: string): WidgetLocation | null;
+  /** Moves a widget into its own browser window (7.12.0): see `FloatingWidgetsApi.popOut`. */
+  popOut(id: string): PopOutResult;
+  /** Whether a widget is in its own browser window now. */
+  isPoppedOut(id: string): boolean;
   /** Removes a widget's hosted panel, if it has one, without closing anything: for close(). */
   release(id: string): void;
   /** Re-applies a re-opened widget's title, icon and capabilities to its hosted panel. */
@@ -72,7 +78,8 @@ export function useWidgetContainer(hostedId: string | undefined, ownerId: string
 function containerKey(st: WorkspaceState, hostedId: string | undefined, ownerId: string): string {
   const panel = hostedId ? st.panels[hostedId] : undefined;
   if (!hostedId || !panel) return 'panel';
-  if (panel.state === 'floating') return 'floating';
+  // In its own browser window (7.12.0): still 'floating' (its panel is), but another container.
+  if (panel.state === 'floating') return panel.poppedOut ? 'floating|out' : 'floating';
   if (panel.state === 'minimized') return 'minimized';
   const leaf = findLeafIdOf(st.gridRoot, hostedId);
   return `${leaf === findLeafIdOf(st.gridRoot, ownerId) ? 'tabbed' : 'docked'}|${leaf ?? ''}`;
@@ -89,6 +96,7 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   const sync = useContext(WindowStoreSyncContext);
   const panelHost = useOptionalPanelHost();
   const registry = useRegistry();
+  const popOuts = useContext(WorkspaceInstanceContext)?._popOut ?? null;
   const ownerId = useContext(FormContainerContext).instanceId;
   const [hostedIds, setHostedIds] = useState<Record<string, string>>(NO_HOSTED);
   // The same record, read synchronously by move() and the cleanup; with each one's close-handler unregister.
@@ -101,7 +109,9 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     listenersRef.current.get(id)?.[kind].forEach(cb => cb());
   };
   // The hosted panels' menu getters are registered once, so they call the latest functions.
-  const latestRef = useRef<{ menuItems: (id: string) => ContextMenuItem[] }>({ menuItems: () => [] });
+  const latestRef = useRef<{ menuItems: (id: string) => ContextMenuItem[]; popOut: (id: string) => PopOutResult }>({
+    menuItems: () => [], popOut: () => ({ ok: false, reason: 'not-open' }),
+  });
 
   const setHosted = (id: string, panelId: string | null): void => {
     setHostedIds(prev => {
@@ -226,7 +236,17 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     }, () => fire(id, 'will'));   // a layout load is about to drop it: the reconcile below sends it home
     // The app's titleMenu items lead the hosted panel's own menus.
     const unregisterMenu = actions.registerPanelContextMenu(panelId, () => latestRef.current.menuItems(id));
-    const unregister = (): void => { unregisterClose(); unregisterMenu(); };
+    // Its own window (7.12.0): popOutPanel / returnPanel on this panel id go through the widget, and
+    // closing that window sends it back into its panel (D17), with one onWillMove / onMoved pair.
+    const unregisterPopOut = popOuts?.registerHosted(panelId, {
+      popOut: () => latestRef.current.popOut(id),
+      returning: () => {
+        fire(id, 'will');
+        lastKeyRef.current.set(id, 'floating');   // its panel floats for a moment: not a move of its own
+      },
+      returned: () => detach(id, true),
+    }) ?? (() => {});
+    const unregister = (): void => { unregisterClose(); unregisterMenu(); unregisterPopOut(); };
     hostedRef.current.set(id, { panelId, unregister, target: to.to === 'floating' ? { to: 'floating', rect: at.kind === 'float' ? at.rect : undefined } : to });
     const nowIn = sync ? containerKey(sync.getSnapshot(), panelId, ownerId) : undefined;
     if (nowIn !== undefined) lastKeyRef.current.set(id, nowIn);
@@ -235,6 +255,44 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
     // so WidgetScope won't see the move. It is one all the same (onWillMove ran): settle it here.
     if (wasIn !== undefined && wasIn === nowIn) settled(id);
     return { ok: true };
+  };
+
+  const isPoppedOut = (id: string): boolean => {
+    const entry = hostedRef.current.get(id);
+    return !!entry && sync?.getSnapshot().panels[entry.panelId]?.poppedOut === true;
+  };
+
+  /**
+   * Into its own browser window: from the panel it leaves it first (into its own floating panel),
+   * as one step; from docked, tabbed, floating or minimised its panel pops out. The checks come
+   * first, so a refusal changes nothing.
+   */
+  const popOut = (id: string): PopOutResult => {
+    if (!popOuts) return { ok: false, reason: 'disabled' };
+    if (!popOuts.enabled) return popOuts.popOut(id);   // 'disabled', with its development warning
+    const config = configs.current.get(id);
+    const el = contentEls.get(id);
+    if (!config || !el) return { ok: false, reason: 'not-open' };
+    const s = sync?.getSnapshot();
+    const owner = s?.panels[ownerId];
+    // Its own opt-in; and a workspace panel to take it out of, whose content stays mounted.
+    if (!config.canPopOut || !actions || !panelHost || !owner || owner.owner
+      || optionsFor(registry, owner)?.keepAlive === false) return { ok: false, reason: 'not-allowed' };
+    const current = hostedRef.current.get(id);
+    if (current) return popOuts.popOut(current.panelId, { prepare: () => true });
+    // Still in the panel: the window opens over where the widget is.
+    const root = containerRef.current;
+    const frame = root ? Array.from(root.querySelectorAll<HTMLElement>('[data-rdd-widget]')).find(f => f.getAttribute('data-rdd-widget') === id) : undefined;
+    const r = frame?.getBoundingClientRect();
+    return popOuts.popOut(`${ownerId}/${id}`, {
+      rect: r && r.width > 0 ? { left: r.left, top: r.top, width: r.width, height: r.height } : null,
+      prepare: () => {
+        if (!move(id, { to: 'floating' }).ok) return false;
+        // Out of the panel and into the window are one move: one onWillMove (fired), one onMoved.
+        lastKeyRef.current.set(id, 'floating|out');
+        return true;
+      },
+    });
   };
 
   const location = (id: string): WidgetLocation | null => {
@@ -262,11 +320,14 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
       id,
       location: location(id) ?? 'panel',
       ...capabilities(config),
+      canPopOut: config.canPopOut === true && !!popOuts?.enabled,
+      isPoppedOut: isPoppedOut(id),
       move: to => move(id, to),
+      popOut: () => popOut(id),
       close: () => closeWidget.current(id),
     });
   };
-  useEffect(() => { latestRef.current = { menuItems }; });
+  useEffect(() => { latestRef.current = { menuItems, popOut }; });
 
   const listen = useCallback((id: string, kind: 'will' | 'moved', cb: () => void): (() => void) => {
     let entry = listenersRef.current.get(id);
@@ -347,7 +408,7 @@ export function useWidgetHosting({ contentEls, configs, containerRef, closeWidge
   }, []);
 
   // Fresh functions each render are fine: callers reach them through the manager context's memo.
-  return useMemo(() => ({ hostedIds, move, location, release, refresh, menuItems, ownerPanelId, listen, settled, outTarget, preserveOwner }),
+  return useMemo(() => ({ hostedIds, move, location, popOut, isPoppedOut, release, refresh, menuItems, ownerPanelId, listen, settled, outTarget, preserveOwner }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hostedIds, actions, sync, panelHost, registry, ownerId, release, ownerPanelId, listen, settled]);
+    [hostedIds, actions, sync, panelHost, registry, ownerId, release, ownerPanelId, listen, settled, popOuts]);
 }
