@@ -343,6 +343,33 @@ describe('a managed widget in its own window', () => {
     await close();
     expect(errors).toEqual([]);
   });
+
+  it("the frame's title icon opens the widget's titleMenu in the window, and it stays open; Enter opens it too", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&ov=1&wo=1`);
+    const [popup] = await Promise.all([page.waitForEvent('popup'), page.click('#wo-po-btn')]);
+    await popup.waitForSelector('.rdd-panel-float__content');
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    const icon = '.rdd-popout-frame__icon--menu';
+
+    // Enter on the focused icon: the menu opens there and is still open a moment later.
+    await popup.focus(icon);
+    await popup.keyboard.press('Enter');
+    await popup.waitForSelector('.rdd-context-menu');
+    await settle(popup, 300);
+    expect(await popup.$('.rdd-context-menu')).not.toBeNull();
+    await popup.keyboard.press('Escape');
+    await popup.waitForSelector('.rdd-context-menu', { state: 'detached' });
+
+    // A click: the same, and its item runs (back into the panel closes the window).
+    await popup.click(icon);
+    await settle(popup, 300);
+    expect(await popup.$('.rdd-context-menu')).not.toBeNull();
+    expect(await page.$('.rdd-context-menu')).toBeNull();
+    await Promise.all([popup.waitForEvent('close'), popup.click('.rdd-context-menu >> text=Back into the panel')]);
+    await page.waitForSelector('[data-rdd-widget="wo"]');
+    await close();
+    expect(errors).toEqual([]);
+  });
 });
 
 // S6: focus across windows. Headless Chromium can't show which OS window is in front, so the

@@ -1,5 +1,26 @@
 # Migration Guide
 
+## v7.11.x → v7.12.0
+
+Additions only (pop-out windows, off by default). One thing may need a change:
+
+- **Five new message keys:** `popOutWindow`, `returnToDesktop`, `backIntoPanel`, `popOutBlocked` and
+  `inOwnWindow`. An app that types its translation table as `Record<MessageKey, string>` must add
+  them to compile. At run time a missing key falls back to the English default.
+
+```ts
+const messages: Record<MessageKey, string> = {
+  // ...your existing keys
+  popOutWindow:    'Open in new window',
+  returnToDesktop: 'Return to desktop',
+  backIntoPanel:   'Back into the panel',
+  popOutBlocked:   'The browser blocked the new window. Allow pop-ups for this site and try again.',
+  inOwnWindow:     'in its own window',
+};
+```
+
+See [Pop-out Windows](./popout-windows).
+
 ## v6.x → v7.0.0
 
 7.0.0 renames the public API to match the rest of the dockable-desktop family

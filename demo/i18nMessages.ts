@@ -41,6 +41,12 @@ export const enMessages: DockableMessages = {
   'dockable-desktop-alertTitle': 'Information',
   'dockable-desktop-closePanelTooltip': 'Close panel',
   'dockable-desktop-closeTooltip': 'Close',
+  // Pop-out windows (7.12.0)
+  'dockable-desktop-popOutWindow': 'Open in new window',
+  'dockable-desktop-returnToDesktop': 'Return to desktop',
+  'dockable-desktop-backIntoPanel': 'Back into the panel',
+  'dockable-desktop-popOutBlocked': 'The browser blocked the new window. Allow pop-ups for this site and try again.',
+  'dockable-desktop-inOwnWindow': 'in its own window',
 };
 
 // ── Spanish ───────────────────────────────────────────────────────────────────
@@ -71,6 +77,12 @@ export const esMessages: DockableMessages = {
   'dockable-desktop-alertTitle': 'Información',
   'dockable-desktop-closePanelTooltip': 'Cerrar panel',
   'dockable-desktop-closeTooltip': 'Cerrar',
+  // Pop-out windows (7.12.0)
+  'dockable-desktop-popOutWindow': 'Abrir en una ventana nueva',
+  'dockable-desktop-returnToDesktop': 'Volver al escritorio',
+  'dockable-desktop-backIntoPanel': 'Volver al panel',
+  'dockable-desktop-popOutBlocked': 'El navegador bloqueó la ventana nueva. Permita las ventanas emergentes para este sitio e inténtelo de nuevo.',
+  'dockable-desktop-inOwnWindow': 'en su propia ventana',
 };
 
 // ── Dutch ─────────────────────────────────────────────────────────────────────
@@ -101,6 +113,12 @@ export const nlMessages: DockableMessages = {
   'dockable-desktop-alertTitle': 'Informatie',
   'dockable-desktop-closePanelTooltip': 'Paneel sluiten',
   'dockable-desktop-closeTooltip': 'Sluiten',
+  // Pop-out windows (7.12.0)
+  'dockable-desktop-popOutWindow': 'Openen in nieuw venster',
+  'dockable-desktop-returnToDesktop': 'Terug naar het bureaublad',
+  'dockable-desktop-backIntoPanel': 'Terug in het paneel',
+  'dockable-desktop-popOutBlocked': 'De browser heeft het nieuwe venster geblokkeerd. Sta pop-ups toe voor deze site en probeer het opnieuw.',
+  'dockable-desktop-inOwnWindow': 'in een eigen venster',
 };
 
 // ── French ────────────────────────────────────────────────────────────────────
@@ -131,6 +149,12 @@ export const frMessages: DockableMessages = {
   'dockable-desktop-alertTitle': 'Information',
   'dockable-desktop-closePanelTooltip': 'Fermer le panneau',
   'dockable-desktop-closeTooltip': 'Fermer',
+  // Pop-out windows (7.12.0)
+  'dockable-desktop-popOutWindow': 'Ouvrir dans une nouvelle fenêtre',
+  'dockable-desktop-returnToDesktop': 'Revenir au bureau',
+  'dockable-desktop-backIntoPanel': 'Revenir dans le panneau',
+  'dockable-desktop-popOutBlocked': 'Le navigateur a bloqué la nouvelle fenêtre. Autorisez les fenêtres pop-up pour ce site et réessayez.',
+  'dockable-desktop-inOwnWindow': 'dans sa propre fenêtre',
 };
 
 // ── Chinese ───────────────────────────────────────────────────────────────────
@@ -161,6 +185,12 @@ export const zhMessages: DockableMessages = {
   'dockable-desktop-alertTitle': '信息',
   'dockable-desktop-closePanelTooltip': '关闭面板',
   'dockable-desktop-closeTooltip': '关闭',
+  // Pop-out windows (7.12.0)
+  'dockable-desktop-popOutWindow': '在新窗口中打开',
+  'dockable-desktop-returnToDesktop': '返回桌面',
+  'dockable-desktop-backIntoPanel': '返回面板',
+  'dockable-desktop-popOutBlocked': '浏览器阻止了新窗口。请允许此网站的弹出窗口，然后重试。',
+  'dockable-desktop-inOwnWindow': '在独立窗口中',
 };
 
 // ── Arabic ────────────────────────────────────────────────────────────────────
@@ -191,4 +221,10 @@ export const arMessages: DockableMessages = {
   'dockable-desktop-alertTitle': 'معلومات',
   'dockable-desktop-closePanelTooltip': 'إغلاق اللوحة',
   'dockable-desktop-closeTooltip': 'إغلاق',
+  // Pop-out windows (7.12.0)
+  'dockable-desktop-popOutWindow': 'فتح في نافذة جديدة',
+  'dockable-desktop-returnToDesktop': 'العودة إلى سطح المكتب',
+  'dockable-desktop-backIntoPanel': 'العودة إلى اللوحة',
+  'dockable-desktop-popOutBlocked': 'حظر المتصفح النافذة الجديدة. اسمح بالنوافذ المنبثقة لهذا الموقع وحاول مرة أخرى.',
+  'dockable-desktop-inOwnWindow': 'في نافذة مستقلة',
 };

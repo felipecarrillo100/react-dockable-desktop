@@ -1184,6 +1184,7 @@ function AppWithIntl({ locale, onLocaleChange }: AppWithIntlProps) {
   return (
     <DockableDesktopProvider
       workspace={workspace}
+      popoutUrl={`${import.meta.env.BASE_URL}popout.html`}
       formatMessage={handleFormatMessage}
       messages={defaultMessages}
       dir={rtlLayout ? 'rtl' : 'ltr'}
