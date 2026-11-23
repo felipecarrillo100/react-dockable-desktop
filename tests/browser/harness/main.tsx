@@ -36,6 +36,8 @@
  *                   production); `pp` shows an Emotion-styled #po-emo; `window.__poMounts` counts its mounts;
  *                   `popper`'s icon, #po-menu's item icon, #po-toast's toast icon and the `wo` widget's icon and
  *                   titleMenu item icons are Emotion-styled boxes ([data-emo-icon], 16 x 16, rgb(200, 30, 40))
+ *   poico=1         (with po=1, not emo=1) `popper`'s icon, and the `wo` widget's, takes its size from its box: an inline-block span
+ *                   with width/height auto around an <svg> with only a viewBox ([data-po-icon])
  *   (po=1: #po-menu in `pp` opens a context menu from there; #po-toast raises a toast "from pp")
  *   (po=1 with ov=1&wo=1: the `wo` widget has canPopOut, and the header's #wo-po-btn pops it out)
  *   po2=1           (with po=1) a second `popper` panel `pq`, a tab in p1's group; #po-btn-q pops it out;
@@ -146,7 +148,7 @@ function ManagedOpener() {
     canDock: true, canFloat: true, preserveEmbeds: q.get('emb') === '1',
     // po=1: it can open in its own window too (7.12.0); #wo-po-btn pops it out.
     canPopOut: q.get('po') === '1',
-    ...(EMO ? { icon: <EmoIcon name="wo" /> } : {}),
+    ...(EMO ? { icon: <EmoIcon name="wo" /> } : PO_ICO ? { icon: <UnsizedIcon /> } : {}),
     titleMenu: (w: WidgetMenuContext) => w.location === 'panel'
       ? [{ label: 'Dock below', icon: EMO ? <EmoIcon name="wo-menu" /> : undefined, action: () => w.move({ to: 'docked', position: 'bottom' }) }]
       : [{ label: 'Back into the panel', icon: EMO ? <EmoIcon name="wo-menu" /> : undefined, action: () => w.move({ to: 'panel' }) }],
@@ -231,6 +233,13 @@ const EmoIcon = ({ name }: { name: string }) => (
     <span data-emo-icon={name} className={css({ display: 'inline-block', width: 16, height: 16, backgroundColor: 'rgb(200, 30, 40)', '--emo-icon': name })} />
   )}</ClassNames>
 );
+/** poico=1: an icon that takes its size from its box (as an Angular Material mat-icon set to width/height: auto). */
+const PO_ICO = q.get('poico') === '1';
+const UnsizedIcon = () => (
+  <span data-po-icon style={{ display: 'inline-block', width: 'auto', height: 'auto' }}>
+    <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="currentColor" /></svg>
+  </span>
+);
 
 function PopPanel() {
   const { id } = usePanel();
@@ -288,7 +297,7 @@ const workspace = createWorkspace({
   popOut: POPOUT,
   panels: {
     // Only with po=1: a canPopOut type on a workspace without popOut warns in development.
-    ...(POPOUT ? { popper: { component: PopPanel, defaultOptions: { canPopOut: true, ...(EMO ? { icon: <EmoIcon name="frame" /> } : {}) } } } : {}),
+    ...(POPOUT ? { popper: { component: PopPanel, defaultOptions: { canPopOut: true, ...(EMO ? { icon: <EmoIcon name="frame" /> } : PO_ICO ? { icon: <UnsizedIcon /> } : {}) } } } : {}),
     probe: { component: ProbePanel },
     overlay: { component: OverlayPanel, ...(POPOUT && q.get('opo') === '1' ? { defaultOptions: { canPopOut: true } } : {}) },
     canvas: { component: CanvasPanel },

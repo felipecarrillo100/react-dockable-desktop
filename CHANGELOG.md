@@ -10,6 +10,29 @@ replacement and the version that removes the old API.
 
 ## [Unreleased]
 
+## [7.12.2] — 2026-11-22
+
+A fix to the title icon of pop-out and floating windows. No API change.
+
+### Fixed
+
+- **A pop-out window's title icon is 14 × 14, as a floating window's.** `.rdd-popout-frame__icon`
+  had no size, so an icon that takes its size from its box (an Angular Material `mat-icon` or an SVG
+  with only a `viewBox`, say) grew to 300 px: the header filled the window, the panel got little or
+  no room, and the browser reported a ResizeObserver loop.
+- **A title icon fits its 14 × 14 box, in a floating window's title (`.rdd-panel-float__icon`)
+  and a pop-out's.** An `svg` or `img` in it is drawn at 14 × 14, as in a tab's icon slot, so an SVG
+  with only a `viewBox` shows instead of collapsing to nothing; any other element bigger than the
+  box is scaled down to fit it (a 16 × 16 icon showed squeezed to 14 × 16 in a floating window).
+
+### Tests
+
+- Browser: a pop-out whose panel icon has no size of its own keeps a one-line header, gives the
+  panel the rest of the window and shows the icon at 14 × 14; the same icon fills a floating
+  window's 14 × 14 title icon; a 16 × 16 Emotion-styled icon measures 14 × 14 in a floating
+  window's title and in both kinds of pop-out frame (it was 16 × 16 in the frame, 14 × 16 in the
+  floating window).
+
 ## [7.12.1] — 2026-11-21
 
 A fix to pop-out windows. No API change.
@@ -1644,7 +1667,8 @@ All of the above is additive and backward-compatible: every new field is optiona
 
 ---
 
-[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.1...HEAD
+[Unreleased]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.2...HEAD
+[7.12.2]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.1...v7.12.2
 [7.12.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0...v7.12.1
 [7.12.0]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.11.0...v7.12.0
 [7.12.0-next.1]: https://github.com/felipecarrillo100/react-dockable-desktop/compare/v7.12.0-next.0...v7.12.0-next.1

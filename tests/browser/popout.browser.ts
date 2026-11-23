@@ -446,6 +446,8 @@ const emoIcon = (p: Page, name: string, within = '') => p.evaluate(([n, w]) => {
   return { w: Math.round(r.width), h: Math.round(r.height), bg: getComputedStyle(el).backgroundColor };
 }, [name, within]);
 const EMO_LOOK = { w: 16, h: 16, bg: 'rgb(200, 30, 40)' };
+/** In a 14 x 14 title-icon box (a frame's, a floating window's), the 16 x 16 icon is scaled to fit (7.12.2). */
+const EMO_FIT = { ...EMO_LOOK, w: 14, h: 14 };
 
 describe('popoutWrapper around the frame, menus and toasts (Emotion, speedy)', () => {
   it("the frame's icon and a menu item's icon look as in the page; a toast raised in the window shows there", async () => {
@@ -461,7 +463,7 @@ describe('popoutWrapper around the frame, menus and toasts (Emotion, speedy)', (
     const popup = await popOutByClick(page);
     popup.setDefaultTimeout(5000);
     await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
-    expect(await emoIcon(popup, 'frame', '.rdd-popout-frame__icon')).toEqual(EMO_LOOK);
+    expect(await emoIcon(popup, 'frame', '.rdd-popout-frame__icon')).toEqual(EMO_FIT);
 
     // A menu opened from inside the window: there, its item's icon styled, and it can be clicked.
     await popup.click('#po-menu');
@@ -489,10 +491,13 @@ describe('popoutWrapper around the frame, menus and toasts (Emotion, speedy)', (
 
   it("a widget's frame icon is styled and clickable in the window; its titleMenu's icons too", async () => {
     const { page, errors, close } = await openHarness(`${PO}&ov=1&wo=1&emo=1`);
+    // In the page, in its floating window's title: scaled to fit, not squeezed to 14 x 16 (7.12.2).
+    await page.waitForSelector('[data-rdd-widget="wo"]');
+    expect(await emoIcon(page, 'wo', '.rdd-panel-float__icon')).toEqual(EMO_FIT);
     const [popup] = await Promise.all([page.waitForEvent('popup'), page.click('#wo-po-btn')]);
     await popup.waitForSelector('.rdd-panel-float__content');
     await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
-    expect(await emoIcon(popup, 'wo', '.rdd-popout-frame__icon--menu')).toEqual(EMO_LOOK);
+    expect(await emoIcon(popup, 'wo', '.rdd-popout-frame__icon--menu')).toEqual(EMO_FIT);
     await popup.click('.rdd-popout-frame__icon--menu');
     await popup.waitForSelector('.rdd-context-menu');
     expect(await emoIcon(popup, 'wo-menu', '.rdd-context-menu')).toEqual(EMO_LOOK);
@@ -528,6 +533,53 @@ describe("the frame's return button", () => {
       expect(errors).toEqual([]);
     });
   }
+});
+
+// 7.12.2: the frame's title icon is sized as a floating window's (14 x 14). An icon that takes its
+// size from its box (MapEvolution's mat-icon, width/height auto) grew to 300 px and pushed the panel
+// out of the window.
+
+/** The frame's icon box, the icon inside it, the header's height and the slot's, in `p`. */
+const frameIconLayout = (p: Page) => p.evaluate(() => {
+  const box = (s: string) => {
+    const r = document.querySelector(s)!.getBoundingClientRect();
+    return { w: Math.round(r.width), h: Math.round(r.height) };
+  };
+  return {
+    icon: box('.rdd-popout-frame__icon'),
+    inner: box('.rdd-popout-frame__icon [data-po-icon]'),
+    header: box('.rdd-popout-frame__header').h,
+    body: box('.rdd-popout-frame__body').h,
+    window: window.innerHeight,
+  };
+});
+
+describe("the frame's title icon", () => {
+  it("is 14 x 14, as a floating window's, with an icon that takes its size from its box; the panel keeps the window", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&poico=1`);
+    const popup = await popOutByClick(page);
+    await popup.waitForFunction(() => getComputedStyle(document.querySelector('.rdd-popout-frame')!).visibility === 'visible');
+    const l = await frameIconLayout(popup);
+    expect(l.icon).toEqual({ w: 14, h: 14 });
+    expect(l.header).toBeLessThan(40);
+    expect(l.body).toBeGreaterThanOrEqual(l.window - l.header - 1);
+    // The icon itself fills its box: not past it, and not collapsed to nothing.
+    expect(l.inner).toEqual({ w: 14, h: 14 });
+    await close();
+    expect(errors).toEqual([]);
+  });
+
+  it("in a floating window's title, an icon that takes its size from its box fills the 14 x 14 box", async () => {
+    const { page, errors, close } = await openHarness(`${PO}&ov=1&wo=1&poico=1`);
+    await page.waitForSelector('[data-rdd-widget="wo"]');
+    const inner = await page.evaluate(() => {
+      const r = document.querySelector('.rdd-panel-float__icon [data-po-icon]')!.getBoundingClientRect();
+      return { w: Math.round(r.width), h: Math.round(r.height) };
+    });
+    expect(inner).toEqual({ w: 14, h: 14 });
+    await close();
+    expect(errors).toEqual([]);
+  });
 });
 
 // 7.12.0: when the four events arrive. popping-out and returning while the panel is still in its
