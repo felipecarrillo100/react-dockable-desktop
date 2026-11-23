@@ -514,7 +514,9 @@ code asks for it: spy on `workspace.focusPanelWindow`, or count calls to the pop
   [Migration](./migration#v7-11-x-→-v7-12-0).
 - **CSS:** the frame is `.rdd-popout-frame` (with `data-rdd-popout="<panel id>"`), its parts
   `__header`, `__icon`, `__title`, `__return` and `__body`; a widget's title icon that opens its
-  `titleMenu` is also `.rdd-popout-frame__icon--menu`. The return button is also
+  `titleMenu` is also `.rdd-popout-frame__icon--menu`. The title icon is a 14 × 14 box, as a
+  floating window's: an `svg` or `img` in it is drawn at 14 × 14, as in a tab, and any other icon
+  bigger than the box is scaled down to fit it. The return button is also
   `.rdd-custom-tab-btn`, so it takes the skin's title-bar button look; style it with
   `.rdd-popout-frame__return`. In the taskbar, a panel in its own window is
   `.rdd-taskbar-item--popout` (with `data-rdd-taskbar-popout="<panel id>"`), and its marker

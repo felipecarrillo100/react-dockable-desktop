@@ -73,6 +73,21 @@
   opacity: 0.7;
   color: var(--rdd-panel-float-title-color, rgba(255, 255, 255, 0.6));
 }
+/* An icon bigger than the box is scaled down to fit it, not squeezed to 14 px wide only (7.12.2). */
+.rdd-panel-float__icon > * {
+  max-width: 100%;
+  max-height: 100%;
+}
+/* An SVG or image is drawn at the box's size, as in a tab's icon slot (7.12.2). */
+.rdd-panel-float__icon svg,
+.rdd-panel-float__icon img {
+  width: 14px;
+  height: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  object-fit: contain;
+  display: block;
+}
 .rdd-panel-float--active .rdd-panel-float__icon {
   opacity: 1;
   color: var(--rdd-panel-float-title-color-active, rgba(255, 255, 255, 0.9));
